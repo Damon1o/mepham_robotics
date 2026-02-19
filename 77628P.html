@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team 77628P | Mepham Robotics Club</title>
+    <meta name="description"
+        content="Meet Team 77628P of the Mepham Robotics Club. View our robot specs, team members, and season goals.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" type="image/png" href="assets/icons/mephamrobotics.png?v=1">
+    <script src='https://www.noupe.com/embed/019c10ae8c1e7b78b2dd982b50a56c1c4e77.js'></script>
+    <style>
+        .hero-image {
+            background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
+                url('assets/photos/77628P.png') center/cover;
+            min-height: 60vh;
+        }
+    </style>
+</head>
+
+<body>
+
+    <button class="menu-toggle" onclick="toggleNav()">☰ MENU</button>
+    <div id="overlay" class="overlay" onclick="toggleNav()"></div>
+
+    <div id="mySidenav" class="sidenav" style="overflow-y:auto">
+        <button class="close-btn" onclick="toggleNav()">&times;</button>
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+
+        <a href="resources.html">Resources</a>
+
+        <button class="dropdown-btn" onclick="toggleDropdown()">Team</button>
+        <div id="teamDropdown" class="dropdown-container">
+            <a href="77628D.html">77628D</a>
+            <a href="77628P.html" class="active">77628P</a>
+        </div>
+
+        <a href="achievements.html">Achievements</a>
+        <a href="donate.html">Donate</a>
+        <a href="contact.html">Contact</a>
+
+    </div>
+
+    <!-- SEARCH OVERLAY -->
+    <div class="search-overlay">
+        <button class="search-close">&times;</button>
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" placeholder="Search pages... (Ctrl+K)" autocomplete="off">
+            </div>
+            <div class="search-results"></div>
+        </div>
+    </div>
+
+    <div class="hero-image fade-in-section">
+        <div class="hero-content">
+            <h1>Team 77628P</h1>
+            <p>Build. Code. Compete.</p>
+        </div>
+        <div class="scroll-indicator"></div>
+    </div>
+
+    <!-- BREADCRUMBS -->
+    <nav class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span class="separator">›</span>
+        <span class="current">Team 77628P</span>
+    </nav>
+
+    <section id="team" class="fade-in-section">
+        <div class="text-center">
+            <h2 class="ripple">Meet the Team</h2>
+        </div>
+        <div class="team-grid">
+            <div class="team-card">
+                <img src="assets/profile/damon.png" alt="Team Lead" class="team-img" loading="lazy">
+                <h3>Damon L.</h3>
+                <p>Team Captain, Lead Driver, Lead Coder, Lead Builder, and Lead Strategist</p>
+            </div>
+            <div class="team-card">
+                <img src="assets/profile/base.png" alt="Programmer" class="team-img" loading="lazy">
+                <h3>Dagur M.</h3>
+                <p>Team Member</p>
+            </div>
+            <div class="team-card">
+                <img src="assets/profile/base.png" alt="Builder" class="team-img" loading="lazy">
+                <h3>Nick K.</h3>
+                <p>Team Member</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="award-container fade-in-section">
+        <div class="text-center">
+            <h2 class="ripple">77628P Competition Awards</h2>
+        </div>
+        <div class="row">
+            <div class="award-box border-gold bg-shimmer">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/world_championship.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">World Championship</span>
+                </div>
+            </div>
+            <div class="award-box border-purple bg-shimmer">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/triple_crown.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">Triple Crown</span>
+                </div>
+            </div>
+        </div>
+        <!-- ... (Rest of awards are 0/placeholder, keeping structure for consistency with original) ... -->
+        <div class="row">
+            <div class="award-box">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/exellence_award.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">Excellence</span>
+                </div>
+            </div>
+            <div class="award-box">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/tournament_champions.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">Champions</span>
+                </div>
+            </div>
+            <div class="award-box">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/robot_skills_champion.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">Skills Champion</span>
+                </div>
+            </div>
+            <div class="award-box">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/tournament_finalists.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">Finalists</span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="award-box">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/design_award.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">Design</span>
+                </div>
+            </div>
+            <div class="award-box">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/judges_award.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">Judges</span>
+                </div>
+            </div>
+            <div class="award-box">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/innovate_award.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">Innovate</span>
+                </div>
+            </div>
+            <div class="award-box">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/amaze_award.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">Amaze</span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="award-box border-red">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/create_award.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">Create</span>
+                </div>
+            </div>
+            <div class="award-box border-green">
+                <span class="award-count">×0</span>
+                <div class="award-content">
+                    <img src="assets/icons/sportsmanship.png" alt="icon" class="award-icon" loading="lazy">
+                    <span class="award-title">Sportsmanship</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- INTERACTIVE 3D VIEWER -->
+    <section class="robot-showcase fade-in-section">
+        <h2 class="ripple">Interactive 3D View: "Prometheus"</h2>
+        <div class="viewer-3d-container">
+            <p class="viewer-label">[ 3D CAD MODEL VIEWER PLACEHOLDER ]</p>
+            <div class="viewer-controls">
+                <button class="viewer-btn">Rotate</button>
+            </div>
+        </div>
+        <p class="robot-tagline">"Precision. Power. Performance."</p>
+    </section>
+
+    <!-- ROBOT SPECS -->
+    <section class="robot-specs fade-in-section">
+        <h2>Technical Specifications</h2>
+        <div class="specs-container">
+            <div class="spec-card">
+                <div class="spec-label">Drive Train</div>
+                <div class="spec-value">4-Motor Mecanum</div>
+            </div>
+            <div class="spec-card">
+                <div class="spec-label">Lift System</div>
+                <div class="spec-value">Linear Slide</div>
+            </div>
+            <div class="spec-card">
+                <div class="spec-label">Intake</div>
+                <div class="spec-value">Dual Claw</div>
+            </div>
+            <div class="spec-card">
+                <div class="spec-label">Auton Consistency</div>
+                <div class="spec-value">90%</div>
+            </div>
+        </div>
+        <div class="text-center" style="margin-top: 3rem;">
+            <a href="#" class="download-btn">
+                <span class="download-icon">📘</span>
+                Engineering Notebook
+            </a>
+        </div>
+    </section>
+
+    <!-- SEASON GOALS -->
+    <section class="goals-section fade-in-section">
+        <h2 class="ripple">Season Goals</h2>
+        <div class="goals-container">
+            <div class="goal-item">
+                <div class="goal-header">
+                    <span class="goal-name">Qualify for Regionals</span>
+                    <span class="goal-percent">100%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" data-progress="100"></div>
+                </div>
+            </div>
+            <div class="goal-item">
+                <div class="goal-header">
+                    <span class="goal-name">Win Design Award</span>
+                    <span class="goal-percent">80%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" data-progress="80"></div>
+                </div>
+            </div>
+            <div class="goal-item">
+                <div class="goal-header">
+                    <span class="goal-name">Top 5 in Skills</span>
+                    <span class="goal-percent">50%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" data-progress="50"></div>
+                </div>
+            </div>
+            <div class="goal-item">
+                <div class="goal-header">
+                    <span class="goal-name">Qualify for Worlds</span>
+                    <span class="goal-percent">30%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" data-progress="30"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-newsletter">
+            <h4>📬 Stay Updated</h4>
+            <p>Get competition results and team news in your inbox.</p>
+            <form class="footer-newsletter-form">
+                <input type="email" name="email" placeholder="your@email.com" required>
+                <button type="submit">Subscribe</button>
+            </form>
+        </div>
+        <p>&copy; 2026 Mepham Robotics Club | Build. Code. Compete.</p>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+
+</html>

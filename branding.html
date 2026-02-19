@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Branding Guide | Mepham Robotics</title>
+    <meta name="description" content="Official Mepham Robotics branding guide — colors, fonts, and logo usage.">
+    <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" type="image/png" href="assets/icons/mephamrobotics.png?v=1">
+    <script src='https://www.noupe.com/embed/019c10ae8c1e7b78b2dd982b50a56c1c4e77.js'></script>
+    <script>
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+
+<body>
+    <button class="menu-toggle" onclick="toggleNav()">☰ MENU</button>
+    <div id="overlay" class="overlay" onclick="toggleNav()"></div>
+    <div id="mySidenav" class="sidenav" style="overflow-y:auto">
+        <button class="close-btn" onclick="toggleNav()">&times;</button>
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+
+        <a href="resources.html">Resources</a>
+        <button class="dropdown-btn" onclick="toggleDropdown()">Team</button>
+        <div id="teamDropdown" class="dropdown-container">
+            <a href="77628D.html">77628D</a>
+            <a href="77628P.html">77628P</a>
+        </div>
+        <a href="achievements.html">Achievements</a>
+        <a href="donate.html">Donate</a>
+        <a href="contact.html">Contact</a>
+
+    </div>
+
+    <div class="search-overlay">
+        <button class="search-close">&times;</button>
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" placeholder="Search pages... (Ctrl+K)" autocomplete="off">
+            </div>
+            <div class="search-results"></div>
+        </div>
+    </div>
+
+    <nav class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span class="separator">›</span>
+        <a href="resources.html">Resources</a>
+        <span class="separator">›</span>
+        <span class="current">Branding Guide</span>
+    </nav>
+
+    <div class="content-page">
+        <h1>Branding Guide</h1>
+        <p style="text-align:center;color:#999;margin-top:-1rem;margin-bottom:2rem;">Official colors, typography, and
+            logo usage for Team 77628.</p>
+
+        <h2>🎨 Color Palette</h2>
+        <p>Our brand is built on a bold maroon and gold foundation. Use these colors consistently across all team
+            materials.</p>
+
+        <div class="color-palette">
+            <div class="color-swatch">
+                <div class="color-preview" style="background:#800000"></div>
+                <div class="color-info">
+                    <div class="color-name">Maroon Dark</div>
+                    <div class="color-hex">#800000</div>
+                </div>
+            </div>
+            <div class="color-swatch">
+                <div class="color-preview" style="background:#944547"></div>
+                <div class="color-info">
+                    <div class="color-name">Maroon Light</div>
+                    <div class="color-hex">#944547</div>
+                </div>
+            </div>
+            <div class="color-swatch">
+                <div class="color-preview" style="background:#FFD700"></div>
+                <div class="color-info">
+                    <div class="color-name">Accent Gold</div>
+                    <div class="color-hex">#FFD700</div>
+                </div>
+            </div>
+            <div class="color-swatch">
+                <div class="color-preview" style="background:#1a1a1a"></div>
+                <div class="color-info">
+                    <div class="color-name">Text Dark</div>
+                    <div class="color-hex">#1A1A1A</div>
+                </div>
+            </div>
+            <div class="color-swatch">
+                <div class="color-preview" style="background:#f8f5f0"></div>
+                <div class="color-info">
+                    <div class="color-name">Background Light</div>
+                    <div class="color-hex">#F8F5F0</div>
+                </div>
+            </div>
+        </div>
+
+        <h2>✏️ Typography</h2>
+        <p>We use two typefaces to create a playful yet technical aesthetic:</p>
+
+        <div class="font-specimen">
+            <h4>Primary — Display</h4>
+            <div class="specimen-text" style="font-family:'Balsamiq Sans',cursive;font-weight:700;">Balsamiq Sans Bold
+            </div>
+            <div class="specimen-text" style="font-family:'Balsamiq Sans',cursive;font-weight:400;font-size:1.5rem;">The
+                quick brown robot jumps over the lazy field element.</div>
+            <div class="specimen-meta">Used for: Body text, paragraphs, navigation</div>
+        </div>
+
+        <div class="font-specimen">
+            <h4>Secondary — Monospace</h4>
+            <div class="specimen-text" style="font-family:'Space Mono',monospace;font-weight:700;">Space Mono Bold</div>
+            <div class="specimen-text" style="font-family:'Space Mono',monospace;font-weight:400;font-size:1.5rem;">
+                BUILD.CODE.COMPETE. → 77628</div>
+            <div class="specimen-meta">Used for: Headings, stats, labels, code references</div>
+        </div>
+
+        <h2>🏷️ Logo Usage</h2>
+        <p>The Mepham Robotics logo should always:</p>
+        <ul>
+            <li>Appear with sufficient clear space around it</li>
+            <li>Not be stretched, skewed, or distorted</li>
+            <li>Use the official maroon/gold colors on light backgrounds</li>
+            <li>Use white/gold on dark backgrounds</li>
+            <li>Maintain a minimum size of 40px height for digital use</li>
+        </ul>
+
+        <h2>🚫 Don'ts</h2>
+        <ul>
+            <li>Don't use off-brand colors (no bright red, no neon green)</li>
+            <li>Don't mix fonts — stick to Balsamiq Sans and Space Mono</li>
+            <li>Don't use the logo as a watermark over photos</li>
+            <li>Don't recreate the logo — always use the official file</li>
+        </ul>
+
+        <h2>📁 Assets</h2>
+        <p>Contact the team's media lead for official logo files, templates, and presentation decks.</p>
+
+        <div style="text-align:center;margin-top:3rem;">
+            <a href="resources.html" class="cta-button cta-primary">← Back to Resources</a>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-newsletter">
+            <h4>📬 Stay Updated</h4>
+            <p>Get competition results and team news in your inbox.</p>
+            <form class="footer-newsletter-form">
+                <input type="email" name="email" placeholder="your@email.com" required>
+                <button type="submit">Subscribe</button>
+            </form>
+        </div>
+        <p>&copy; 2026 Mepham Robotics Club | Build. Code. Compete.</p>
+    </footer>
+
+
+    <script src="js/script.js"></script>
+</body>
+
+</html>
