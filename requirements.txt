@@ -1,0 +1,4 @@
+Flask==3.1.*
+pymongo[srv]==4.12.*
+python-dotenv==1.1.*
+bcrypt==4.3.*

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Team 77628P | Mepham Robotics Club{% endblock %}
+{% block meta_description %}Meet Team 77628P of the Mepham Robotics Club. View our robot specs, team members, and season
+goals.{% endblock %}
+
+{% block page_styles %}
+<style>
+    .hero-image {
+        background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
+        url('{{ url_for("static", filename="assets/photos/77628P.png") }}') center/cover;
+        min-height: 60vh;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-image fade-in-section">
+    <div class="hero-content">
+        <h1>Team 77628P</h1>
+        <p>Build. Code. Compete.</p>
+    </div>
+    <div class="scroll-indicator"></div>
+</div>
+
+<nav class="breadcrumb">
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="separator">›</span>
+    <span class="current">Team 77628P</span>
+</nav>
+
+<section id="team" class="fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">Meet the Team</h2>
+    </div>
+    <div class="team-grid">
+        <div class="team-card">
+            <img src="{{ url_for('static', filename='assets/profile/damon.png') }}" alt="Team Lead" class="team-img"
+                loading="lazy">
+            <h3>Damon L.</h3>
+            <p>Team Captain, Lead Driver, Lead Coder, Lead Builder, and Lead Strategist</p>
+        </div>
+        <div class="team-card">
+            <img src="{{ url_for('static', filename='assets/profile/base.png') }}" alt="Programmer" class="team-img"
+                loading="lazy">
+            <h3>Dagur M.</h3>
+            <p>Team Member</p>
+        </div>
+        <div class="team-card">
+            <img src="{{ url_for('static', filename='assets/profile/base.png') }}" alt="Builder" class="team-img"
+                loading="lazy">
+            <h3>Nick K.</h3>
+            <p>Team Member</p>
+        </div>
+    </div>
+</section>
+
+{% include "partials/awards_grid.html" %}
+
+<!-- INTERACTIVE 3D VIEWER -->
+<section class="robot-showcase fade-in-section">
+    <h2 class="ripple">Interactive 3D View: "Prometheus"</h2>
+    <div class="viewer-3d-container">
+        <p class="viewer-label">[ 3D CAD MODEL VIEWER PLACEHOLDER ]</p>
+        <div class="viewer-controls">
+            <button class="viewer-btn">Rotate</button>
+        </div>
+    </div>
+    <p class="robot-tagline">"Precision. Power. Performance."</p>
+</section>
+
+<!-- ROBOT SPECS -->
+<section class="robot-specs fade-in-section">
+    <h2>Technical Specifications</h2>
+    <div class="specs-container">
+        <div class="spec-card">
+            <div class="spec-label">Drive Train</div>
+            <div class="spec-value">4-Motor Mecanum</div>
+        </div>
+        <div class="spec-card">
+            <div class="spec-label">Lift System</div>
+            <div class="spec-value">Linear Slide</div>
+        </div>
+        <div class="spec-card">
+            <div class="spec-label">Intake</div>
+            <div class="spec-value">Dual Claw</div>
+        </div>
+        <div class="spec-card">
+            <div class="spec-label">Auton Consistency</div>
+            <div class="spec-value">90%</div>
+        </div>
+    </div>
+    <div class="text-center" style="margin-top: 3rem;">
+        <a href="#" class="download-btn">
+            <span class="download-icon">📘</span>
+            Engineering Notebook
+        </a>
+    </div>
+</section>
+
+<!-- SEASON GOALS -->
+<section class="goals-section fade-in-section">
+    <h2 class="ripple">Season Goals</h2>
+    <div class="goals-container">
+        <div class="goal-item">
+            <div class="goal-header">
+                <span class="goal-name">Qualify for Regionals</span>
+                <span class="goal-percent">100%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" data-progress="100"></div>
+            </div>
+        </div>
+        <div class="goal-item">
+            <div class="goal-header">
+                <span class="goal-name">Win Design Award</span>
+                <span class="goal-percent">80%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" data-progress="80"></div>
+            </div>
+        </div>
+        <div class="goal-item">
+            <div class="goal-header">
+                <span class="goal-name">Top 5 in Skills</span>
+                <span class="goal-percent">50%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" data-progress="50"></div>
+            </div>
+        </div>
+        <div class="goal-item">
+            <div class="goal-header">
+                <span class="goal-name">Qualify for Worlds</span>
+                <span class="goal-percent">30%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" data-progress="30"></div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

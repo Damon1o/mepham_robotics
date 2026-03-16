@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Achievements | Mepham Robotics Club{% endblock %}
+{% block meta_description %}Our history of excellence in VEX Robotics competitions, including awards and match
+results.{% endblock %}
+
+{% block page_styles %}
+<style>
+    .hero-image {
+        background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
+        url('{{ url_for("static", filename="assets/photos/about.png") }}') center/cover;
+        min-height: 60vh;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-image">
+    <div class="hero-content">
+        <h1>Achievements</h1>
+        <p>Our Competition History</p>
+        <div class="hero-cta">
+            <a href="{{ url_for('index') }}" class="cta-button cta-primary">Back Home</a>
+            <a href="#awards" class="cta-button cta-secondary">View Awards</a>
+        </div>
+    </div>
+    <div class="scroll-indicator"></div>
+</div>
+
+<!-- BREADCRUMBS -->
+<nav class="breadcrumb">
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="separator">›</span>
+    <span class="current">Achievements</span>
+</nav>
+
+<section id="awards" class="award-container fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">All-Time VEX V5 Competition Awards</h2>
+    </div>
+
+    <!-- FILTER TABS -->
+    <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all">All Seasons</button>
+        <button class="filter-tab" data-filter="2024-2025">2024-2025</button>
+        <button class="filter-tab" data-filter="2023-2024">2023-2024</button>
+        <button class="filter-tab" data-filter="2022-2023">2022-2023</button>
+    </div>
+
+    <div class="row">
+        <div class="award-box border-gold bg-shimmer">
+            <span class="award-count">×0</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/world_championship.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">World Championship</span>
+            </div>
+        </div>
+        <div class="award-box border-purple bg-shimmer">
+            <span class="award-count">×0</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/triple_crown.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">Triple Crown</span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="award-box">
+            <span class="award-count">×0</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/exellence_award.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">Excellence</span>
+            </div>
+        </div>
+        <div class="award-box">
+            <span class="award-count">×0</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/tournament_champions.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">Champions</span>
+            </div>
+        </div>
+        <div class="award-box">
+            <span class="award-count">×0</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/robot_skills_champion.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">Skills Champion</span>
+            </div>
+        </div>
+        <div class="award-box">
+            <span class="award-count">×1</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/tournament_finalists.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">Finalists</span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="award-box">
+            <span class="award-count">×1</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/design_award.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">Design</span>
+            </div>
+        </div>
+        <div class="award-box">
+            <span class="award-count">×1</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/judges_award.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">Judges</span>
+            </div>
+        </div>
+        <div class="award-box">
+            <span class="award-count">×0</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/innovate_award.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">Innovate</span>
+            </div>
+        </div>
+        <div class="award-box">
+            <span class="award-count">×0</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/amaze_award.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">Amaze</span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="award-box border-red">
+            <span class="award-count">×0</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/create_award.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">Create</span>
+            </div>
+        </div>
+        <div class="award-box border-green">
+            <span class="award-count">×0</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/sportsmanship.png') }}" alt="icon"
+                    class="award-icon" loading="lazy">
+                <span class="award-title">Sportsmanship</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- LIVE MATCH RESULTS -->
+<section class="live-results-section fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple" style="margin-bottom: 2rem;">Live Match Results</h2>
+        <p style="margin-bottom: 2rem; color: #666;">Real-time scores from our latest competition</p>
+    </div>
+
+    <div class="results-table-container">
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Match</th>
+                    <th>Red Alliance</th>
+                    <th>Blue Alliance</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody id="live-results-body">
+                <tr>
+                    <td>Q-12</td>
+                    <td class="alliance-red" style="text-align: center;">77628D, 1234A</td>
+                    <td class="alliance-blue" style="text-align: center;">5678B, 9999Z</td>
+                    <td class="match-score">45 - 30</td>
+                </tr>
+                <tr>
+                    <td>Q-18</td>
+                    <td class="alliance-red" style="text-align: center;">4444X, 5555Y</td>
+                    <td class="alliance-blue" style="text-align: center;">77628P, 2222C</td>
+                    <td class="match-score">22 - 68</td>
+                </tr>
+                <tr>
+                    <td>Q-25</td>
+                    <td class="alliance-red" style="text-align: center;">77628D, 8888K</td>
+                    <td class="alliance-blue" style="text-align: center;">1111J, 3333L</td>
+                    <td class="match-status-live" style="text-align: right;">In Progress...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="text-center" style="margin-top: 1rem;">
+        <small>Data provided by RobotEvents API</small>
+    </div>
+</section>
+{% endblock %}
