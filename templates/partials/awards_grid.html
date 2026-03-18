@@ -1,0 +1,57 @@
+<section class="award-container fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">Competition Awards</h2>
+    </div>
+
+    {# Row 1: 2 Awards (Wide/Special) #}
+    <div class="row">
+        {% for award in awards[0:2] %}
+        <div class="award-box {{ 'border-' ~ award.border if award.border }} {{ 'bg-shimmer' if award.shimmer }}">
+            <span class="award-count">×{{ award.count }}</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/' ~ award.icon) }}" alt="icon" class="award-icon" loading="lazy">
+                <span class="award-title">{{ award.title }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {# Row 2: 4 Awards #}
+    <div class="row">
+        {% for award in awards[2:6] %}
+        <div class="award-box {{ 'border-' ~ award.border if award.border }} {{ 'bg-shimmer' if award.shimmer }}">
+            <span class="award-count">×{{ award.count }}</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/' ~ award.icon) }}" alt="icon" class="award-icon" loading="lazy">
+                <span class="award-title">{{ award.title }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {# Row 3: 4 Awards #}
+    <div class="row">
+        {% for award in awards[6:10] %}
+        <div class="award-box {{ 'border-' ~ award.border if award.border }} {{ 'bg-shimmer' if award.shimmer }}">
+            <span class="award-count">×{{ award.count }}</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/' ~ award.icon) }}" alt="icon" class="award-icon" loading="lazy">
+                <span class="award-title">{{ award.title }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {# Row 4: 2 Awards #}
+    <div class="row">
+        {% for award in awards[10:12] %}
+        <div class="award-box {{ 'border-' ~ award.border if award.border }} {{ 'bg-shimmer' if award.shimmer }}">
+            <span class="award-count">×{{ award.count }}</span>
+            <div class="award-content">
+                <img src="{{ url_for('static', filename='assets/icons/' ~ award.icon) }}" alt="icon" class="award-icon" loading="lazy">
+                <span class="award-title">{{ award.title }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
