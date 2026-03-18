@@ -153,7 +153,7 @@ def api_chat():
     if not user_message:
         return {'error': 'No message provided'}, 400
 
-    api_key = "sk-hc-v1-c770c233d23344fa88ace4877a0dba32e2a229a7feb74e39aea80f1a2b4ac30d"
+    api_key = ""
     url = "https://ai.hackclub.com/proxy/v1/chat/completions"
     
     headers = {
