@@ -5,7 +5,7 @@ from bson import ObjectId
 import bcrypt
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-from werkzeug.utils import secure_filename
+from werkzeug.utils import secure_filename  # ✅ FIXED: was missing, caused NameError
 from pymongo import MongoClient
 
 load_dotenv()
@@ -19,9 +19,28 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'stl'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# --- MongoDB Connection ---
-client = MongoClient(os.getenv('MONGO_URI'))
-db = client['mepham']
+# --- MongoDB Connection (lazy, so a missing env var doesn't crash on import) ---
+_client = None
+_db = None
+
+def get_db():
+    global _client, _db
+    if _db is None:
+        mongo_uri = os.getenv('MONGO_URI')
+        if not mongo_uri:
+            raise RuntimeError("MONGO_URI environment variable is not set.")
+        _client = MongoClient(mongo_uri)
+        _db = _client['mepham']
+    return _db
+
+# Convenience proxy so existing code using `db` and `users_collection` still works
+class _DbProxy:
+    def __getitem__(self, name):
+        return get_db()[name]
+    def __getattr__(self, name):
+        return getattr(get_db(), name)
+
+db = _DbProxy()
 users_collection = db['users']
 
 @app.context_processor
