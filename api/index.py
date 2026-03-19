@@ -19,10 +19,21 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'stl'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# --- MongoDB Connection ---
-client = MongoClient(os.getenv('MONGO_URI'))
-db = client['mepham']
-users_collection = db['users']
+# --- MongoDB Connection (Defensive) ---
+try:
+    mongo_uri = os.getenv('MONGO_URI')
+    if mongo_uri:
+        client = MongoClient(mongo_uri)
+        db = client['mepham']
+        users_collection = db['users']
+    else:
+        print("MONGO_URI not found in environment!")
+        db = None
+        users_collection = None
+except Exception as e:
+    print(f"CRITICAL MONGODB ERROR: {e}")
+    db = None
+    users_collection = None
 
 
 # --- Diagnostic Route ---
@@ -32,16 +43,17 @@ def health_check():
 
 @app.context_processor
 def inject_global_data():
-    try:
-        nav_teams = list(db['teams'].find({}, {'team_number': 1}).sort('team_number', 1))
-        awards_list = list(db['awards'].find())
-        sponsors_list = list(db['sponsors'].find())
-        for s in sponsors_list:
-            s['_id'] = str(s['_id'])
-    except Exception as e:
-        print(f"Database Error: {e}")
-        nav_teams, awards_list, sponsors_list = [], [], []
-        
+    nav_teams, awards_list, sponsors_list = [], [], []
+    if db is not None:
+        try:
+            nav_teams = list(db['teams'].find({}, {'team_number': 1}).sort('team_number', 1))
+            awards_list = list(db['awards'].find())
+            sponsors_list = list(db['sponsors'].find())
+            for s in sponsors_list:
+                s['_id'] = str(s['_id'])
+        except Exception as e:
+            print(f"Database Query Error: {e}")
+            
     return dict(nav_teams=nav_teams, awards=awards_list, sponsors=sponsors_list)
 
 
