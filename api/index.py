@@ -1,11 +1,12 @@
-from flask import Flask
+import os
+import datetime
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'dev-fallback-key')
 
 @app.route('/')
 def index():
-    return 'Flask is working on Vercel!', 200
-
-@app.route('/test')
-def test():
-    return 'Test route working!', 200
+    return 'Step 1 OK - Flask + werkzeug imports work!', 200
