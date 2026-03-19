@@ -25,6 +25,11 @@ db = client['mepham']
 users_collection = db['users']
 
 
+# --- Diagnostic Route ---
+@app.route('/health')
+def health_check():
+    return "App is Running! If you see this, the routing works. Check your MongoDB Env Vars next.", 200
+
 @app.context_processor
 def inject_global_data():
     nav_teams = list(db['teams'].find({}, {'team_number': 1}).sort('team_number', 1))
