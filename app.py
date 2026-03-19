@@ -5,7 +5,7 @@ from bson import ObjectId
 import bcrypt
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-from werkzeug.utils import secure_filename  # ✅ FIXED: was missing, caused NameError
+from werkzeug.utils import secure_filename
 from pymongo import MongoClient
 
 load_dotenv()
