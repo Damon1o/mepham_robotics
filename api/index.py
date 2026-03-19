@@ -1,9 +1,10 @@
 import sys
 import os
 
-# Make sure the root of the project is in the path so app.py can be found
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# Add the project root to the path so app.py and all its imports resolve correctly
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app
 
 # Vercel looks for a variable named `app` in this file
+handler = app
