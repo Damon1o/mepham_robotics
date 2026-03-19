@@ -32,11 +32,16 @@ def health_check():
 
 @app.context_processor
 def inject_global_data():
-    nav_teams = list(db['teams'].find({}, {'team_number': 1}).sort('team_number', 1))
-    awards_list = list(db['awards'].find())
-    sponsors_list = list(db['sponsors'].find())
-    for s in sponsors_list:
-        s['_id'] = str(s['_id'])
+    try:
+        nav_teams = list(db['teams'].find({}, {'team_number': 1}).sort('team_number', 1))
+        awards_list = list(db['awards'].find())
+        sponsors_list = list(db['sponsors'].find())
+        for s in sponsors_list:
+            s['_id'] = str(s['_id'])
+    except Exception as e:
+        print(f"Database Error: {e}")
+        nav_teams, awards_list, sponsors_list = [], [], []
+        
     return dict(nav_teams=nav_teams, awards=awards_list, sponsors=sponsors_list)
 
 
