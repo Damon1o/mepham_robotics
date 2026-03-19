@@ -10,7 +10,11 @@ from pymongo import MongoClient
 
 load_dotenv()
 
-app = Flask(__name__, template_folder='../templates', static_folder='../static')
+# Resolve absolute paths so Vercel can find templates/static regardless of working directory
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+app = Flask(__name__,
+            template_folder=os.path.join(_root, 'templates'),
+            static_folder=os.path.join(_root, 'static'))
 app.secret_key = os.getenv('SECRET_KEY', 'dev-fallback-key')
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 
@@ -29,7 +33,7 @@ def get_db():
         mongo_uri = os.getenv('MONGO_URI')
         if not mongo_uri:
             raise RuntimeError("MONGO_URI environment variable is not set.")
-        _client = MongoClient(mongo_uri)
+        _client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
         _db = _client['mepham']
     return _db
 
@@ -51,7 +55,6 @@ def inject_global_data():
         s['_id'] = str(s['_id'])
     return dict(nav_teams=nav_teams, awards=awards_list, sponsors=sponsors_list)
 
-# --- Auth Decorators ---
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -73,7 +76,6 @@ def role_required(role):
         return decorated
     return decorator
 
-# --- Public Pages ---
 @app.route('/')
 def index():
     stats = db['site_metadata'].find_one({'_id': 'global_stats'}) or {
@@ -127,7 +129,6 @@ def privacy():
 def credits_page():
     return render_template('credits.html', active_page='credits')
 
-# --- Auth-Gated Pages ---
 @app.route('/resources')
 @role_required('member')
 def resources():
@@ -153,7 +154,6 @@ def standards():
 def notebook():
     return render_template('notebook.html', active_page='notebook')
 
-# --- Login / Logout ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -174,15 +174,13 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# --- Admin Dashboard ---
 @app.route('/admin')
 @role_required('admin')
 def admin_dashboard():
     stats = db['site_metadata'].find_one({'_id': 'global_stats'}) or {}
     if '_id' in stats and not isinstance(stats['_id'], str):
         stats['_id'] = str(stats['_id'])
-    awards_raw = list(db['awards'].find())
-    awards = [dict(a, _id=str(a['_id'])) for a in awards_raw]
+    awards = [dict(a, _id=str(a['_id'])) for a in db['awards'].find()]
     competitions_raw = list(db['competitions'].find().sort('date', 1))
     competitions = []
     for c in competitions_raw:
@@ -231,11 +229,8 @@ def admin_update_stats():
 def admin_add_competition():
     try:
         date_obj = datetime.datetime.strptime(request.form.get('comp_date'), '%Y-%m-%dT%H:%M')
-        db['competitions'].insert_one({
-            'name': request.form.get('comp_name'),
-            'location': request.form.get('comp_location'),
-            'date': date_obj
-        })
+        db['competitions'].insert_one({'name': request.form.get('comp_name'),
+                                       'location': request.form.get('comp_location'), 'date': date_obj})
         flash('New competition added successfully!', 'success')
     except Exception as e:
         flash(f'Error adding competition: {e}', 'error')
@@ -248,9 +243,7 @@ def admin_edit_competition(id):
         date_obj = datetime.datetime.strptime(request.form.get('comp_date'), '%Y-%m-%dT%H:%M')
         db['competitions'].update_one({'_id': ObjectId(id)}, {'$set': {
             'name': request.form.get('comp_name'),
-            'location': request.form.get('comp_location'),
-            'date': date_obj
-        }})
+            'location': request.form.get('comp_location'), 'date': date_obj}})
         flash('Event updated successfully!', 'success')
     except Exception as e:
         flash(f'Error updating event: {e}', 'error')
@@ -284,43 +277,22 @@ def admin_save_team():
             },
             'notebook_link': request.form.get('notebook_link', '#')
         }
-        hero_img = request.files.get('hero_image')
-        if hero_img and allowed_file(hero_img.filename):
-            filename = secure_filename(f"hero_{team_number}_{hero_img.filename}")
-            path = os.path.join(app.config['UPLOAD_FOLDER'], 'teams', filename)
-            hero_img.save(path)
-            team_data['hero_image'] = path.replace('\\', '/')
-        stl_file = request.files.get('stl_file')
-        if stl_file and allowed_file(stl_file.filename):
-            filename = secure_filename(f"robot_{team_number}.stl")
-            path = os.path.join(app.config['UPLOAD_FOLDER'], 'teams', filename)
-            stl_file.save(path)
-            team_data['stl_path'] = path.replace('\\', '/')
         members = []
         i = 0
         while f'member_name_{i}' in request.form:
-            member = {
+            members.append({
                 'name': request.form.get(f'member_name_{i}'),
                 'role': request.form.get(f'member_role_{i}'),
                 'user_id': request.form.get(f'member_user_{i}'),
                 'photo': request.form.get(f'member_photo_path_{i}', 'static/assets/profile/base.png')
-            }
-            m_photo = request.files.get(f'member_photo_{i}')
-            if m_photo and allowed_file(m_photo.filename):
-                m_filename = secure_filename(f"member_{team_number}_{i}_{m_photo.filename}")
-                m_path = os.path.join(app.config['UPLOAD_FOLDER'], 'teams', m_filename)
-                m_photo.save(m_path)
-                member['photo'] = m_path.replace('\\', '/')
-            members.append(member)
+            })
             i += 1
         team_data['members'] = members
         goals = []
         j = 0
         while f'goal_name_{j}' in request.form:
-            goals.append({
-                'name': request.form.get(f'goal_name_{j}'),
-                'progress': int(request.form.get(f'goal_progress_{j}', 0))
-            })
+            goals.append({'name': request.form.get(f'goal_name_{j}'),
+                          'progress': int(request.form.get(f'goal_progress_{j}', 0))})
             j += 1
         team_data['goals'] = goals
         if team_id and len(team_id) == 24:
@@ -349,8 +321,8 @@ def admin_update_awards():
     try:
         for key, value in request.form.items():
             if key.startswith('award_'):
-                award_id = key.replace('award_', '')
-                db['awards'].update_one({'_id': ObjectId(award_id)}, {'$set': {'count': int(value)}})
+                db['awards'].update_one({'_id': ObjectId(key.replace('award_', ''))},
+                                        {'$set': {'count': int(value)}})
         flash('Award inventory updated!', 'success')
     except Exception as e:
         flash(f'Error updating awards: {e}', 'error')
@@ -361,9 +333,7 @@ def admin_update_awards():
 def admin_create_user():
     try:
         username = request.form.get('username', '').strip()
-        email = request.form.get('email', '').strip()
         password = request.form.get('password', '').strip()
-        role = request.form.get('role', 'member').strip()
         if not username or not password:
             flash('Username and password are required.', 'error')
             return redirect(url_for('admin_dashboard'))
@@ -371,8 +341,9 @@ def admin_create_user():
             flash('Username already exists.', 'error')
             return redirect(url_for('admin_dashboard'))
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        users_collection.insert_one({'username': username, 'email': email, 'password': hashed, 'role': role})
-        flash(f'User "{username}" created successfully as {role}!', 'success')
+        users_collection.insert_one({'username': username, 'email': request.form.get('email', ''),
+                                     'password': hashed, 'role': request.form.get('role', 'member')})
+        flash(f'User "{username}" created successfully!', 'success')
     except Exception as e:
         flash(f'Error creating user: {e}', 'error')
     return redirect(url_for('admin_dashboard'))
@@ -383,18 +354,8 @@ def admin_save_sponsor():
     try:
         sponsor_id = request.form.get('sponsor_id')
         name = request.form.get('name')
-        sponsor_data = {
-            'name': name,
-            'website': request.form.get('website', ''),
-            'level': request.form.get('level', 'Bronze')
-        }
-        logo_file = request.files.get('logo')
-        if logo_file and allowed_file(logo_file.filename):
-            os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'sponsors'), exist_ok=True)
-            filename = secure_filename(f"sponsor_{name.replace(' ', '_')}_{logo_file.filename}")
-            path = os.path.join('static/uploads/sponsors', filename)
-            logo_file.save(os.path.join(app.root_path, path))
-            sponsor_data['logo_path'] = path.replace('\\', '/')
+        sponsor_data = {'name': name, 'website': request.form.get('website', ''),
+                        'level': request.form.get('level', 'Bronze')}
         if sponsor_id and len(sponsor_id) == 24:
             db['sponsors'].update_one({'_id': ObjectId(sponsor_id)}, {'$set': sponsor_data})
             flash(f'Sponsor "{name}" updated!', 'success')
@@ -415,7 +376,6 @@ def admin_delete_sponsor(id):
         flash(f'Error deleting sponsor: {e}', 'error')
     return redirect(url_for('admin_dashboard'))
 
-# --- API Routes ---
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     import requests as req
@@ -423,23 +383,16 @@ def api_chat():
     user_message = data.get('message')
     if not user_message:
         return {'error': 'No message provided'}, 400
-    headers = {
-        "Authorization": f"Bearer {os.getenv('CHATBOT_API_KEY')}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": os.getenv('CHATBOT_MODEL', "gpt-4o-mini"),
-        "messages": [
-            {"role": "system", "content": "You are Steven, the official AI assistant for the Mepham Robotics Club (VEX V5 Team 77628). Be helpful, enthusiastic about robotics, and concise."},
-            {"role": "user", "content": user_message}
-        ]
-    }
     try:
-        response = req.post(os.getenv('CHATBOT_API_URL', "https://ai.hackclub.com/proxy/v1/chat/completions"),
-                            headers=headers, json=payload)
+        response = req.post(
+            os.getenv('CHATBOT_API_URL', "https://ai.hackclub.com/proxy/v1/chat/completions"),
+            headers={"Authorization": f"Bearer {os.getenv('CHATBOT_API_KEY')}", "Content-Type": "application/json"},
+            json={"model": os.getenv('CHATBOT_MODEL', "gpt-4o-mini"),
+                  "messages": [{"role": "system", "content": "You are Steven, the official AI assistant for the Mepham Robotics Club (VEX V5 Team 77628). Be helpful, enthusiastic about robotics, and concise."},
+                                {"role": "user", "content": user_message}]})
         response.raise_for_status()
         return {'reply': response.json()['choices'][0]['message']['content']}
-    except Exception as e:
+    except Exception:
         return {'error': 'Failed to process request'}, 500
 
 @app.context_processor
