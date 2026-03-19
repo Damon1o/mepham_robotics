@@ -39,7 +39,13 @@ except Exception as e:
 # --- Diagnostic Route ---
 @app.route('/health')
 def health_check():
-    return "App is Running! If you see this, the routing works. Check your MongoDB Env Vars next.", 200
+    status = {
+        "app": "Running",
+        "bcrypt": "OK" if bcrypt else "FAILED",
+        "pymongo": "OK" if MongoClient else "FAILED",
+        "mongo_uri_set": "YES" if os.getenv('MONGO_URI') else "NO"
+    }
+    return f"Status: {status}", 200
 
 @app.context_processor
 def inject_global_data():
