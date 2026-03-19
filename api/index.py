@@ -7,6 +7,7 @@ import bcrypt
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from pymongo import MongoClient
+from werkzeug.utils import secure_filename
 
 load_dotenv()
 
