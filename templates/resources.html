@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Student Resources | Mepham Robotics{% endblock %}
+{% block meta_description %}Internal team resources, tutorials, and documentation for Mepham Robotics members.{%
+endblock %}
+
+
+{% block page_styles %}
+<style>
+    .hero-image {
+        background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
+        url('{{ url_for("static", filename="assets/photos/about.png") }}') center/cover;
+        min-height: 60vh;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- SYSTEM STATUS BAR -->
+<div class="system-status">
+    <div class="status-dot"></div>
+    SYSTEMS ONLINE | ACCESS LEVEL: AUTHORIZED | OPERATOR: <span id="userNameDisplay">MEMBER</span>
+</div>
+
+<!-- HERO SECTION -->
+<div class="hero-image">
+    <div class="hero-content">
+        <h1>Student Resources</h1>
+        <p>Internal Training & Documentation</p>
+    </div>
+    <div class="scroll-indicator"></div>
+</div>
+
+<!-- BREADCRUMBS -->
+<nav class="breadcrumb">
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="separator">›</span>
+    <span class="current">Resources</span>
+</nav>
+
+<!-- RESOURCES GRID -->
+<section class="resources-grid">
+    <!-- CODING -->
+    <div class="resource-card">
+        <span class="resource-icon">💻</span>
+        <h3 class="resource-title">Programming</h3>
+        <ul class="resource-links">
+            <li><a href="https://api.vexcode.cloud/v5/" target="_blank">VEXcode V5 API Docs</a></li>
+            <li><a href="https://pros.cs.purdue.edu/" target="_blank">PROS C++ Tutorials</a></li>
+            <li><a href="https://github.com/MephamRobotics" target="_blank">Team GitHub Repository</a></li>
+            <li><a href="{{ url_for('glossary') }}#P">Internal PID Guide (Glossary)</a></li>
+            <li><a href="{{ url_for('notebook') }}">Odometry Logs</a></li>
+        </ul>
+    </div>
+
+    <!-- MECHANICS -->
+    <div class="resource-card">
+        <span class="resource-icon">⚙️</span>
+        <h3 class="resource-title">Mechanics & Design</h3>
+        <ul class="resource-links">
+            <li><a href="https://cad.onshape.com/" target="_blank">Onshape CAD</a></li>
+            <li><a href="https://www.vexrobotics.com/v5/products" target="_blank">V5 Parts Catalog</a></li>
+            <li><a href="{{ url_for('glossary') }}#G">Gear Ratio Reference</a></li>
+            <li><a href="{{ url_for('standards') }}">Build Standards</a></li>
+            <li><a href="{{ url_for('standards') }}#checklist">Pre-Match Checklist</a></li>
+        </ul>
+    </div>
+
+    <!-- STRATEGY -->
+    <div class="resource-card">
+        <span class="resource-icon">📊</span>
+        <h3 class="resource-title">Strategy & Data</h3>
+        <ul class="resource-links">
+            <li><a href="https://www.robotevents.com/" target="_blank">RobotEvents Database</a></li>
+            <li><a href="{{ url_for('contact') }}">Team Scouting (Contact Lead)</a></li>
+            <li><a href="https://link.vex.com/docs/2025-2026/game-manual" target="_blank">Game Manual</a></li>
+            <li><a href="{{ url_for('notebook') }}">Match Analysis Logs</a></li>
+            <li><a href="https://jerryio.com/vex_path_generator/" target="_blank">Autonomous Path Planner</a></li>
+        </ul>
+    </div>
+
+    <!-- LEARNING LIBRARY -->
+    <div class="resource-card">
+        <span class="resource-icon">📚</span>
+        <h3 class="resource-title">Learning Library</h3>
+        <ul class="resource-links">
+            <li><a href="https://kb.vex.com/hc/en-us/categories/360002333191-V5" target="_blank">VEX Knowledge
+                    Base</a></li>
+            <li><a href="{{ url_for('standards') }}">Wiring 101 Guide</a></li>
+            <li><a href="https://www.roboticseducation.org/" target="_blank">REC Foundation</a></li>
+            <li><a href="{{ url_for('glossary') }}">Robotics Glossary</a></li>
+        </ul>
+    </div>
+</section>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    // Display user name if available in localStorage
+    const userName = localStorage.getItem('username');
+    if (userName) {
+        document.getElementById('userNameDisplay').textContent = userName.toUpperCase();
+    }
+</script>
+{% endblock %}

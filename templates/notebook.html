@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Engineering Notebook | Mepham Robotics{% endblock %}
+{% block meta_description %}Public engineering notebook — design process, testing logs, and iteration notes.{% endblock
+%}
+
+
+{% block content %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="separator">›</span>
+    <a href="{{ url_for('resources') }}">Resources</a>
+    <span class="separator">›</span>
+    <span class="current">Engineering Notebook</span>
+</nav>
+
+<div class="content-page">
+    <h1>📓 Engineering Notebook</h1>
+    <p style="text-align:center;color:#999;margin-top:-1rem;margin-bottom:2rem;">Our design process, testing logs,
+        and iteration notes — documenting the journey.</p>
+
+    <h2>📅 Latest Entries</h2>
+    <p>Engineering notebook entries will be uploaded here as the season progresses. Each entry follows the design
+        process: Identify → Brainstorm → Select → Build → Test → Iterate.</p>
+
+    <div style="margin:2rem 0;">
+        <div class="faq-item" style="margin-bottom:1rem;">
+            <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                <span>📝 Entry Template — How We Document</span>
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+                <p>Every notebook entry includes:</p>
+                <ul style="padding-left:1.5rem;margin-top:0.5rem;">
+                    <li><strong>Date & Attendees</strong> — who was there</li>
+                    <li><strong>Objective</strong> — what we set out to accomplish</li>
+                    <li><strong>Process</strong> — step-by-step work done</li>
+                    <li><strong>Results</strong> — what happened (including failures)</li>
+                    <li><strong>Reflection</strong> — what we learned and next steps</li>
+                    <li><strong>Photos/Sketches</strong> — visual documentation</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <h2>🏗️ Design Process Overview</h2>
+    <div class="subteam-grid" style="margin-bottom:2rem;">
+        <div class="subteam-card"><span class="subteam-icon">🔍</span>
+            <h3>Identify</h3>
+            <p>Define the problem the mechanism needs to solve based on game analysis.</p>
+        </div>
+        <div class="subteam-card"><span class="subteam-icon">💡</span>
+            <h3>Brainstorm</h3>
+            <p>Generate multiple solution concepts with sketches and pros/cons.</p>
+        </div>
+        <div class="subteam-card"><span class="subteam-icon">✅</span>
+            <h3>Select</h3>
+            <p>Choose the best approach using a decision matrix weighted by priorities.</p>
+        </div>
+        <div class="subteam-card"><span class="subteam-icon">🔨</span>
+            <h3>Build</h3>
+            <p>Prototype and construct the selected design with careful documentation.</p>
+        </div>
+        <div class="subteam-card"><span class="subteam-icon">🧪</span>
+            <h3>Test</h3>
+            <p>Evaluate performance with measurable metrics and driver feedback.</p>
+        </div>
+        <div class="subteam-card"><span class="subteam-icon">🔄</span>
+            <h3>Iterate</h3>
+            <p>Refine based on test results — repeat until competition-ready.</p>
+        </div>
+    </div>
+
+    <h2>📊 Testing Log Template</h2>
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:0.85rem;">
+            <thead>
+                <tr style="background:var(--maroon-dark);color:white;">
+                    <th style="padding:1rem;text-align:left;">Date</th>
+                    <th style="padding:1rem;text-align:left;">Test</th>
+                    <th style="padding:1rem;text-align:left;">Result</th>
+                    <th style="padding:1rem;text-align:left;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom:1px solid #e0e0e0;">
+                    <td style="padding:0.75rem 1rem;color:#999;">YYYY-MM-DD</td>
+                    <td style="padding:0.75rem 1rem;color:#999;">Describe test...</td>
+                    <td style="padding:0.75rem 1rem;color:#999;">Pass / Fail / Partial</td>
+                    <td style="padding:0.75rem 1rem;color:#999;">Next steps...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>📎 Uploaded Entries</h2>
+    <p style="color:#999;font-style:italic;">No entries uploaded yet. Team members can submit scanned notebook pages
+        to be featured here.</p>
+
+    <div style="text-align:center;margin-top:3rem;">
+        <a href="{{ url_for('resources') }}" class="cta-button cta-primary">← Back to Resources</a>
+    </div>
+</div>
+{% endblock %}

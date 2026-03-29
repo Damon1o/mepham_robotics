@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Safety Quiz | Mepham Robotics{% endblock %}
+{% block meta_description %}Test your workshop safety knowledge with this interactive quiz.{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="separator">›</span>
+    <a href="{{ url_for('resources') }}">Resources</a>
+    <span class="separator">›</span>
+    <span class="current">Safety Quiz</span>
+</nav>
+
+<div class="content-page">
+    <h1>🛡️ Workshop Safety Quiz</h1>
+    <p style="text-align:center;color:#999;margin-top:-1rem;margin-bottom:2rem;">Score 70% or higher to pass. You
+        can retake as many times as needed.</p>
+
+    <div id="quizContainer" class="quiz-container">
+        <!-- Quiz is rendered by JavaScript -->
+    </div>
+</div>
+{% endblock %}
