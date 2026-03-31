@@ -1,0 +1,501 @@
+{% extends "base.html" %}
+
+{% block title %}Mepham Robotics Club | Build. Code. Compete.{% endblock %}
+{% block meta_description %}Mepham Robotics Club (Team 77628) — Building robots, coding futures, and competing in VEX
+Robotics. Join the legacy.{% endblock %}
+
+{% block page_styles %}
+<style>
+    .hero-image {
+        min-height: 100vh;
+        background: linear-gradient(135deg, rgba(128, 0, 0, 0.7) 0%, rgba(90, 0, 0, 0.6) 100%),
+        url('{{ url_for("static", filename="assets/photos/hero.png") }}') center/cover no-repeat;
+    }
+
+    /* --- DONATION CTA SECTION --- */
+    .donation-cta {
+        background: linear-gradient(135deg, #f1f1f1 0%, #e8e8e8 100%);
+        padding: 5rem 2rem;
+        position: relative;
+        overflow: hidden;
+        border-top: 4px solid #944547;
+        border-bottom: 4px solid #944547;
+    }
+
+    .donation-cta::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(148, 69, 71, 0.05) 1px, transparent 1px);
+        background-size: 40px 40px;
+        animation: backgroundPulse 20s ease-in-out infinite;
+    }
+
+    .donate-container {
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .donate-container h2 {
+        color: #944547;
+        font-family: 'Space Mono', monospace;
+        margin-bottom: 1.5rem;
+        font-size: clamp(2rem, 5vw, 3rem);
+    }
+
+    .donate-container p {
+        font-size: 1.2rem;
+        color: #666;
+        margin-bottom: 2rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .cta-donate-btn {
+        display: inline-block;
+        padding: 1.25rem 3rem;
+        background: linear-gradient(135deg, #800000 0%, #5a0000 100%);
+        color: #f1f1f1;
+        text-decoration: none;
+        font-family: 'Space Mono', monospace;
+        font-weight: 700;
+        font-size: 1.2rem;
+        border-radius: 8px;
+        border: 3px solid #1a1a1a;
+        transition: all 0.3s ease;
+        box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cta-donate-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .cta-donate-btn:hover::before {
+        left: 100%;
+    }
+
+    .cta-donate-btn:hover {
+        transform: translate(-3px, -3px);
+        box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.3);
+    }
+
+    /* --- TIMELINE SECTION --- */
+    .timeline-section {
+        padding: var(--spacing-xl) var(--spacing-sm);
+        background-color: var(--bg-light);
+        font-family: var(--font-body);
+        position: relative;
+    }
+
+    .timeline-section h2 {
+        text-align: center;
+        margin-bottom: var(--spacing-lg);
+        color: var(--maroon-dark);
+        font-family: var(--font-display);
+        font-size: 2.5rem;
+        text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+    }
+
+    .timeline-wrapper {
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-lg);
+        position: relative;
+        padding-left: var(--spacing-md);
+    }
+
+    .timeline-wrapper::before {
+        content: '';
+        position: absolute;
+        left: 20px;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background-color: var(--text-light);
+        opacity: 0.3;
+        border-radius: 4px;
+    }
+
+    .timeline-card {
+        position: relative;
+        background: white;
+        border: 2px solid var(--text-dark);
+        border-radius: 12px;
+        padding: var(--spacing-md);
+        margin-left: var(--spacing-md);
+        text-decoration: none;
+        color: var(--text-dark);
+        box-shadow: var(--shadow-brutal);
+        transition: var(--transition-base);
+        display: block;
+    }
+
+    .timeline-card::before {
+        content: '';
+        position: absolute;
+        left: -42px;
+        top: 2rem;
+        width: 16px;
+        height: 16px;
+        background: var(--maroon-light);
+        border: 2px solid var(--text-dark);
+        border-radius: 50%;
+        z-index: 2;
+        transition: var(--transition-fast);
+    }
+
+    .timeline-card:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.2);
+        border-color: var(--maroon-dark);
+    }
+
+    .timeline-card:hover::before {
+        background: var(--accent-gold);
+        transform: scale(1.2);
+    }
+
+    .date-tag {
+        position: absolute;
+        top: -14px;
+        right: var(--spacing-md);
+        background: var(--accent-gold);
+        color: var(--text-dark);
+        font-weight: 700;
+        font-size: 0.9rem;
+        padding: 0.4rem 1rem;
+        border: 2px solid var(--text-dark);
+        border-radius: 8px;
+        transform: rotate(2deg);
+        z-index: 3;
+    }
+
+    .timeline-content h3 {
+        font-size: 1.35rem;
+        margin-bottom: var(--spacing-sm);
+        color: var(--maroon-dark);
+        line-height: 1.3;
+    }
+
+    .timeline span {
+        padding-bottom: 10000px;
+    }
+
+    .info-row p {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin: 0.3rem 0;
+    }
+
+    .info-row svg {
+        width: 18px;
+        height: 18px;
+        color: var(--maroon-light);
+        flex-shrink: 0;
+    }
+
+    .info-row p span {
+        display: inline-block;
+        transform: translateY(1px);
+        font-size: 1rem;
+        color: var(--text-light);
+        line-height: 1;
+    }
+
+    .timeline span {
+        padding-bottom: 0;
+    }
+
+    @media (max-width: 600px) {
+        .timeline-wrapper {
+            padding-left: 0.5rem;
+        }
+
+        .timeline-wrapper::before {
+            left: 12px;
+        }
+
+        .timeline-card {
+            margin-left: 1.5rem;
+            padding: var(--spacing-sm);
+        }
+
+        .timeline-card::before {
+            left: -32px;
+        }
+    }
+
+    /* --- STATS SECTION --- */
+    .stats-section {
+        background: linear-gradient(135deg, #800000 0%, #5a0000 100%);
+        padding: 5rem 2rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stats-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1" fill="rgba(255,255,255,0.05)"/></svg>');
+        background-size: 30px 30px;
+    }
+
+    .stats-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 3rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 2rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .stat-item:hover {
+        transform: translateY(-10px);
+        background: rgba(255, 255, 255, 0.1);
+        border-color: #ffd700;
+    }
+
+    .stat-number {
+        font-size: 3.5rem;
+        font-weight: 700;
+        font-family: 'Space Mono', monospace;
+        background: linear-gradient(135deg, #fff 0%, #ffd700 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        opacity: 0.9;
+    }
+
+    @media (max-width: 768px) {
+        .hero-cta {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .cta-button {
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .stats-container {
+            gap: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- HERO SECTION -->
+<div class="hero-image">
+    <div class="hero-content">
+        <h1>Mepham Robotics</h1>
+        <p>Build. Code. Compete.</p>
+        <div class="hero-cta">
+            <a href="{{ url_for('about') }}" class="cta-button cta-primary">Learn More</a>
+            <a href="{{ url_for('donate') }}" class="cta-button cta-secondary">Support Us</a>
+        </div>
+    </div>
+    <div class="scroll-indicator"></div>
+</div>
+
+<!-- COUNTDOWN SECTION -->
+<section class="countdown-section fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple" style="color:white; margin-bottom: 2rem;">Next Competition In:</h2>
+    </div>
+    <div class="countdown-container">
+        <div class="countdown-item">
+            <span id="days" class="countdown-number">00</span>
+            <span class="countdown-label">Days</span>
+        </div>
+        <div class="countdown-item">
+            <span id="hours" class="countdown-number">00</span>
+            <span class="countdown-label">Hours</span>
+        </div>
+        <div class="countdown-item">
+            <span id="minutes" class="countdown-number">00</span>
+            <span class="countdown-label">Mins</span>
+        </div>
+        <div class="countdown-item">
+            <span id="seconds" class="countdown-number">00</span>
+            <span class="countdown-label">Secs</span>
+        </div>
+    </div>
+    <p class="countdown-event">{{ competition.name if competition else "TBD" }}</p>
+    {% if competition %}
+    <script>
+        window.COUNTDOWN_DATE = "{{ competition.date.isoformat() }}";
+    </script>
+    {% endif %}
+</section>
+
+<!-- STATS SECTION -->
+<section class="stats-section fade-in-section">
+    <div class="stats-container">
+        <div class="stat-item">
+            <div class="stat-number">{{ stats.teams_count }}</div>
+            <div class="stat-label">Teams</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ stats.members_count }}</div>
+            <div class="stat-label">Members</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ stats.awards_count }}</div>
+            <div class="stat-label">Awards</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ stats.hours_built }}+</div>
+            <div class="stat-label">Hours Built</div>
+        </div>
+    </div>
+</section>
+
+<!-- DONATION CTA -->
+<section class="donation-cta fade-in-section">
+    <div class="donate-container">
+        <h2 class="ripple">Want to Support Us?</h2>
+        <p>Your donation helps us compete at the highest level, acquire new parts, and continue building innovative
+            robots.</p>
+        <a href="{{ url_for('donate') }}" class="cta-donate-btn">Donate Now</a>
+    </div>
+</section>
+
+<section class="timeline">
+    <h2>Upcoming Events</h2>
+    <div class="timeline-wrapper">
+        {% for event in upcoming_events %}
+        <div class="timeline-card">
+            <div class="date-pill">{{ event.month }} {{ event.day }}</div>
+            <div class="timeline-content">
+                <h3>{{ event.name }}</h3>
+                <div class="info-row">
+                    <p class="location">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        <span>{{ event.location or 'TBA' }}</span>
+                    </p>
+                </div>
+                <div class="info-row">
+                    <p class="location">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span>{{ event.time }}</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% if not upcoming_events %}
+        <p style="text-align: center; color: var(--accent-light); opacity: 0.7; padding: 2rem;">No upcoming events scheduled at this time. Check back soon!</p>
+        {% endif %}
+    </div>
+</section>
+
+<!-- PHOTO CAROUSEL -->
+<section class="photo-carousel-section fade-in-section">
+    <h2 class="ripple">Team Gallery</h2>
+    <div class="carousel-container">
+        <div class="carousel-track">
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel1.jpg') }}" alt="Team Photo 1"
+                    loading="lazy">
+            </div>
+            {% for i in range(2, 9) %}
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/other/base.png') }}" alt="Team Photo {{ i }}"
+                    loading="lazy">
+            </div>
+            {% endfor %}
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel1.jpg') }}" alt="Team Photo 1"
+                    loading="lazy">
+            </div>
+            {% for i in range(2, 9) %}
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/other/base.png') }}" alt="Team Photo {{ i }}"
+                    loading="lazy">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- SPONSOR MARQUEE -->
+<section class="sponsor-marquee-section">
+    <div class="marquee-content">
+        {% for sponsor in sponsors %}
+        <span class="sponsor-item {{ 'sponsor-primary' if loop.index % 2 == 0 else 'sponsor-secondary' }}">
+            {% if sponsor.logo_path %}
+            <img src="{{ get_image_url(sponsor.logo_path) }}" alt="{{ sponsor.name }}" class="marquee-logo">
+            {% endif %}
+            {{ sponsor.name }}
+        </span>
+        {% endfor %}
+        {# Repeat for infinite effect #}
+        {% for sponsor in sponsors %}
+        <span class="sponsor-item {{ 'sponsor-primary' if loop.index % 2 == 0 else 'sponsor-secondary' }}">
+            {% if sponsor.logo_path %}
+            <img src="{{ get_image_url(sponsor.logo_path) }}" alt="{{ sponsor.name }}" class="marquee-logo">
+            {% endif %}
+            {{ sponsor.name }}
+        </span>
+        {% endfor %}
+        {% if not sponsors %}
+        <span class="sponsor-item sponsor-primary">BMCHSD</span>
+        <span class="sponsor-item sponsor-secondary">Wellington C. Mepham HS</span>
+        <span class="sponsor-item sponsor-primary">Your Company Here?</span>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Design Standards | Mepham Robotics{% endblock %}
+{% block meta_description %}Build standards, coding style, and naming conventions for Mepham Robotics.{% endblock %}
+
+
+{% block content %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="separator">›</span>
+    <a href="{{ url_for('resources') }}">Resources</a>
+    <span class="separator">›</span>
+    <span class="current">Design Standards</span>
+</nav>
+
+<div class="content-page">
+    <h1>Design Standards</h1>
+    <p style="text-align:center;color:#999;margin-top:-1rem;margin-bottom:2rem;">The Mepham Way — how we build, code,
+        and organize.</p>
+
+    <h2>🔧 Build Standards</h2>
+    <ul>
+        <li>Use nylocks on all competition-critical joints — no regular nuts</li>
+        <li>All C-channel cuts must be deburred and filed smooth</li>
+        <li>Wires must be zip-tied and routed away from moving parts</li>
+        <li>Standoffs must be used for motor mounting — never direct-bolt</li>
+        <li>Always use bearing flats on shafts that pass through metal</li>
+        <li>Label all motors with their port numbers using tape flags</li>
+    </ul>
+
+    <h2>💻 Code Style Guide</h2>
+    <ul>
+        <li>Use camelCase for variables and functions: <code>driveForward()</code>, <code>liftSpeed</code></li>
+        <li>Use UPPER_SNAKE_CASE for constants: <code>MAX_SPEED</code>, <code>DRIVE_KP</code></li>
+        <li>Comment all autonomous routines with a description of what they do</li>
+        <li>Keep functions under 50 lines — break long logic into helpers</li>
+        <li>Use PID controllers for all precision movements (not raw setPower)</li>
+        <li>Commit to GitHub after every successful test, with descriptive messages</li>
+    </ul>
+
+    <h2>📂 File & Naming Conventions</h2>
+    <ul>
+        <li><strong>CAD Files:</strong> <code>77628[D/P]_[mechanism]_v[version].step</code> — e.g.,
+            <code>77628D_intake_v3.step</code></li>
+        <li><strong>Code Files:</strong> <code>src/[subsystem].cpp</code> — e.g., <code>src/drivetrain.cpp</code>,
+            <code>src/auton.cpp</code></li>
+        <li><strong>Notebook Entries:</strong> <code>YYYY-MM-DD_[topic].pdf</code> — e.g.,
+            <code>2026-01-15_drivetrain-rebuild.pdf</code></li>
+        <li><strong>Media:</strong> <code>[event]_[date]_[number].jpg</code> — e.g.,
+            <code>states_2026-02-08_001.jpg</code></li>
+    </ul>
+
+    <h2>📐 CAD Best Practices</h2>
+    <ul>
+        <li>Always start designs from the official VEX CAD library models</li>
+        <li>Build in sub-assemblies: drivetrain, intake, lift, clamp as separate files</li>
+        <li>Use constraints/mates to simulate range of motion before building</li>
+        <li>Export STL files for any 3D-printed components at 0.2mm resolution</li>
+        <li>Version your designs — never overwrite, always "Save As" with incremented version</li>
+        <li>Save screenshots of each iteration for the engineering notebook</li>
+    </ul>
+
+    <h2>📋 Pre-Match Checklist</h2>
+    <ul>
+        <li>✅ Battery above 80%</li>
+        <li>✅ All screws tightened (check drivetrain, lift, clamp)</li>
+        <li>✅ Autonomous routine selected and confirmed</li>
+        <li>✅ Controller paired and tested</li>
+        <li>✅ Rubber bands checked for wear</li>
+        <li>✅ Robot fits within 18" × 18" × 18" sizing tool</li>
+    </ul>
+
+    <h2>🤝 Team Communication</h2>
+    <ul>
+        <li>Use the team Discord for real-time coordination</li>
+        <li>Post build updates in the #build-log channel with photos</li>
+        <li>Tag @programmers for any code-related requests</li>
+        <li>Weekly standup meetings every Monday to review progress</li>
+    </ul>
+
+    <div style="text-align:center;margin-top:3rem;">
+        <a href="{{ url_for('resources') }}" class="cta-button cta-primary">← Back to Resources</a>
+    </div>
+</div>
+{% endblock %}
