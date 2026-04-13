@@ -1,0 +1,1984 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard | Mepham Robotics{% endblock %}
+
+{% block page_styles %}
+<style>
+    :root {
+        --admin-bg: #f8f9fa;
+        --admin-card-bg: #ffffff;
+        --admin-text: #333;
+        --admin-accent: #ffd700;
+    }
+
+    .admin-container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 2rem;
+        font-family: var(--font-body);
+        pointer-events: auto;
+    }
+
+    .admin-header {
+        margin-bottom: 3rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, var(--maroon-dark) 0%, #a00000 100%);
+        border-radius: 16px;
+        color: white;
+        box-shadow: var(--shadow-md);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .admin-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+        background-size: 20px 20px;
+        opacity: 0.3;
+    }
+
+    .admin-header h1 {
+        font-size: 2rem;
+        color: white;
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+        position: relative;
+        z-index: 1;
+    }
+
+    .admin-header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        position: relative;
+        z-index: 1;
+    }
+
+    .admin-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+        pointer-events: auto;
+    }
+
+    .admin-quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .quick-action-btn {
+        background: white;
+        border: 3px solid var(--maroon-dark);
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: var(--maroon-dark);
+        text-align: center;
+        box-shadow: 4px 4px 0px rgba(128, 0, 0, 0.2);
+        pointer-events: auto;
+        position: relative;
+        z-index: 1;
+    }
+
+    .quick-action-btn:hover {
+        transform: translate(2px, 2px);
+        border-color: var(--maroon-dark);
+        box-shadow: 2px 2px 0px rgba(128, 0, 0, 0.3);
+        background: rgba(128, 0, 0, 0.05);
+    }
+
+    .quick-action-btn i {
+        font-size: 1.5rem;
+        color: var(--maroon-dark);
+    }
+
+    .quick-action-btn span {
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    .admin-card {
+        background: var(--admin-card-bg);
+        border: 2px solid #e0e0e0;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.3s ease;
+        text-align: center;
+        pointer-events: auto;
+        position: relative;
+        z-index: 1;
+    }
+
+    .admin-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--maroon-dark);
+    }
+
+    .admin-card-header {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f0f0f0;
+        text-align: center;
+    }
+
+    .admin-card h2 {
+        font-size: 1.25rem;
+        margin: 0 0 1rem 0;
+        color: var(--maroon-dark);
+        text-align: center;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        color: #555;
+        font-weight: 500;
+        text-align: left;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.9rem 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 1rem;
+        transition: all 0.2s;
+        background: #fafafa;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        border-color: var(--maroon-dark);
+        outline: none;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.1);
+    }
+
+    .form-group input[type="file"] {
+        padding: 0.5rem;
+        background: white;
+        border: 2px dashed #ddd;
+    }
+
+    .form-group input[type="file"]:hover {
+        border-color: var(--maroon-dark);
+    }
+
+    .form-hint {
+        font-size: 0.8rem;
+        color: #888;
+        margin-top: 0.25rem;
+        display: block;
+    }
+
+    .admin-btn {
+        width: 100%;
+        padding: 1rem 2.5rem;
+        font-size: 1.1rem;
+        font-family: var(--font-display);
+        font-weight: 700;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all var(--transition-base);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+        pointer-events: auto;
+        background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
+        color: var(--text-dark);
+        border: 3px solid var(--text-dark);
+        box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        display: block;
+    }
+
+    .admin-btn:hover {
+        transform: translate(2px, 2px);
+        box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.4);
+        background: linear-gradient(135deg, #ffed4e 0%, var(--accent-gold) 100%);
+    }
+
+    .admin-btn:active {
+        transform: translate(0, 0);
+    }
+
+    .admin-btn-secondary {
+        background: transparent;
+        color: var(--maroon-dark);
+        border: 3px solid var(--maroon-dark);
+        box-shadow: 6px 6px 0px rgba(128, 0, 0, 0.2);
+    }
+
+    .admin-btn-secondary:hover {
+        background: rgba(128, 0, 0, 0.1);
+        transform: translate(-3px, -3px);
+        box-shadow: 9px 9px 0px rgba(128, 0, 0, 0.3);
+    }
+
+    .admin-btn-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #ff6b6b 100%);
+        color: white;
+        border: 3px solid var(--text-dark);
+        box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.3);
+    }
+
+    .admin-btn-danger:hover {
+        background: linear-gradient(135deg, #ff6b6b 0%, #dc3545 100%);
+        transform: translate(2px, 2px);
+        box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.4);
+    }
+
+    .admin-btn-success {
+        background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
+        color: var(--text-dark);
+        border: 3px solid var(--text-dark);
+        box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.3);
+    }
+
+    .admin-btn-success:hover {
+        background: linear-gradient(135deg, #ffed4e 0%, var(--accent-gold) 100%);
+        transform: translate(2px, 2px);
+        box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.4);
+    }
+
+    .admin-btn-small {
+        padding: 0.3rem 0.6rem !important;
+        font-size: 0.75rem !important;
+        width: auto;
+        min-width: 70px;
+        display: inline-block;
+        font-family: var(--font-display);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-radius: 5px;
+        transition: all var(--transition-base);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+        background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
+        color: var(--text-dark);
+        border: 2px solid var(--text-dark);
+        box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.3);
+    }
+
+    .admin-btn-small:hover {
+        transform: translate(1px, 1px);
+        box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.4);
+        background: linear-gradient(135deg, #ffed4e 0%, var(--accent-gold) 100%);
+    }
+
+    /* Small button variants */
+    .admin-btn-secondary.admin-btn-small {
+        border: 2px solid var(--maroon-dark);
+        box-shadow: 3px 3px 0px rgba(128, 0, 0, 0.2);
+    }
+
+    .admin-btn-secondary.admin-btn-small:hover {
+        transform: translate(1px, 1px);
+        box-shadow: 2px 2px 0px rgba(128, 0, 0, 0.3);
+        background: rgba(128, 0, 0, 0.1);
+    }
+
+    .admin-btn-danger.admin-btn-small {
+        border: 2px solid var(--text-dark);
+        box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.3);
+    }
+
+    .admin-btn-danger.admin-btn-small:hover {
+        transform: translate(1px, 1px);
+        box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.4);
+        background: linear-gradient(135deg, #ff6b6b 0%, #dc3545 100%);
+    }
+
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn-group .admin-btn {
+        flex: 1;
+        width: 100%;
+    }
+
+    .data-list {
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+
+    .data-item {
+        display: grid;
+        grid-template-columns: 80px 1fr auto;
+        gap: 1rem;
+        align-items: start;
+        /* Changed from center to start */
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-radius: 8px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        transition: all 0.2s;
+        pointer-events: auto;
+    }
+
+    /* Event items - take full width except for buttons */
+    .data-item.event-item {
+        grid-template-columns: 1fr auto;
+    }
+
+    .data-item.event-item .event-info {
+        grid-column: 1;
+    }
+
+    /* Award items - take full width except for input field */
+    .data-item.award-item {
+        grid-template-columns: 1fr auto;
+    }
+
+    .data-item.award-item .award-info {
+        grid-column: 1;
+    }
+
+    .data-item:hover {
+        background: #e9ecef;
+        border-color: #dee2e6;
+    }
+
+    .data-item-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        justify-content: flex-start;
+        align-items: stretch;
+        align-self: start;
+    }
+
+    .data-item-actions form {
+        display: block;
+        width: auto;
+    }
+
+    .team-number-box {
+        background: linear-gradient(135deg, var(--maroon-dark) 0%, #a00000 100%);
+        height: 60px;
+        width: 80px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        font-size: 1.1rem;
+        text-align: center;
+        align-self: start;
+    }
+
+    .sponsor-logo {
+        height: 50px;
+        width: 50px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e9ecef;
+        align-self: start;
+    }
+
+    .sponsor-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 4px;
+    }
+
+    .sponsor-icon {
+        font-size: 1.5rem;
+    }
+
+    /* Custom Scrollbar */
+    .data-list::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .data-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .data-list::-webkit-scrollbar-thumb {
+        background: #b8b8b8;
+        border-radius: 4px;
+    }
+
+    .data-list::-webkit-scrollbar-thumb:hover {
+        background: #999;
+    }
+
+    .status-msg {
+        padding: 1rem 1.5rem;
+        margin-bottom: 2rem;
+        border-radius: 10px;
+        display: none;
+        animation: slideIn 0.3s ease;
+        border-left: 4px solid;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .status-msg.success {
+        background: rgba(255, 215, 0, 0.1);
+        color: var(--text-dark);
+        display: block;
+        border-left-color: var(--accent-gold);
+        border: 1px solid rgba(255, 215, 0, 0.2);
+    }
+
+    .status-msg.error {
+        background: #f8d7da;
+        color: #721c24;
+        display: block;
+        border-left-color: #dc3545;
+        border: 1px solid #f5c6cb;
+    }
+
+    .status-msg.info {
+        background: rgba(128, 0, 0, 0.1);
+        color: var(--maroon-dark);
+        display: block;
+        border-left-color: var(--maroon-dark);
+        border: 1px solid rgba(128, 0, 0, 0.2);
+    }
+
+    .status-msg.warning {
+        background: #fff3cd;
+        color: #856404;
+        display: block;
+        border-left-color: #ffc107;
+        border: 1px solid #ffeaa7;
+    }
+
+    .admin-card .edit-btn {
+        background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
+        color: var(--text-dark);
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+        font-family: var(--font-display);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border: 2px solid var(--text-dark);
+        border-radius: 6px;
+        cursor: pointer;
+        box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.3);
+        transition: all var(--transition-base);
+    }
+
+    .admin-card .edit-btn:hover {
+        transform: translate(1px, 1px);
+        box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.4);
+        background: linear-gradient(135deg, #ffed4e 0%, var(--accent-gold) 100%);
+    }
+
+    .dynamic-row {
+        background: #fdfdfd;
+        border: 1px solid #eee;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+
+    .remove-btn {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        background: linear-gradient(135deg, #dc3545 0%, #ff6b6b 100%);
+        color: white;
+        border: 2px solid var(--text-dark);
+        border-radius: 6px;
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        transition: all var(--transition-base);
+        box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.3);
+        font-weight: bold;
+    }
+
+    .remove-btn:hover {
+        background: linear-gradient(135deg, #ff6b6b 0%, #dc3545 100%);
+        transform: translate(1px, 1px);
+        box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.4);
+    }
+
+    .add-more-btn {
+        background: rgba(128, 0, 0, 0.05);
+        border: 2px dashed var(--maroon-dark);
+        color: var(--maroon-dark);
+        width: 100%;
+        padding: 0.75rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all var(--transition-base);
+        font-family: var(--font-display);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 4px 4px 0px rgba(128, 0, 0, 0.1);
+    }
+
+    .add-more-btn:hover {
+        background: rgba(128, 0, 0, 0.1);
+        border-color: var(--maroon-dark);
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0px rgba(128, 0, 0, 0.2);
+    }
+
+    .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+        pointer-events: auto;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #e0e0e0;
+        transition: all 0.2s;
+        text-align: center;
+        pointer-events: auto;
+        position: relative;
+        z-index: 1;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--maroon-dark);
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--maroon-dark);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .stat-change {
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        text-align: center;
+    }
+
+    .stat-change.positive {
+        color: var(--accent-gold);
+    }
+
+    .stat-change.negative {
+        color: #dc3545;
+    }
+
+    .search-box {
+        margin-bottom: 2rem;
+        position: relative;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 1rem 1rem 1rem 3rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+
+    .search-box input:focus {
+        border-color: var(--maroon-dark);
+        box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.1);
+        outline: none;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+    }
+
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        display: none !important;
+    }
+
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid var(--maroon-dark);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .confirmation-dialog {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        display: none !important;
+    }
+
+    .confirmation-content {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: var(--shadow-lg);
+    }
+
+    @media (max-width: 768px) {
+        .admin-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .admin-quick-actions {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+
+    .sponsor-badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .sponsor-badge.platinum {
+        background: linear-gradient(135deg, #e5e4e2 0%, #d4d4d4 100%);
+        color: #333;
+    }
+
+    .sponsor-badge.gold {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        color: #333;
+    }
+
+    .sponsor-badge.silver {
+        background: linear-gradient(135deg, #c0c0c0 0%, #e0e0e0 100%);
+        color: #333;
+    }
+
+    .sponsor-badge.bronze {
+        background: linear-gradient(135deg, #cd7f32 0%, #e6a85c 100%);
+        color: white;
+    }
+
+    .team-select-dropdown {
+        background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23800000' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat right 1rem center;
+        background-size: 16px;
+        padding-right: 2.5rem;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+
+    .role-select {
+        background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23800000' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat right 1rem center;
+        background-size: 16px;
+        padding-right: 2.5rem;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+
+    .image-preview {
+        margin-top: 1rem;
+        display: none;
+    }
+
+    .image-preview img {
+        max-width: 200px;
+        max-height: 150px;
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+    }
+
+
+    .activity-item {
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        gap: 1rem;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        background: #f8f9fa;
+        border-left: 4px solid var(--maroon-dark);
+        align-items: center;
+    }
+
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--maroon-dark);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .activity-time {
+        font-size: 0.85rem;
+        color: #666;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 2px dashed #dee2e6;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+
+    /* Tooltips */
+    .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: help;
+        margin-left: 0.25rem;
+    }
+
+    .tooltip .tooltip-text {
+        visibility: hidden;
+        width: 200px;
+        background-color: #333;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 0.5rem;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -100px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 0.85rem;
+        font-weight: normal;
+    }
+
+    .tooltip .tooltip-text::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #333 transparent transparent transparent;
+    }
+
+    .tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+
+
+    /* Help button */
+    .help-button {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--maroon-dark) 0%, #a00000 100%);
+        color: white;
+        border: 3px solid var(--text-dark);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        z-index: 1000;
+        box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.3);
+        transition: all var(--transition-base);
+        font-weight: bold;
+    }
+
+    .help-button:hover {
+        transform: translate(2px, 2px);
+        box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.4);
+        background: linear-gradient(135deg, #a00000 0%, var(--maroon-dark) 100%);
+    }
+
+    /* Help modal */
+    .help-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .help-modal-content {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: var(--shadow-lg);
+        position: relative;
+    }
+
+
+    .help-modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #666;
+    }
+
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .admin-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .admin-quick-actions {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .data-item {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+
+        .data-item.event-item {
+            grid-template-columns: 1fr;
+        }
+
+        .data-item.award-item {
+            grid-template-columns: 1fr;
+        }
+
+        .data-item-actions {
+            justify-content: center;
+            align-items: stretch;
+            align-self: start;
+        }
+
+        .team-number-box,
+        .sponsor-logo {
+            align-self: center;
+        }
+
+        .btn-group {
+            gap: 0.5rem;
+        }
+
+        .team-number-box,
+        .sponsor-logo {
+            margin: 0 auto;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .dashboard-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .admin-quick-actions {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    function editEvent(id, name, location, dateStr) {
+        document.getElementById('event_form_title').innerText = 'Edit Event';
+        document.getElementById('event_form').action = '/admin/update-competition/' + id;
+        document.getElementsByName('comp_name')[0].value = name;
+        document.getElementsByName('comp_location')[0].value = location;
+        document.getElementsByName('comp_date')[0].value = dateStr;
+        window.scrollTo({ top: document.getElementById('event_form').offsetTop - 100, behavior: 'smooth' });
+    }
+
+    function resetEventForm() {
+        document.getElementById('event_form_title').innerText = 'Add New Event';
+        document.getElementById('event_form').action = "{{ url_for('admin_add_competition') }}";
+        document.getElementById('event_form').reset();
+    }
+
+    let memberCount = 0;
+    function addMemberRow(data = {}) {
+        const container = document.getElementById('members_container');
+        const i = memberCount++;
+        const row = document.createElement('div');
+        row.className = 'dynamic-row';
+        row.innerHTML = `
+            <button type="button" class="remove-btn" onclick="this.parentElement.remove()">&times;</button>
+            <input type="hidden" name="member_photo_path_${i}" value="${data.photo || 'static/assets/profile/base.png'}">
+            <div class="form-group">
+                <label>Member Name</label>
+                <input type="text" name="member_name_${i}" value="${data.name || ''}" required>
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <input type="text" name="member_role_${i}" value="${data.role || ''}" required>
+            </div>
+            <div class="form-group">
+                <label>Link User Account (Optional)</label>
+                <select name="member_user_${i}">
+                    <option value="">-- No link --</option>
+                    {% for u in users %}
+                    <option value="{{ u._id }}" ${data.user_id == '{{ u._id }}' ? 'selected' : ''}>{{ u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Profile Image (${data.photo ? 'Current exists' : 'Default used'})</label>
+                <input type="file" name="member_photo_${i}" accept="image/*" onchange="previewMemberImage(this, ${i})">
+                ${data.photo ? `<div class="image-preview" id="member_preview_${i}"><img src="${data.photo}" alt="Current photo" style="max-width: 100px; max-height: 100px;"></div>` : ''}
+            </div>
+        `;
+        container.appendChild(row);
+    }
+
+    let goalCount = 0;
+    function addGoalRow(data = {}) {
+        const container = document.getElementById('goals_container');
+        const i = goalCount++;
+        const row = document.createElement('div');
+        row.className = 'dynamic-row';
+        row.innerHTML = `
+            <button type="button" class="remove-btn" onclick="this.parentElement.remove()">&times;</button>
+            <div class="form-group">
+                <label>Goal Name</label>
+                <input type="text" name="goal_name_${i}" value="${data.name || ''}" required>
+            </div>
+            <div class="form-group">
+                <label>Progress (${data.progress || 0}%)</label>
+                <input type="range" name="goal_progress_${i}" value="${data.progress || 0}" min="0" max="100" oninput="this.previousElementSibling.innerText = 'Progress (' + this.value + '%)'">
+            </div>
+        `;
+        container.appendChild(row);
+    }
+
+    function editTeam(teamJson) {
+        const team = JSON.parse(teamJson);
+        document.getElementById('team_form_title').innerText = 'Edit Team ' + team.team_number;
+        document.getElementById('team_id').value = team._id;
+        document.getElementsByName('team_number')[0].value = team.team_number;
+        document.getElementsByName('nickname')[0].value = team.nickname || '';
+        document.getElementsByName('tagline')[0].value = team.tagline || '';
+        document.getElementsByName('drive_train')[0].value = team.specs.drive_train || '';
+        document.getElementsByName('lift_system')[0].value = team.specs.lift_system || '';
+        document.getElementsByName('intake')[0].value = team.specs.intake || '';
+        document.getElementsByName('auton_consistency')[0].value = team.specs.auton_consistency || '';
+        document.getElementsByName('notebook_link')[0].value = team.notebook_link || '#';
+
+        // Clear and rebuild dynamic rows
+        document.getElementById('members_container').innerHTML = '';
+        memberCount = 0;
+        team.members.forEach(m => addMemberRow(m));
+
+        document.getElementById('goals_container').innerHTML = '';
+        goalCount = 0;
+        team.goals.forEach(g => addGoalRow(g));
+
+        window.scrollTo({ top: document.getElementById('team_form_card').offsetTop - 50, behavior: 'smooth' });
+    }
+
+    function editSponsor(id, name, website, level) {
+        document.getElementById('sponsor_form_title').innerText = 'Edit Sponsor';
+        document.getElementById('sponsor_form').action = '/admin/save-sponsor';
+        document.getElementById('sponsor_id').value = id;
+        document.getElementsByName('name')[1].value = name; // [1] because 'name' is also in User Management
+        document.getElementsByName('website')[0].value = website;
+        document.getElementsByName('level')[0].value = level;
+        window.scrollTo({ top: document.getElementById('sponsor_form_card').offsetTop - 50, behavior: 'smooth' });
+    }
+
+    function resetSponsorForm() {
+        document.getElementById('sponsor_form_title').innerText = 'Add New Sponsor';
+        document.getElementById('sponsor_form').action = '/admin/save-sponsor';
+        document.getElementById('sponsor_id').value = '';
+        document.getElementById('sponsor_form').reset();
+    }
+</script>
+<script id="team_awards_data" type="application/json">
+        {{ team_awards|tojson|safe }}
+    </script>
+<script>
+    function showTeamAwards(teamNum) {
+        const teamAwards = JSON.parse(document.getElementById('team_awards_data').textContent);
+        const container = document.getElementById('team_awards_list');
+        const form = document.getElementById('team_awards_form');
+        const msg = document.getElementById('no_team_msg');
+
+        if (!teamNum) {
+            form.style.display = 'none';
+            msg.style.display = 'block';
+            return;
+        }
+
+        container.innerHTML = '';
+        const filtered = teamAwards.filter(a => a.team_number === teamNum);
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 1rem;">No awards found for this team. Please seed them first.</p>';
+        } else {
+            filtered.forEach(award => {
+                const item = document.createElement('div');
+                item.className = 'award-item';
+                item.innerHTML = `
+                    <span style="font-size: 0.9rem;">${award.title}</span>
+                    <input type="number" name="team_award_${award._id}" value="${award.count}" min="0" style="width: 70px; padding: 0.4rem;">
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        form.style.display = 'block';
+        msg.style.display = 'none';
+    }
+
+    function resetTeamForm() {
+        document.getElementById('team_form_title').innerText = 'Create New Team';
+        document.getElementById('team_id').value = '';
+        document.getElementById('team_form').reset();
+        document.getElementById('members_container').innerHTML = '';
+        document.getElementById('goals_container').innerHTML = '';
+        memberCount = 0;
+        goalCount = 0;
+    }
+
+    // New enhanced functions
+    function showLoading() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    function confirmDelete(type) {
+        return confirm(`Are you sure you want to delete this ${type}? This action cannot be undone.`);
+    }
+
+    function searchAdminContent() {
+        const searchTerm = document.getElementById('adminSearch').value.toLowerCase();
+        const cards = document.querySelectorAll('.admin-card');
+
+        cards.forEach(card => {
+            const cardContent = card.textContent.toLowerCase();
+            if (cardContent.includes(searchTerm)) {
+                card.style.display = 'block';
+                card.style.animation = 'slideIn 0.3s ease';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    function addNewAward() {
+        const awardsList = document.querySelector('.data-list');
+        const newAwardDiv = document.createElement('div');
+        newAwardDiv.className = 'data-item';
+        newAwardDiv.innerHTML = `
+            <div>
+                <input type="text" placeholder="New award name" style="width: 100%; padding: 0.5rem; border: 2px solid #ddd; border-radius: 6px;">
+                <div class="form-hint">New award - set initial count</div>
+            </div>
+            <input type="number" value="0" min="0" style="width: 80px; padding: 0.5rem;">
+        `;
+        awardsList.appendChild(newAwardDiv);
+        newAwardDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetTeamAwards() {
+        const inputs = document.querySelectorAll('#team_awards_list input[type="number"]');
+        inputs.forEach(input => {
+            input.value = 0;
+        });
+        showNotification('Team awards reset to zero', 'info');
+    }
+
+    function showNotification(message, type = 'info') {
+        // Remove existing notifications
+        const existingNotifications = document.querySelectorAll('.notification');
+        existingNotifications.forEach(notification => notification.remove());
+
+        // Create new notification
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+            <span>${message}</span>
+            <button onclick="this.parentElement.remove()">&times;</button>
+        `;
+        document.body.appendChild(notification);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    // Image preview functionality
+    function previewImage(input, previewId) {
+        const preview = document.getElementById(previewId);
+        const file = input.files[0];
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                preview.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+        }
+    }
+
+    // Member image preview functionality
+    function previewMemberImage(input, index) {
+        const previewId = `member_preview_${index}`;
+        let preview = document.getElementById(previewId);
+
+        if (!preview) {
+            preview = document.createElement('div');
+            preview.className = 'image-preview';
+            preview.id = previewId;
+            input.parentNode.appendChild(preview);
+        }
+
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="max-width: 100px; max-height: 100px;">`;
+                preview.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+        }
+    }
+
+    // Form validation for user creation
+    document.getElementById('userForm')?.addEventListener('submit', function (e) {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+
+        if (password !== confirmPassword) {
+            e.preventDefault();
+            showNotification('Passwords do not match!', 'error');
+            return false;
+        }
+
+        if (password.length < 8) {
+            e.preventDefault();
+            showNotification('Password must be at least 8 characters long', 'error');
+            return false;
+        }
+
+        showLoading();
+        return true;
+    });
+
+    // Auto-save indicator
+    let autoSaveTimeout;
+    function setupAutoSave(formId, saveUrl) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        form.addEventListener('input', function () {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                // Simulate auto-save
+                const saveIndicator = document.createElement('div');
+                saveIndicator.className = 'status-msg info';
+                saveIndicator.textContent = 'Auto-saving changes...';
+                form.prepend(saveIndicator);
+
+                setTimeout(() => {
+                    saveIndicator.remove();
+                }, 2000);
+            }, 2000); // Save after 2 seconds of inactivity
+        });
+    }
+
+    // Initialize auto-save for main forms
+    document.addEventListener('DOMContentLoaded', function () {
+        setupAutoSave('team_form', '/admin/auto-save-team');
+        setupAutoSave('event_form', '/admin/auto-save-event');
+        setupAutoSave('sponsor_form', '/admin/auto-save-sponsor');
+    });
+
+    // Help functionality
+    function showHelp() {
+        const helpContent = `
+            <h3>Admin Dashboard Help</h3>
+            <p><strong>Quick Actions:</strong> Use the buttons at the top for common tasks.</p>
+            <p><strong>Search:</strong> Type in the search box to filter content across all sections.</p>
+            <p><strong>Forms:</strong> Most forms support auto-save (saves after 2 seconds of inactivity).</p>
+            <p><strong>Dark Mode:</strong> Toggle the theme button in the bottom right.</p>
+            <p><strong>Export Data:</strong> Use the export button to download all data as CSV.</p>
+            <p><strong>Need more help?</strong> Contact the system administrator.</p>
+        `;
+
+        // Create a modal for help
+        const modal = document.createElement('div');
+        modal.className = 'help-modal';
+        modal.innerHTML = `
+            <div class="help-modal-content">
+                <button class="help-modal-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                ${helpContent}
+                <div style="margin-top: 1.5rem;">
+                    <button class="admin-btn" onclick="this.parentElement.parentElement.remove()">Got it!</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+</script>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+</div>
+
+<!-- Notification CSS -->
+<style>
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 10px;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        z-index: 10000;
+        animation: slideInRight 0.3s ease;
+        max-width: 400px;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .notification.info {
+        background: linear-gradient(135deg, var(--maroon-dark) 0%, #a00000 100%);
+        border-left: 4px solid #5a0000;
+    }
+
+    .notification.success {
+        background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
+        border-left: 4px solid #ccac00;
+    }
+
+    .notification.error {
+        background: #dc3545;
+        border-left: 4px solid #c82333;
+    }
+
+    .notification.warning {
+        background: #ffc107;
+        color: #333;
+        border-left: 4px solid #e0a800;
+    }
+
+    .notification button {
+        background: none;
+        border: none;
+        color: inherit;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <h1>Command Center
+            <span class="tooltip">ℹ️
+                <span class="tooltip-text">Admin dashboard for managing all aspects of Mepham Robotics. Use the quick
+                    actions below for common tasks.</span>
+            </span>
+        </h1>
+        <p>Welcome back, {{ current_user }} | Manage the legacy of Team 77628.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="status-msg {{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <!-- Dashboard Overview -->
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.get('teams_count', 0) }}</div>
+            <div class="stat-label">Active Teams</div>
+            {% if monthly_changes.teams_change > 0 %}
+            <div class="stat-change positive">↑ {{ monthly_changes.teams_change }} this month</div>
+            {% elif monthly_changes.teams_change < 0 %} <div class="stat-change negative">↓ {{
+                monthly_changes.teams_change|abs }} this month
+        </div>
+        {% else %}
+        <div class="stat-change">No change</div>
+        {% endif %}
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.get('members_count', 0) }}</div>
+        <div class="stat-label">Team Members</div>
+        {% if monthly_changes.members_change > 0 %}
+        <div class="stat-change positive">↑ {{ monthly_changes.members_change }} this month</div>
+        {% elif monthly_changes.members_change < 0 %} <div class="stat-change negative">↓ {{
+            monthly_changes.members_change|abs }} this month
+    </div>
+    {% else %}
+    <div class="stat-change">No change</div>
+    {% endif %}
+</div>
+<div class="stat-card">
+    <div class="stat-value">{{ stats.get('awards_count', 0) }}</div>
+    <div class="stat-label">Total Awards</div>
+    {% if monthly_changes.awards_change > 0 %}
+    <div class="stat-change positive">↑ {{ monthly_changes.awards_change }} this month</div>
+    {% elif monthly_changes.awards_change < 0 %} <div class="stat-change negative">↓ {{
+        monthly_changes.awards_change|abs }} this month
+</div>
+{% else %}
+<div class="stat-change">No change</div>
+{% endif %}
+</div>
+<div class="stat-card">
+    <div class="stat-value">{{ competitions|length }}</div>
+    <div class="stat-label">Upcoming Events</div>
+    {% if monthly_changes.events_change > 0 %}
+    <div class="stat-change positive">↑ {{ monthly_changes.events_change }} this month</div>
+    {% elif monthly_changes.events_change < 0 %} <div class="stat-change negative">↓ {{
+        monthly_changes.events_change|abs }} this month
+</div>
+{% else %}
+<div class="stat-change">No change</div>
+{% endif %}
+</div>
+</div>
+
+<!-- Quick Actions -->
+<div class="admin-quick-actions">
+    <a href="#event_form_card" class="quick-action-btn" onclick="resetEventForm(); return false;">
+        <span>📅 Add Event</span>
+    </a>
+    <a href="#team_form_card" class="quick-action-btn" onclick="resetTeamForm(); return false;">
+        <span>🤖 Add Team</span>
+    </a>
+    <a href="#sponsor_form_card" class="quick-action-btn" onclick="resetSponsorForm(); return false;">
+        <span>🤝 Add Sponsor</span>
+    </a>
+    <a href="{{ url_for('admin_dashboard') }}?export=data" class="quick-action-btn">
+        <span>📊 Export Data</span>
+    </a>
+</div>
+
+<!-- Search Box -->
+<div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="adminSearch" placeholder="Search teams, events, sponsors, awards..."
+        onkeyup="searchAdminContent()">
+</div>
+
+<div class="admin-grid">
+    <!-- GLOBAL STATS CARD -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>📊 Site Statistics</h2>
+        </div>
+        <form action="{{ url_for('admin_update_stats') }}" method="POST">
+            <div class="form-group">
+                <label>Teams Count</label>
+                <input type="number" name="teams_count" value="{{ stats.teams_count }}" required>
+            </div>
+            <div class="form-group">
+                <label>Members Count</label>
+                <input type="number" name="members_count" value="{{ stats.members_count }}" required>
+            </div>
+            <div class="form-group">
+                <label>Awards Count (Total)</label>
+                <input type="number" name="awards_count" value="{{ stats.awards_count }}" required>
+            </div>
+            <div class="form-group">
+                <label>Hours Built</label>
+                <input type="number" name="hours_built" value="{{ stats.hours_built }}" required>
+            </div>
+            <button type="submit" class="admin-btn">Update Stats</button>
+        </form>
+    </div>
+
+    <!-- UPCOMING EVENTS MANAGER -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>⏳ Upcoming Events</h2>
+        </div>
+        <div class="data-list" style="margin-bottom: 1.5rem; max-height: 250px;">
+            {% for comp in competitions %}
+            <div class="data-item event-item">
+                <div class="event-info">
+                    <strong style="display: block; color: var(--maroon-dark);">{{ comp.name }}</strong>
+                    <small style="display: block; color: #666;">{{ comp.display_date }}</small>
+                    <small style="display: block; color: #888; font-style: italic;">📍 {{ comp.location or 'No location
+                        set' }}</small>
+                </div>
+                <div class="data-item-actions">
+                    <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-id="{{ comp._id }}"
+                        data-name="{{ comp.name }}" data-location="{{ comp.location }}" data-date="{{ comp.date_str }}"
+                        onclick="editEvent(this.dataset.id, this.dataset.name, this.dataset.location, this.dataset.date)">Edit</button>
+                    <form action="{{ url_for('admin_delete_competition', comp_id=comp._id) }}" method="POST"
+                        style="margin: 0;" onsubmit="return confirmDelete('event')">
+                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not competitions %}
+            <p style="text-align: center; color: #999; padding: 1rem;">No upcoming events scheduled.</p>
+            {% endif %}
+        </div>
+
+        <h3 id="event_form_title"
+            style="font-size: 1rem; margin-bottom: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">Add New Event
+        </h3>
+        <form id="event_form" action="{{ url_for('admin_add_competition') }}" method="POST">
+            <div class="form-group">
+                <label>Event Name</label>
+                <input type="text" name="comp_name" placeholder="e.g. Regional Qualifiers" required>
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" name="comp_location" placeholder="e.g. Mepham High School" required>
+            </div>
+            <div class="form-group">
+                <label>Event Date & Time</label>
+                <input type="datetime-local" name="comp_date" required>
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="admin-btn admin-btn-success">Save Event</button>
+                <button type="button" class="admin-btn admin-btn-secondary" onclick="resetEventForm()">Cancel /
+                    Reset</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- AWARDS MANAGER CARD -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>🏆 Awards Inventory</h2>
+        </div>
+        <form action="{{ url_for('admin_update_awards') }}" method="POST">
+            <div class="data-list">
+                {% for award in awards %}
+                <div class="data-item award-item">
+                    <div class="award-info">
+                        <span style="font-weight: 500;">{{ award.title }}</span>
+                        <div class="form-hint">Current: {{ award.count|default(0) }} awards</div>
+                    </div>
+                    <div class="data-item-actions">
+                        <input type="number" name="award_{{ award._id }}" value="{{ award.count|default(0) }}" min="0"
+                            style="width: 80px; padding: 0.5rem;">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="admin-btn admin-btn-success">Update All Awards</button>
+                <button type="button" class="admin-btn admin-btn-secondary" onclick="addNewAward()">+ Add New</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- TEAM AWARDS MANAGER CARD -->
+    <div class="admin-card"
+        style="grid-column: 1 / -1; background: linear-gradient(135deg, #fffdf5 0%, #fff9e6 100%); border-color: var(--maroon-dark);">
+        <div class="admin-card-header">
+            <h2>🏅 Team Awards Management</h2>
+        </div>
+
+        <div class="form-group" style="max-width: 400px;">
+            <label>Select Team to Manage</label>
+            <select id="team_selector" onchange="showTeamAwards(this.value)" class="team-select-dropdown">
+                <option value="">-- Choose a Team --</option>
+                {% for team in teams %}
+                <option value="{{ team.team_number }}">{{ team.team_number }} - {{ team.nickname }}</option>
+                {% endfor %}
+            </select>
+            <div class="form-hint">Select a team to view and edit their award counts</div>
+        </div>
+
+        <form action="{{ url_for('admin_update_team_awards') }}" method="POST" id="team_awards_form"
+            style="display: none;">
+            <div id="team_awards_list" class="data-list"
+                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem; max-height: none;">
+                <!-- Dynamically populated -->
+            </div>
+            <div class="btn-group" style="margin-top: 2rem;">
+                <button type="submit" class="admin-btn admin-btn-success">Save Team Awards</button>
+                <button type="button" class="admin-btn admin-btn-secondary" onclick="resetTeamAwards()">Reset
+                    Changes</button>
+            </div>
+        </form>
+
+        <div id="no_team_msg"
+            style="text-align: center; color: #666; padding: 3rem; background: rgba(0,0,0,0.02); border-radius: 12px; border: 2px dashed #ddd; margin-top: 1rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🏆</div>
+            <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No team selected</p>
+            <p style="color: #888;">Please select a team from the dropdown above to manage their awards</p>
+        </div>
+    </div>
+
+    <!-- TEAMS MANAGEMENT CARD -->
+    <div class="admin-card" style="grid-column: 1 / -1;" id="team_form_card">
+        <div class="admin-card-header">
+            <h2>🤖 Teams Management</h2>
+        </div>
+
+        <div class="data-list" style="margin-bottom: 2rem; max-height: 400px;">
+            {% for team in teams %}
+            <div class="data-item">
+                <div class="team-number-box">
+                    {{ team.team_number }}
+                </div>
+                <div>
+                    <strong style="display: block; font-size: 1.1rem;">{{ team.nickname }}</strong>
+                    <small style="color: #666; display: block; margin-top: 0.25rem;">
+                        <span style="display: inline-flex; align-items: center; gap: 0.25rem;">👥 {{ team.members|length
+                            }} members</span>
+                        <span style="margin: 0 0.5rem;">•</span>
+                        <span>{{ team.tagline }}</span>
+                    </small>
+                </div>
+                <!-- Pass team data as JSON to JS function using data-attribute -->
+                {% set team_json = team|tojson %}
+                <div class="data-item-actions">
+                    <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
+                        data-team='{{ team_json|e }}' onclick="editTeam(this.dataset.team)">Edit</button>
+                    <form action="{{ url_for('admin_delete_team', id=team._id) }}" method="POST" style="margin: 0;"
+                        onsubmit="return confirmDelete('team')">
+                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <h3 id="team_form_title"
+            style="font-size: 1.25rem; margin-bottom: 1.5rem; border-top: 2px solid #eee; padding-top: 1.5rem;">Create
+            New Team</h3>
+        <form id="team_form" action="{{ url_for('admin_save_team') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" id="team_id" name="team_id">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div>
+                    <h4 style="margin-bottom: 1rem; color: var(--maroon-dark);">Basic Info</h4>
+                    <div class="form-group">
+                        <label>Team Number</label>
+                        <input type="text" name="team_number" placeholder="e.g. 77628P" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nickname</label>
+                        <input type="text" name="nickname" placeholder="e.g. Prometheus">
+                    </div>
+                    <div class="form-group">
+                        <label>Tagline</label>
+                        <input type="text" name="tagline" placeholder="Precision. Power. Performance.">
+                    </div>
+                    <div class="form-group">
+                        <label>Engineering Notebook Link</label>
+                        <input type="text" name="notebook_link" placeholder="URL to notebook">
+                    </div>
+                    <div class="form-group">
+                        <label>Hero Image</label>
+                        <input type="file" name="hero_image" accept="image/*"
+                            onchange="previewImage(this, 'heroImagePreview')">
+                        <div id="heroImagePreview" class="image-preview"></div>
+                        <div class="form-hint">Recommended: 1200x600px, JPG or PNG</div>
+                    </div>
+                    <div class="form-group">
+                        <label>STL CAD File (.stl)</label>
+                        <input type="file" name="stl_file" accept=".stl">
+                    </div>
+                </div>
+
+                <div>
+                    <h4 style="margin-bottom: 1rem; color: var(--maroon-dark);">Robot Specs</h4>
+                    <div class="form-group">
+                        <label>Drive Train</label>
+                        <input type="text" name="drive_train" placeholder="e.g. 6-Motor Drive">
+                    </div>
+                    <div class="form-group">
+                        <label>Lift System</label>
+                        <input type="text" name="lift_system" placeholder="e.g. 4-Bar Lift">
+                    </div>
+                    <div class="form-group">
+                        <label>Intake</label>
+                        <input type="text" name="intake" placeholder="e.g. Side Rollers">
+                    </div>
+                    <div class="form-group">
+                        <label>Auton Consistency (%)</label>
+                        <input type="text" name="auton_consistency" placeholder="e.g. 95%">
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+                <div>
+                    <h4 style="margin-bottom: 1rem; color: var(--maroon-dark);">Team Members</h4>
+                    <div id="members_container"></div>
+                    <button type="button" class="add-more-btn" onclick="addMemberRow()">+ Add Member</button>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 1rem; color: var(--maroon-dark);">Season Goals</h4>
+                    <div id="goals_container"></div>
+                    <button type="button" class="add-more-btn" onclick="addGoalRow()">+ Add Goal</button>
+                </div>
+            </div>
+
+            <div style="margin-top: 3rem; display: flex; flex-direction: column; gap: 1rem;">
+                <button type="submit" class="admin-btn">Save Team Profile</button>
+                <button type="button" class="admin-btn admin-btn-secondary" onclick="resetTeamForm()">Reset
+                    Form</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- SPONSORS MANAGEMENT CARD -->
+    <div class="admin-card" id="sponsor_form_card">
+        <div class="admin-card-header">
+            <h2>🤝 Sponsors Management</h2>
+        </div>
+
+        <div class="data-list" style="margin-bottom: 2rem; max-height: 300px;">
+            {% for sponsor in sponsors %}
+            <div class="data-item">
+                <div class="sponsor-logo">
+                    {% if sponsor.logo %}
+                    <img src="{{ get_image_url(sponsor.logo) }}" alt="{{ sponsor.name }} logo">
+                    {% else %}
+                    <span class="sponsor-icon">🏢</span>
+                    {% endif %}
+                </div>
+                {% if sponsor.logo %}
+                <img src="{{ get_image_url(sponsor.logo) }}"
+                    style="width: 100%; height: 100%; object-fit: contain; padding: 4px;" alt="{{ sponsor.name }} logo">
+                {% else %}
+                <span style="font-size: 1.5rem;">🏢</span>
+                {% endif %}
+            </div>
+            <div>
+                <strong style="display: block; font-size: 1.1rem;">{{ sponsor.name }}</strong>
+                <small style="color: #666; display: block; margin-top: 0.25rem;">
+                    <span class="sponsor-badge {{ sponsor.level|lower }}">{{ sponsor.level }}</span>
+                    {% if sponsor.website %}
+                    <span style="margin-left: 0.5rem;">•</span>
+                    <a href="{{ sponsor.website }}" target="_blank"
+                        style="color: var(--maroon-dark); text-decoration: none;">Website →</a>
+                    {% endif %}
+                </small>
+            </div>
+            <div class="data-item-actions">
+                <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
+                    onclick="editSponsor('{{ sponsor._id }}', '{{ sponsor.name|e }}', '{{ sponsor.website|e }}', '{{ sponsor.level }}')">Edit</button>
+                <form action="{{ url_for('admin_delete_sponsor', id=sponsor._id) }}" method="POST" style="margin: 0;"
+                    onsubmit="return confirmDelete('sponsor')">
+                    <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+        {% if not sponsors %}
+        <div
+            style="text-align: center; color: #666; padding: 2rem; background: #f8f9fa; border-radius: 8px; border: 2px dashed #dee2e6;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🤝</div>
+            <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No sponsors yet</p>
+            <p style="color: #888;">Add your first sponsor using the form below</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <h3 id="sponsor_form_title"
+        style="font-size: 1.1rem; margin-bottom: 1rem; border-top: 2px solid #eee; padding-top: 1.5rem;">Add New Sponsor
+    </h3>
+    <form id="sponsor_form" action="{{ url_for('admin_save_sponsor') }}" method="POST" enctype="multipart/form-data">
+        <input type="hidden" id="sponsor_id" name="sponsor_id">
+        <div class="form-group">
+            <label>Sponsor Name</label>
+            <input type="text" name="name" required placeholder="e.g. Acme Corp">
+        </div>
+        <div class="form-group">
+            <label>Website URL</label>
+            <input type="url" name="website" placeholder="https://example.com">
+        </div>
+        <div class="form-group">
+            <label>Sponsorship Level</label>
+            <select name="level">
+                <option value="Bronze">Bronze</option>
+                <option value="Silver">Silver</option>
+                <option value="Gold">Gold</option>
+                <option value="Platinum">Platinum</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Logo (Optional)</label>
+            <input type="file" name="logo" accept="image/*" onchange="previewImage(this, 'sponsorLogoPreview')">
+            <div id="sponsorLogoPreview" class="image-preview"></div>
+            <div class="form-hint">Square logo, transparent background preferred</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <button type="submit" class="admin-btn">Save Sponsor</button>
+            <button type="button" class="admin-btn admin-btn-secondary" onclick="resetSponsorForm()">Reset</button>
+        </div>
+    </form>
+</div>
+
+<!-- USER MANAGEMENT CARD -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>👤 User Management</h2>
+    </div>
+    <form action="{{ url_for('admin_create_user') }}" method="POST" id="userForm">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Enter username" required>
+            <div class="form-hint">Must be 3-20 characters, letters and numbers only</div>
+        </div>
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" placeholder="user@example.com">
+            <div class="form-hint">Optional - for notifications and password reset</div>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="Enter secure password" required>
+            <div class="form-hint">Minimum 8 characters with letters and numbers</div>
+        </div>
+        <div class="form-group">
+            <label for="confirm_password">Confirm Password</label>
+            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password">
+        </div>
+        <div class="form-group">
+            <label for="role">User Role</label>
+            <select id="role" name="role" class="role-select">
+                <option value="member">Member (View only)</option>
+                <option value="editor">Editor (Can edit content)</option>
+                <option value="admin">Admin (Full access)</option>
+            </select>
+            <div class="form-hint">Admins have full access to all management features</div>
+        </div>
+        <div class="btn-group">
+            <button type="submit" class="admin-btn admin-btn-success">Create User</button>
+            <button type="button" class="admin-btn admin-btn-secondary"
+                onclick="document.getElementById('userForm').reset()">Clear Form</button>
+        </div>
+    </form>
+</div>
+
+<!-- Recent Activity Card -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>📋 Recent Activity</h2>
+    </div>
+
+    <div class="activity-list">
+        {% if activities %}
+        {% for activity in activities %}
+        <div class="activity-item">
+            <div class="activity-icon">{{ get_activity_icon(activity.type) }}</div>
+            <div class="activity-content">
+                <div class="activity-title">{{ get_activity_title(activity.type) }}</div>
+                <div class="activity-desc">{{ activity.description|default('') }}</div>
+                <div class="activity-time">{{ activity.display_time|default('') }}</div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="text-align: center; color: #666; padding: 3rem;">
+            <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No recent activity</p>
+            <p style="color: #888;">Activity will appear here as you make changes</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="empty-state" style="display: none;" id="noActivity">
+        <div class="empty-state-icon">📋</div>
+        <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No recent activity</p>
+        <p style="color: #888;">Activity will appear here as you make changes</p>
+    </div>
+</div>
+
+</div>
+</div>
+
+<!-- Help Button -->
+<button class="help-button" onclick="showHelp()">?</button>
+</div>
+{% endblock %}

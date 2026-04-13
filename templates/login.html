@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Mepham Robotics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/icons/mephamrobotics.png') }}?v=1">
+    <style>
+        :root {
+            --accent-red: #800000;
+            --maroon-dark: #4a0000;
+            --accent-gold: #ffd700;
+            --bg-color: radial-gradient(circle at center, #2a0000 0%, #000 100%);
+            --text-gray: #a0aec0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-color);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bg-gear {
+            position: absolute;
+            color: rgba(128, 0, 0, 0.1);
+            font-size: 20rem;
+            animation: rotate 20s linear infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 950px;
+            height: 600px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            display: flex;
+            overflow: hidden;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            margin: 20px;
+            z-index: 1;
+        }
+
+        .illustration-side {
+            flex: 1.2;
+            background: linear-gradient(135deg, var(--maroon-dark) 0%, var(--accent-red) 100%);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .gear-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.2;
+        }
+
+        .main-gear-svg {
+            width: 300px;
+            height: 300px;
+            fill: var(--accent-gold);
+            animation: rotate 10s linear infinite;
+        }
+
+        .form-side {
+            flex: 1;
+            padding: 4rem 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .login-header h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+            letter-spacing: 2px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-gray);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent-gold);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--accent-red) 0%, #b30000 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(128, 0, 0, 0.3);
+            background: linear-gradient(135deg, #b30000 0%, #ff1a1a 100%);
+        }
+
+        .form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-gray);
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .forgot-password {
+            color: var(--accent-gold);
+            text-decoration: none;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        .forgot-password:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .back-to-site {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.85rem;
+        }
+
+        .back-to-site a {
+            color: var(--text-gray);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .back-to-site a:hover {
+            color: var(--accent-gold);
+        }
+
+        .error-message {
+            color: #ff4d4d;
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 1rem;
+            display: none;
+            font-weight: 500;
+            background: rgba(255, 77, 77, 0.1);
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        @media (max-width: 850px) {
+            .illustration-side {
+                display: none;
+            }
+
+            .login-container {
+                max-width: 450px;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-gear" style="top: -50px; left: -50px;">⚙️</div>
+    <div class="bg-gear" style="bottom: -100px; right: -50px; animation-direction: reverse; font-size: 30rem;">⚙️</div>
+
+    <div class="login-container">
+        <!-- Illustration Side -->
+        <div class="illustration-side">
+            <div class="gear-overlay">
+                <svg class="main-gear-svg" viewBox="0 0 100 100">
+                    <path
+                        d="M50 35c-8.3 0-15 6.7-15 15s6.7 15 15 15 15-6.7 15-15-6.7-15-15-15zm41.2 10.3l-8.5-1.4c-.3-1.1-.7-2.1-1.1-3.2l5.1-6.9c.5-.7.4-1.7-.3-2.3l-5.7-5.7c-.7-.7-1.7-.7-2.3-.3l-6.9 5.1c-1-.5-2.1-.8-3.2-1.1l-1.4-8.5c-.1-.9-.9-1.5-1.8-1.5h-8c-.9 0-1.7.6-1.8 1.5l-1.4 8.5c-1.1.3-2.1.7-3.2 1.1l-6.9-5.1c-.7-.5-1.7-.4-2.3.3l-5.7 5.7c-.7.7-.7 1.7-.3 2.3l5.1 6.9c-.5 1-.8 2.1-1.1 3.2l-8.5 1.4c-.9.1-1.5.9-1.5 1.8v8c0 .9.6 1.7 1.5 1.8l8.5 1.4c.3 1.1.7 2.1 1.1 3.2l-5.1 6.9c-.5.7-.4 1.7.3 2.3l5.7 5.7c.7.7 1.7.7 2.3.3l6.9-5.1c1 .5 2.1.8 3.2 1.1l1.4 8.5c.1.9.9 1.5 1.8 1.5h8c.9 0 1.7-.6 1.8-1.5l1.4-8.5c1.1-.3 2.1-.7 3.2-1.1l6.9 5.1c.7.5 1.7.4 2.3-.3l5.7-5.7c.7-.7.7-1.7.3-2.3l-5.1-6.9c.5-1 .8-2.1 1.1-3.2l8.5-1.4c.9-.1 1.5-.9 1.5-1.8v-8c0-.9-.6-1.7-1.5-1.8z" />
+                </svg>
+            </div>
+            <div style="position: absolute; bottom: 20%; right: 20%; opacity: 0.1;">
+                <svg width="150" height="150" viewBox="0 0 100 100"
+                    style="animation: rotate 15s linear infinite reverse;">
+                    <path fill="var(--accent-gold)"
+                        d="M50 35c-8.3 0-15 6.7-15 15s6.7 15 15 15 15-6.7 15-15-6.7-15-15-15zm41.2 10.3l-8.5-1.4c-.3-1.1-.7-2.1-1.1-3.2l5.1-6.9c.5-.7.4-1.7-.3-2.3l-5.7-5.7c-.7-.7-1.7-.7-2.3-.3l-6.9 5.1c-1-.5-2.1-.8-3.2-1.1l-1.4-8.5c-.1-.9-.9-1.5-1.8-1.5h-8c-.9 0-1.7.6-1.8 1.5l-1.4 8.5c-1.1.3-2.1.7-3.2 1.1l-6.9-5.1c-.7-.5-1.7-.4-2.3.3l-5.7 5.7c-.7.7-.7 1.7-.3 2.3l5.1 6.9c-.5 1-.8 2.1-1.1 3.2l-8.5 1.4c-.9.1-1.5.9-1.5 1.8v8c0 .9.6 1.7 1.5 1.8l8.5 1.4c.3 1.1.7 2.1 1.1 3.2l-5.1 6.9c-.5.7-.4 1.7.3 2.3l5.7 5.7c.7.7 1.7.7 2.3.3l6.9-5.1c1 .5 2.1.8 3.2 1.1l1.4 8.5c.1.9.9 1.5 1.8 1.5h8c.9 0 1.7-.6 1.8-1.5l1.4-8.5c1.1-.3 2.1-.7 3.2-1.1l6.9 5.1c.7.5 1.7.4 2.3-.3l5.7-5.7c.7-.7.7-1.7.3-2.3l-5.1-6.9c.5-1 .8-2.1 1.1-3.2l8.5-1.4c.9-.1 1.5-.9 1.5-1.8v-8c0-.9-.6-1.7-1.5-1.8z" />
+                </svg>
+            </div>
+        </div>
+
+        <!-- Form Side -->
+        <div class="form-side">
+            <div class="login-header">
+                <h2>LOGIN</h2>
+            </div>
+
+            <form id="loginForm" method="POST" action="{{ url_for('login') }}">
+                <div class="form-group">
+                    <label for="username">Email</label>
+                    <input type="text" id="username" name="username" placeholder="user@mephamrobotics.com" required
+                        autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required
+                        autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="login-btn">Login</button>
+                {% if error %}
+                <div class="error-message" style="display:block;">{{ error }}</div>
+                {% endif %}
+
+                <div class="form-footer">
+                    <label class="remember-me">
+                        <input type="checkbox"> Remember me
+                    </label>
+                    <a href="#" class="forgot-password">Forgot Password?</a>
+                </div>
+
+                <div class="back-to-site">
+                    <a href="{{ url_for('index') }}" class="back-to-site">← Back to Site</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

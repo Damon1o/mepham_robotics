@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Branding Guide | Mepham Robotics{% endblock %}
+{% block meta_description %}Official Mepham Robotics branding guide — colors, fonts, and logo usage.{% endblock %}
+
+
+{% block content %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="separator">›</span>
+    <a href="{{ url_for('resources') }}">Resources</a>
+    <span class="separator">›</span>
+    <span class="current">Branding Guide</span>
+</nav>
+
+<div class="content-page">
+    <h1>Branding Guide</h1>
+    <p style="text-align:center;color:#999;margin-top:-1rem;margin-bottom:2rem;">Official colors, typography, and
+        logo usage for Team 77628.</p>
+
+    <h2>🎨 Color Palette</h2>
+    <p>Our brand is built on a bold maroon and gold foundation. Use these colors consistently across all team
+        materials.</p>
+
+    <div class="color-palette">
+        <div class="color-swatch">
+            <div class="color-preview" style="background:#800000"></div>
+            <div class="color-info">
+                <div class="color-name">Maroon Dark</div>
+                <div class="color-hex">#800000</div>
+            </div>
+        </div>
+        <div class="color-swatch">
+            <div class="color-preview" style="background:#944547"></div>
+            <div class="color-info">
+                <div class="color-name">Maroon Light</div>
+                <div class="color-hex">#944547</div>
+            </div>
+        </div>
+        <div class="color-swatch">
+            <div class="color-preview" style="background:#FFD700"></div>
+            <div class="color-info">
+                <div class="color-name">Accent Gold</div>
+                <div class="color-hex">#FFD700</div>
+            </div>
+        </div>
+        <div class="color-swatch">
+            <div class="color-preview" style="background:#1a1a1a"></div>
+            <div class="color-info">
+                <div class="color-name">Text Dark</div>
+                <div class="color-hex">#1A1A1A</div>
+            </div>
+        </div>
+        <div class="color-swatch">
+            <div class="color-preview" style="background:#f8f5f0"></div>
+            <div class="color-info">
+                <div class="color-name">Background Light</div>
+                <div class="color-hex">#F8F5F0</div>
+            </div>
+        </div>
+    </div>
+
+    <h2>✏️ Typography</h2>
+    <p>We use two typefaces to create a playful yet technical aesthetic:</p>
+
+    <div class="font-specimen">
+        <h4>Primary — Display</h4>
+        <div class="specimen-text" style="font-family:'Balsamiq Sans',cursive;font-weight:700;">Balsamiq Sans Bold</div>
+        <div class="specimen-text" style="font-family:'Balsamiq Sans',cursive;font-weight:400;font-size:1.5rem;">The
+            quick brown robot jumps over the lazy field element.</div>
+        <div class="specimen-meta">Used for: Body text, paragraphs, navigation</div>
+    </div>
+
+    <div class="font-specimen">
+        <h4>Secondary — Monospace</h4>
+        <div class="specimen-text" style="font-family:'Space Mono',monospace;font-weight:700;">Space Mono Bold</div>
+        <div class="specimen-text" style="font-family:'Space Mono',monospace;font-weight:400;font-size:1.5rem;">
+            BUILD.CODE.COMPETE. → 77628</div>
+        <div class="specimen-meta">Used for: Headings, stats, labels, code references</div>
+    </div>
+
+    <h2>🏷️ Logo Usage</h2>
+    <p>The Mepham Robotics logo should always:</p>
+    <ul>
+        <li>Appear with sufficient clear space around it</li>
+        <li>Not be stretched, skewed, or distorted</li>
+        <li>Use the official maroon/gold colors on light backgrounds</li>
+        <li>Use white/gold on dark backgrounds</li>
+        <li>Maintain a minimum size of 40px height for digital use</li>
+    </ul>
+
+    <h2>🚫 Don'ts</h2>
+    <ul>
+        <li>Don't use off-brand colors (no bright red, no neon green)</li>
+        <li>Don't mix fonts — stick to Balsamiq Sans and Space Mono</li>
+        <li>Don't use the logo as a watermark over photos</li>
+        <li>Don't recreate the logo — always use the official file</li>
+    </ul>
+
+    <h2>📁 Assets</h2>
+    <p>Contact the team's media lead for official logo files, templates, and presentation decks.</p>
+
+    <div style="text-align:center;margin-top:3rem;">
+        <a href="{{ url_for('resources') }}" class="cta-button cta-primary">← Back to Resources</a>
+    </div>
+</div>
+{% endblock %}

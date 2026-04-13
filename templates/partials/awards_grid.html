@@ -1,0 +1,23 @@
+<section class="award-container team-awards fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">Competition Awards</h2>
+    </div>
+
+    <div class="awards-grid">
+        {% for award in team_awards %}
+        <div
+            class="award-box {{ award.layout }} {{ 'border-' + award.border if award.border else '' }} {{ 'bg-shimmer' if award.shimmer else '' }}">
+            <div class="award-count">×{{ award.count }}</div>
+            <div class="award-icon-container">
+                <img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}" alt="{{ award.title }}"
+                    class="award-icon" loading="lazy">
+            </div>
+            <div class="award-title">{{ award.title }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="text-center mt-lg">
+        <a href="{{ url_for('achievements') }}" class="cta-button cta-primary">View All Achievements</a>
+    </div>
+</section>
