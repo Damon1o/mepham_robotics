@@ -1374,10 +1374,10 @@
         modal.className = 'help-modal';
         modal.innerHTML = `
             <div class="help-modal-content">
-                <button class="help-modal-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                <button class="help-modal-close" onclick="this.closest('.help-modal').remove()">&times;</button>
                 ${helpContent}
                 <div style="margin-top: 1.5rem;">
-                    <button class="admin-btn" onclick="this.parentElement.parentElement.remove()">Got it!</button>
+                    <button class="admin-btn" onclick="this.closest('.help-modal').remove()">Got it!</button>
                 </div>
             </div>
         `;
