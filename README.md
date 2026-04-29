@@ -1,6 +1,6 @@
 # Mepham Robotics Club Website
 
-![Mepham Robotics](assets/icons/mephamrobotics.png)
+![Mepham Robotics](static/assets/icons/mephamrobotics.png)
 
 ## Build. Code. Compete.
 
