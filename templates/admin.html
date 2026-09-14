@@ -95,13 +95,13 @@
 
 <!-- Quick Actions -->
 <div class="admin-quick-actions">
-    <a href="#event_form_card" class="quick-action-btn" onclick="resetEventForm(); return false;">
+    <a href="#events" class="quick-action-btn" onclick="AdminTabs.go('events'); resetEventForm(); return false;">
         <span>📅 Add Event</span>
     </a>
-    <a href="#team_form_card" class="quick-action-btn" onclick="resetTeamForm(); return false;">
+    <a href="#teams" class="quick-action-btn" onclick="AdminTabs.go('teams'); resetTeamForm(); return false;">
         <span>🤖 Add Team</span>
     </a>
-    <a href="#sponsor_form_card" class="quick-action-btn" onclick="resetSponsorForm(); return false;">
+    <a href="#sponsors" class="quick-action-btn" onclick="AdminTabs.go('sponsors'); resetSponsorForm(); return false;">
         <span>🤝 Add Sponsor</span>
     </a>
     <a href="{{ url_for('admin_dashboard') }}?export=data" class="quick-action-btn">
@@ -116,8 +116,28 @@
         onkeyup="searchAdminContent()">
 </div>
 
+<nav class="admin-tabs" role="tablist" aria-label="Admin sections">
+    <a href="#stats" role="tab" id="tab-stats" aria-controls="panel-stats" aria-selected="true"
+        data-tab="stats" tabindex="0">📊 Statistics</a>
+    <a href="#events" role="tab" id="tab-events" aria-controls="panel-events" aria-selected="false"
+        data-tab="events" tabindex="-1">⏳ Events</a>
+    <a href="#awards" role="tab" id="tab-awards" aria-controls="panel-awards" aria-selected="false"
+        data-tab="awards" tabindex="-1">🏆 Awards</a>
+    <a href="#team-awards" role="tab" id="tab-team-awards" aria-controls="panel-team-awards"
+        aria-selected="false" data-tab="team-awards" tabindex="-1">🏅 Team Awards</a>
+    <a href="#teams" role="tab" id="tab-teams" aria-controls="panel-teams" aria-selected="false"
+        data-tab="teams" tabindex="-1">🤖 Teams</a>
+    <a href="#sponsors" role="tab" id="tab-sponsors" aria-controls="panel-sponsors" aria-selected="false"
+        data-tab="sponsors" tabindex="-1">🤝 Sponsors</a>
+    <a href="#users" role="tab" id="tab-users" aria-controls="panel-users" aria-selected="false"
+        data-tab="users" tabindex="-1">👤 Users</a>
+    <a href="#activity" role="tab" id="tab-activity" aria-controls="panel-activity" aria-selected="false"
+        data-tab="activity" tabindex="-1">📋 Activity</a>
+</nav>
+
 <div class="admin-grid">
     <!-- GLOBAL STATS CARD -->
+    <section class="admin-panel" data-panel="stats" id="panel-stats" role="tabpanel" aria-labelledby="tab-stats">
     <div class="admin-card">
         <div class="admin-card-header">
             <h2>📊 Site Statistics</h2>
@@ -142,8 +162,10 @@
             <button type="submit" class="admin-btn">Update Stats</button>
         </form>
     </div>
+    </section>
 
     <!-- UPCOMING EVENTS MANAGER -->
+    <section class="admin-panel" data-panel="events" id="panel-events" role="tabpanel" aria-labelledby="tab-events" hidden>
     <div class="admin-card">
         <div class="admin-card-header">
             <h2>⏳ Upcoming Events</h2>
@@ -196,8 +218,10 @@
             </div>
         </form>
     </div>
+    </section>
 
     <!-- AWARDS MANAGER CARD -->
+    <section class="admin-panel" data-panel="awards" id="panel-awards" role="tabpanel" aria-labelledby="tab-awards" hidden>
     <div class="admin-card">
         <div class="admin-card-header">
             <h2>🏆 Awards Inventory</h2>
@@ -223,8 +247,10 @@
             </div>
         </form>
     </div>
+    </section>
 
     <!-- TEAM AWARDS MANAGER CARD -->
+    <section class="admin-panel" data-panel="team-awards" id="panel-team-awards" role="tabpanel" aria-labelledby="tab-team-awards" hidden>
     <div class="admin-card"
         style="grid-column: 1 / -1; background: linear-gradient(135deg, #fffdf5 0%, #fff9e6 100%); border-color: var(--maroon-dark);">
         <div class="admin-card-header">
@@ -262,8 +288,10 @@
             <p style="color: #888;">Please select a team from the dropdown above to manage their awards</p>
         </div>
     </div>
+    </section>
 
     <!-- TEAMS MANAGEMENT CARD -->
+    <section class="admin-panel" data-panel="teams" id="panel-teams" role="tabpanel" aria-labelledby="tab-teams" hidden>
     <div class="admin-card" style="grid-column: 1 / -1;" id="team_form_card">
         <div class="admin-card-header">
             <h2>🤖 Teams Management</h2>
@@ -377,8 +405,10 @@
             </div>
         </form>
     </div>
+    </section>
 
     <!-- SPONSORS MANAGEMENT CARD -->
+    <section class="admin-panel" data-panel="sponsors" id="panel-sponsors" role="tabpanel" aria-labelledby="tab-sponsors" hidden>
     <div class="admin-card" id="sponsor_form_card">
         <div class="admin-card-header">
             <h2>🤝 Sponsors Management</h2>
@@ -461,8 +491,10 @@
         </div>
     </form>
 </div>
+</section>
 
 <!-- USER MANAGEMENT CARD -->
+<section class="admin-panel" data-panel="users" id="panel-users" role="tabpanel" aria-labelledby="tab-users" hidden>
 <div class="admin-card">
     <div class="admin-card-header">
         <h2>👤 User Management</h2>
@@ -503,8 +535,10 @@
         </div>
     </form>
 </div>
+</section>
 
 <!-- Recent Activity Card -->
+<section class="admin-panel" data-panel="activity" id="panel-activity" role="tabpanel" aria-labelledby="tab-activity" hidden>
 <div class="admin-card">
     <div class="admin-card-header">
         <h2>📋 Recent Activity</h2>
@@ -536,6 +570,7 @@
         <p style="color: #888;">Activity will appear here as you make changes</p>
     </div>
 </div>
+</section>
 
 </div>
 </div>

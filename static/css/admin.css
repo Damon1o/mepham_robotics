@@ -61,6 +61,52 @@
         pointer-events: auto;
     }
 
+    .admin-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 3px solid var(--maroon-dark);
+        padding-bottom: 0;
+    }
+
+    .admin-tabs a {
+        display: inline-block;
+        padding: 0.65rem 1.1rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--maroon-dark);
+        text-decoration: none;
+        border: 2px solid transparent;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        background: transparent;
+        cursor: pointer;
+    }
+
+    .admin-tabs a:hover {
+        background: rgba(128, 0, 0, 0.05);
+    }
+
+    .admin-tabs a[aria-selected="true"] {
+        background: var(--admin-card-bg, #fff);
+        border-color: var(--maroon-dark);
+        box-shadow: 0 -3px 0 var(--accent-gold, #d4af37) inset;
+    }
+
+    .admin-panel {
+        display: block;
+    }
+
+    .admin-panel[hidden] {
+        display: none;
+    }
+
+    .admin-panel .admin-grid,
+    .admin-panel .admin-card {
+        grid-column: 1 / -1;
+    }
+
     .admin-quick-actions {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

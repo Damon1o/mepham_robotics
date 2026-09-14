@@ -353,3 +353,76 @@ function showHelp() {
     `;
     document.body.appendChild(modal);
 }
+
+const AdminTabs = (function () {
+    const DEFAULT_TAB = 'stats';
+
+    function tabs() {
+        return Array.from(document.querySelectorAll('.admin-tabs [role="tab"]'));
+    }
+
+    function panels() {
+        return Array.from(document.querySelectorAll('.admin-panel'));
+    }
+
+    function currentTab() {
+        const hash = location.hash.replace('#', '');
+        const valid = tabs().some(t => t.dataset.tab === hash);
+        return valid ? hash : DEFAULT_TAB;
+    }
+
+    function show(name) {
+        tabs().forEach(tab => {
+            const active = tab.dataset.tab === name;
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
+            tab.tabIndex = active ? 0 : -1;
+        });
+        panels().forEach(panel => {
+            panel.hidden = panel.dataset.panel !== name;
+        });
+    }
+
+    function go(name) {
+        if (location.hash === '#' + name) {
+            show(name);
+        } else {
+            location.hash = name;
+        }
+    }
+
+    function onHashChange() {
+        show(currentTab());
+    }
+
+    function onKeydown(e) {
+        const tabEls = tabs();
+        const i = tabEls.indexOf(document.activeElement);
+        if (i === -1) return;
+        let next = null;
+        if (e.key === 'ArrowRight') next = tabEls[(i + 1) % tabEls.length];
+        else if (e.key === 'ArrowLeft') next = tabEls[(i - 1 + tabEls.length) % tabEls.length];
+        else if (e.key === 'Home') next = tabEls[0];
+        else if (e.key === 'End') next = tabEls[tabEls.length - 1];
+        if (next) {
+            e.preventDefault();
+            next.focus();
+            go(next.dataset.tab);
+        }
+    }
+
+    function init() {
+        tabs().forEach(tab => {
+            tab.addEventListener('click', function (e) {
+                e.preventDefault();
+                go(tab.dataset.tab);
+            });
+        });
+        document.querySelector('.admin-tabs').addEventListener('keydown', onKeydown);
+        window.addEventListener('hashchange', onHashChange);
+        show(currentTab());
+    }
+
+    return { init, go };
+})();
+
+document.addEventListener('DOMContentLoaded', () => AdminTabs.init());
