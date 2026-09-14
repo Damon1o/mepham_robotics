@@ -1,5 +1,6 @@
 import os
 import datetime
+import logging
 from functools import wraps
 from bson import ObjectId
 import bcrypt
@@ -185,7 +186,6 @@ class _DbProxy:
         return getattr(get_db(), name)
 
 db = _DbProxy()
-users_collection = db['users']
 
 def get_image_url(image_path, external=False):
     """Helper function to get proper image URL for both local static files and Vercel Blob URLs"""
@@ -203,9 +203,13 @@ def get_image_url(image_path, external=False):
 
 @app.context_processor
 def inject_global_data():
-    nav_teams = list(db['teams'].find({}, {'team_number': 1}).sort('team_number', 1))
-    awards_list = list(db['awards'].find({'team_number': {'$exists': False}}).sort('_id', 1))
-    sponsors_list = list(db['sponsors'].find())
+    try:
+        nav_teams = list(db['teams'].find({}, {'team_number': 1}).sort('team_number', 1))
+        awards_list = list(db['awards'].find({'team_number': {'$exists': False}}).sort('_id', 1))
+        sponsors_list = list(db['sponsors'].find())
+    except Exception:
+        logger.exception("inject_global_data: failed to load nav/footer data")
+        nav_teams, awards_list, sponsors_list = [], [], []
     for s in sponsors_list:
         s['_id'] = str(s['_id'])
         # Ensure sponsors have logo_path field for backward compatibility with templates
@@ -327,7 +331,7 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
-        user = users_collection.find_one({
+        user = db['users'].find_one({
             '$or': [{'username': username}, {'email': username}]
         })
         if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
@@ -828,7 +832,7 @@ def admin_create_user():
         if not username or not password:
             flash('Username and password are required.', 'error')
             return redirect(url_for('admin_dashboard'))
-        if users_collection.find_one({'username': username}):
+        if db['users'].find_one({'username': username}):
             flash('Username already exists.', 'error')
             return redirect(url_for('admin_dashboard'))
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
@@ -838,7 +842,7 @@ def admin_create_user():
             'password': hashed,
             'role': request.form.get('role', 'member')
         }
-        users_collection.insert_one(user_data)
+        db['users'].insert_one(user_data)
         flash(f'User "{username}" created successfully!', 'success')
 
         # Log activity
@@ -1075,6 +1079,24 @@ def sitemap_xml():
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
+
+logger = logging.getLogger(__name__)
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    logger.exception("Internal server error: %s", e)
+    return render_template('500.html'), 500
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(e):
+    logger.exception("Unhandled exception: %s", e)
+    return render_template('500.html'), 500
+
+@app.after_request
+def add_static_cache_headers(response):
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)
