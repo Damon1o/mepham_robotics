@@ -19,3 +19,4 @@ Thumbs.db
 
 # Uploads (user-generated, served via Vercel Blob instead)
 static/uploads/
+.env*
