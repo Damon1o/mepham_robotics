@@ -790,16 +790,48 @@
         align-items: center;
         justify-content: center;
         z-index: 10000;
-        display: none !important;
+        animation: fadeIn 0.2s ease;
+    }
+
+    .confirmation-dialog[hidden] {
+        display: none;
     }
 
     .confirmation-content {
         background: white;
         border-radius: 16px;
         padding: 2rem;
-        max-width: 400px;
+        max-width: 480px;
         width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
         box-shadow: var(--shadow-lg);
+    }
+
+    .confirmation-title {
+        margin-top: 0;
+        color: var(--maroon-dark);
+    }
+
+    .confirmation-message {
+        color: var(--text-dark, #333);
+    }
+
+    .confirmation-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
     }
 
     @media (max-width: 768px) {
@@ -1003,55 +1035,6 @@
         background: linear-gradient(135deg, #a00000 0%, var(--maroon-dark) 100%);
     }
 
-    /* Help modal */
-    .help-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        animation: fadeIn 0.3s ease;
-    }
-
-    .help-modal-content {
-        background: white;
-        border-radius: 16px;
-        padding: 2rem;
-        max-width: 500px;
-        width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
-        box-shadow: var(--shadow-lg);
-        position: relative;
-    }
-
-
-    .help-modal-close {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: #666;
-    }
-
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
-    }
 
     @media (max-width: 768px) {
         .admin-grid {

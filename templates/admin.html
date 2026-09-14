@@ -186,7 +186,7 @@
                         data-name="{{ comp.name }}" data-location="{{ comp.location }}" data-date="{{ comp.date_str }}"
                         onclick="editEvent(this.dataset.id, this.dataset.name, this.dataset.location, this.dataset.date)">Edit</button>
                     <form action="{{ url_for('admin_delete_competition', comp_id=comp._id) }}" method="POST"
-                        style="margin: 0;" onsubmit="return confirmDelete('event')">
+                        style="margin: 0;" onsubmit="return confirmDelete(this, 'event')">
                         <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
                     </form>
                 </div>
@@ -320,7 +320,7 @@
                     <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
                         data-team='{{ team_json|e }}' onclick="editTeam(this.dataset.team)">Edit</button>
                     <form action="{{ url_for('admin_delete_team', id=team._id) }}" method="POST" style="margin: 0;"
-                        onsubmit="return confirmDelete('team')">
+                        onsubmit="return confirmDelete(this, 'team')">
                         <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
                     </form>
                 </div>
@@ -443,7 +443,7 @@
                         data-website="{{ sponsor.website }}" data-level="{{ sponsor.level }}"
                         onclick="editSponsor(this.dataset.id, this.dataset.name, this.dataset.website, this.dataset.level)">Edit</button>
                     <form action="{{ url_for('admin_delete_sponsor', id=sponsor._id) }}" method="POST" style="margin: 0;"
-                        onsubmit="return confirmDelete('sponsor')">
+                        onsubmit="return confirmDelete(this, 'sponsor')">
                         <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
                     </form>
                 </div>
@@ -579,5 +579,18 @@
 
 <!-- Help Button -->
 <button class="help-button" onclick="showHelp()">?</button>
+
+<!-- Shared confirm/alert dialog (Dialog.confirm / Dialog.alert) -->
+<div id="admin-confirm-dialog" class="confirmation-dialog" role="alertdialog" aria-modal="true"
+    aria-labelledby="confirmation-title" aria-describedby="confirmation-message" hidden>
+    <div class="confirmation-content">
+        <h3 class="confirmation-title" id="confirmation-title"></h3>
+        <div class="confirmation-message" id="confirmation-message"></div>
+        <div class="confirmation-actions">
+            <button type="button" class="admin-btn admin-btn-secondary confirmation-cancel">Cancel</button>
+            <button type="button" class="admin-btn admin-btn-danger confirmation-confirm">Confirm</button>
+        </div>
+    </div>
+</div>
 </div>
 {% endblock %}

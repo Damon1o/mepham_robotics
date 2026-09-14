@@ -171,8 +171,15 @@ function hideLoading() {
     document.getElementById('loadingOverlay').style.display = 'none';
 }
 
-function confirmDelete(type) {
-    return confirm(`Are you sure you want to delete this ${type}? This action cannot be undone.`);
+function confirmDelete(form, type) {
+    Dialog.confirm({
+        title: `Delete ${type}`,
+        message: `Are you sure you want to delete this ${type}? This action cannot be undone.`,
+        confirmLabel: 'Delete',
+    }).then(confirmed => {
+        if (confirmed) form.submit();
+    });
+    return false;
 }
 
 function searchAdminContent() {
@@ -325,30 +332,93 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Help functionality
 function showHelp() {
-    const helpContent = `
-        <h3>Admin Dashboard Help</h3>
-        <p><strong>Quick Actions:</strong> Use the buttons at the top for common tasks.</p>
-        <p><strong>Search:</strong> Type in the search box to filter content across all sections.</p>
-        <p><strong>Forms:</strong> Most forms support auto-save (saves after 2 seconds of inactivity).</p>
-        <p><strong>Dark Mode:</strong> Toggle the theme button in the bottom right.</p>
-        <p><strong>Export Data:</strong> Use the export button to download all data as CSV.</p>
-        <p><strong>Need more help?</strong> Contact the system administrator.</p>
-    `;
-
-    // Create a modal for help
-    const modal = document.createElement('div');
-    modal.className = 'help-modal';
-    modal.innerHTML = `
-        <div class="help-modal-content">
-            <button class="help-modal-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
-            ${helpContent}
-            <div style="margin-top: 1.5rem;">
-                <button class="admin-btn" onclick="this.parentElement.parentElement.remove()">Got it!</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
+    Dialog.alert({
+        title: 'Admin Dashboard Help',
+        message: `
+            <p><strong>Quick Actions:</strong> Use the buttons at the top for common tasks.</p>
+            <p><strong>Search:</strong> Type in the search box to filter content across all sections.</p>
+            <p><strong>Forms:</strong> Most forms support auto-save (saves after 2 seconds of inactivity).</p>
+            <p><strong>Dark Mode:</strong> Toggle the theme button in the bottom right.</p>
+            <p><strong>Export Data:</strong> Use the export button to download all data as CSV.</p>
+            <p><strong>Need more help?</strong> Contact the system administrator.</p>
+        `,
+        confirmLabel: 'Got it!',
+    });
 }
+
+const Dialog = (function () {
+    let dialogEl, titleEl, messageEl, confirmBtn, cancelBtn, lastFocused, resolvePromise;
+
+    function els() {
+        if (dialogEl) return;
+        dialogEl = document.getElementById('admin-confirm-dialog');
+        titleEl = dialogEl.querySelector('.confirmation-title');
+        messageEl = dialogEl.querySelector('.confirmation-message');
+        confirmBtn = dialogEl.querySelector('.confirmation-confirm');
+        cancelBtn = dialogEl.querySelector('.confirmation-cancel');
+
+        confirmBtn.addEventListener('click', () => close(true));
+        cancelBtn.addEventListener('click', () => close(false));
+        dialogEl.addEventListener('click', e => {
+            if (e.target === dialogEl) close(false);
+        });
+        dialogEl.addEventListener('keydown', onKeydown);
+    }
+
+    function onKeydown(e) {
+        if (dialogEl.hidden) return;
+        if (e.key === 'Escape') {
+            close(false);
+            return;
+        }
+        if (e.key !== 'Tab') return;
+        const focusable = dialogEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
+    }
+
+    function close(result) {
+        dialogEl.hidden = true;
+        if (lastFocused) lastFocused.focus();
+        if (resolvePromise) {
+            const resolve = resolvePromise;
+            resolvePromise = null;
+            resolve(result);
+        }
+    }
+
+    function open({ title, message, confirmLabel, cancelLabel, showCancel }) {
+        els();
+        lastFocused = document.activeElement;
+        titleEl.textContent = title || '';
+        messageEl.innerHTML = message || '';
+        confirmBtn.textContent = confirmLabel;
+        cancelBtn.hidden = !showCancel;
+        dialogEl.hidden = false;
+        confirmBtn.focus();
+        return new Promise(resolve => {
+            resolvePromise = resolve;
+        });
+    }
+
+    function confirmDialog({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel' } = {}) {
+        return open({ title, message, confirmLabel, cancelLabel, showCancel: true });
+    }
+
+    function alertDialog({ title, message, confirmLabel = 'OK' } = {}) {
+        return open({ title, message, confirmLabel, showCancel: false });
+    }
+
+    return { confirm: confirmDialog, alert: alertDialog };
+})();
 
 const AdminTabs = (function () {
     const DEFAULT_TAB = 'stats';
