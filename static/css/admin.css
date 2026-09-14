@@ -665,6 +665,36 @@
         box-shadow: 2px 2px 0px rgba(128, 0, 0, 0.2);
     }
 
+    .form-fieldset {
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 0;
+        min-width: 0;
+    }
+
+    .form-fieldset legend {
+        padding: 0 0.5rem;
+        font-weight: 700;
+        color: var(--maroon-dark);
+        font-family: var(--font-display);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.95rem;
+    }
+
+    .form-fieldset-empty-hint {
+        display: none;
+        color: #888;
+        font-style: italic;
+        margin: 0 0 1rem;
+    }
+
+    .form-fieldset #members_container:empty + .form-fieldset-empty-hint,
+    .form-fieldset #goals_container:empty + .form-fieldset-empty-hint {
+        display: block;
+    }
+
     .dashboard-stats {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
