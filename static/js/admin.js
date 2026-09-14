@@ -1,0 +1,355 @@
+// Extracted from templates/admin.html inline <script> blocks
+function editEvent(id, name, location, dateStr) {
+    document.getElementById('event_form_title').innerText = 'Edit Event';
+    document.getElementById('event_form').action = '/admin/update-competition/' + id;
+    document.getElementsByName('comp_name')[0].value = name;
+    document.getElementsByName('comp_location')[0].value = location;
+    document.getElementsByName('comp_date')[0].value = dateStr;
+    window.scrollTo({ top: document.getElementById('event_form').offsetTop - 100, behavior: 'smooth' });
+}
+
+function resetEventForm() {
+    document.getElementById('event_form_title').innerText = 'Add New Event';
+    document.getElementById('event_form').action = document.getElementById('event_form').dataset.defaultAction;
+    document.getElementById('event_form').reset();
+}
+
+let memberCount = 0;
+function addMemberRow(data = {}) {
+    const container = document.getElementById('members_container');
+    const i = memberCount++;
+    const row = document.createElement('div');
+    row.className = 'dynamic-row';
+    row.innerHTML = `
+        <button type="button" class="remove-btn" onclick="this.parentElement.remove()">&times;</button>
+        <input type="hidden" name="member_photo_path_${i}" value="${data.photo || 'static/assets/profile/base.png'}">
+        <div class="form-group">
+            <label>Member Name</label>
+            <input type="text" name="member_name_${i}" value="${data.name || ''}" required>
+        </div>
+        <div class="form-group">
+            <label>Role</label>
+            <input type="text" name="member_role_${i}" value="${data.role || ''}" required>
+        </div>
+        <div class="form-group">
+            <label>Link User Account (Optional)</label>
+            <select name="member_user_${i}">
+                <option value="">-- No link --</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Profile Image (${data.photo ? 'Current exists' : 'Default used'})</label>
+            <input type="file" name="member_photo_${i}" accept="image/*" onchange="previewMemberImage(this, ${i})">
+            ${data.photo ? `<div class="image-preview" id="member_preview_${i}"><img src="${data.photo}" alt="Current photo" style="max-width: 100px; max-height: 100px;"></div>` : ''}
+        </div>
+    `;
+
+    const users = JSON.parse(document.getElementById('admin_users_data').textContent);
+    const select = row.querySelector(`select[name="member_user_${i}"]`);
+    users.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u._id;
+        opt.textContent = u.username;
+        if (data.user_id === u._id) opt.selected = true;
+        select.appendChild(opt);
+    });
+
+    container.appendChild(row);
+}
+
+let goalCount = 0;
+function addGoalRow(data = {}) {
+    const container = document.getElementById('goals_container');
+    const i = goalCount++;
+    const row = document.createElement('div');
+    row.className = 'dynamic-row';
+    row.innerHTML = `
+        <button type="button" class="remove-btn" onclick="this.parentElement.remove()">&times;</button>
+        <div class="form-group">
+            <label>Goal Name</label>
+            <input type="text" name="goal_name_${i}" value="${data.name || ''}" required>
+        </div>
+        <div class="form-group">
+            <label>Progress (${data.progress || 0}%)</label>
+            <input type="range" name="goal_progress_${i}" value="${data.progress || 0}" min="0" max="100" oninput="this.previousElementSibling.innerText = 'Progress (' + this.value + '%)'">
+        </div>
+    `;
+    container.appendChild(row);
+}
+
+function editTeam(teamJson) {
+    const team = JSON.parse(teamJson);
+    document.getElementById('team_form_title').innerText = 'Edit Team ' + team.team_number;
+    document.getElementById('team_id').value = team._id;
+    document.getElementsByName('team_number')[0].value = team.team_number;
+    document.getElementsByName('nickname')[0].value = team.nickname || '';
+    document.getElementsByName('tagline')[0].value = team.tagline || '';
+    document.getElementsByName('drive_train')[0].value = team.specs.drive_train || '';
+    document.getElementsByName('lift_system')[0].value = team.specs.lift_system || '';
+    document.getElementsByName('intake')[0].value = team.specs.intake || '';
+    document.getElementsByName('auton_consistency')[0].value = team.specs.auton_consistency || '';
+    document.getElementsByName('notebook_link')[0].value = team.notebook_link || '#';
+
+    // Clear and rebuild dynamic rows
+    document.getElementById('members_container').innerHTML = '';
+    memberCount = 0;
+    team.members.forEach(m => addMemberRow(m));
+
+    document.getElementById('goals_container').innerHTML = '';
+    goalCount = 0;
+    team.goals.forEach(g => addGoalRow(g));
+
+    window.scrollTo({ top: document.getElementById('team_form_card').offsetTop - 50, behavior: 'smooth' });
+}
+
+function editSponsor(id, name, website, level) {
+    document.getElementById('sponsor_form_title').innerText = 'Edit Sponsor';
+    document.getElementById('sponsor_form').action = '/admin/save-sponsor';
+    document.getElementById('sponsor_id').value = id;
+    document.getElementById('sponsor_form').querySelector('[name="name"]').value = name;
+    document.getElementsByName('website')[0].value = website;
+    document.getElementsByName('level')[0].value = level;
+    window.scrollTo({ top: document.getElementById('sponsor_form_card').offsetTop - 50, behavior: 'smooth' });
+}
+
+function resetSponsorForm() {
+    document.getElementById('sponsor_form_title').innerText = 'Add New Sponsor';
+    document.getElementById('sponsor_form').action = '/admin/save-sponsor';
+    document.getElementById('sponsor_id').value = '';
+    document.getElementById('sponsor_form').reset();
+}
+
+function showTeamAwards(teamNum) {
+    const teamAwards = JSON.parse(document.getElementById('team_awards_data').textContent);
+    const container = document.getElementById('team_awards_list');
+    const form = document.getElementById('team_awards_form');
+    const msg = document.getElementById('no_team_msg');
+
+    if (!teamNum) {
+        form.style.display = 'none';
+        msg.style.display = 'block';
+        return;
+    }
+
+    container.innerHTML = '';
+    const filtered = teamAwards.filter(a => a.team_number === teamNum);
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 1rem;">No awards found for this team. Please seed them first.</p>';
+    } else {
+        filtered.forEach(award => {
+            const item = document.createElement('div');
+            item.className = 'award-item';
+            item.innerHTML = `
+                <span style="font-size: 0.9rem;">${award.title}</span>
+                <input type="number" name="team_award_${award._id}" value="${award.count}" min="0" style="width: 70px; padding: 0.4rem;">
+            `;
+            container.appendChild(item);
+        });
+    }
+
+    form.style.display = 'block';
+    msg.style.display = 'none';
+}
+
+function resetTeamForm() {
+    document.getElementById('team_form_title').innerText = 'Create New Team';
+    document.getElementById('team_id').value = '';
+    document.getElementById('team_form').reset();
+    document.getElementById('members_container').innerHTML = '';
+    document.getElementById('goals_container').innerHTML = '';
+    memberCount = 0;
+    goalCount = 0;
+}
+
+// New enhanced functions
+function showLoading() {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+function confirmDelete(type) {
+    return confirm(`Are you sure you want to delete this ${type}? This action cannot be undone.`);
+}
+
+function searchAdminContent() {
+    const searchTerm = document.getElementById('adminSearch').value.toLowerCase();
+    const cards = document.querySelectorAll('.admin-card');
+
+    cards.forEach(card => {
+        const cardContent = card.textContent.toLowerCase();
+        if (cardContent.includes(searchTerm)) {
+            card.style.display = 'block';
+            card.style.animation = 'slideIn 0.3s ease';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+function addNewAward() {
+    const awardsList = document.querySelector('.data-list');
+    const newAwardDiv = document.createElement('div');
+    newAwardDiv.className = 'data-item';
+    newAwardDiv.innerHTML = `
+        <div>
+            <input type="text" placeholder="New award name" style="width: 100%; padding: 0.5rem; border: 2px solid #ddd; border-radius: 6px;">
+            <div class="form-hint">New award - set initial count</div>
+        </div>
+        <input type="number" value="0" min="0" style="width: 80px; padding: 0.5rem;">
+    `;
+    awardsList.appendChild(newAwardDiv);
+    newAwardDiv.scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetTeamAwards() {
+    const inputs = document.querySelectorAll('#team_awards_list input[type="number"]');
+    inputs.forEach(input => {
+        input.value = 0;
+    });
+    showNotification('Team awards reset to zero', 'info');
+}
+
+function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+
+    // Create new notification
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()">&times;</button>
+    `;
+    document.body.appendChild(notification);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Image preview functionality
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    const file = input.files[0];
+
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Member image preview functionality
+function previewMemberImage(input, index) {
+    const previewId = `member_preview_${index}`;
+    let preview = document.getElementById(previewId);
+
+    if (!preview) {
+        preview = document.createElement('div');
+        preview.className = 'image-preview';
+        preview.id = previewId;
+        input.parentNode.appendChild(preview);
+    }
+
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="max-width: 100px; max-height: 100px;">`;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Form validation for user creation
+document.getElementById('userForm')?.addEventListener('submit', function (e) {
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+
+    if (password !== confirmPassword) {
+        e.preventDefault();
+        showNotification('Passwords do not match!', 'error');
+        return false;
+    }
+
+    if (password.length < 8) {
+        e.preventDefault();
+        showNotification('Password must be at least 8 characters long', 'error');
+        return false;
+    }
+
+    showLoading();
+    return true;
+});
+
+// Auto-save indicator
+let autoSaveTimeout;
+function setupAutoSave(formId, saveUrl) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+
+    form.addEventListener('input', function () {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(() => {
+            // Simulate auto-save
+            const saveIndicator = document.createElement('div');
+            saveIndicator.className = 'status-msg info';
+            saveIndicator.textContent = 'Auto-saving changes...';
+            form.prepend(saveIndicator);
+
+            setTimeout(() => {
+                saveIndicator.remove();
+            }, 2000);
+        }, 2000); // Save after 2 seconds of inactivity
+    });
+}
+
+// Initialize auto-save for main forms
+document.addEventListener('DOMContentLoaded', function () {
+    setupAutoSave('team_form', '/admin/auto-save-team');
+    setupAutoSave('event_form', '/admin/auto-save-event');
+    setupAutoSave('sponsor_form', '/admin/auto-save-sponsor');
+});
+
+// Help functionality
+function showHelp() {
+    const helpContent = `
+        <h3>Admin Dashboard Help</h3>
+        <p><strong>Quick Actions:</strong> Use the buttons at the top for common tasks.</p>
+        <p><strong>Search:</strong> Type in the search box to filter content across all sections.</p>
+        <p><strong>Forms:</strong> Most forms support auto-save (saves after 2 seconds of inactivity).</p>
+        <p><strong>Dark Mode:</strong> Toggle the theme button in the bottom right.</p>
+        <p><strong>Export Data:</strong> Use the export button to download all data as CSV.</p>
+        <p><strong>Need more help?</strong> Contact the system administrator.</p>
+    `;
+
+    // Create a modal for help
+    const modal = document.createElement('div');
+    modal.className = 'help-modal';
+    modal.innerHTML = `
+        <div class="help-modal-content">
+            <button class="help-modal-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+            ${helpContent}
+            <div style="margin-top: 1.5rem;">
+                <button class="admin-btn" onclick="this.parentElement.parentElement.remove()">Got it!</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
