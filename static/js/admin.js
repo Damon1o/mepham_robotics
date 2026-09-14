@@ -236,6 +236,18 @@ const Admin = {
             toast.addEventListener('animationend', () => toast.remove(), { once: true });
         }, 5000);
     },
+
+    attachListFilter(inputSelector, itemSelector, matchFn) {
+        const input = document.querySelector(inputSelector);
+        if (!input) return;
+        const match = matchFn || ((item, term) => item.textContent.toLowerCase().includes(term));
+        input.addEventListener('input', () => {
+            const term = input.value.trim().toLowerCase();
+            document.querySelectorAll(itemSelector).forEach(item => {
+                item.classList.toggle('is-hidden', term !== '' && !match(item, term));
+            });
+        });
+    },
 };
 
 // Image preview functionality
@@ -492,6 +504,13 @@ const AdminTabs = (function () {
 })();
 
 document.addEventListener('DOMContentLoaded', () => AdminTabs.init());
+
+document.addEventListener('DOMContentLoaded', function () {
+    Admin.attachListFilter('#events_filter', '#panel-events .event-item');
+    Admin.attachListFilter('#awards_filter', '#panel-awards .award-item');
+    Admin.attachListFilter('#teams_filter', '#panel-teams .data-list > .data-item');
+    Admin.attachListFilter('#sponsors_filter', '#panel-sponsors .data-list > .data-item');
+});
 
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('#toast-stack .status-msg').forEach(toast => {

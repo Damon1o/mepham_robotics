@@ -738,6 +738,26 @@
         outline: none;
     }
 
+    .panel-filter {
+        width: 100%;
+        padding: 0.65rem 1rem;
+        margin-bottom: 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .panel-filter:focus {
+        border-color: var(--maroon-dark);
+        box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.1);
+        outline: none;
+    }
+
+    .is-hidden {
+        display: none !important;
+    }
+
     .search-icon {
         position: absolute;
         left: 1rem;

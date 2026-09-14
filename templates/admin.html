@@ -172,6 +172,7 @@
         <div class="admin-card-header">
             <h2>⏳ Upcoming Events</h2>
         </div>
+        <input type="search" id="events_filter" class="panel-filter" placeholder="Filter events by name, date, or location...">
         <div class="data-list" style="margin-bottom: 1.5rem; max-height: 250px;">
             {% for comp in competitions %}
             <div class="data-item event-item">
@@ -228,6 +229,7 @@
         <div class="admin-card-header">
             <h2>🏆 Awards Inventory</h2>
         </div>
+        <input type="search" id="awards_filter" class="panel-filter" placeholder="Filter awards by name...">
         <form action="{{ url_for('admin_update_awards') }}" method="POST">
             <div class="data-list">
                 {% for award in awards %}
@@ -298,6 +300,7 @@
         <div class="admin-card-header">
             <h2>🤖 Teams Management</h2>
         </div>
+        <input type="search" id="teams_filter" class="panel-filter" placeholder="Filter teams by name or number...">
 
         <div class="data-list" style="margin-bottom: 2rem; max-height: 400px;">
             {% for team in teams %}
@@ -415,6 +418,7 @@
         <div class="admin-card-header">
             <h2>🤝 Sponsors Management</h2>
         </div>
+        <input type="search" id="sponsors_filter" class="panel-filter" placeholder="Filter sponsors by name or tier...">
 
         <div class="data-list" style="margin-bottom: 2rem; max-height: 300px;">
             {% for sponsor in sponsors %}
