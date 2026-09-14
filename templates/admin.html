@@ -33,13 +33,15 @@
         <p>Welcome back, {{ current_user }} | Manage the legacy of Team 77628.</p>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div class="status-msg {{ category }}">{{ message }}</div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
+    <div id="toast-stack" class="toast-stack">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="status-msg {{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
 
     <!-- Dashboard Overview -->
     <div class="dashboard-stats">

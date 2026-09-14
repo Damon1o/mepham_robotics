@@ -210,30 +210,26 @@ function resetTeamAwards() {
     inputs.forEach(input => {
         input.value = 0;
     });
-    showNotification('Team awards reset to zero', 'info');
+    Admin.notify('Team awards reset to zero', 'info');
 }
 
-function showNotification(message, type = 'info') {
-    // Remove existing notifications
-    const existingNotifications = document.querySelectorAll('.notification');
-    existingNotifications.forEach(notification => notification.remove());
+const Admin = {
+    notify(message, category = 'info') {
+        const stack = document.getElementById('toast-stack');
+        if (!stack) return;
 
-    // Create new notification
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <span>${message}</span>
-        <button onclick="this.parentElement.remove()">&times;</button>
-    `;
-    document.body.appendChild(notification);
+        const toast = document.createElement('div');
+        toast.className = `status-msg ${category}`;
+        toast.style.display = 'block';
+        toast.textContent = message;
+        stack.appendChild(toast);
 
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
-    }, 5000);
-}
+        setTimeout(() => {
+            toast.classList.add('is-leaving');
+            toast.addEventListener('animationend', () => toast.remove(), { once: true });
+        }, 5000);
+    },
+};
 
 // Image preview functionality
 function previewImage(input, previewId) {
@@ -284,13 +280,13 @@ document.getElementById('userForm')?.addEventListener('submit', function (e) {
 
     if (password !== confirmPassword) {
         e.preventDefault();
-        showNotification('Passwords do not match!', 'error');
+        Admin.notify('Passwords do not match!', 'error');
         return false;
     }
 
     if (password.length < 8) {
         e.preventDefault();
-        showNotification('Password must be at least 8 characters long', 'error');
+        Admin.notify('Password must be at least 8 characters long', 'error');
         return false;
     }
 
@@ -426,3 +422,12 @@ const AdminTabs = (function () {
 })();
 
 document.addEventListener('DOMContentLoaded', () => AdminTabs.init());
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('#toast-stack .status-msg').forEach(toast => {
+        setTimeout(() => {
+            toast.classList.add('is-leaving');
+            toast.addEventListener('animationend', () => toast.remove(), { once: true });
+        }, 5000);
+    });
+});
