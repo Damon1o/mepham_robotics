@@ -889,79 +889,45 @@ function showToast(message, type = 'info') {
 })();
 
 /* ============================================
-   ROBOTEVENTS API INTEGRATION
+   ROBOTEVENTS MATCH RESULTS (via backend proxy — key stays server-side)
    ============================================ */
 (function initRobotEvents() {
-    const API_KEY = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIzIiwianRpIjoiNTA5NzY3ZDE1ZmJiOWY4YzZkYmNkMWEyYzEzMzk2N2M2ODJiYjJjNmM0NGYyNDViYTBjYzQ1ZjQ1NzUwMmViOTM2ZWNkYTJiNGFlYzM1ZmEiLCJpYXQiOjE3NzM2MDM1MjkuNTI2OTU4OSwibmJmIjoxNzczNjAzNTI5LjUyNjk2MiwiZXhwIjoyNzIwMzc0NzI5LjUxODE0NDEsInN1YiI6IjE1NDQzOSIsInNjb3BlcyI6W119.EOR1y6OCYc3gMiaGoAkJjUiWGm9BjjAZ6O9LmKoaCLKg5zLEYnoFjgEbAL-uC2MOLYBO1iSLCJGEAOpDQKQs0Fh0g3HpThXPij7z6fam3Au-2SifoECf-Q3zfQA0I7RfJtY4zxOkBmOB35gfd-EZeWHJJ1QZiQGwLDd_Wm18UEvFnJASmjQRtABwiWAP2vF0bCeoHTjL_EjAuyviJotKiJg9M8dyV85uY0yar5nclhjZPRI6OFcJEXklMxMX5MBcJ5WcF8r-anTnTW_HsL7kKsDrTzJVTetviRyuQJQ5m34Ea1TYOsW8ovUetmtHYT7yOZdKehQpiBsCJ9Ct5Y1vs5PXIdYmyZ8KAvgxCzmzUY15xsDyu_JqZiINit9Mwi1wP63MfP2Su5zMcMAgxf1K7VGO4ydkJuMHGNKD1zdi_YcGY5JksUmeBbbowjQd1xcI5giN-tM-hTl_vAX2cxLExg1bWPAP9bhDXLBJxEd7PK-U3vYIRt7gcDXwjCS-vDEkVw2ulDMGYVrslJVysY3iA_Nw3scLKiiUJBwSpG_VyfWgzo1RemNOnmv0AwYQ8Bd-vwpeSYQJMpVDE7o3Qz5H7v1NeUVainB8kkOGjAyldZbN6QCJio66zWVVImEtHifNPBSunXe1uhBuleVasj0HjYjTym9uy-gxINTs1kTm5jQ";
-    const TEAM_NUMBERS = ['77628D', '77628P'];
     const resultsBody = document.getElementById('live-results-body');
-
     if (!resultsBody) return;
 
-    async function fetchFromRobotEvents(endpoint) {
-        try {
-            const response = await fetch(`https://www.robotevents.com/api/v2/${endpoint}`, {
-                headers: {
-                    'Authorization': `Bearer ${API_KEY}`,
-                    'Accept': 'application/json'
-                }
-            });
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return await response.json();
-        } catch (error) {
-            console.error('RobotEvents Fetch Error:', error);
-            return null;
-        }
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 
     async function updateMatches() {
-        const teamsData = await fetchFromRobotEvents(`teams?number[]=${TEAM_NUMBERS.join('&number[]=')}`);
-        if (!teamsData || !teamsData.data) return;
-
-        const teamIds = teamsData.data.map(t => t.id);
-        let allMatches = [];
-
-        for (const id of teamIds) {
-            const matchesData = await fetchFromRobotEvents(`teams/${id}/matches?per_page=20`);
-            if (matchesData && matchesData.data) {
-                allMatches = allMatches.concat(matchesData.data);
-            }
+        let data;
+        try {
+            const response = await fetch('/api/matches');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            data = await response.json();
+        } catch (error) {
+            console.error('Match fetch error:', error);
+            return;
         }
 
-        const uniqueMatches = Array.from(new Set(allMatches.map(m => m.id)))
-            .map(id => allMatches.find(m => m.id === id))
-            .sort((a, b) => new Date(b.scheduled) - new Date(a.scheduled));
-
-        let displayedMatches = [];
-        if (uniqueMatches.length > 0) {
-            const latestEventId = uniqueMatches[0].event.id;
-            displayedMatches = uniqueMatches
-                .filter(m => m.event.id === latestEventId)
-                .sort((a, b) => b.matchnum - a.matchnum)
-                .slice(0, 5);
-        }
-
-        if (displayedMatches.length === 0) {
+        const matches = data.matches || [];
+        if (matches.length === 0) {
             resultsBody.innerHTML = '<tr><td colspan="4" style="text-align:center">No recent matches found.</td></tr>';
             return;
         }
 
-        resultsBody.innerHTML = displayedMatches.map(match => {
-            const redAlliance = match.alliances.find(a => a.color === 'red');
-            const blueAlliance = match.alliances.find(a => a.color === 'blue');
-
-            const redTeams = redAlliance.teams.map(t => t.team.name).join(', ');
-            const blueTeams = blueAlliance.teams.map(t => t.team.name).join(', ');
-
-            const scoreDisplay = redAlliance.score !== null ? `${redAlliance.score} - ${blueAlliance.score}` : 'Pending';
-            const statusClass = redAlliance.score !== null ? 'match-score' : 'match-status-live';
+        resultsBody.innerHTML = matches.map(match => {
+            const scoreDisplay = match.score || 'Pending';
+            const statusClass = match.score ? 'match-score' : 'match-status-live';
 
             return `
                 <tr>
-                    <td>${match.name}</td>
-                    <td class="alliance-red" style="text-align: center;">${redTeams}</td>
-                    <td class="alliance-blue" style="text-align: center;">${blueTeams}</td>
-                    <td class="${statusClass}">${scoreDisplay}</td>
+                    <td>${escapeHtml(match.name)}</td>
+                    <td class="alliance-red" style="text-align: center;">${escapeHtml(match.red_teams)}</td>
+                    <td class="alliance-blue" style="text-align: center;">${escapeHtml(match.blue_teams)}</td>
+                    <td class="${statusClass}">${escapeHtml(scoreDisplay)}</td>
                 </tr>
             `;
         }).join('');
@@ -1006,9 +972,10 @@ function showToast(message, type = 'info') {
         const msgDiv = document.createElement('div');
         msgDiv.className = `chatbot-msg ${sender}`;
 
-        // Parse markdown only for the bot to prevent XSS from user input
+        // Parse markdown for the bot, sanitized against XSS before insertion
         if (sender === 'bot' && window.marked) {
-            msgDiv.innerHTML = marked.parse(text);
+            const rawHtml = marked.parse(text);
+            msgDiv.innerHTML = window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
         } else {
             msgDiv.textContent = text;
         }

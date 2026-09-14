@@ -6,7 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Mepham Robotics Club{% endblock %}</title>
     <meta name="description"
-        content="{% block meta_description %}Mepham Robotics Club (Team 77628) — Building robots, coding futures, and competing in VEX Robotics.{% endblock %}">
+        content="{% filter collapse_ws %}{% block meta_description %}Mepham Robotics Club (Team 77628) — Building robots, coding futures, and competing in VEX Robotics.{% endblock %}{% endfilter %}">
+
+    <!-- Open Graph / Link Preview -->
+    <meta property="og:site_name" content="Mepham Robotics Club">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:title" content="{% block og_title %}{{ self.title()|collapse_ws }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ self.meta_description()|collapse_ws }}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='assets/photos/hero.png', _external=True) }}{% endblock %}">
+    <meta property="og:image:width" content="1276">
+    <meta property="og:image:height" content="957">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ self.og_title()|collapse_ws }}">
+    <meta name="twitter:description" content="{{ self.og_description()|collapse_ws }}">
+    <meta name="twitter:image" content="{{ self.og_image() }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     {% block fonts %}
     <link
         href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:wght@400;700&display=swap"
@@ -121,8 +138,13 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"
+        integrity="sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7"
+        crossorigin="anonymous" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"
+        integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a"
+        crossorigin="anonymous" defer></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}?v=2" defer></script>
     {% block page_scripts %}{% endblock %}
     </body>
 

@@ -3,6 +3,7 @@
 {% block title %}Team {{ team.team_number }} | Mepham Robotics Club{% endblock %}
 {% block meta_description %}Meet Team {{ team.team_number }} of the Mepham Robotics Club. View our robot specs, team
 members, and season goals.{% endblock %}
+{% block og_image %}{{ get_image_url(team.hero_image, external=True) }}{% endblock %}
 
 {% block page_styles %}
 <style>

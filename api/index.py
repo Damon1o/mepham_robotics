@@ -4,7 +4,7 @@ from functools import wraps
 from bson import ObjectId
 import bcrypt
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response
 from werkzeug.utils import secure_filename
 from pymongo import MongoClient
 import requests
@@ -79,6 +79,11 @@ app = Flask(__name__,
             static_folder=os.path.join(_root, 'static'))
 app.secret_key = os.getenv('SECRET_KEY', 'dev-fallback-key')
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
+
+@app.template_filter('collapse_ws')
+def collapse_whitespace(value):
+    """Collapse newlines/indentation from wrapped Jinja block text so it's safe inside a single HTML attribute (og:*, twitter:*, meta description)."""
+    return ' '.join(str(value).split())
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'stl'}
 
@@ -182,10 +187,10 @@ class _DbProxy:
 db = _DbProxy()
 users_collection = db['users']
 
-def get_image_url(image_path):
+def get_image_url(image_path, external=False):
     """Helper function to get proper image URL for both local static files and Vercel Blob URLs"""
     if not image_path:
-        return url_for('static', filename='assets/other/base.png')
+        return url_for('static', filename='assets/other/base.png', _external=external)
 
     # If it's already a full URL (http/https), use it directly
     if image_path.startswith(('http://', 'https://')):
@@ -194,7 +199,7 @@ def get_image_url(image_path):
     # Otherwise, treat it as a local static file path
     # Clean up the path by removing 'static/' prefix if present
     clean_path = image_path.replace('\\', '/').replace('static/', '')
-    return url_for('static', filename=clean_path)
+    return url_for('static', filename=clean_path, _external=external)
 
 @app.context_processor
 def inject_global_data():
@@ -939,15 +944,71 @@ def admin_delete_sponsor(id):
         flash(f'Error deleting sponsor: {e}', 'error')
     return redirect(url_for('admin_dashboard'))
 
+ROBOTEVENTS_TEAM_NUMBERS = ['77628D', '77628P']
+
+@app.route('/api/matches')
+def api_matches():
+    """Proxy RobotEvents match data so the API key never reaches the browser."""
+    api_key = os.getenv('ROBOTEVENTS_API_KEY')
+    if not api_key:
+        return jsonify({'matches': []})
+
+    headers = {'Authorization': f'Bearer {api_key}', 'Accept': 'application/json'}
+
+    def fetch(endpoint):
+        try:
+            resp = requests.get(f'https://www.robotevents.com/api/v2/{endpoint}', headers=headers, timeout=8)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            print(f"RobotEvents fetch error: {e}")
+            return None
+
+    number_qs = '&'.join(f'number[]={n}' for n in ROBOTEVENTS_TEAM_NUMBERS)
+    teams_data = fetch(f'teams?{number_qs}')
+    if not teams_data or not teams_data.get('data'):
+        return jsonify({'matches': []})
+
+    all_matches = []
+    for team in teams_data['data']:
+        matches_data = fetch(f"teams/{team['id']}/matches?per_page=20")
+        if matches_data and matches_data.get('data'):
+            all_matches.extend(matches_data['data'])
+
+    seen = {}
+    for m in all_matches:
+        seen[m['id']] = m
+    unique_matches = sorted(seen.values(), key=lambda m: m.get('scheduled') or '', reverse=True)
+
+    displayed = []
+    if unique_matches:
+        latest_event_id = unique_matches[0]['event']['id']
+        same_event = [m for m in unique_matches if m['event']['id'] == latest_event_id]
+        displayed = sorted(same_event, key=lambda m: m.get('matchnum', 0), reverse=True)[:5]
+
+    results = []
+    for match in displayed:
+        red = next((a for a in match['alliances'] if a['color'] == 'red'), None)
+        blue = next((a for a in match['alliances'] if a['color'] == 'blue'), None)
+        if not red or not blue:
+            continue
+        results.append({
+            'name': match.get('name', ''),
+            'red_teams': ', '.join(t['team']['name'] for t in red['teams']),
+            'blue_teams': ', '.join(t['team']['name'] for t in blue['teams']),
+            'score': f"{red['score']} - {blue['score']}" if red['score'] is not None else None,
+        })
+
+    return jsonify({'matches': results})
+
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
-    import requests as req
     data = request.get_json()
     user_message = data.get('message')
     if not user_message:
         return {'error': 'No message provided'}, 400
     try:
-        response = req.post(
+        response = requests.post(
             os.getenv('CHATBOT_API_URL', "https://ai.hackclub.com/proxy/v1/chat/completions"),
             headers={"Authorization": f"Bearer {os.getenv('CHATBOT_API_KEY')}", "Content-Type": "application/json"},
             json={"model": os.getenv('CHATBOT_MODEL', "gpt-4o-mini"),
@@ -961,6 +1022,55 @@ def api_chat():
 @app.context_processor
 def inject_user():
     return dict(current_user=session.get('user'))
+
+STATIC_PUBLIC_PAGES = [
+    ('index', 1.0, 'daily'),
+    ('about', 0.8, 'monthly'),
+    ('achievements', 0.8, 'weekly'),
+    ('donate', 0.7, 'monthly'),
+    ('contact', 0.6, 'monthly'),
+    ('privacy', 0.3, 'yearly'),
+    ('credits_page', 0.3, 'yearly'),
+]
+
+@app.route('/robots.txt')
+def robots_txt():
+    lines = [
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /admin',
+        'Disallow: /login',
+        'Disallow: /logout',
+        'Disallow: /api/',
+        f"Sitemap: {url_for('sitemap_xml', _external=True)}",
+    ]
+    return Response('\n'.join(lines), mimetype='text/plain')
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    urls = []
+    for endpoint, priority, changefreq in STATIC_PUBLIC_PAGES:
+        urls.append({
+            'loc': url_for(endpoint, _external=True),
+            'priority': priority,
+            'changefreq': changefreq,
+        })
+    for team in db['teams'].find({}, {'team_number': 1}):
+        urls.append({
+            'loc': url_for('team_page', team_number=team['team_number'], _external=True),
+            'priority': 0.6,
+            'changefreq': 'weekly',
+        })
+
+    xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>',
+                 '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for u in urls:
+        xml_parts.append(
+            f"<url><loc>{u['loc']}</loc><changefreq>{u['changefreq']}</changefreq>"
+            f"<priority>{u['priority']}</priority></url>"
+        )
+    xml_parts.append('</urlset>')
+    return Response('\n'.join(xml_parts), mimetype='application/xml')
 
 @app.errorhandler(404)
 def page_not_found(e):

@@ -1827,34 +1827,29 @@
                     <span class="sponsor-icon">🏢</span>
                     {% endif %}
                 </div>
-                {% if sponsor.logo %}
-                <img src="{{ get_image_url(sponsor.logo) }}"
-                    style="width: 100%; height: 100%; object-fit: contain; padding: 4px;" alt="{{ sponsor.name }} logo">
-                {% else %}
-                <span style="font-size: 1.5rem;">🏢</span>
-                {% endif %}
+                <div>
+                    <strong style="display: block; font-size: 1.1rem;">{{ sponsor.name }}</strong>
+                    <small style="color: #666; display: block; margin-top: 0.25rem;">
+                        <span class="sponsor-badge {{ sponsor.level|lower }}">{{ sponsor.level }}</span>
+                        {% if sponsor.website %}
+                        <span style="margin-left: 0.5rem;">•</span>
+                        <a href="{{ sponsor.website }}" target="_blank"
+                            style="color: var(--maroon-dark); text-decoration: none;">Website →</a>
+                        {% endif %}
+                    </small>
+                </div>
+                <div class="data-item-actions">
+                    <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
+                        data-id="{{ sponsor._id }}" data-name="{{ sponsor.name }}"
+                        data-website="{{ sponsor.website }}" data-level="{{ sponsor.level }}"
+                        onclick="editSponsor(this.dataset.id, this.dataset.name, this.dataset.website, this.dataset.level)">Edit</button>
+                    <form action="{{ url_for('admin_delete_sponsor', id=sponsor._id) }}" method="POST" style="margin: 0;"
+                        onsubmit="return confirmDelete('sponsor')">
+                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
+                    </form>
+                </div>
             </div>
-            <div>
-                <strong style="display: block; font-size: 1.1rem;">{{ sponsor.name }}</strong>
-                <small style="color: #666; display: block; margin-top: 0.25rem;">
-                    <span class="sponsor-badge {{ sponsor.level|lower }}">{{ sponsor.level }}</span>
-                    {% if sponsor.website %}
-                    <span style="margin-left: 0.5rem;">•</span>
-                    <a href="{{ sponsor.website }}" target="_blank"
-                        style="color: var(--maroon-dark); text-decoration: none;">Website →</a>
-                    {% endif %}
-                </small>
-            </div>
-            <div class="data-item-actions">
-                <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
-                    onclick="editSponsor('{{ sponsor._id }}', '{{ sponsor.name|e }}', '{{ sponsor.website|e }}', '{{ sponsor.level }}')">Edit</button>
-                <form action="{{ url_for('admin_delete_sponsor', id=sponsor._id) }}" method="POST" style="margin: 0;"
-                    onsubmit="return confirmDelete('sponsor')">
-                    <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
-                </form>
-            </div>
-        </div>
-        {% endfor %}
+            {% endfor %}
         {% if not sponsors %}
         <div
             style="text-align: center; color: #666; padding: 2rem; background: #f8f9fa; border-radius: 8px; border: 2px dashed #dee2e6;">
