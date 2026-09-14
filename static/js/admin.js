@@ -21,7 +21,7 @@ function addMemberRow(data = {}) {
     const row = document.createElement('div');
     row.className = 'dynamic-row';
     row.innerHTML = `
-        <button type="button" class="remove-btn" onclick="this.parentElement.remove()">&times;</button>
+        <button type="button" class="remove-btn" aria-label="Remove member" onclick="this.parentElement.remove()">&times;</button>
         <input type="hidden" name="member_photo_path_${i}" value="${data.photo || 'static/assets/profile/base.png'}">
         <div class="form-group">
             <label>Member Name</label>
@@ -64,7 +64,7 @@ function addGoalRow(data = {}) {
     const row = document.createElement('div');
     row.className = 'dynamic-row';
     row.innerHTML = `
-        <button type="button" class="remove-btn" onclick="this.parentElement.remove()">&times;</button>
+        <button type="button" class="remove-btn" aria-label="Remove goal" onclick="this.parentElement.remove()">&times;</button>
         <div class="form-group">
             <label>Goal Name</label>
             <input type="text" name="goal_name_${i}" value="${data.name || ''}" required>

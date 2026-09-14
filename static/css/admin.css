@@ -6,6 +6,12 @@
         --admin-accent: #ffd700;
     }
 
+    :focus-visible {
+        outline: 3px solid var(--accent-gold, #ffd700);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 5px rgba(128, 0, 0, 0.15);
+    }
+
     .admin-container {
         max-width: 1400px;
         margin: 2rem auto;
@@ -1021,7 +1027,9 @@
         border-color: #333 transparent transparent transparent;
     }
 
-    .tooltip:hover .tooltip-text {
+    .tooltip:hover .tooltip-text,
+    .tooltip:focus .tooltip-text,
+    .tooltip:focus-visible .tooltip-text {
         visibility: visible;
         opacity: 1;
     }

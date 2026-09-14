@@ -25,8 +25,9 @@
 <div class="admin-container">
     <div class="admin-header">
         <h1>Command Center
-            <span class="tooltip">ℹ️
-                <span class="tooltip-text">Admin dashboard for managing all aspects of Mepham Robotics. Use the quick
+            <span class="tooltip" tabindex="0" role="img"
+                aria-label="Admin dashboard for managing all aspects of Mepham Robotics. Use the quick actions below for common tasks.">ℹ️
+                <span class="tooltip-text" aria-hidden="true">Admin dashboard for managing all aspects of Mepham Robotics. Use the quick
                     actions below for common tasks.</span>
             </span>
         </h1>
@@ -110,9 +111,9 @@
 
 <!-- Search Box -->
 <div class="search-box">
-    <span class="search-icon">🔍</span>
-    <input type="text" id="adminSearch" placeholder="Search teams, events, sponsors, awards..."
-        onkeyup="searchAdminContent()">
+    <span class="search-icon" aria-hidden="true">🔍</span>
+    <input type="text" id="adminSearch" aria-label="Search teams, events, sponsors, awards"
+        placeholder="Search teams, events, sponsors, awards..." onkeyup="searchAdminContent()">
 </div>
 
 <nav class="admin-tabs" role="tablist" aria-label="Admin sections">
@@ -169,7 +170,8 @@
         <div class="admin-card-header">
             <h2>⏳ Upcoming Events</h2>
         </div>
-        <input type="search" id="events_filter" class="panel-filter" placeholder="Filter events by name, date, or location...">
+        <input type="search" id="events_filter" class="panel-filter" aria-label="Filter events"
+            placeholder="Filter events by name, date, or location...">
         <div class="data-list" style="margin-bottom: 1.5rem; max-height: 250px;">
             {% for comp in competitions %}
             <div class="data-item event-item">
@@ -182,10 +184,12 @@
                 <div class="data-item-actions">
                     <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-id="{{ comp._id }}"
                         data-name="{{ comp.name }}" data-location="{{ comp.location }}" data-date="{{ comp.date_str }}"
+                        aria-label="Edit event: {{ comp.name }}"
                         onclick="editEvent(this.dataset.id, this.dataset.name, this.dataset.location, this.dataset.date)">Edit</button>
                     <form action="{{ url_for('admin_delete_competition', comp_id=comp._id) }}" method="POST"
                         style="margin: 0;" onsubmit="return confirmDelete(this, 'event')">
-                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
+                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
+                            aria-label="Delete event: {{ comp.name }}">Delete</button>
                     </form>
                 </div>
             </div>
@@ -226,7 +230,8 @@
         <div class="admin-card-header">
             <h2>🏆 Awards Inventory</h2>
         </div>
-        <input type="search" id="awards_filter" class="panel-filter" placeholder="Filter awards by name...">
+        <input type="search" id="awards_filter" class="panel-filter" aria-label="Filter awards"
+            placeholder="Filter awards by name...">
         <form action="{{ url_for('admin_update_awards') }}" method="POST">
             <div class="data-list">
                 {% for award in awards %}
@@ -296,7 +301,8 @@
         <div class="admin-card-header">
             <h2>🤖 Teams Management</h2>
         </div>
-        <input type="search" id="teams_filter" class="panel-filter" placeholder="Filter teams by name or number...">
+        <input type="search" id="teams_filter" class="panel-filter" aria-label="Filter teams"
+            placeholder="Filter teams by name or number...">
 
         <div class="data-list" style="margin-bottom: 2rem; max-height: 400px;">
             {% for team in teams %}
@@ -317,10 +323,12 @@
                 {% set team_json = team|tojson %}
                 <div class="data-item-actions">
                     <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
-                        data-team='{{ team_json|e }}' onclick="editTeam(this.dataset.team)">Edit</button>
+                        data-team='{{ team_json|e }}' aria-label="Edit team: {{ team.nickname }}"
+                        onclick="editTeam(this.dataset.team)">Edit</button>
                     <form action="{{ url_for('admin_delete_team', id=team._id) }}" method="POST" style="margin: 0;"
                         onsubmit="return confirmDelete(this, 'team')">
-                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
+                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
+                            aria-label="Delete team: {{ team.nickname }}">Delete</button>
                     </form>
                 </div>
             </div>
@@ -414,7 +422,8 @@
         <div class="admin-card-header">
             <h2>🤝 Sponsors Management</h2>
         </div>
-        <input type="search" id="sponsors_filter" class="panel-filter" placeholder="Filter sponsors by name or tier...">
+        <input type="search" id="sponsors_filter" class="panel-filter" aria-label="Filter sponsors"
+            placeholder="Filter sponsors by name or tier...">
 
         <div class="data-list" style="margin-bottom: 2rem; max-height: 300px;">
             {% for sponsor in sponsors %}
@@ -441,10 +450,12 @@
                     <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
                         data-id="{{ sponsor._id }}" data-name="{{ sponsor.name }}"
                         data-website="{{ sponsor.website }}" data-level="{{ sponsor.level }}"
+                        aria-label="Edit sponsor: {{ sponsor.name }}"
                         onclick="editSponsor(this.dataset.id, this.dataset.name, this.dataset.website, this.dataset.level)">Edit</button>
                     <form action="{{ url_for('admin_delete_sponsor', id=sponsor._id) }}" method="POST" style="margin: 0;"
                         onsubmit="return confirmDelete(this, 'sponsor')">
-                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
+                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
+                            aria-label="Delete sponsor: {{ sponsor.name }}">Delete</button>
                     </form>
                 </div>
             </div>
@@ -578,7 +589,7 @@
 </div>
 
 <!-- Help Button -->
-<button class="help-button" onclick="showHelp()">?</button>
+<button class="help-button" aria-label="Show help" onclick="showHelp()">?</button>
 
 <!-- Shared confirm/alert dialog (Dialog.confirm / Dialog.alert) -->
 <div id="admin-confirm-dialog" class="confirmation-dialog" role="alertdialog" aria-modal="true"
