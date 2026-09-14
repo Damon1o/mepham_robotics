@@ -127,6 +127,27 @@ def log_activity(activity_type, description, user=None, details=None):
     except Exception as e:
         print(f"Failed to log activity: {e}")
 
+def seed_team_awards(team_number):
+    """Give a newly created team its own copy of every award category, starting at 0."""
+    if db['awards'].find_one({'team_number': team_number}):
+        return  # already seeded, don't duplicate
+    global_awards = list(db['awards'].find({'team_number': {'$exists': False}}))
+    if not global_awards:
+        return
+    new_docs = [
+        {
+            'team_number': team_number,
+            'title': a.get('title'),
+            'icon': a.get('icon'),
+            'layout': a.get('layout'),
+            'border': a.get('border'),
+            'shimmer': a.get('shimmer'),
+            'count': 0
+        }
+        for a in global_awards
+    ]
+    db['awards'].insert_many(new_docs)
+
 def get_activity_icon(activity_type):
     """Get appropriate icon for activity type"""
     icons = {
@@ -676,6 +697,7 @@ def admin_save_team():
         else:
             # Create new team
             db['teams'].insert_one(team_data)
+            seed_team_awards(team_number)
             flash(f'Team {team_number} created!', 'success')
 
             # Log activity for new team
