@@ -197,21 +197,6 @@ function searchAdminContent() {
     });
 }
 
-function addNewAward() {
-    const awardsList = document.querySelector('.data-list');
-    const newAwardDiv = document.createElement('div');
-    newAwardDiv.className = 'data-item';
-    newAwardDiv.innerHTML = `
-        <div>
-            <input type="text" placeholder="New award name" style="width: 100%; padding: 0.5rem; border: 2px solid #ddd; border-radius: 6px;">
-            <div class="form-hint">New award - set initial count</div>
-        </div>
-        <input type="number" value="0" min="0" style="width: 80px; padding: 0.5rem;">
-    `;
-    awardsList.appendChild(newAwardDiv);
-    newAwardDiv.scrollIntoView({ behavior: 'smooth' });
-}
-
 function resetTeamAwards() {
     const inputs = document.querySelectorAll('#team_awards_list input[type="number"]');
     inputs.forEach(input => {
@@ -313,45 +298,13 @@ document.getElementById('userForm')?.addEventListener('submit', function (e) {
     return true;
 });
 
-// Auto-save indicator
-let autoSaveTimeout;
-function setupAutoSave(formId, saveUrl) {
-    const form = document.getElementById(formId);
-    if (!form) return;
-
-    form.addEventListener('input', function () {
-        clearTimeout(autoSaveTimeout);
-        autoSaveTimeout = setTimeout(() => {
-            // Simulate auto-save
-            const saveIndicator = document.createElement('div');
-            saveIndicator.className = 'status-msg info';
-            saveIndicator.textContent = 'Auto-saving changes...';
-            form.prepend(saveIndicator);
-
-            setTimeout(() => {
-                saveIndicator.remove();
-            }, 2000);
-        }, 2000); // Save after 2 seconds of inactivity
-    });
-}
-
-// Initialize auto-save for main forms
-document.addEventListener('DOMContentLoaded', function () {
-    setupAutoSave('team_form', '/admin/auto-save-team');
-    setupAutoSave('event_form', '/admin/auto-save-event');
-    setupAutoSave('sponsor_form', '/admin/auto-save-sponsor');
-});
-
 // Help functionality
 function showHelp() {
     Dialog.alert({
         title: 'Admin Dashboard Help',
         message: `
-            <p><strong>Quick Actions:</strong> Use the buttons at the top for common tasks.</p>
-            <p><strong>Search:</strong> Type in the search box to filter content across all sections.</p>
-            <p><strong>Forms:</strong> Most forms support auto-save (saves after 2 seconds of inactivity).</p>
-            <p><strong>Dark Mode:</strong> Toggle the theme button in the bottom right.</p>
-            <p><strong>Export Data:</strong> Use the export button to download all data as CSV.</p>
+            <p><strong>Tabs:</strong> Use the tab bar to jump between sections; each tab's link is shareable.</p>
+            <p><strong>Search:</strong> Use the search box at the top, or each panel's own filter box, to narrow a list.</p>
             <p><strong>Need more help?</strong> Contact the system administrator.</p>
         `,
         confirmLabel: 'Got it!',

@@ -106,9 +106,6 @@
     <a href="#sponsors" class="quick-action-btn" onclick="AdminTabs.go('sponsors'); resetSponsorForm(); return false;">
         <span>🤝 Add Sponsor</span>
     </a>
-    <a href="{{ url_for('admin_dashboard') }}?export=data" class="quick-action-btn">
-        <span>📊 Export Data</span>
-    </a>
 </div>
 
 <!-- Search Box -->
@@ -247,7 +244,6 @@
             </div>
             <div class="btn-group">
                 <button type="submit" class="admin-btn admin-btn-success">Update All Awards</button>
-                <button type="button" class="admin-btn admin-btn-secondary" onclick="addNewAward()">+ Add New</button>
             </div>
         </form>
     </div>
