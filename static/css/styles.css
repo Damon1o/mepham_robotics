@@ -141,11 +141,26 @@ body::before {
     background: linear-gradient(180deg, var(--maroon-dark) 0%, #5a0000 100%);
     overflow-x: hidden;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #ffd700 transparent;
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     padding-top: 100px;
     transform: translateX(-100%);
     box-shadow: 8px 0 32px rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(10px);
+}
+
+.sidenav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidenav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidenav::-webkit-scrollbar-thumb {
+    background: rgba(255, 215, 0, 0.4);
+    border-radius: 3px;
 }
 
 .nav-links {
