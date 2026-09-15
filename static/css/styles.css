@@ -370,22 +370,22 @@ h2::after {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 220px;
-    height: 320px;
+    width: 110px;
+    height: 150px;
     object-fit: cover;
-    border: 4px solid var(--text-dark);
-    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.35);
+    border: 3px solid var(--text-dark);
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.35);
     z-index: 5;
 }
 
 .hero-side-photo--left {
-    left: 4vw;
-    transform: translateY(-50%) rotate(-4deg);
+    left: calc(50% - 340px);
+    transform: translateY(-50%) rotate(-6deg);
 }
 
 .hero-side-photo--right {
-    right: 4vw;
-    transform: translateY(-50%) rotate(4deg);
+    right: calc(50% - 340px);
+    transform: translateY(-50%) rotate(6deg);
 }
 
 @media (max-width: 900px) {
