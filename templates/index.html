@@ -471,32 +471,4 @@ Robotics. Join the legacy.{% endblock %}
         </div>
     </div>
 </section>
-
-<!-- SPONSOR MARQUEE -->
-<section class="sponsor-marquee-section">
-    <div class="marquee-content">
-        {% for sponsor in sponsors %}
-        <span class="sponsor-item {{ 'sponsor-primary' if loop.index % 2 == 0 else 'sponsor-secondary' }}">
-            {% if sponsor.logo_path %}
-            <img src="{{ get_image_url(sponsor.logo_path) }}" alt="{{ sponsor.name }}" class="marquee-logo">
-            {% endif %}
-            {{ sponsor.name }}
-        </span>
-        {% endfor %}
-        {# Repeat for infinite effect #}
-        {% for sponsor in sponsors %}
-        <span class="sponsor-item {{ 'sponsor-primary' if loop.index % 2 == 0 else 'sponsor-secondary' }}">
-            {% if sponsor.logo_path %}
-            <img src="{{ get_image_url(sponsor.logo_path) }}" alt="{{ sponsor.name }}" class="marquee-logo">
-            {% endif %}
-            {{ sponsor.name }}
-        </span>
-        {% endfor %}
-        {% if not sponsors %}
-        <span class="sponsor-item sponsor-primary">BMCHSD</span>
-        <span class="sponsor-item sponsor-secondary">Wellington C. Mepham HS</span>
-        <span class="sponsor-item sponsor-primary">Your Company Here?</span>
-        {% endif %}
-    </div>
-</section>
 {% endblock %}
