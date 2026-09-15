@@ -1958,22 +1958,61 @@ footer::before {
     margin: 0 auto;
 }
 
+.sponsor-card {
+    text-align: center;
+}
+
+.sponsor-card-link {
+    text-decoration: none;
+    color: inherit;
+}
+
 .sponsor-logo {
-    width: 120px;
-    height: 80px;
-    background: #f0f0f0;
-    border-radius: 8px;
+    width: 160px;
+    height: 120px;
+    margin: 0 auto 0.5rem;
+    background: var(--bg-light);
+    border: 3px solid var(--text-dark);
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #999;
-    font-size: 0.8rem;
-    transition: all 0.3s ease;
+    overflow: hidden;
+    box-shadow: var(--shadow-brutal);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .sponsor-logo:hover {
-    transform: scale(1.1);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    transform: translate(-3px, -3px);
+    box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.3);
+}
+
+.sponsor-logo-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.sponsor-logo-fallback {
+    font-weight: bold;
+    color: var(--text-dark);
+    padding: 1rem;
+}
+
+.sponsor-name {
+    font-weight: bold;
+    color: var(--maroon-dark);
+}
+
+.sponsor-level {
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
+.sponsors-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-light);
 }
 
 /* --- IMPACT STATS --- */
@@ -3293,7 +3332,11 @@ footer::before {
 
 [data-theme="dark"] .sponsor-logo {
     background: #2a2a2a;
-    color: #777;
+    border-color: #444;
+}
+
+[data-theme="dark"] .sponsor-logo-fallback {
+    color: #999;
 }
 
 [data-theme="dark"] .detail-item {
