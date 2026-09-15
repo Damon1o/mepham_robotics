@@ -14,32 +14,16 @@ Robotics. Join the legacy.{% endblock %}
 
     /* --- DONATION CTA SECTION --- */
     .donation-cta {
-        background: linear-gradient(135deg, #f1f1f1 0%, #e8e8e8 100%);
+        background: var(--accent-light);
         padding: 5rem 2rem;
-        position: relative;
-        overflow: hidden;
-        border-top: 4px solid #944547;
-        border-bottom: 4px solid #944547;
-    }
-
-    .donation-cta::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(148, 69, 71, 0.05) 1px, transparent 1px);
-        background-size: 40px 40px;
-        animation: backgroundPulse 20s ease-in-out infinite;
+        border-top: 4px solid var(--maroon-dark);
+        border-bottom: 4px solid var(--maroon-dark);
     }
 
     .donate-container {
         max-width: 800px;
         margin: 0 auto;
         text-align: center;
-        position: relative;
-        z-index: 1;
     }
 
     .donate-container h2 {
@@ -139,7 +123,7 @@ Robotics. Join the legacy.{% endblock %}
     .timeline-card {
         position: relative;
         background: white;
-        border: 2px solid var(--text-dark);
+        border: 3px solid var(--text-dark);
         border-radius: 12px;
         padding: var(--spacing-md);
         margin-left: var(--spacing-md);
@@ -165,8 +149,8 @@ Robotics. Join the legacy.{% endblock %}
     }
 
     .timeline-card:hover {
-        transform: translate(-2px, -2px);
-        box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.2);
+        transform: translate(-3px, -3px);
+        box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.3);
         border-color: var(--maroon-dark);
     }
 
@@ -175,7 +159,7 @@ Robotics. Join the legacy.{% endblock %}
         transform: scale(1.2);
     }
 
-    .date-tag {
+    .date-pill {
         position: absolute;
         top: -14px;
         right: var(--spacing-md);
@@ -184,7 +168,7 @@ Robotics. Join the legacy.{% endblock %}
         font-weight: 700;
         font-size: 0.9rem;
         padding: 0.4rem 1rem;
-        border: 2px solid var(--text-dark);
+        border: 3px solid var(--text-dark);
         border-radius: 8px;
         transform: rotate(2deg);
         z-index: 3;
@@ -248,22 +232,9 @@ Robotics. Join the legacy.{% endblock %}
 
     /* --- STATS SECTION --- */
     .stats-section {
-        background: linear-gradient(135deg, #800000 0%, #5a0000 100%);
+        background: var(--bg-light);
         padding: 5rem 2rem;
-        color: white;
         position: relative;
-        overflow: hidden;
-    }
-
-    .stats-section::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1" fill="rgba(255,255,255,0.05)"/></svg>');
-        background-size: 30px 30px;
     }
 
     .stats-container {
@@ -271,35 +242,30 @@ Robotics. Join the legacy.{% endblock %}
         margin: 0 auto;
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 3rem;
-        position: relative;
-        z-index: 1;
+        gap: 2.5rem;
     }
 
     .stat-item {
         text-align: center;
         padding: 2rem;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 16px;
-        backdrop-filter: blur(10px);
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
+        background: white;
+        border: 3px solid var(--text-dark);
+        border-radius: 12px;
+        box-shadow: var(--shadow-brutal);
+        transition: var(--transition-base);
     }
 
     .stat-item:hover {
-        transform: translateY(-10px);
-        background: rgba(255, 255, 255, 0.1);
-        border-color: #ffd700;
+        transform: translateY(-6px);
+        box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.25);
+        border-color: var(--accent-gold);
     }
 
     .stat-number {
         font-size: 3.5rem;
         font-weight: 700;
         font-family: 'Space Mono', monospace;
-        background: linear-gradient(135deg, #fff 0%, #ffd700 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: var(--maroon-dark);
         margin-bottom: 0.5rem;
     }
 
@@ -307,7 +273,7 @@ Robotics. Join the legacy.{% endblock %}
         font-size: 1.1rem;
         text-transform: uppercase;
         letter-spacing: 2px;
-        opacity: 0.9;
+        color: var(--text-light);
     }
 
     @media (max-width: 768px) {
@@ -331,6 +297,12 @@ Robotics. Join the legacy.{% endblock %}
 {% block content %}
 <!-- HERO SECTION -->
 <div class="hero-image">
+    <img class="hero-side-photo hero-side-photo--left"
+         src="{{ url_for('static', filename='assets/photos/carousel1.jpg') }}" alt="" aria-hidden="true"
+         loading="lazy">
+    <img class="hero-side-photo hero-side-photo--right"
+         src="{{ url_for('static', filename='assets/photos/carousel2.jpg') }}" alt="" aria-hidden="true"
+         loading="lazy">
     <div class="hero-content">
         <h1>Mepham Robotics</h1>
         <p>Build. Code. Compete.</p>
@@ -373,38 +345,6 @@ Robotics. Join the legacy.{% endblock %}
     {% endif %}
 </section>
 
-<!-- STATS SECTION -->
-<section class="stats-section fade-in-section">
-    <div class="stats-container">
-        <div class="stat-item">
-            <div class="stat-number">{{ stats.teams_count }}</div>
-            <div class="stat-label">Teams</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ stats.members_count }}</div>
-            <div class="stat-label">Members</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ stats.awards_count }}</div>
-            <div class="stat-label">Awards</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ stats.hours_built }}+</div>
-            <div class="stat-label">Hours Built</div>
-        </div>
-    </div>
-</section>
-
-<!-- DONATION CTA -->
-<section class="donation-cta fade-in-section">
-    <div class="donate-container">
-        <h2 class="ripple">Want to Support Us?</h2>
-        <p>Your donation helps us compete at the highest level, acquire new parts, and continue building innovative
-            robots.</p>
-        <a href="{{ url_for('donate') }}" class="cta-donate-btn">Donate Now</a>
-    </div>
-</section>
-
 <section class="timeline">
     <h2>Upcoming Events</h2>
     <div class="timeline-wrapper">
@@ -443,6 +383,28 @@ Robotics. Join the legacy.{% endblock %}
     </div>
 </section>
 
+<!-- STATS SECTION -->
+<section class="stats-section fade-in-section">
+    <div class="stats-container">
+        <div class="stat-item">
+            <div class="stat-number">{{ stats.teams_count }}</div>
+            <div class="stat-label">Teams</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ stats.members_count }}</div>
+            <div class="stat-label">Members</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ stats.awards_count }}</div>
+            <div class="stat-label">Awards</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ stats.hours_built }}+</div>
+            <div class="stat-label">Hours Built</div>
+        </div>
+    </div>
+</section>
+
 <!-- PHOTO CAROUSEL -->
 <section class="photo-carousel-section fade-in-section">
     <h2 class="ripple">Team Gallery</h2>
@@ -469,6 +431,16 @@ Robotics. Join the legacy.{% endblock %}
             </div>
             {% endfor %}
         </div>
+    </div>
+</section>
+
+<!-- DONATION CTA -->
+<section class="donation-cta fade-in-section">
+    <div class="donate-container">
+        <h2 class="ripple">Want to Support Us?</h2>
+        <p>Your donation helps us compete at the highest level, acquire new parts, and continue building innovative
+            robots.</p>
+        <a href="{{ url_for('donate') }}" class="cta-donate-btn">Donate Now</a>
     </div>
 </section>
 {% endblock %}

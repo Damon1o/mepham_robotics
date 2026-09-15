@@ -366,6 +366,34 @@ h2::after {
     padding: var(--spacing-md);
 }
 
+.hero-side-photo {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 220px;
+    height: 320px;
+    object-fit: cover;
+    border: 4px solid var(--text-dark);
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.35);
+    z-index: 5;
+}
+
+.hero-side-photo--left {
+    left: 4vw;
+    transform: translateY(-50%) rotate(-4deg);
+}
+
+.hero-side-photo--right {
+    right: 4vw;
+    transform: translateY(-50%) rotate(4deg);
+}
+
+@media (max-width: 900px) {
+    .hero-side-photo {
+        display: none;
+    }
+}
+
 .hero-image h1 {
     font-size: clamp(3rem, 10vw, 7rem);
     font-family: var(--font-display);
@@ -1034,9 +1062,9 @@ footer::before {
     flex-shrink: 0;
     width: 350px;
     height: 250px;
-    border-radius: 16px;
+    border-radius: 12px;
     overflow: hidden;
-    border: 4px solid rgba(255, 255, 255, 0.2);
+    border: 4px solid var(--accent-light);
     transition: all var(--transition-base);
     position: relative;
 }
@@ -1050,25 +1078,12 @@ footer::before {
 
 .carousel-item:hover {
     border-color: var(--accent-gold);
-    transform: scale(1.05);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    transform: translate(-4px, -4px);
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.4);
 }
 
 .carousel-item:hover img {
-    transform: scale(1.1);
-}
-
-.carousel-item::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 50%);
-    opacity: 0;
-    transition: opacity var(--transition-base);
-}
-
-.carousel-item:hover::after {
-    opacity: 1;
+    transform: scale(1.08);
 }
 
 @keyframes scrollCarousel {
@@ -2023,10 +2038,11 @@ footer::before {
 /* --- PREMIUM COUNTDOWN --- */
 .countdown-section {
     padding: 6rem 2rem;
-    background: radial-gradient(circle at top right, #3a0000 0%, #000 80%);
+    background: var(--maroon-dark);
     text-align: center;
     color: white;
-    border-bottom: 4px solid #ffd700;
+    border-top: 4px solid var(--text-dark);
+    border-bottom: 4px solid var(--text-dark);
     position: relative;
     overflow: hidden;
 }
@@ -2034,27 +2050,25 @@ footer::before {
 .countdown-container {
     display: flex;
     justify-content: center;
-    gap: 3rem;
+    gap: 2rem;
     flex-wrap: wrap;
     margin-bottom: 2rem;
-    perspective: 1000px;
 }
 
 .countdown-item {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 2.5rem 1.5rem;
-    border-radius: 20px;
-    border: 1px solid rgba(255, 215, 0, 0.2);
+    background: var(--accent-light);
+    padding: 2rem 1.5rem;
+    border-radius: 12px;
+    border: 3px solid var(--text-dark);
     min-width: 150px;
-    backdrop-filter: blur(15px);
-    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-brutal);
+    transition: var(--transition-base);
 }
 
 .countdown-item:hover {
-    transform: translateY(-10px) rotateX(5deg);
-    border-color: #ffd700;
-    box-shadow: 0 20px 50px rgba(128, 0, 0, 0.3);
+    transform: translate(-3px, -3px) rotate(-2deg);
+    box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.3);
+    border-color: var(--accent-gold);
 }
 
 .countdown-number {
@@ -2062,24 +2076,23 @@ footer::before {
     font-family: 'Space Mono', monospace;
     font-size: 4rem;
     font-weight: 700;
-    color: #ffd700;
-    text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+    color: var(--maroon-dark);
 }
 
 .countdown-label {
     text-transform: uppercase;
     font-size: 0.8rem;
     letter-spacing: 3px;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-light);
     font-weight: 700;
 }
 
 .countdown-event {
     font-size: 1.1rem;
-    color: #ffd700;
+    color: var(--accent-gold);
     font-family: 'Space Mono', monospace;
     margin-top: 2rem;
-    opacity: 0.8;
+    opacity: 0.9;
 }
 
 /* --- PREMIUM NEWSLETTER --- */
