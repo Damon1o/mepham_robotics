@@ -2,6 +2,15 @@
 // MEPHAM ROBOTICS - ENHANCED INTERACTIONS
 // ============================================
 
+// --- LUCIDE ICONS ---
+// Call after inserting any markup containing [data-lucide] elements.
+function refreshLucideIcons() {
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+document.addEventListener('DOMContentLoaded', refreshLucideIcons);
+
 // --- NAVIGATION TOGGLE ---
 function toggleNav() {
     const nav = document.getElementById("mySidenav");
@@ -330,10 +339,21 @@ function showToast(message, type = 'info') {
         existingToast.remove();
     }
 
+    const ICONS_BY_TYPE = { success: 'circle-check-big', error: 'circle-x', info: 'info' };
+
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.textContent = message;
+
+    const icon = document.createElement('i');
+    icon.setAttribute('data-lucide', ICONS_BY_TYPE[type] || ICONS_BY_TYPE.info);
+    toast.appendChild(icon);
+
+    const text = document.createElement('span');
+    text.textContent = message;
+    toast.appendChild(text);
+
     document.body.appendChild(toast);
+    refreshLucideIcons();
 
     // Trigger show animation
     setTimeout(() => toast.classList.add('show'), 10);
@@ -764,7 +784,7 @@ function showToast(message, type = 'info') {
         const email = form.querySelector('input[type="email"]');
         if (email && email.value) {
             if (typeof showToast === 'function') {
-                showToast('Thanks for subscribing! 🎉', 'success');
+                showToast('Thanks for subscribing!', 'success');
             } else {
                 alert('Thanks for subscribing!');
             }
@@ -839,12 +859,13 @@ function showToast(message, type = 'info') {
                 </div>
             </div>
             <div class="quiz-nav">
-                <button class="quiz-btn" onclick="quizPrev()" ${current === 0 ? 'disabled' : ''}>← Back</button>
+                <button class="quiz-btn" onclick="quizPrev()" ${current === 0 ? 'disabled' : ''}><i data-lucide="arrow-left"></i> Back</button>
                 <button class="quiz-btn quiz-btn-primary" onclick="quizNext()" ${answers[current] === -1 ? 'disabled' : ''}>
-                    ${current === questions.length - 1 ? 'Finish' : 'Next →'}
+                    ${current === questions.length - 1 ? 'Finish' : 'Next <i data-lucide="arrow-right"></i>'}
                 </button>
             </div>
         `;
+        refreshLucideIcons();
     }
 
     container.addEventListener('click', function (e) {
@@ -872,12 +893,13 @@ function showToast(message, type = 'info') {
         container.innerHTML = `
             <div class="quiz-results">
                 <div class="quiz-score-circle ${pass ? 'pass' : 'fail'}">${pct}%</div>
-                <h2 style="margin-bottom:1rem">${pass ? '🎉 You Passed!' : '❌ Not Quite'}</h2>
+                <h2 style="margin-bottom:1rem">${pass ? '<i data-lucide="party-popper"></i> You Passed!' : '<i data-lucide="circle-x"></i> Not Quite'}</h2>
                 <p style="color:#666;margin-bottom:2rem">You got ${score} out of ${questions.length} correct.
                 ${pass ? 'Great job — you know your workshop safety!' : 'Review the safety guidelines and try again.'}</p>
                 <button class="quiz-btn quiz-btn-primary" onclick="location.reload()">Try Again</button>
             </div>
         `;
+        refreshLucideIcons();
     }
 
     // Initial render on DOMContentLoaded
@@ -985,12 +1007,13 @@ function showToast(message, type = 'info') {
         if (sender === 'bot') {
             const footerDiv = document.createElement('div');
             footerDiv.className = 'chatbot-bot-footer';
-            footerDiv.innerHTML = '✨ This conversation is handled by Steven.';
+            footerDiv.innerHTML = '<i data-lucide="sparkles"></i> This conversation is handled by Steven.';
             containerDiv.appendChild(footerDiv);
         }
 
         messagesContainer.appendChild(containerDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        refreshLucideIcons();
     }
 
     // Helper: Add/Remove Typing Indicator

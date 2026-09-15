@@ -15,18 +15,18 @@
 </nav>
 
 <div class="content-page">
-    <h1>📓 Engineering Notebook</h1>
+    <h1><i data-lucide="notebook"></i> Engineering Notebook</h1>
     <p style="text-align:center;color:#999;margin-top:-1rem;margin-bottom:2rem;">Our design process, testing logs,
         and iteration notes — documenting the journey.</p>
 
-    <h2>📅 Latest Entries</h2>
+    <h2><i data-lucide="calendar"></i> Latest Entries</h2>
     <p>Engineering notebook entries will be uploaded here as the season progresses. Each entry follows the design
         process: Identify → Brainstorm → Select → Build → Test → Iterate.</p>
 
     <div style="margin:2rem 0;">
         <div class="faq-item" style="margin-bottom:1rem;">
             <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">
-                <span>📝 Entry Template — How We Document</span>
+                <span><i data-lucide="pencil-line"></i> Entry Template — How We Document</span>
                 <span class="faq-icon">+</span>
             </button>
             <div class="faq-answer">
@@ -43,35 +43,35 @@
         </div>
     </div>
 
-    <h2>🏗️ Design Process Overview</h2>
+    <h2><i data-lucide="hammer"></i> Design Process Overview</h2>
     <div class="subteam-grid" style="margin-bottom:2rem;">
-        <div class="subteam-card"><span class="subteam-icon">🔍</span>
+        <div class="subteam-card"><i data-lucide="search" class="subteam-icon"></i>
             <h3>Identify</h3>
             <p>Define the problem the mechanism needs to solve based on game analysis.</p>
         </div>
-        <div class="subteam-card"><span class="subteam-icon">💡</span>
+        <div class="subteam-card"><i data-lucide="lightbulb" class="subteam-icon"></i>
             <h3>Brainstorm</h3>
             <p>Generate multiple solution concepts with sketches and pros/cons.</p>
         </div>
-        <div class="subteam-card"><span class="subteam-icon">✅</span>
+        <div class="subteam-card"><i data-lucide="circle-check-big" class="subteam-icon"></i>
             <h3>Select</h3>
             <p>Choose the best approach using a decision matrix weighted by priorities.</p>
         </div>
-        <div class="subteam-card"><span class="subteam-icon">🔨</span>
+        <div class="subteam-card"><i data-lucide="hammer" class="subteam-icon"></i>
             <h3>Build</h3>
             <p>Prototype and construct the selected design with careful documentation.</p>
         </div>
-        <div class="subteam-card"><span class="subteam-icon">🧪</span>
+        <div class="subteam-card"><i data-lucide="flask-conical" class="subteam-icon"></i>
             <h3>Test</h3>
             <p>Evaluate performance with measurable metrics and driver feedback.</p>
         </div>
-        <div class="subteam-card"><span class="subteam-icon">🔄</span>
+        <div class="subteam-card"><i data-lucide="refresh-cw" class="subteam-icon"></i>
             <h3>Iterate</h3>
             <p>Refine based on test results — repeat until competition-ready.</p>
         </div>
     </div>
 
-    <h2>📊 Testing Log Template</h2>
+    <h2><i data-lucide="chart-column"></i> Testing Log Template</h2>
     <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:0.85rem;">
             <thead>
@@ -93,12 +93,12 @@
         </table>
     </div>
 
-    <h2>📎 Uploaded Entries</h2>
+    <h2><i data-lucide="paperclip"></i> Uploaded Entries</h2>
     <p style="color:#999;font-style:italic;">No entries uploaded yet. Team members can submit scanned notebook pages
         to be featured here.</p>
 
     <div style="text-align:center;margin-top:3rem;">
-        <a href="{{ url_for('resources') }}" class="cta-button cta-primary">← Back to Resources</a>
+        <a href="{{ url_for('resources') }}" class="cta-button cta-primary"><i data-lucide="arrow-left"></i> Back to Resources</a>
     </div>
 </div>
 {% endblock %}

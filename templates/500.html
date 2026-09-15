@@ -14,7 +14,7 @@
 <body>
     <div class="error-page">
         <div class="error-content">
-            <span class="error-emoji">⚙️</span>
+            <i data-lucide="settings" class="error-emoji"></i>
             <div class="error-code">500</div>
             <p class="error-message">Something Slipped a Gear</p>
             <p class="error-submessage">We hit a snag on our end — our team's already been notified. Please try
@@ -26,6 +26,9 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"
+        integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
+        crossorigin="anonymous"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 

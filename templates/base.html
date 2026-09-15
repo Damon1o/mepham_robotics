@@ -37,7 +37,7 @@
 
 <body{% if current_user %} data-current-user="{{ current_user }}" {% endif %}>
 
-    <button class="menu-toggle" onclick="toggleNav()">☰ MENU</button>
+    <button class="menu-toggle" onclick="toggleNav()"><i data-lucide="menu"></i> MENU</button>
     <div id="overlay" class="overlay" onclick="toggleNav()"></div>
 
     <div id="mySidenav" class="sidenav">
@@ -79,7 +79,7 @@
         <button class="search-close">&times;</button>
         <div class="search-container">
             <div class="search-input-wrapper">
-                <span class="search-icon">🔍</span>
+                <span class="search-icon"><i data-lucide="search"></i></span>
                 <input type="text" placeholder="Search pages... (Ctrl+K)" autocomplete="off">
             </div>
             <div class="search-results"></div>
@@ -89,15 +89,44 @@
     {% block content %}{% endblock %}
 
     <footer>
-        <div class="footer-newsletter">
-            <h4>📬 Stay Updated</h4>
-            <p>Get competition results and team news in your inbox.</p>
-            <form class="footer-newsletter-form">
-                <input type="email" name="email" placeholder="your@email.com" required>
-                <button type="submit">Subscribe</button>
-            </form>
+        <div class="footer-grid">
+            <div class="footer-col footer-brand">
+                <h3>Mepham Robotics</h3>
+                <p>Build. Code. Compete.</p>
+                <div class="footer-socials">
+                    <a href="https://facebook.com" target="_blank" rel="noopener" title="Facebook"><i data-lucide="facebook"></i></a>
+                    <a href="https://instagram.com/mephamrobotics" target="_blank" rel="noopener" title="Instagram"><i data-lucide="instagram"></i></a>
+                    <a href="https://x.com" target="_blank" rel="noopener" title="X"><i data-lucide="twitter"></i></a>
+                </div>
+            </div>
+
+            <div class="footer-col">
+                <h4>Site</h4>
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('about') }}">About</a>
+                <a href="{{ url_for('achievements') }}">Achievements</a>
+                <a href="{{ url_for('donate') }}">Donate</a>
+                <a href="{{ url_for('contact') }}">Contact</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Resources</h4>
+                <a href="{{ url_for('safety_quiz') }}">Safety Quiz</a>
+                <a href="{{ url_for('credits_page') }}">Credits</a>
+                <a href="{{ url_for('privacy') }}">Privacy Policy</a>
+                <a href="{{ url_for('sitemap_xml') }}">Sitemap</a>
+            </div>
+
+            <div class="footer-col footer-newsletter">
+                <h4><i data-lucide="mail"></i> Stay Updated</h4>
+                <p>Get competition results and team news in your inbox.</p>
+                <form class="footer-newsletter-form">
+                    <input type="email" name="email" placeholder="your@email.com" required>
+                    <button type="submit">Subscribe</button>
+                </form>
+            </div>
         </div>
-        <p>&copy; 2026 Mepham Robotics Club | Build. Code. Compete.</p>
+        <p class="footer-copyright">&copy; 2026 Mepham Robotics Club | Build. Code. Compete.</p>
     </footer>
 
     <div id="custom-chatbot-container">
@@ -109,11 +138,11 @@
             </div>
             <div id="chatbot-messages">
                 <div class="chatbot-msg-container bot">
-                    <div class="chatbot-msg bot">Hi there! 👋 I'm Steven. I can provide you with information on the
+                    <div class="chatbot-msg bot"><i data-lucide="hand"></i> Hi there! I'm Steven. I can provide you with information on the
                         Mepham Robotics Club, which focuses on building, coding, and competing in robotics. How can I
                         assist you today?</div>
                     <div class="chatbot-bot-footer">
-                        ✨ This conversation is handled by Steven.
+                        <i data-lucide="sparkles"></i> This conversation is handled by Steven.
                     </div>
                 </div>
             </div>
@@ -143,6 +172,9 @@
         crossorigin="anonymous" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"
         integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a"
+        crossorigin="anonymous" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"
+        integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
         crossorigin="anonymous" defer></script>
     <script src="{{ url_for('static', filename='js/script.js') }}?v=2" defer></script>
     {% block page_scripts %}{% endblock %}

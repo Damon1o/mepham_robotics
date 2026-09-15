@@ -68,32 +68,32 @@ information.{% endblock %}
             </form>
             <div id="form-success"
                 style="display:none; margin-top: 1.5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, rgba(0,200,83,0.15), rgba(0,200,83,0.05)); border: 1px solid rgba(0,200,83,0.3); border-radius: 12px; color: #a8ffb0; text-align: center; font-family: 'Balsamiq Sans', sans-serif;">
-                ✅ Message transmitted successfully! We'll get back to you soon.
+                <i data-lucide="circle-check-big"></i> Message transmitted successfully! We'll get back to you soon.
             </div>
             <div id="form-error"
                 style="display:none; margin-top: 1.5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, rgba(255,50,50,0.15), rgba(255,50,50,0.05)); border: 1px solid rgba(255,50,50,0.3); border-radius: 12px; color: #ffb0b0; text-align: center; font-family: 'Balsamiq Sans', sans-serif;">
-                ❌ Something went wrong. Please try again.
+                <i data-lucide="circle-x"></i> Something went wrong. Please try again.
             </div>
 
             <div class="contact-details">
                 <div class="detail-item">
-                    <h4>📧 Email</h4>
+                    <h4><i data-lucide="mail"></i> Email</h4>
                     <p>damlin@bmchsd.com</p>
                 </div>
                 <div class="detail-item">
-                    <h4>📍 Location</h4>
+                    <h4><i data-lucide="map-pin"></i> Location</h4>
                     <p>North Bellmore, NY</p>
                 </div>
 
                 <div class="contact-socials">
-                    <a href="https://facebook.com" target="_blank" title="Facebook">
-                        <img src="{{ url_for('static', filename='assets/icons/facebook.png') }}" alt="Facebook">
+                    <a href="https://facebook.com" target="_blank" rel="noopener" title="Facebook">
+                        <i data-lucide="facebook"></i>
                     </a>
-                    <a href="https://instagram.com/mephamrobotics" target="_blank" title="Instagram">
-                        <img src="{{ url_for('static', filename='assets/icons/instagram.png') }}" alt="Instagram">
+                    <a href="https://instagram.com/mephamrobotics" target="_blank" rel="noopener" title="Instagram">
+                        <i data-lucide="instagram"></i>
                     </a>
-                    <a href="https://x.com" target="_blank" title="X">
-                        <img src="{{ url_for('static', filename='assets/icons/x.png') }}" alt="X">
+                    <a href="https://x.com" target="_blank" rel="noopener" title="X">
+                        <i data-lucide="twitter"></i>
                     </a>
                 </div>
             </div>
@@ -115,7 +115,7 @@ information.{% endblock %}
 <section class="schedule-section fade-in-section">
     <div class="meeting-schedule">
         <div class="schedule-header">
-            <h3>📅 Next Meeting</h3>
+            <h3><i data-lucide="calendar"></i> Next Meeting</h3>
         </div>
         <div class="schedule-body">
             <p class="next-meeting">Every Tuesday & Thursday</p>

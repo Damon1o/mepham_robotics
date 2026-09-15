@@ -241,8 +241,8 @@
 </head>
 
 <body>
-    <div class="bg-gear" style="top: -50px; left: -50px;">⚙️</div>
-    <div class="bg-gear" style="bottom: -100px; right: -50px; animation-direction: reverse; font-size: 30rem;">⚙️</div>
+    <i data-lucide="settings" class="bg-gear" style="top: -50px; left: -50px;"></i>
+    <i data-lucide="settings" class="bg-gear" style="bottom: -100px; right: -50px; animation-direction: reverse; font-size: 30rem;"></i>
 
     <div class="login-container">
         <!-- Illustration Side -->
@@ -294,11 +294,18 @@
                 </div>
 
                 <div class="back-to-site">
-                    <a href="{{ url_for('index') }}" class="back-to-site">← Back to Site</a>
+                    <a href="{{ url_for('index') }}" class="back-to-site"><i data-lucide="arrow-left"></i> Back to Site</a>
                 </div>
             </form>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"
+        integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
+        crossorigin="anonymous"></script>
+    <script>
+        if (window.lucide) lucide.createIcons();
+    </script>
 </body>
 
 </html>
