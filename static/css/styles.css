@@ -2760,7 +2760,8 @@ footer::before {
     margin-top: 2rem;
     min-height: 400px;
     width: 100%;
-    border-radius: 12px;
+    border-radius: 0;
+    border: 3px solid var(--text-dark);
     overflow: hidden;
 }
 
