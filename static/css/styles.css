@@ -2914,6 +2914,31 @@ footer::before {
     background: #fff;
 }
 
+.sponsor-form .form-group input,
+.sponsor-form .form-group textarea,
+.sponsor-form .form-group select {
+    border-radius: 0;
+}
+
+.sponsor-form .form-group select {
+    width: 100%;
+    padding: 1.2rem;
+    background: #fdfdfd;
+    border: 3px solid var(--text-dark);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.05);
+}
+
+.sponsor-form .form-group select:focus {
+    outline: none;
+    border-color: var(--maroon-dark);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px rgba(148, 69, 71, 0.2);
+    background: #fff;
+}
+
 /* --- SCHEDULE SECTION --- */
 .schedule-section {
     padding: var(--spacing-lg) var(--spacing-md);
@@ -4164,8 +4189,8 @@ footer::before {
     margin: 2rem auto;
     background: white;
     padding: 2.5rem;
-    border: 3px solid #1a1a1a;
-    border-radius: 20px;
+    border: 3px solid var(--text-dark);
+    border-radius: 0;
     box-shadow: 10px 10px 0px rgba(148, 69, 71, 0.15);
 }
 

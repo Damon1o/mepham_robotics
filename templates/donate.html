@@ -128,20 +128,17 @@ build the future.{% endblock %}
         <div class="sponsor-form">
             <h3>Partner with Us</h3>
             <form id="sponsorForm">
-                <div style="margin-bottom:1rem;">
-                    <label style="display:block;margin-bottom:0.5rem;font-weight:bold;">Company Name</label>
-                    <input type="text" name="company" required
-                        style="width:100%;padding:0.8rem;border:2px solid #ccc;border-radius:8px;">
+                <div class="form-group">
+                    <label>Company Name</label>
+                    <input type="text" name="company" required>
                 </div>
-                <div style="margin-bottom:1rem;">
-                    <label style="display:block;margin-bottom:0.5rem;font-weight:bold;">Contact Email</label>
-                    <input type="email" name="email" required
-                        style="width:100%;padding:0.8rem;border:2px solid #ccc;border-radius:8px;">
+                <div class="form-group">
+                    <label>Contact Email</label>
+                    <input type="email" name="email" required>
                 </div>
-                <div style="margin-bottom:1rem;">
-                    <label style="display:block;margin-bottom:0.5rem;font-weight:bold;">Sponsorship Level
-                        Interest</label>
-                    <select name="level" style="width:100%;padding:0.8rem;border:2px solid #ccc;border-radius:8px;">
+                <div class="form-group">
+                    <label>Sponsorship Level Interest</label>
+                    <select name="level">
                         <option>Bronze ($50+)</option>
                         <option>Silver ($150+)</option>
                         <option>Gold ($500+)</option>
@@ -149,10 +146,9 @@ build the future.{% endblock %}
                         <option>Custom Amount</option>
                     </select>
                 </div>
-                <div style="margin-bottom:1.5rem;">
-                    <label style="display:block;margin-bottom:0.5rem;font-weight:bold;">Message</label>
-                    <textarea name="message" rows="4" required
-                        style="width:100%;padding:0.8rem;border:2px solid #ccc;border-radius:8px;"></textarea>
+                <div class="form-group">
+                    <label>Message</label>
+                    <textarea name="message" rows="4" required></textarea>
                 </div>
                 <button type="submit" class="cta-button cta-primary" style="width:100%;">Send Inquiry</button>
             </form>
