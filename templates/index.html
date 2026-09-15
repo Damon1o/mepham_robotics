@@ -297,11 +297,17 @@ Robotics. Join the legacy.{% endblock %}
 {% block content %}
 <!-- HERO SECTION -->
 <div class="hero-image">
-    <img class="hero-side-photo hero-side-photo--left"
+    <img class="hero-side-photo hero-side-photo--top-left"
          src="{{ url_for('static', filename='assets/photos/carousel1.jpg') }}" alt="" aria-hidden="true"
          loading="lazy">
-    <img class="hero-side-photo hero-side-photo--right"
+    <img class="hero-side-photo hero-side-photo--bottom-left"
+         src="{{ url_for('static', filename='assets/photos/newyork.jpg') }}" alt="" aria-hidden="true"
+         loading="lazy">
+    <img class="hero-side-photo hero-side-photo--top-right"
          src="{{ url_for('static', filename='assets/photos/carousel2.jpg') }}" alt="" aria-hidden="true"
+         loading="lazy">
+    <img class="hero-side-photo hero-side-photo--bottom-right"
+         src="{{ url_for('static', filename='assets/photos/carousel1.jpg') }}" alt="" aria-hidden="true"
          loading="lazy">
     <div class="hero-content">
         <h1>Mepham Robotics</h1>
