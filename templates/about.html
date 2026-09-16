@@ -15,7 +15,7 @@ in VEX Robotics.{% endblock %}
         <p>Innovation Driven by Passion</p>
         <div class="hero-cta">
             <a href="{{ url_for('contact') }}" class="cta-button cta-primary">Join the Team</a>
-            <a href="#process" class="cta-button cta-secondary">Our Process</a>
+            <a href="#subteams" class="cta-button cta-secondary">Our Teams</a>
         </div>
     </div>
     <div class="scroll-indicator"></div>
@@ -30,7 +30,7 @@ in VEX Robotics.{% endblock %}
 <section id="about" class="fade-in-section">
     <div class="about-content">
         <div class="about-text">
-            <h2 style="font-family:'Space Mono'; margin-bottom:1rem; color:var(--maroon-dark);">Who We Are</h2>
+            <h2 class="about-heading">Who We Are</h2>
             <p>We are a <strong>student-led robotics club</strong> competing in the <strong>VEX V5 Robotics
                     Competition</strong>. Our members learn hands-on mechanical design, electrical engineering, and
                 complex C++ / Python programming.</p>
@@ -39,94 +39,110 @@ in VEX Robotics.{% endblock %}
             <p>Our teams work year-round to design, build, and program competitive robots that can tackle the
                 season's challenges with precision and creativity.</p>
         </div>
-        <div class="about-image-container">
-            <img src="{{ url_for('static', filename='assets/other/vexrobotics.png') }}" alt="VEX Robotics"
-                class="animated-cube-img" loading="lazy">
-        </div>
+        <figure class="about-photo">
+            <img src="{{ url_for('static', filename='assets/photos/carousel1.jpg') }}"
+                alt="Mepham Robotics members working on a robot" loading="lazy">
+        </figure>
     </div>
 </section>
 
-<section class="mission-section fade-in-section">
-    <div class="mission-container">
-        <div class="text-center">
-            <h2 class="ripple">Our Mission</h2>
-        </div>
-        <div class="mission-grid">
-            <div class="mission-card">
-                <i data-lucide="target" class="mission-icon"></i>
+<section class="about-values fade-in-section">
+    <div class="about-values-inner">
+        <h2 class="ripple">What We Stand For</h2>
+        <div class="about-values-grid">
+            <div class="about-value-card">
+                <i data-lucide="target" class="about-value-icon"></i>
                 <h3>Excellence</h3>
                 <p>We strive for excellence in every aspect of robotics - from mechanical design to autonomous
                     programming.</p>
             </div>
-            <div class="mission-card">
-                <i data-lucide="handshake" class="mission-icon"></i>
-                <h3>Collaboration</h3>
-                <p>Teamwork is at our core. We believe the best solutions come from diverse minds working together.
-                </p>
-            </div>
-            <div class="mission-card">
-                <i data-lucide="lightbulb" class="mission-icon"></i>
+            <div class="about-value-card">
+                <i data-lucide="lightbulb" class="about-value-icon"></i>
                 <h3>Innovation</h3>
                 <p>We encourage creative thinking and innovative solutions to complex engineering challenges.</p>
             </div>
-        </div>
-    </div>
-</section>
-
-<section class="di-section fade-in-section">
-    <div class="content-page">
-        <div class="di-statement">
-            <i data-lucide="globe" class="di-icon"></i>
-            <h3>Diversity & Inclusion</h3>
-            <p>Mepham Robotics is committed to fostering an inclusive environment where students of all backgrounds
-                can thrive in STEM. We believe that diverse perspectives lead to better engineering solutions and a
-                stronger community.</p>
-        </div>
-    </div>
-</section>
-
-<section class="values-section fade-in-section">
-    <div class="values-container">
-        <div class="text-center">
-            <h2 class="ripple">Our Values</h2>
-        </div>
-        <div class="values-list">
-            <div class="value-item">
-                <h4>Integrity</h4>
-                <p>We compete with honesty and fairness, upholding the highest standards of sportsmanship.</p>
+            <div class="about-value-card">
+                <i data-lucide="handshake" class="about-value-icon"></i>
+                <h3>Collaboration</h3>
+                <p>Teamwork is at our core. The best solutions come from diverse minds working together, and we
+                    carry that spirit into our school and local community by giving back.</p>
             </div>
-            <div class="value-item">
-                <h4>Perseverance</h4>
+            <div class="about-value-card">
+                <i data-lucide="mountain" class="about-value-icon"></i>
+                <h3>Perseverance</h3>
                 <p>We embrace challenges and learn from failures, constantly improving our robots and ourselves.</p>
             </div>
-            <div class="value-item">
-                <h4>Mentorship</h4>
+            <div class="about-value-card">
+                <i data-lucide="scale" class="about-value-icon"></i>
+                <h3>Integrity</h3>
+                <p>We compete with honesty and fairness, upholding the highest standards of sportsmanship.</p>
+            </div>
+            <div class="about-value-card">
+                <i data-lucide="graduation-cap" class="about-value-icon"></i>
+                <h3>Mentorship</h3>
                 <p>Experienced members guide new team members, fostering a culture of continuous learning.</p>
             </div>
-            <div class="value-item">
-                <h4>Community</h4>
-                <p>We give back to our school and local community, inspiring the next generation of engineers.</p>
+        </div>
+    </div>
+</section>
+
+<section id="subteams" class="about-subteams fade-in-section">
+    <h2 class="ripple">Our Sub-Teams</h2>
+    <div class="about-subteams-layout">
+        <figure class="about-photo">
+            <img src="{{ url_for('static', filename='assets/photos/carousel7.jpg') }}"
+                alt="Mepham Robotics sub-teams at work" loading="lazy">
+        </figure>
+        <div class="about-subteam-grid">
+            <div class="about-subteam-card">
+                <i data-lucide="cog" class="about-subteam-icon"></i>
+                <h3>Mechanical</h3>
+                <p>CAD, fabrication, drivetrain and manipulator design.</p>
+            </div>
+            <div class="about-subteam-card">
+                <i data-lucide="zap" class="about-subteam-icon"></i>
+                <h3>Electrical</h3>
+                <p>Wiring, sensors, and V5 brain configuration.</p>
+            </div>
+            <div class="about-subteam-card">
+                <i data-lucide="code" class="about-subteam-icon"></i>
+                <h3>Programming</h3>
+                <p>C++ and Python, autonomous routines, odometry.</p>
+            </div>
+            <div class="about-subteam-card">
+                <i data-lucide="notebook-pen" class="about-subteam-icon"></i>
+                <h3>Notebook &amp; Outreach</h3>
+                <p>Engineering notebook, judging interviews, community events.</p>
             </div>
         </div>
     </div>
 </section>
 
-<section class="safety-captain-section fade-in-section" style="background:var(--bg-light); text-align:center;">
-    <div class="content-page">
-        <div
-            style="max-width:800px;margin:0 auto;background:white;padding:2rem;border-radius:16px;border:3px solid #1a1a1a;box-shadow:8px 8px 0px rgba(0,0,0,0.1);">
-            <i data-lucide="hard-hat" style="width:3rem;height:3rem;margin-bottom:1rem;"></i>
-            <h3>Team Safety Captain</h3>
-            <p>Our dedicated Safety Captain ensures all team members adhere to safety protocols, manages the safety
-                manual, and conducts regular workshop inspections.</p>
-            <div style="margin-top:1.5rem;">
-                <a href="{{ url_for('safety_quiz') }}" class="cta-button cta-primary">Take Safety Quiz</a>
+<section class="about-culture fade-in-section">
+    <div class="about-culture-inner">
+        <h2 class="ripple">Culture &amp; Safety</h2>
+        <div class="about-culture-grid">
+            <div class="about-culture-card">
+                <i data-lucide="globe" class="about-culture-icon"></i>
+                <h3>Diversity &amp; Inclusion</h3>
+                <p>Mepham Robotics is committed to fostering an inclusive environment where students of all
+                    backgrounds can thrive in STEM. We believe that diverse perspectives lead to better engineering
+                    solutions and a stronger community.</p>
+            </div>
+            <div class="about-culture-card">
+                <i data-lucide="hard-hat" class="about-culture-icon"></i>
+                <h3>Team Safety Captain</h3>
+                <p>Our dedicated Safety Captain ensures all team members adhere to safety protocols, manages the
+                    safety manual, and conducts regular workshop inspections.</p>
+                <div class="about-culture-cta">
+                    <a href="{{ url_for('safety_quiz') }}" class="cta-button cta-primary">Take Safety Quiz</a>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<section class="history-timeline fade-in-section">
+<section class="history-timeline about-journey fade-in-section">
     <h2 class="ripple">Our Journey</h2>
     <div class="timeline-vertical">
         <div class="timeline-item">
@@ -168,14 +184,46 @@ in VEX Robotics.{% endblock %}
     <h2 class="ripple">Team Moments</h2>
     <div class="carousel-container">
         <div class="carousel-track">
-            {% for i in range(1, 5) %}
-            <div class="carousel-item"><img src="{{ url_for('static', filename='assets/other/base.png') }}"
-                    alt="Team Photo {{ i }}" loading="lazy"></div>
-            {% endfor %}
-            {% for i in range(1, 3) %}
-            <div class="carousel-item"><img src="{{ url_for('static', filename='assets/other/base.png') }}"
-                    alt="Team Photo {{ i }}" loading="lazy"></div>
-            {% endfor %}
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel1.jpg') }}" alt="Team photo 1"
+                    loading="lazy">
+            </div>
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel2.jpg') }}" alt="Team photo 2"
+                    loading="lazy">
+            </div>
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel3.jpg') }}" alt="Team photo 3"
+                    loading="lazy">
+            </div>
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel4.jpg') }}" alt="Team photo 4"
+                    loading="lazy">
+            </div>
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel5.jpg') }}" alt="Team photo 5"
+                    loading="lazy">
+            </div>
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel6.jpg') }}" alt="Team photo 6"
+                    loading="lazy">
+            </div>
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel7.jpg') }}" alt="Team photo 7"
+                    loading="lazy">
+            </div>
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel8.jpg') }}" alt="Team photo 8"
+                    loading="lazy">
+            </div>
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel9.jpg') }}" alt="Team photo 9"
+                    loading="lazy">
+            </div>
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='assets/photos/carousel10.jpg') }}" alt="Team photo 10"
+                    loading="lazy">
+            </div>
         </div>
     </div>
 </section>
