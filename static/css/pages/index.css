@@ -15,7 +15,7 @@
 }
 
 .donate-container {
-    max-width: 800px;
+    max-width: var(--layout-max);
     margin: 0 auto;
     text-align: center;
 }
@@ -93,7 +93,7 @@
 }
 
 .timeline-wrapper {
-    max-width: 800px;
+    max-width: var(--layout-max);
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -232,7 +232,7 @@
 }
 
 .stats-container {
-    max-width: 1200px;
+    max-width: var(--layout-max);
     margin: 0 auto;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
