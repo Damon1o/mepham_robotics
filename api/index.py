@@ -161,6 +161,7 @@ def get_activity_icon(activity_type):
         'awards_update': '🏆',
         'user_add': '👤',
         'user_update': '👥',
+        'user_delete': '🗑️',
         'sponsor_add': '🤝',
         'sponsor_update': '💼',
         'sponsor_delete': '🗑️',
@@ -180,6 +181,7 @@ def get_activity_title(activity_type):
         'awards_update': 'Awards updated',
         'user_add': 'User created',
         'user_update': 'User updated',
+        'user_delete': 'User deleted',
         'sponsor_add': 'Sponsor added',
         'sponsor_update': 'Sponsor updated',
         'sponsor_delete': 'Sponsor deleted',
@@ -247,6 +249,8 @@ def inject_global_data():
         get_image_url=get_image_url,
         abs=abs
     )
+
+USER_ROLES = ('member', 'editor', 'admin')
 
 def login_required(f):
     @wraps(f)
@@ -385,7 +389,8 @@ def admin_dashboard():
             c['date_str'] = c['date'].strftime('%Y-%m-%dT%H:%M')
             c['display_date'] = c['date'].strftime('%b %d, %Y @ %I:%M %p')
         competitions.append(c)
-    users = [dict(u, _id=str(u['_id'])) for u in db['users'].find({}, {'username': 1})]
+    users = [dict(u, _id=str(u['_id']), role=u.get('role', 'member'), email=u.get('email', ''))
+             for u in db['users'].find({}, {'username': 1, 'email': 1, 'role': 1}).sort('username', 1)]
     teams = []
     for t in db['teams'].find().sort('team_number', 1):
         t['_id'] = str(t['_id'])
@@ -853,16 +858,20 @@ def admin_create_user():
         password = request.form.get('password', '').strip()
         if not username or not password:
             flash('Username and password are required.', 'error')
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('admin_dashboard', _anchor='users'))
         if db['users'].find_one({'username': username}):
             flash('Username already exists.', 'error')
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('admin_dashboard', _anchor='users'))
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        role = request.form.get('role', 'member')
+        if role not in USER_ROLES:
+            flash('Invalid role.', 'error')
+            return redirect(url_for('admin_dashboard', _anchor='users'))
         user_data = {
             'username': username,
-            'email': request.form.get('email', ''),
+            'email': request.form.get('email', '').strip(),
             'password': hashed,
-            'role': request.form.get('role', 'member')
+            'role': role
         }
         db['users'].insert_one(user_data)
         flash(f'User "{username}" created successfully!', 'success')
@@ -878,7 +887,92 @@ def admin_create_user():
         )
     except Exception as e:
         flash(f'Error creating user: {e}', 'error')
-    return redirect(url_for('admin_dashboard'))
+    return redirect(url_for('admin_dashboard', _anchor='users'))
+
+def _other_admin_exists(user_id):
+    return db['users'].count_documents({'role': 'admin', '_id': {'$ne': user_id}}, limit=1) > 0
+
+@app.route('/admin/update-user/<id>', methods=['POST'])
+@role_required('admin')
+def admin_update_user(id):
+    try:
+        user = db['users'].find_one({'_id': ObjectId(id)})
+        if not user:
+            flash('User not found.', 'error')
+            return redirect(url_for('admin_dashboard', _anchor='users'))
+
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        role = request.form.get('role', 'member')
+        if not username:
+            flash('Username is required.', 'error')
+            return redirect(url_for('admin_dashboard', _anchor='users'))
+        if role not in USER_ROLES:
+            flash('Invalid role.', 'error')
+            return redirect(url_for('admin_dashboard', _anchor='users'))
+        if db['users'].find_one({'username': username, '_id': {'$ne': user['_id']}}):
+            flash('Username already exists.', 'error')
+            return redirect(url_for('admin_dashboard', _anchor='users'))
+        if user.get('role') == 'admin' and role != 'admin' and not _other_admin_exists(user['_id']):
+            flash('Cannot remove the last admin.', 'error')
+            return redirect(url_for('admin_dashboard', _anchor='users'))
+
+        updates = {
+            'username': username,
+            'email': request.form.get('email', '').strip(),
+            'role': role
+        }
+        if password:
+            updates['password'] = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        db['users'].update_one({'_id': user['_id']}, {'$set': updates})
+
+        # Keep the current session in sync when admins edit themselves
+        if session.get('user') == user['username']:
+            session['user'] = username
+            session['role'] = role
+
+        flash(f'User "{username}" updated!', 'success')
+        changes = [f for f in ('username', 'email', 'role') if user.get(f, '') != updates[f]]
+        if password:
+            changes.append('password')
+        log_activity(
+            'user_update',
+            f'Updated user: {username}',
+            details={'username': username, 'role': role, 'changes': changes}
+        )
+    except Exception as e:
+        flash(f'Error updating user: {e}', 'error')
+    if session.get('role') != 'admin':
+        return redirect(url_for('index'))
+    return redirect(url_for('admin_dashboard', _anchor='users'))
+
+@app.route('/admin/delete-user/<id>', methods=['POST'])
+@role_required('admin')
+def admin_delete_user(id):
+    try:
+        user = db['users'].find_one({'_id': ObjectId(id)})
+        if not user:
+            flash('User not found.', 'error')
+        elif user['username'] == session.get('user'):
+            flash('You cannot delete your own account.', 'error')
+        elif user.get('role') == 'admin' and not _other_admin_exists(user['_id']):
+            flash('Cannot delete the last admin.', 'error')
+        else:
+            db['users'].delete_one({'_id': user['_id']})
+            # Unlink the account from any team member entries
+            for team in db['teams'].find({'members.user_id': id}):
+                members = [dict(mem, user_id='') if mem.get('user_id') == id else mem
+                           for mem in team['members']]
+                db['teams'].update_one({'_id': team['_id']}, {'$set': {'members': members}})
+            flash(f'User "{user["username"]}" deleted.', 'success')
+            log_activity(
+                'user_delete',
+                f'Deleted user: {user["username"]}',
+                details={'username': user['username'], 'role': user.get('role', 'member')}
+            )
+    except Exception as e:
+        flash(f'Error deleting user: {e}', 'error')
+    return redirect(url_for('admin_dashboard', _anchor='users'))
 
 @app.route('/admin/save-sponsor', methods=['POST'])
 @role_required('admin')

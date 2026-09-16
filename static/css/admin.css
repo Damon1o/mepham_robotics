@@ -1151,3 +1151,131 @@
         }
     }
 
+
+    /* User management */
+    .user-summary {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .user-filters {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .user-filters .panel-filter {
+        flex: 1;
+    }
+
+    .user-role-filter {
+        height: fit-content;
+        padding: 0.65rem 1rem;
+        margin-bottom: 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        background: #fff;
+    }
+
+    .user-list {
+        margin-bottom: 1.5rem;
+        max-height: 360px;
+    }
+
+    .data-item.user-item {
+        grid-template-columns: 48px 1fr auto;
+        align-items: center;
+    }
+
+    .user-avatar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--maroon-dark);
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.2rem;
+    }
+
+    .user-info {
+        min-width: 0;
+        text-align: left;
+    }
+
+    .user-name {
+        display: block;
+        font-size: 1.05rem;
+    }
+
+    .user-you {
+        margin-left: 0.25rem;
+        color: #888;
+        font-weight: 400;
+        font-size: 0.85rem;
+    }
+
+    .user-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+        color: #666;
+    }
+
+    .user-email {
+        overflow-wrap: anywhere;
+    }
+
+    .role-badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: #e9ecef;
+        color: #333;
+    }
+
+    .role-badge.admin {
+        background: var(--maroon-dark);
+        color: #fff;
+    }
+
+    .role-badge.editor {
+        background: #ffd700;
+        color: #333;
+    }
+
+    .inline-form {
+        margin: 0;
+    }
+
+    .user-empty {
+        text-align: center;
+        color: #999;
+        padding: 1rem;
+    }
+
+    .user-form-title {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        border-top: 1px solid #eee;
+        padding-top: 1rem;
+    }
+
+    @media (max-width: 480px) {
+        .user-filters {
+            flex-direction: column;
+            gap: 0;
+        }
+    }

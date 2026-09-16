@@ -119,6 +119,37 @@ function resetSponsorForm() {
     document.getElementById('sponsor_form').reset();
 }
 
+function editUser(user) {
+    const form = document.getElementById('userForm');
+    document.getElementById('user_form_title').innerText = 'Edit User: ' + user.username;
+    form.action = '/admin/update-user/' + user.id;
+    form.dataset.mode = 'edit';
+    form.reset();
+    document.getElementById('username').value = user.username;
+    document.getElementById('email').value = user.email || '';
+    document.getElementById('role').value = user.role || 'member';
+    const password = document.getElementById('password');
+    password.required = false;
+    password.placeholder = 'Leave blank to keep current password';
+    document.getElementById('password_hint').innerText = 'Optional - enter a new password (8+ characters) to reset it';
+    document.getElementById('user_submit').innerText = 'Save Changes';
+    window.scrollTo({ top: document.getElementById('user_form_title').offsetTop - 100, behavior: 'smooth' });
+    document.getElementById('username').focus({ preventScroll: true });
+}
+
+function resetUserForm() {
+    const form = document.getElementById('userForm');
+    document.getElementById('user_form_title').innerText = 'Create New User';
+    form.action = form.dataset.defaultAction;
+    delete form.dataset.mode;
+    form.reset();
+    const password = document.getElementById('password');
+    password.required = true;
+    password.placeholder = 'Enter secure password';
+    document.getElementById('password_hint').innerText = 'Minimum 8 characters';
+    document.getElementById('user_submit').innerText = 'Create User';
+}
+
 function showTeamAwards(teamNum) {
     const teamAwards = JSON.parse(document.getElementById('team_awards_data').textContent);
     const container = document.getElementById('team_awards_list');
@@ -281,6 +312,12 @@ function previewMemberImage(input, index) {
 document.getElementById('userForm')?.addEventListener('submit', function (e) {
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirm_password').value;
+    const editing = this.dataset.mode === 'edit';
+
+    if (editing && !password && !confirmPassword) {
+        showLoading();
+        return true;
+    }
 
     if (password !== confirmPassword) {
         e.preventDefault();
@@ -463,6 +500,20 @@ document.addEventListener('DOMContentLoaded', function () {
     Admin.attachListFilter('#awards_filter', '#panel-awards .award-item');
     Admin.attachListFilter('#teams_filter', '#panel-teams .data-list > .data-item');
     Admin.attachListFilter('#sponsors_filter', '#panel-sponsors .data-list > .data-item');
+
+    const usersFilter = document.getElementById('users_filter');
+    const usersRoleFilter = document.getElementById('users_role_filter');
+    function filterUsers() {
+        const term = usersFilter.value.trim().toLowerCase();
+        const role = usersRoleFilter.value;
+        document.querySelectorAll('#panel-users .user-item').forEach(item => {
+            const matches = (!term || item.textContent.toLowerCase().includes(term))
+                && (!role || item.dataset.role === role);
+            item.classList.toggle('is-hidden', !matches);
+        });
+    }
+    usersFilter?.addEventListener('input', filterUsers);
+    usersRoleFilter?.addEventListener('change', filterUsers);
 });
 
 document.addEventListener('DOMContentLoaded', function () {

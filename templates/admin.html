@@ -510,29 +510,85 @@
 
 <!-- USER MANAGEMENT CARD -->
 <section class="admin-panel" data-panel="users" id="panel-users" role="tabpanel" aria-labelledby="tab-users" hidden>
-<div class="admin-card">
+<div class="admin-card" id="user_form_card">
     <div class="admin-card-header">
         <h2><i data-lucide="user"></i> User Management</h2>
     </div>
-    <form action="{{ url_for('admin_create_user') }}" method="POST" id="userForm">
+    <div class="user-summary">
+        <span>{{ users|length }} user{{ 's' if users|length != 1 }}</span>
+        <span class="role-badge admin">{{ users|selectattr('role', 'equalto', 'admin')|list|length }} admin</span>
+        <span class="role-badge editor">{{ users|selectattr('role', 'equalto', 'editor')|list|length }} editor</span>
+        <span class="role-badge member">{{ users|selectattr('role', 'equalto', 'member')|list|length }} member</span>
+    </div>
+    <div class="user-filters">
+        <input type="search" id="users_filter" class="panel-filter" aria-label="Filter users"
+            placeholder="Filter users by username or email...">
+        <select id="users_role_filter" class="user-role-filter" aria-label="Filter users by role">
+            <option value="">All roles</option>
+            <option value="admin">Admins</option>
+            <option value="editor">Editors</option>
+            <option value="member">Members</option>
+        </select>
+    </div>
+
+    <div class="data-list user-list">
+        {% for user in users %}
+        <div class="data-item user-item" data-role="{{ user.role }}">
+            <div class="user-avatar" aria-hidden="true">{{ user.username[:1]|upper }}</div>
+            <div class="user-info">
+                <strong class="user-name">
+                    {{ user.username }}
+                    {% if user.username == session.user %}<span class="user-you">(you)</span>{% endif %}
+                </strong>
+                <small class="user-meta">
+                    <span class="role-badge {{ user.role }}">{{ user.role }}</span>
+                    <span class="user-email">{{ user.email or 'No email' }}</span>
+                </small>
+            </div>
+            <div class="data-item-actions">
+                <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
+                    data-id="{{ user._id }}" data-username="{{ user.username }}"
+                    data-email="{{ user.email }}" data-role="{{ user.role }}"
+                    aria-label="Edit user: {{ user.username }}"
+                    onclick="editUser(this.dataset)">Edit</button>
+                {% if user.username != session.user %}
+                <form action="{{ url_for('admin_delete_user', id=user._id) }}" method="POST" class="inline-form"
+                    onsubmit="return confirmDelete(this, 'user')">
+                    <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
+                        aria-label="Delete user: {{ user.username }}">Delete</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% if not users %}
+        <p class="user-empty">No users yet. Create one below.</p>
+        {% endif %}
+    </div>
+
+    <h3 id="user_form_title" class="user-form-title">Create New User</h3>
+    <form action="{{ url_for('admin_create_user') }}" data-default-action="{{ url_for('admin_create_user') }}"
+        method="POST" id="userForm">
         <div class="form-group">
             <label for="username">Username</label>
             <input type="text" id="username" name="username" placeholder="Enter username" required>
-            <div class="form-hint">Must be 3-20 characters, letters and numbers only</div>
+            <div class="form-hint">Used to sign in; must be unique</div>
         </div>
         <div class="form-group">
             <label for="email">Email Address</label>
             <input type="email" id="email" name="email" placeholder="user@example.com">
-            <div class="form-hint">Optional - for notifications and password reset</div>
+            <div class="form-hint">Optional - can also be used to sign in</div>
         </div>
         <div class="form-group">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Enter secure password" required>
-            <div class="form-hint">Minimum 8 characters with letters and numbers</div>
+            <input type="password" id="password" name="password" placeholder="Enter secure password"
+                autocomplete="new-password" required>
+            <div class="form-hint" id="password_hint">Minimum 8 characters</div>
         </div>
         <div class="form-group">
             <label for="confirm_password">Confirm Password</label>
-            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password">
+            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password"
+                autocomplete="new-password">
         </div>
         <div class="form-group">
             <label for="role">User Role</label>
@@ -544,9 +600,8 @@
             <div class="form-hint">Admins have full access to all management features</div>
         </div>
         <div class="btn-group">
-            <button type="submit" class="admin-btn admin-btn-success">Create User</button>
-            <button type="button" class="admin-btn admin-btn-secondary"
-                onclick="document.getElementById('userForm').reset()">Clear Form</button>
+            <button type="submit" id="user_submit" class="admin-btn admin-btn-success">Create User</button>
+            <button type="button" class="admin-btn admin-btn-secondary" onclick="resetUserForm()">Cancel / Reset</button>
         </div>
     </form>
 </div>
