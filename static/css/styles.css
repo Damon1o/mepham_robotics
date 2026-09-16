@@ -397,69 +397,98 @@ h2::after {
     border: 4px solid var(--text-dark);
     box-shadow: 7px 7px 0px rgba(0, 0, 0, 0.35);
     z-index: 5;
+    --rot: 0deg;
+    --pull: 0px;
+    transform: translateX(var(--pull)) rotate(var(--rot));
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+}
+
+/* Pull toward hero center on hover */
+.hero-side-photo:hover {
+    --pull: var(--pull-hover, 0px);
+    box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.45);
+    z-index: 6;
 }
 
 .hero-side-photo--portrait {
-    width: 130px;
-    height: 180px;
+    width: 260px;
+    height: 360px;
 }
 
 .hero-side-photo--landscape {
-    width: 190px;
-    height: 130px;
+    width: 380px;
+    height: 260px;
 }
 
 /* Left edge stack, top to bottom */
 .hero-side-photo--l1 {
-    top: 6%;
+    top: 2%;
     left: 1.5vw;
-    transform: rotate(-6deg);
+    --rot: -6deg;
+    --pull-hover: 40px;
 }
 
 .hero-side-photo--l2 {
-    top: 30%;
+    top: 28%;
     left: 0.5vw;
-    transform: rotate(4deg);
+    --rot: 4deg;
+    --pull-hover: 40px;
 }
 
 .hero-side-photo--l3 {
-    top: 56%;
+    bottom: 26%;
     left: 2vw;
-    transform: rotate(-4deg);
+    --rot: -4deg;
+    --pull-hover: 40px;
 }
 
 .hero-side-photo--l4 {
-    top: 80%;
+    bottom: 2%;
     left: 0.5vw;
-    transform: rotate(6deg);
+    --rot: 6deg;
+    --pull-hover: 40px;
 }
 
 /* Right edge stack, top to bottom */
 .hero-side-photo--r1 {
-    top: 6%;
+    top: 2%;
     right: 0.5vw;
-    transform: rotate(6deg);
+    --rot: 6deg;
+    --pull-hover: -40px;
 }
 
 .hero-side-photo--r2 {
-    top: 30%;
+    top: 28%;
     right: 1.5vw;
-    transform: rotate(-4deg);
+    --rot: -4deg;
+    --pull-hover: -40px;
 }
 
 .hero-side-photo--r3 {
-    top: 56%;
+    bottom: 26%;
     right: 0.5vw;
-    transform: rotate(4deg);
+    --rot: 4deg;
+    --pull-hover: -40px;
 }
 
 .hero-side-photo--r4 {
-    top: 80%;
+    bottom: 2%;
     right: 2vw;
-    transform: rotate(-6deg);
+    --rot: -6deg;
+    --pull-hover: -40px;
 }
 
-@media (max-width: 1300px) {
+@media (prefers-reduced-motion: reduce) {
+    .hero-side-photo {
+        transition: none;
+    }
+
+    .hero-side-photo:hover {
+        --pull: 0px;
+    }
+}
+
+@media (max-width: 1700px) {
     .hero-side-photo {
         display: none;
     }
@@ -1971,25 +2000,22 @@ footer::before {
     width: 160px;
     height: 120px;
     margin: 0 auto 0.5rem;
-    background: var(--bg-light);
-    border: 3px solid var(--text-dark);
-    border-radius: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
-    box-shadow: var(--shadow-brutal);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease;
 }
 
 .sponsors-grid .sponsor-logo:hover {
     transform: translate(-3px, -3px);
-    box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.3);
 }
 
-.sponsor-logo-img {
-    max-width: 100%;
-    max-height: 100%;
+.sponsors-grid .sponsor-logo-img {
+    width: 160px;
+    height: 120px;
     object-fit: contain;
 }
 
@@ -2962,12 +2988,23 @@ footer::before {
 .sponsor-form .form-group select {
     width: 100%;
     padding: 1.2rem;
-    background: #fdfdfd;
+    padding-right: 3rem;
+    background-color: #fdfdfd;
     border: 3px solid var(--text-dark);
     font-family: var(--font-body);
     font-size: 1rem;
+    line-height: 1.5;
+    color: var(--text-dark);
     transition: all var(--transition-fast);
     box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.05);
+    /* Drop the native control so the box matches the text inputs */
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232b2b2b' stroke-width='2' stroke-linecap='square'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1.2rem center;
+    background-size: 12px 8px;
 }
 
 .sponsor-form .form-group select:focus {
@@ -2975,7 +3012,7 @@ footer::before {
     border-color: var(--maroon-dark);
     transform: translate(-2px, -2px);
     box-shadow: 6px 6px 0px rgba(148, 69, 71, 0.2);
-    background: #fff;
+    background-color: #fff;
 }
 
 /* --- SCHEDULE SECTION --- */
@@ -3321,8 +3358,14 @@ footer::before {
 }
 
 [data-theme="dark"] .sponsor-form .form-group select {
-    background: #2a2a2a;
+    background-color: #2a2a2a;
     border-color: #555;
+    color: #e0e0e0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23e0e0e0' stroke-width='2' stroke-linecap='square'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"] .sponsor-form .form-group select option {
+    background-color: #2a2a2a;
     color: #e0e0e0;
 }
 
@@ -3334,11 +3377,6 @@ footer::before {
     background: #1e1e1e;
     border-color: #555;
     color: #e0e0e0;
-}
-
-[data-theme="dark"] .sponsors-grid .sponsor-logo {
-    background: #2a2a2a;
-    border-color: #444;
 }
 
 [data-theme="dark"] .sponsor-logo-fallback {
