@@ -118,28 +118,25 @@ in VEX Robotics.{% endblock %}
     </div>
 </section>
 
-<section class="di-section fade-in-section">
-    <div class="content-page">
-        <div class="di-statement">
-            <i data-lucide="globe" class="di-icon"></i>
-            <h3>Diversity & Inclusion</h3>
-            <p>Mepham Robotics is committed to fostering an inclusive environment where students of all backgrounds
-                can thrive in STEM. We believe that diverse perspectives lead to better engineering solutions and a
-                stronger community.</p>
-        </div>
-    </div>
-</section>
-
-<section class="safety-captain-section fade-in-section" style="background:var(--bg-light); text-align:center;">
-    <div class="content-page">
-        <div
-            style="max-width:800px;margin:0 auto;background:white;padding:2rem;border-radius:16px;border:3px solid #1a1a1a;box-shadow:8px 8px 0px rgba(0,0,0,0.1);">
-            <i data-lucide="hard-hat" style="width:3rem;height:3rem;margin-bottom:1rem;"></i>
-            <h3>Team Safety Captain</h3>
-            <p>Our dedicated Safety Captain ensures all team members adhere to safety protocols, manages the safety
-                manual, and conducts regular workshop inspections.</p>
-            <div style="margin-top:1.5rem;">
-                <a href="{{ url_for('safety_quiz') }}" class="cta-button cta-primary">Take Safety Quiz</a>
+<section class="about-culture fade-in-section">
+    <div class="about-culture-inner">
+        <h2 class="ripple">Culture &amp; Safety</h2>
+        <div class="about-culture-grid">
+            <div class="about-culture-card">
+                <i data-lucide="globe" class="about-culture-icon"></i>
+                <h3>Diversity &amp; Inclusion</h3>
+                <p>Mepham Robotics is committed to fostering an inclusive environment where students of all
+                    backgrounds can thrive in STEM. We believe that diverse perspectives lead to better engineering
+                    solutions and a stronger community.</p>
+            </div>
+            <div class="about-culture-card">
+                <i data-lucide="hard-hat" class="about-culture-icon"></i>
+                <h3>Team Safety Captain</h3>
+                <p>Our dedicated Safety Captain ensures all team members adhere to safety protocols, manages the
+                    safety manual, and conducts regular workshop inspections.</p>
+                <div class="about-culture-cta">
+                    <a href="{{ url_for('safety_quiz') }}" class="cta-button cta-primary">Take Safety Quiz</a>
+                </div>
             </div>
         </div>
     </div>

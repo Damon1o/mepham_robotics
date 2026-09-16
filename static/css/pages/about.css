@@ -210,3 +210,79 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Culture & Safety: painted, full-bleed, two columns */
+.about-culture {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    background: var(--accent-light);
+    padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.about-culture-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.about-culture-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.about-culture-card {
+    background: #fff;
+    border: 3px solid var(--text-dark);
+    border-radius: 16px;
+    padding: 2.5rem;
+    box-shadow: 8px 8px 0px rgba(148, 69, 71, 0.2);
+}
+
+.about-culture-icon {
+    width: 3rem;
+    height: 3rem;
+    color: var(--maroon-dark);
+    margin-bottom: 1rem;
+}
+
+.about-culture-card h3 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.5rem;
+    color: var(--maroon-dark);
+    margin-bottom: 1rem;
+}
+
+.about-culture-card p {
+    color: var(--text-light);
+    line-height: 1.8;
+    font-size: 1.05rem;
+}
+
+.about-culture-cta {
+    margin-top: 1.5rem;
+}
+
+[data-theme="dark"] .about-culture {
+    background: #1a1a1a;
+}
+
+[data-theme="dark"] .about-culture-card {
+    background: #1e1e1e;
+    border-color: #444;
+}
+
+[data-theme="dark"] .about-culture-icon,
+[data-theme="dark"] .about-culture-card h3 {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .about-culture-card p {
+    color: #bbb;
+}
+
+@media (max-width: 768px) {
+    .about-culture-grid {
+        grid-template-columns: 1fr;
+    }
+}
