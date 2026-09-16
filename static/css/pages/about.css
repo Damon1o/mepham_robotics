@@ -292,3 +292,30 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Our Journey: unpainted, flat track, year tags */
+.about-journey {
+    background: transparent;
+    padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.about-journey .timeline-vertical::before {
+    background: var(--maroon-dark);
+}
+
+.about-journey .timeline-year {
+    display: inline-block;
+    background: var(--maroon-dark);
+    color: var(--accent-gold);
+    font-size: 1.1rem;
+    padding: 0.15rem 0.75rem;
+    border-radius: 8px;
+}
+
+[data-theme="dark"] .about-journey {
+    background: transparent;
+}
+
+[data-theme="dark"] .about-journey .timeline-year {
+    color: var(--accent-gold);
+}
