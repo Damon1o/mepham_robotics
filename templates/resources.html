@@ -6,13 +6,7 @@ endblock %}
 
 
 {% block page_styles %}
-<style>
-    .hero-image {
-        background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
-        url('{{ url_for("static", filename="assets/photos/about.png") }}') center/cover;
-        min-height: 60vh;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/resources.css') }}">
 {% endblock %}
 
 {% block content %}

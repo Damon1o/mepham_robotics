@@ -1,0 +1,7 @@
+/* Page styles: team */
+
+.hero-image {
+    background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
+    var(--team-hero-image) center/cover;
+    min-height: 60vh;
+}

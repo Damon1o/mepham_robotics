@@ -5,13 +5,7 @@
 build the future.{% endblock %}
 
 {% block page_styles %}
-<style>
-    .hero-image {
-        background: var(--maroon-dark);
-        border-bottom: 4px solid var(--text-dark);
-        min-height: 60vh;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/donate.css') }}">
 {% endblock %}
 
 {% block content %}

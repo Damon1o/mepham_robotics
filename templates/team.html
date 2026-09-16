@@ -6,17 +6,11 @@ members, and season goals.{% endblock %}
 {% block og_image %}{{ get_image_url(team.hero_image, external=True) }}{% endblock %}
 
 {% block page_styles %}
-<style>
-    .hero-image {
-        background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
-        url('{{ get_image_url(team.hero_image) }}') center/cover;
-        min-height: 60vh;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="hero-image fade-in-section">
+<div class="hero-image fade-in-section" style="--team-hero-image: url('{{ get_image_url(team.hero_image) }}')">
     <div class="hero-content">
         <h1>Team {{ team.team_number }}</h1>
         <p>{{ team.nickname or 'Build. Code. Compete.' }}</p>

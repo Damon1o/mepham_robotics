@@ -1,0 +1,7 @@
+/* Page styles: donate */
+
+.hero-image {
+    background: var(--maroon-dark);
+    border-bottom: 4px solid var(--text-dark);
+    min-height: 60vh;
+}
