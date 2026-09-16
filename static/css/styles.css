@@ -1549,14 +1549,15 @@ footer::before {
 }
 
 .tier-card {
-    background: none;
-    border: none;
-    box-shadow: none;
+    background: white;
+    border-radius: 20px;
+    border: 3px solid var(--text-dark);
+    box-shadow: var(--shadow-brutal);
     padding: 2.5rem 2rem;
     text-align: center;
     position: relative;
     overflow: hidden;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .tier-card::before {
@@ -1582,6 +1583,7 @@ footer::before {
 
 .tier-card:hover {
     transform: translate(-4px, -4px);
+    box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.25);
 }
 
 .tier-icon {
@@ -2076,16 +2078,17 @@ footer::before {
 
 .impact-card {
     background: var(--maroon-light);
-    border-radius: 18px;
+    border-radius: 20px;
     padding: 2rem;
     text-align: center;
-    border: none;
-    box-shadow: none;
-    transition: transform 0.2s ease;
+    border: 3px solid var(--text-dark);
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .impact-card:hover {
     transform: translate(-3px, -3px);
+    box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.35);
 }
 
 .impact-amount {
@@ -2848,7 +2851,7 @@ footer::before {
     margin-top: 2rem;
     min-height: 400px;
     width: 100%;
-    border-radius: 0;
+    border-radius: 20px;
     border: 3px solid var(--text-dark);
     overflow: hidden;
 }
@@ -2994,7 +2997,7 @@ footer::before {
 .sponsor-form .form-group input,
 .sponsor-form .form-group textarea,
 .sponsor-form .form-group select {
-    border-radius: 0;
+    border-radius: 12px;
 }
 
 .sponsor-form .form-group select {
@@ -4286,10 +4289,16 @@ footer::before {
 .sponsor-form {
     max-width: 600px;
     margin: 2rem auto;
-    background: none;
-    padding: 2.5rem 0;
-    border: none;
-    box-shadow: none;
+    background: white;
+    padding: 2.5rem;
+    border: 3px solid var(--text-dark);
+    border-radius: 20px;
+    box-shadow: 10px 10px 0px rgba(148, 69, 71, 0.15);
+}
+
+[data-theme="dark"] .sponsor-form {
+    background: #1e1e1e;
+    border-color: #444;
 }
 
 .sponsor-form h3 {
