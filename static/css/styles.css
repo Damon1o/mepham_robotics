@@ -1967,7 +1967,7 @@ footer::before {
     color: inherit;
 }
 
-.sponsor-logo {
+.sponsors-grid .sponsor-logo {
     width: 160px;
     height: 120px;
     margin: 0 auto 0.5rem;
@@ -1982,7 +1982,7 @@ footer::before {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.sponsor-logo:hover {
+.sponsors-grid .sponsor-logo:hover {
     transform: translate(-3px, -3px);
     box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.3);
 }
@@ -3320,6 +3320,12 @@ footer::before {
     color: #e0e0e0;
 }
 
+[data-theme="dark"] .sponsor-form .form-group select {
+    background: #2a2a2a;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
 [data-theme="dark"] .form-group label {
     color: #d4a0a1;
 }
@@ -3330,7 +3336,7 @@ footer::before {
     color: #e0e0e0;
 }
 
-[data-theme="dark"] .sponsor-logo {
+[data-theme="dark"] .sponsors-grid .sponsor-logo {
     background: #2a2a2a;
     border-color: #444;
 }
