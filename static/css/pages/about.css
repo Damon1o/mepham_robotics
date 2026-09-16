@@ -36,3 +36,94 @@
 [data-theme="dark"] .about-photo {
     border-color: #444;
 }
+
+/* What We Stand For: painted, full-bleed */
+.about-values {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    background: var(--maroon-dark);
+    padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.about-values-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.about-values h2 {
+    color: #fff;
+}
+
+.about-values-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+}
+
+.about-value-card {
+    background: #fff;
+    border: 3px solid var(--text-dark);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.25);
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.about-value-card:hover {
+    transform: translate(-4px, -4px);
+    box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.3);
+}
+
+.about-value-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--maroon-dark);
+    margin-bottom: 1rem;
+}
+
+.about-value-card h3 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    color: var(--maroon-dark);
+    margin-bottom: 0.75rem;
+}
+
+.about-value-card p {
+    color: var(--text-light);
+    line-height: 1.7;
+}
+
+[data-theme="dark"] .about-values {
+    background: #3a0a0b;
+}
+
+[data-theme="dark"] .about-values h2 {
+    color: #fff;
+}
+
+[data-theme="dark"] .about-value-card {
+    background: #1e1e1e;
+    border-color: #444;
+}
+
+[data-theme="dark"] .about-value-icon,
+[data-theme="dark"] .about-value-card h3 {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .about-value-card p {
+    color: #bbb;
+}
+
+@media (max-width: 900px) {
+    .about-values-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .about-values-grid {
+        grid-template-columns: 1fr;
+    }
+}
