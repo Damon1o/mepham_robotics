@@ -341,8 +341,7 @@ section {
 .robot-showcase,
 .live-results-section,
 .contact-section,
-.team-awards,
-.di-statement {
+.team-awards {
     max-width: none;
     margin-left: 0;
     margin-right: 0;
@@ -2689,99 +2688,10 @@ footer::before {
     font-weight: 700;
 }
 
-.about-image-container {
-    text-align: center;
-    position: relative;
-}
-
-.animated-cube-img {
-    max-width: 400px;
-    width: 100%;
-    height: auto;
-    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.2));
-    animation: float 6s ease-in-out infinite;
-    transition: transform 0.3s ease;
-}
-
-.animated-cube-img:hover {
-    transform: scale(1.05) rotate(5deg);
-}
-
-.mission-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-}
-
-.mission-card {
-    background: white;
-    padding: 2.5rem;
-    border-radius: 16px;
-    border: 3px solid var(--text-dark);
-    box-shadow: 8px 8px 0px rgba(148, 69, 71, 0.2);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
-
-.mission-card:hover {
-    transform: translate(-4px, -4px);
-    box-shadow: 12px 12px 0px rgba(148, 69, 71, 0.3);
-}
-
-.mission-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-}
-
-.mission-card h3 {
-    font-size: 1.5rem;
-    font-family: 'Space Mono', monospace;
-    color: var(--maroon-light);
-    margin-bottom: 1rem;
-}
-
-.mission-card p {
-    color: #666;
-    line-height: 1.7;
-    font-size: 1.05rem;
-}
-
-.values-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-}
-
-.value-item {
-    padding: 2.5rem;
-    background: white;
-    border-radius: 16px;
-    border: 3px solid var(--text-dark);
-    border-left: 8px solid var(--maroon-dark);
-    transition: all 0.3s ease;
-}
-
-.value-item:hover {
-    transform: translateX(10px);
-    border-left-color: var(--accent-gold);
-}
-
-.value-item h4 {
-    font-size: 1.3rem;
-    font-family: 'Space Mono', monospace;
-    color: var(--maroon-dark);
-    margin-bottom: 0.75rem;
-}
-
 @media (max-width: 768px) {
     .about-content {
         grid-template-columns: 1fr;
         gap: 3rem;
-    }
-
-    .mission-grid {
-        grid-template-columns: 1fr;
     }
 }
 
@@ -3310,8 +3220,6 @@ footer::before {
 }
 
 [data-theme="dark"] .feature-card,
-[data-theme="dark"] .mission-card,
-[data-theme="dark"] .value-item,
 [data-theme="dark"] .tier-card,
 [data-theme="dark"] .faq-item,
 [data-theme="dark"] .process-step,
@@ -3328,8 +3236,6 @@ footer::before {
 }
 
 [data-theme="dark"] .feature-card h3,
-[data-theme="dark"] .mission-card h3,
-[data-theme="dark"] .value-item h4,
 [data-theme="dark"] .faq-question,
 [data-theme="dark"] .process-step h4,
 [data-theme="dark"] .team-card h3,
@@ -3340,7 +3246,6 @@ footer::before {
 }
 
 [data-theme="dark"] .feature-card p,
-[data-theme="dark"] .mission-card p,
 [data-theme="dark"] .faq-answer p,
 [data-theme="dark"] .process-step p,
 [data-theme="dark"] .team-card p,
@@ -4237,51 +4142,6 @@ footer::before {
 }
 
 [data-theme="dark"] .subteam-card p {
-    color: #bbb;
-}
-
-/* D&I Statement */
-.di-statement {
-    background: linear-gradient(135deg, rgba(148, 69, 71, 0.05), rgba(255, 215, 0, 0.05));
-    border: 3px solid #1a1a1a;
-    border-radius: 20px;
-    padding: 3rem;
-    text-align: center;
-    margin: 2rem 0;
-    box-shadow: 8px 8px 0px rgba(148, 69, 71, 0.1);
-}
-
-[data-theme="dark"] .di-statement {
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(148, 69, 71, 0.05));
-    border-color: #444;
-}
-
-.di-statement .di-icon {
-    font-size: 3rem;
-    display: block;
-    margin-bottom: 1rem;
-}
-
-.di-statement h3 {
-    font-family: 'Space Mono', monospace;
-    color: var(--maroon-dark);
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-}
-
-[data-theme="dark"] .di-statement h3 {
-    color: #d4a0a1;
-}
-
-.di-statement p {
-    max-width: 700px;
-    margin: 0 auto;
-    color: #555;
-    line-height: 1.8;
-    font-size: 1.1rem;
-}
-
-[data-theme="dark"] .di-statement p {
     color: #bbb;
 }
 
