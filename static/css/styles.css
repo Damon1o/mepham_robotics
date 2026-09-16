@@ -17,9 +17,6 @@
     --bg-light: #fafafa;
 
     /* Spacing */
-    /* Layout width. 'none' = full-bleed; set a length to re-cap the site. */
-    --layout-max: none;
-
     --spacing-xs: 0.5rem;
     --spacing-sm: 1rem;
     --spacing-md: 1.5rem;
@@ -319,21 +316,36 @@ body::before {
 /* --- SECTION STYLING --- */
 section {
     padding: var(--spacing-lg) var(--spacing-md);
-    max-width: var(--layout-max);
+    max-width: 1200px;
     margin: 0 auto;
     position: relative;
     width: 100%;
     display: block;
 }
 
-/* Index page sections: full-bleed background, inner containers keep their own centering */
+/* Sections that paint their own background run edge to edge, so the colour band
+   spans the viewport. Their inner containers keep their own widths, so the
+   content inside them does not change size. */
 .countdown-section,
 .timeline,
 .stats-section,
 .photo-carousel-section,
-.donation-cta {
+.donation-cta,
+.history-timeline,
+.faq-section,
+.donation-tiers,
+.robot-specs,
+.goals-section,
+.map-section,
+.impact-section,
+.robot-showcase,
+.live-results-section,
+.contact-section,
+.team-awards,
+.di-statement {
     max-width: none;
-    margin: 0;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 h2 {
@@ -604,7 +616,7 @@ footer {
 }
 
 .footer-grid {
-    max-width: var(--layout-max);
+    max-width: 1200px;
     margin: 0 auto 2rem;
     display: grid;
     grid-template-columns: 1.3fr 1fr 1fr 1.3fr;
@@ -735,7 +747,7 @@ footer::before {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 1.5rem;
-    max-width: var(--layout-max);
+    max-width: 1200px;
     margin: 2rem auto;
 }
 
@@ -1100,7 +1112,7 @@ footer::before {
 }
 
 .container {
-    max-width: var(--layout-max);
+    max-width: 1200px;
     margin: 0 auto;
     padding: 0 var(--spacing-md);
 }
@@ -1145,7 +1157,7 @@ footer::before {
 }
 
 .carousel-container {
-    max-width: var(--layout-max);
+    max-width: 1400px;
     margin: 0 auto;
     position: relative;
 }
@@ -1358,7 +1370,7 @@ footer::before {
 }
 
 .timeline-vertical {
-    max-width: var(--layout-max);
+    max-width: 800px;
     margin: 0 auto;
     position: relative;
 }
@@ -1451,7 +1463,7 @@ footer::before {
 }
 
 .faq-container {
-    max-width: var(--layout-max);
+    max-width: 800px;
     margin: 0 auto;
 }
 
@@ -1532,7 +1544,7 @@ footer::before {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 2rem;
-    max-width: var(--layout-max);
+    max-width: 1000px;
     margin: 0 auto;
 }
 
@@ -1645,7 +1657,7 @@ footer::before {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 2rem;
-    max-width: var(--layout-max);
+    max-width: 900px;
     margin: 0 auto;
 }
 
@@ -1689,7 +1701,7 @@ footer::before {
 }
 
 .specs-container {
-    max-width: var(--layout-max);
+    max-width: 800px;
     margin: 0 auto;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1739,7 +1751,7 @@ footer::before {
 }
 
 .goals-container {
-    max-width: var(--layout-max);
+    max-width: 700px;
     margin: 0 auto;
 }
 
@@ -1814,7 +1826,7 @@ footer::before {
 }
 
 .map-container {
-    max-width: var(--layout-max);
+    max-width: 1190px;
     margin: 0 auto;
     background: white;
     border-radius: 16px;
@@ -1984,7 +1996,7 @@ footer::before {
     align-items: center;
     gap: 3rem;
     flex-wrap: wrap;
-    max-width: var(--layout-max);
+    max-width: 900px;
     margin: 0 auto;
 }
 
@@ -2058,7 +2070,7 @@ footer::before {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 2rem;
-    max-width: var(--layout-max);
+    max-width: 900px;
     margin: 0 auto;
 }
 
@@ -2250,7 +2262,7 @@ footer::before {
 }
 
 .newsletter-container {
-    max-width: var(--layout-max);
+    max-width: 800px;
     margin: 0 auto;
     text-align: center;
     background: white;
@@ -2324,7 +2336,7 @@ footer::before {
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 3rem;
     padding: 6rem 2rem;
-    max-width: var(--layout-max);
+    max-width: 1300px;
     margin: 0 auto;
 }
 
@@ -2528,7 +2540,7 @@ footer::before {
 
 /* --- 3D VIEWER CONTAINER --- */
 .viewer-3d-container {
-    max-width: var(--layout-max);
+    max-width: 800px;
     margin: 0 auto;
     background: #e0e0e0;
     aspect-ratio: 16/9;
@@ -2576,7 +2588,7 @@ footer::before {
 }
 
 .results-table-container {
-    max-width: var(--layout-max);
+    max-width: 800px;
     margin: 0 auto;
     overflow-x: auto;
     border: 3px solid #1a1a1a;
@@ -2655,7 +2667,7 @@ footer::before {
     grid-template-columns: 1fr 1fr;
     gap: 4rem;
     align-items: center;
-    max-width: var(--layout-max);
+    max-width: 1200px;
     margin: 0 auto;
 }
 
@@ -2776,7 +2788,7 @@ footer::before {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 2.5rem;
     padding: 6rem 2rem;
-    max-width: var(--layout-max);
+    max-width: 1200px;
     margin: 0 auto;
 }
 
@@ -2818,7 +2830,7 @@ footer::before {
 
 /* --- DONATE PAGE --- */
 .donation-container {
-    max-width: var(--layout-max);
+    max-width: 800px;
     margin: 4rem auto;
     padding: 3rem;
     background: white;
@@ -2853,7 +2865,7 @@ footer::before {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 4rem;
-    max-width: var(--layout-max);
+    max-width: 1200px;
     margin: 0 auto;
 }
 
@@ -3103,7 +3115,7 @@ footer::before {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 4rem;
-    max-width: var(--layout-max);
+    max-width: 1300px;
     margin: 0 auto;
     position: relative;
 }
@@ -3215,7 +3227,7 @@ footer::before {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 3rem;
     padding: 6rem 2rem;
-    max-width: var(--layout-max);
+    max-width: 1200px;
     margin: 0 auto;
 }
 
@@ -3419,7 +3431,7 @@ footer::before {
     font-family: 'Space Mono', monospace;
     font-size: 0.85rem;
     letter-spacing: 0.5px;
-    max-width: var(--layout-max);
+    max-width: 1200px;
     margin: 1rem auto 0;
     border-radius: 12px;
     border: 2px solid rgba(0, 0, 0, 0.08);
@@ -3746,7 +3758,7 @@ footer::before {
 /* Generic content page */
 .content-page {
     padding: 3rem 2rem;
-    max-width: var(--layout-max);
+    max-width: 900px;
     margin: 0 auto;
 }
 
@@ -4272,7 +4284,7 @@ footer::before {
 
 /* Sponsor inquiry form */
 .sponsor-form {
-    max-width: var(--layout-max);
+    max-width: 600px;
     margin: 2rem auto;
     background: none;
     padding: 2.5rem 0;
@@ -4322,7 +4334,7 @@ footer::before {
 
 /* Centered Content Page Wrapper */
 .content-page {
-    max-width: var(--layout-max);
+    max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
     min-height: 60vh;
@@ -4403,7 +4415,7 @@ footer::before {
     display: grid;
     grid-template-columns: repeat(4, 1fr); /* Match achievements page for consistent ratio */
     gap: 1.5rem;
-    max-width: var(--layout-max);
+    max-width: 1200px;
     margin: 2rem auto;
 }
 
