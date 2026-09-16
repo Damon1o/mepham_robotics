@@ -237,6 +237,12 @@
     border-radius: 16px;
     padding: 2.5rem;
     box-shadow: 8px 8px 0px rgba(148, 69, 71, 0.2);
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.about-culture-card:hover {
+    transform: translate(-4px, -4px);
+    box-shadow: 12px 12px 0px rgba(148, 69, 71, 0.3);
 }
 
 .about-culture-icon {
