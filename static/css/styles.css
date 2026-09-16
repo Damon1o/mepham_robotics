@@ -331,7 +331,6 @@ section {
 .stats-section,
 .photo-carousel-section,
 .donation-cta,
-.history-timeline,
 .faq-section,
 .donation-tiers,
 .robot-specs,
@@ -1358,47 +1357,6 @@ footer::before {
    ============================================ */
 
 /* --- TIMELINE COMPONENT --- */
-.history-timeline {
-    padding: 4rem 2rem;
-    background: linear-gradient(135deg, #f8f8f8 0%, #ececec 100%);
-}
-
-.history-timeline h2 {
-    text-align: center;
-    margin-bottom: 3rem;
-}
-
-.timeline-vertical {
-    max-width: 800px;
-    margin: 0 auto;
-    position: relative;
-}
-
-.timeline-vertical::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 4px;
-    height: 100%;
-    background: linear-gradient(180deg, var(--maroon-dark), var(--accent-gold));
-    border-radius: 2px;
-}
-
-.timeline-item {
-    display: flex;
-    justify-content: flex-end;
-    padding-right: 50%;
-    position: relative;
-    margin-bottom: 3rem;
-}
-
-.timeline-item:nth-child(even) {
-    justify-content: flex-start;
-    padding-right: 0;
-    padding-left: 50%;
-}
-
 .timeline-content {
     background: white;
     padding: 1.5rem 2rem;
@@ -1408,35 +1366,6 @@ footer::before {
     max-width: 350px;
     position: relative;
     margin-right: 30px;
-}
-
-.timeline-item:nth-child(even) .timeline-content {
-    margin-right: 0;
-    margin-left: 30px;
-}
-
-.timeline-dot {
-    position: absolute;
-    right: calc(50% - 12px);
-    width: 24px;
-    height: 24px;
-    background: var(--accent-gold);
-    border: 4px solid var(--maroon-dark);
-    border-radius: 50%;
-    z-index: 1;
-}
-
-.timeline-item:nth-child(even) .timeline-dot {
-    left: calc(50% - 12px);
-    right: auto;
-}
-
-.timeline-year {
-    font-family: 'Space Mono', monospace;
-    font-size: 1.5rem;
-    color: var(--maroon-dark);
-    font-weight: 700;
-    margin-bottom: 0.5rem;
 }
 
 .timeline-content h3 {
@@ -2172,27 +2101,9 @@ footer::before {
 
 /* --- RESPONSIVE FOR NEW COMPONENTS --- */
 @media (max-width: 768px) {
-    .timeline-vertical::before {
-        left: 20px;
-    }
-
-    .timeline-item,
-    .timeline-item:nth-child(even) {
-        padding-left: 60px;
-        padding-right: 0;
-        justify-content: flex-start;
-    }
-
-    .timeline-content,
-    .timeline-item:nth-child(even) .timeline-content {
+    .timeline-content {
         margin-left: 0;
         margin-right: 0;
-    }
-
-    .timeline-dot,
-    .timeline-item:nth-child(even) .timeline-dot {
-        left: 8px;
-        right: auto;
     }
 }
 
@@ -3240,7 +3151,6 @@ footer::before {
 [data-theme="dark"] .process-step h4,
 [data-theme="dark"] .team-card h3,
 [data-theme="dark"] .timeline-content h3,
-[data-theme="dark"] .timeline-year,
 [data-theme="dark"] .detail-item h4 {
     color: #e0e0e0;
 }
@@ -3254,7 +3164,6 @@ footer::before {
     color: #bbb;
 }
 
-[data-theme="dark"] .history-timeline,
 [data-theme="dark"] .donation-tiers,
 [data-theme="dark"] .map-section,
 [data-theme="dark"] .faq-section {
