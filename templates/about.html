@@ -15,7 +15,7 @@ in VEX Robotics.{% endblock %}
         <p>Innovation Driven by Passion</p>
         <div class="hero-cta">
             <a href="{{ url_for('contact') }}" class="cta-button cta-primary">Join the Team</a>
-            <a href="#process" class="cta-button cta-secondary">Our Process</a>
+            <a href="#subteams" class="cta-button cta-secondary">Our Teams</a>
         </div>
     </div>
     <div class="scroll-indicator"></div>
@@ -30,7 +30,7 @@ in VEX Robotics.{% endblock %}
 <section id="about" class="fade-in-section">
     <div class="about-content">
         <div class="about-text">
-            <h2 style="font-family:'Space Mono'; margin-bottom:1rem; color:var(--maroon-dark);">Who We Are</h2>
+            <h2 class="about-heading">Who We Are</h2>
             <p>We are a <strong>student-led robotics club</strong> competing in the <strong>VEX V5 Robotics
                     Competition</strong>. Our members learn hands-on mechanical design, electrical engineering, and
                 complex C++ / Python programming.</p>
@@ -39,10 +39,10 @@ in VEX Robotics.{% endblock %}
             <p>Our teams work year-round to design, build, and program competitive robots that can tackle the
                 season's challenges with precision and creativity.</p>
         </div>
-        <div class="about-image-container">
-            <img src="{{ url_for('static', filename='assets/other/vexrobotics.png') }}" alt="VEX Robotics"
-                class="animated-cube-img" loading="lazy">
-        </div>
+        <figure class="about-photo">
+            <img src="{{ url_for('static', filename='assets/photos/carousel1.jpg') }}"
+                alt="Mepham Robotics members working on a robot" loading="lazy">
+        </figure>
     </div>
 </section>
 

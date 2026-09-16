@@ -5,3 +5,34 @@
     url('../../assets/photos/carousel6.jpg') center/cover;
     min-height: 60vh;
 }
+
+/* Who We Are */
+.about-heading {
+    font-family: 'Space Mono', monospace;
+    color: var(--maroon-dark);
+    text-align: left;
+    margin-bottom: 1rem;
+}
+
+[data-theme="dark"] .about-heading {
+    color: #d4a0a1;
+}
+
+.about-photo {
+    margin: 0;
+    border: 3px solid var(--text-dark);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 8px 8px 0px rgba(148, 69, 71, 0.2);
+}
+
+.about-photo img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+}
+
+[data-theme="dark"] .about-photo {
+    border-color: #444;
+}
