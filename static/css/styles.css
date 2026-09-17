@@ -4209,6 +4209,14 @@ footer::before {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    /* The hidden chat window still sizes this fixed box (380x680), so let taps
+       pass through everywhere except the bubble and an open window */
+    pointer-events: none;
+}
+
+#chatbot-bubble,
+#chatbot-window.active {
+    pointer-events: auto;
 }
 
 #chatbot-window {
