@@ -42,31 +42,36 @@ information.{% endblock %}
         </div>
 
         <div class="content-container">
-            <h2 class="ripple" style="text-align: left; margin-bottom: 2rem;">Contact Us</h2>
+            <h2 class="ripple contact-heading">Contact Us</h2>
 
-            <form id="contact-form">
+            <form id="contact-form" novalidate>
                 <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" name="name" placeholder="Your Name" required>
+                    <label for="contact-name">Full Name</label>
+                    <input type="text" id="contact-name" name="name" placeholder="Your Name" maxlength="100"
+                        autocomplete="name" required>
                 </div>
                 <div class="form-group">
-                    <label>E-mail</label>
-                    <input type="email" name="email" placeholder="Email@example.com" required>
+                    <label for="contact-email">E-mail</label>
+                    <input type="email" id="contact-email" name="email" placeholder="Email@example.com" maxlength="254"
+                        autocomplete="email" required>
                 </div>
                 <div class="form-group">
-                    <label>Message</label>
-                    <textarea rows="4" name="message" placeholder="How can we help?" required></textarea>
+                    <label for="contact-message">Message</label>
+                    <textarea id="contact-message" name="message" rows="4" placeholder="How can we help?"
+                        maxlength="4000" required></textarea>
                 </div>
-                <button type="submit" class="submit-btn" style="width: 100%; margin-top: 1rem;">Initialize
-                    Transmission</button>
+                <div class="contact-honeypot" aria-hidden="true">
+                    <label for="contact-website">Website</label>
+                    <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off">
+                </div>
+                <button type="submit" class="submit-btn contact-submit">Initialize Transmission</button>
             </form>
-            <div id="form-success"
-                style="display:none; margin-top: 1.5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, rgba(0,200,83,0.15), rgba(0,200,83,0.05)); border: 1px solid rgba(0,200,83,0.3); border-radius: 12px; color: #a8ffb0; text-align: center; font-family: 'Balsamiq Sans', sans-serif;">
-                <i data-lucide="circle-check-big"></i> Message transmitted successfully! We'll get back to you soon.
+
+            <div id="form-success" class="contact-form-status contact-form-status--success" role="status">
+                Message transmitted successfully! We'll get back to you soon.
             </div>
-            <div id="form-error"
-                style="display:none; margin-top: 1.5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, rgba(255,50,50,0.15), rgba(255,50,50,0.05)); border: 1px solid rgba(255,50,50,0.3); border-radius: 12px; color: #ffb0b0; text-align: center; font-family: 'Balsamiq Sans', sans-serif;">
-                <i data-lucide="circle-x"></i> Something went wrong. Please try again.
+            <div id="form-error" class="contact-form-status contact-form-status--error" role="alert">
+                Something went wrong. Please try again.
             </div>
 
             <div class="contact-details">
@@ -80,14 +85,8 @@ information.{% endblock %}
                 </div>
 
                 <div class="contact-socials">
-                    <a href="https://facebook.com" target="_blank" rel="noopener" title="Facebook">
-                        <i data-lucide="facebook"></i>
-                    </a>
                     <a href="https://instagram.com/mephamrobotics" target="_blank" rel="noopener" title="Instagram">
                         <i data-lucide="instagram"></i>
-                    </a>
-                    <a href="https://x.com" target="_blank" rel="noopener" title="X">
-                        <i data-lucide="twitter"></i>
                     </a>
                 </div>
             </div>
@@ -98,10 +97,14 @@ information.{% endblock %}
 <!-- MAP SECTION -->
 <section class="map-section fade-in-section">
     <div class="map-container">
-        <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3025.932292543359!2d-73.54547492397614!3d40.67546077139915!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c27e9652ff1c0d%3A0xf758cff5fe1b37ac!2sWellington%20C.%20Mepham%20High%20School!5e0!3m2!1sen!2sus!4v1769884579961!5m2!1sen!2sus"
-            class="map-embed" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">
-        </iframe>
+        <div class="contact-map-facade"
+            data-map-src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3025.932292543359!2d-73.54547492397614!3d40.67546077139915!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c27e9652ff1c0d%3A0xf758cff5fe1b37ac!2sWellington%20C.%20Mepham%20High%20School!5e0!3m2!1sen!2sus!4v1769884579961!5m2!1sen!2sus">
+            <p class="contact-map-caption">
+                <i data-lucide="map-pin"></i> Wellington C. Mepham High School, North Bellmore, NY
+            </p>
+            <button type="button" class="contact-map-load">Load map</button>
+            <p class="contact-map-note">Loading the map contacts Google Maps.</p>
+        </div>
     </div>
 </section>
 
@@ -112,7 +115,7 @@ information.{% endblock %}
             <h3><i data-lucide="calendar"></i> Next Meeting</h3>
         </div>
         <div class="schedule-body">
-            <p class="next-meeting">Every Tuesday & Fridays</p>
+            <p class="next-meeting">Every Tuesday &amp; Fridays</p>
             <p class="meeting-details">3:00 PM - 5:00 PM | Room 123</p>
         </div>
     </div>
@@ -123,43 +126,63 @@ information.{% endblock %}
     <h2 class="ripple">Frequently Asked Questions</h2>
     <div class="faq-container">
         <div class="faq-item">
-            <button class="faq-question">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-1">
                 How do I join the robotics club?
                 <span class="faq-icon">+</span>
             </button>
-            <div class="faq-answer">
+            <div class="faq-answer" id="faq-answer-1">
                 <p>Just show up to any of our meetings! We welcome students of all skill levels. You can also email
                     us or talk to your guidance counselor.</p>
             </div>
         </div>
         <div class="faq-item">
-            <button class="faq-question">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-2">
                 Do I need prior experience?
                 <span class="faq-icon">+</span>
             </button>
-            <div class="faq-answer">
+            <div class="faq-answer" id="faq-answer-2">
                 <p>No experience required! We teach everything from basic mechanics to advanced programming.
                     Everyone starts somewhere.</p>
             </div>
         </div>
         <div class="faq-item">
-            <button class="faq-question">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
+                When and where do you meet?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-3">
+                <p>We meet every Tuesday and Friday from 3:00 PM to 5:00 PM in Room 123 at Wellington C. Mepham High
+                    School.</p>
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-4">
                 What is the time commitment?
                 <span class="faq-icon">+</span>
             </button>
-            <div class="faq-answer">
+            <div class="faq-answer" id="faq-answer-4">
                 <p>We meet twice a week during the school year. Before competitions, there may be additional
                     practice sessions on weekends.</p>
             </div>
         </div>
         <div class="faq-item">
-            <button class="faq-question">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-5">
                 Is there a membership fee?
                 <span class="faq-icon">+</span>
             </button>
-            <div class="faq-answer">
+            <div class="faq-answer" id="faq-answer-5">
                 <p>No, there is no membership fee to join the Mepham Robotics Club. All students are welcome to join
                     for free!</p>
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-6">
+                How can my company sponsor the team?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-6">
+                <p>We'd love to hear from you. See the <a href="{{ url_for('donate') }}">support page</a> for
+                    sponsorship levels, or send us a message using the form above.</p>
             </div>
         </div>
     </div>

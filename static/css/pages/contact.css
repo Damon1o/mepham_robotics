@@ -5,3 +5,469 @@
     url('../../assets/photos/carousel8.jpg') center/cover;
     min-height: 60vh;
 }
+
+/* --- Moved from styles.css: contact-page-only rules --- */
+
+.map-container {
+    max-width: 1190px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 16px;
+    border: 3px solid #1a1a1a;
+    overflow: hidden;
+    box-shadow: 10px 10px 0px rgba(148, 69, 71, 0.2);
+}
+
+.map-placeholder {
+    height: 300px;
+    background: linear-gradient(135deg, #e0e0e0, #f0f0f0);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+}
+
+.map-embed {
+    display: block;
+    width: 100%;
+    height: 350px;
+    border: 0;
+}
+
+.map-placeholder .map-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.map-embed {
+    width: 100%;
+    height: 300px;
+    border: none;
+}
+
+.meeting-schedule h3 {
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 1rem;
+}
+
+.next-meeting {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.meeting-details {
+    opacity: 0.9;
+}
+
+.contact-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.content-container {
+    background: white;
+    padding: 3rem;
+    border-radius: 20px;
+    border: 3px solid var(--text-dark);
+    box-shadow: 10px 10px 0px rgba(148, 69, 71, 0.2);
+}
+
+.content-container h1 {
+    font-size: 3rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--maroon-dark);
+    margin-bottom: 2rem;
+}
+
+.submit-btn {
+    font-family: 'Space Mono', monospace;
+    background: linear-gradient(135deg, var(--maroon-dark), var(--maroon-light));
+    color: #fff;
+    border: 3px solid var(--text-dark);
+    padding: 1.2rem 2.5rem;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 1rem;
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.submit-btn:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, var(--maroon-light), var(--maroon-accent));
+}
+
+.contact-details {
+    margin-top: 4rem;
+    padding-top: 3rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.contact-socials a {
+    color: var(--maroon-dark);
+    transition: all 0.3s ease;
+}
+
+.contact-socials a [data-lucide] {
+    width: 30px;
+    height: 30px;
+}
+
+.contact-socials a:hover {
+    color: var(--accent-gold);
+    transform: translate(-3px, -3px);
+}
+
+.detail-item {
+    padding: 1.5rem;
+    background: rgba(148, 69, 71, 0.03);
+    border-radius: 16px;
+    border: 1px dashed rgba(148, 69, 71, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.detail-item h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.detail-item p {
+    margin: 0;
+    font-family: var(--font-display);
+    color: var(--text-dark);
+}
+
+.meeting-schedule {
+    max-width: 600px;
+    margin: 0 auto;
+    background: white;
+    border: 3px solid var(--text-dark);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 10px 10px 0px var(--maroon-dark);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.meeting-schedule:hover {
+    transform: scale(1.02);
+    box-shadow: 15px 15px 0px var(--maroon-light);
+}
+
+.schedule-header {
+    background: var(--maroon-dark);
+    color: white;
+    padding: 1.5rem;
+    border-bottom: 3px solid var(--text-dark);
+}
+
+.schedule-header h3 {
+    margin: 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 1.5rem;
+}
+
+.schedule-body {
+    padding: 2.5rem;
+}
+
+.next-meeting {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--maroon-dark);
+    margin-bottom: 0.5rem;
+}
+
+.meeting-details {
+    font-family: 'Space Mono', monospace;
+    color: var(--text-light);
+    font-size: 1.1rem;
+}
+
+.contact-socials {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.detail-item {
+    margin-bottom: 2rem;
+}
+
+.detail-item h4 {
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--maroon-dark);
+}
+
+/* --- MAP PLACEHOLDER --- */
+.map-section {
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f8f8 0%, #ececec 100%);
+}
+
+/* --- CONTACT PAGE --- */
+.contact-section {
+    padding: var(--spacing-xl) var(--spacing-md);
+    background: radial-gradient(circle at top right, rgba(148, 69, 71, 0.05), transparent 40%),
+        radial-gradient(circle at bottom left, rgba(255, 215, 0, 0.05), transparent 40%),
+        var(--bg-light);
+}
+
+/* --- SCHEDULE SECTION --- */
+.schedule-section {
+    padding: var(--spacing-lg) var(--spacing-md);
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .contact-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+[data-theme="dark"] .detail-item {
+    background: rgba(255, 215, 0, 0.05);
+    border-color: rgba(255, 215, 0, 0.2);
+}
+
+/* --- MEETING SCHEDULE --- */
+.meeting-schedule {
+    background: linear-gradient(135deg, var(--maroon-dark), var(--maroon-light));
+    padding: 2rem;
+    border-radius: 16px;
+    border: 3px solid #1a1a1a;
+    color: white;
+    text-align: center;
+    margin: 2rem auto;
+    max-width: 500px;
+}
+
+/* --- Contact form: honeypot, status banners, submit --- */
+
+/* Visually hidden, but not display:none - bots skip hidden-by-display fields. */
+.contact-honeypot {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.contact-heading {
+    text-align: left;
+    margin-bottom: 2rem;
+}
+
+.contact-submit {
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.contact-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.contact-form-status {
+    display: none;
+    margin-top: 1.5rem;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    font-family: 'Balsamiq Sans', sans-serif;
+}
+
+.contact-form-status.is-visible {
+    display: block;
+}
+
+.contact-form-status--success {
+    background: linear-gradient(135deg, rgba(0, 150, 60, 0.12), rgba(0, 150, 60, 0.04));
+    border: 1px solid rgba(0, 150, 60, 0.35);
+    color: #1b7a3c;
+}
+
+.contact-form-status--error {
+    background: linear-gradient(135deg, rgba(190, 30, 30, 0.12), rgba(190, 30, 30, 0.04));
+    border: 1px solid rgba(190, 30, 30, 0.35);
+    color: #a32020;
+}
+
+/* --- Map facade: Google is only contacted once the visitor asks --- */
+.contact-map-facade {
+    aspect-ratio: 16 / 9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+    text-align: center;
+    background: linear-gradient(135deg, #e8e8e8, #f4f4f4);
+}
+
+.contact-map-facade.is-loaded {
+    display: block;
+    padding: 0;
+    aspect-ratio: auto;
+}
+
+.contact-map-facade .map-embed {
+    height: 350px;
+}
+
+.contact-map-caption {
+    font-family: 'Space Mono', monospace;
+    color: var(--maroon-dark);
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.contact-map-caption [data-lucide] {
+    vertical-align: middle;
+}
+
+.contact-map-load {
+    font-family: 'Space Mono', monospace;
+    background: linear-gradient(135deg, var(--maroon-dark), var(--maroon-light));
+    color: #fff;
+    border: 3px solid var(--text-dark);
+    border-radius: 12px;
+    padding: 0.9rem 2rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+    transition: var(--transition-base);
+}
+
+.contact-map-load:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.3);
+}
+
+.contact-map-note {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+/* --- Dark mode --- */
+[data-theme="dark"] .contact-section {
+    background: #181818;
+}
+
+[data-theme="dark"] .map-container {
+    background: #1e1e1e;
+    border-color: #444;
+}
+
+[data-theme="dark"] .contact-map-facade {
+    background: linear-gradient(135deg, #202020, #262626);
+}
+
+[data-theme="dark"] .contact-map-caption {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .contact-map-note {
+    color: #999;
+}
+
+[data-theme="dark"] .contact-details {
+    border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .detail-item p {
+    color: #bbb;
+}
+
+[data-theme="dark"] .contact-socials {
+    border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .contact-socials a {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .contact-socials a:hover {
+    color: var(--accent-gold);
+}
+
+[data-theme="dark"] .schedule-section {
+    background: #181818;
+}
+
+[data-theme="dark"] .meeting-schedule h3,
+[data-theme="dark"] .schedule-header h3,
+[data-theme="dark"] .next-meeting {
+    color: #fff;
+}
+
+[data-theme="dark"] .meeting-details {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+[data-theme="dark"] .contact-form-status--success {
+    background: linear-gradient(135deg, rgba(0, 200, 83, 0.15), rgba(0, 200, 83, 0.05));
+    border-color: rgba(0, 200, 83, 0.3);
+    color: #a8ffb0;
+}
+
+[data-theme="dark"] .contact-form-status--error {
+    background: linear-gradient(135deg, rgba(255, 50, 50, 0.15), rgba(255, 50, 50, 0.05));
+    border-color: rgba(255, 50, 50, 0.3);
+    color: #ffb0b0;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    .contact-container {
+        grid-template-columns: 1fr;
+    }
+
+    .image-container {
+        order: 2;
+    }
+
+    .content-container {
+        padding: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .contact-map-facade {
+        padding: 1.25rem;
+    }
+
+    .contact-map-caption {
+        font-size: 0.95rem;
+    }
+}
