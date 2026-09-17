@@ -1,5 +1,9 @@
 import os
 import datetime
+import urllib.parse
+import hashlib
+import math
+import secrets
 import logging
 from functools import wraps
 from bson import ObjectId
@@ -78,7 +82,21 @@ _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 app = Flask(__name__,
             template_folder=os.path.join(_root, 'templates'),
             static_folder=os.path.join(_root, 'static'))
-app.secret_key = os.getenv('SECRET_KEY', 'dev-fallback-key')
+_secret_key = os.getenv('SECRET_KEY')
+if not _secret_key:
+    if os.getenv('VERCEL'):
+        raise RuntimeError(
+            'SECRET_KEY environment variable is not set. Refusing to start on Vercel '
+            'with the insecure dev fallback key.'
+        )
+    _secret_key = 'dev-fallback-key'
+app.secret_key = _secret_key
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=bool(os.getenv('VERCEL')),
+    PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=30),
+)
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 
 @app.template_filter('collapse_ws')
@@ -119,7 +137,7 @@ def log_activity(activity_type, description, user=None, details=None):
         activity = {
             'type': activity_type,
             'description': description,
-            'user': user or (session.get('username') if 'username' in session else 'System'),
+            'user': user or (session.get('user') if 'user' in session else 'System'),
             'timestamp': datetime.datetime.now(),
             'details': details or {}
         }
@@ -165,6 +183,8 @@ def get_activity_icon(activity_type):
         'sponsor_add': '🤝',
         'sponsor_update': '💼',
         'sponsor_delete': '🗑️',
+        'password_reset': '🔑',
+        'reset_link_generate': '🔗',
     }
     return icons.get(activity_type, '📝')
 
@@ -185,6 +205,8 @@ def get_activity_title(activity_type):
         'sponsor_add': 'Sponsor added',
         'sponsor_update': 'Sponsor updated',
         'sponsor_delete': 'Sponsor deleted',
+        'password_reset': 'Password reset',
+        'reset_link_generate': 'Reset link generated',
     }
     return titles.get(activity_type, 'Activity')
 
@@ -252,11 +274,40 @@ def inject_global_data():
 
 USER_ROLES = ('member', 'editor', 'admin')
 
+def _safe_next(target):
+    """Only allow same-site relative paths as post-login redirects."""
+    if (target and target.startswith('/') and not target.startswith(('//', '/\\'))
+            and not any(ord(c) < 0x21 or c == '\\' for c in target)):
+        parsed = urllib.parse.urlsplit(target)
+        if not parsed.scheme and not parsed.netloc:
+            return target
+    return url_for('index')
+
+def _login_redirect():
+    return redirect(url_for('login', next=request.full_path.rstrip('?')))
+
+def _current_db_user():
+    """Look up the DB user backing the current session.
+
+    Returns the user doc (role, session_version) or None if there is no
+    session, the user no longer exists, or the session predates a password
+    reset / role change / deletion (session_version mismatch). Missing
+    session_version on either side is treated as 0, so existing users and
+    sessions keep working without a migration.
+    """
+    if 'user' not in session:
+        return None
+    user = db['users'].find_one({'username': session['user']}, {'role': 1, 'session_version': 1})
+    if not user or user.get('session_version', 0) != session.get('session_version', 0):
+        return None
+    return user
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'user' not in session:
-            return redirect(url_for('login'))
+        if _current_db_user() is None:
+            session.clear()
+            return _login_redirect()
         return f(*args, **kwargs)
     return decorated
 
@@ -264,14 +315,87 @@ def role_required(role):
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
-            if 'user' not in session:
-                return redirect(url_for('login'))
-            if session.get('role') != role and session.get('role') != 'admin':
+            user = _current_db_user()
+            if user is None:
+                session.clear()
+                return _login_redirect()
+            db_role = user.get('role', 'member')
+            if session.get('role') != db_role:
+                session['role'] = db_role
+            if db_role != role and db_role != 'admin':
                 flash('You do not have permission to access that page.', 'error')
                 return redirect(url_for('index'))
             return f(*args, **kwargs)
         return decorated
     return decorator
+
+# --- Auth helpers: rate limiting, reset tokens, email ---
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_WINDOW = datetime.timedelta(minutes=15)
+RESET_TOKEN_TTL = datetime.timedelta(hours=1)
+_auth_indexes_ready = False
+
+def _utcnow():
+    """Naive UTC now; MongoDB TTL indexes compare against UTC."""
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
+def _client_ip():
+    # Trusted: Vercel overwrites X-Forwarded-For with the real client IP (spoofable if hosted elsewhere).
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    return forwarded.split(',')[0].strip() or request.remote_addr or ''
+
+def _ensure_auth_indexes():
+    global _auth_indexes_ready
+    if _auth_indexes_ready:
+        return
+    db['login_attempts'].create_index('created_at', expireAfterSeconds=int(LOGIN_WINDOW.total_seconds()))
+    db['login_attempts'].create_index([('key', 1), ('ip', 1)])
+    db['password_resets'].create_index('created_at', expireAfterSeconds=int(RESET_TOKEN_TTL.total_seconds()))
+    db['password_resets'].create_index('token_hash', unique=True)
+    _auth_indexes_ready = True
+
+def _lockout_minutes(key, ip):
+    """Minutes until (key, ip) may try again, or 0 if not locked out."""
+    since = _utcnow() - LOGIN_WINDOW
+    attempts = list(db['login_attempts'].find(
+        {'key': key, 'ip': ip, 'created_at': {'$gte': since}}).sort('created_at', 1))
+    if len(attempts) < LOGIN_MAX_ATTEMPTS:
+        return 0
+    unlock_at = attempts[0]['created_at'] + LOGIN_WINDOW
+    return max(1, math.ceil((unlock_at - _utcnow()).total_seconds() / 60))
+
+def _record_attempt(key, ip):
+    _ensure_auth_indexes()
+    db['login_attempts'].insert_one({'key': key, 'ip': ip, 'created_at': _utcnow()})
+
+def _clear_attempts(key, ip=None):
+    query = {'key': key}
+    if ip is not None:
+        query['ip'] = ip
+    db['login_attempts'].delete_many(query)
+
+def _hash_token(token):
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
+def _build_reset_link(token):
+    """Build the absolute reset-password link for a freshly issued token."""
+    public_base = os.getenv('PUBLIC_BASE_URL', '')
+    if public_base:
+        return public_base.rstrip('/') + url_for('reset_password', token=token)
+    return url_for('reset_password', token=token, _external=True)
+
+def _find_reset(token):
+    _ensure_auth_indexes()
+    doc = db['password_resets'].find_one({'token_hash': _hash_token(token)})
+    if not doc or _utcnow() - doc['created_at'] > RESET_TOKEN_TTL:
+        return None
+    return doc
+
+def _no_referrer(rv):
+    """Wrap a view return value and set Referrer-Policy: no-referrer (keeps reset tokens out of Referer)."""
+    resp = app.make_response(rv)
+    resp.headers['Referrer-Policy'] = 'no-referrer'
+    return resp
 
 @app.route('/')
 def index():
@@ -353,23 +477,85 @@ def notebook():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    next_url = _safe_next(request.values.get('next'))
+    if _current_db_user() is not None:
+        return redirect(next_url)
+    session.clear()
+
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
+        identifier = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
-        user = db['users'].find_one({
-            '$or': [{'username': username}, {'email': username}]
-        })
+        attempt_key = identifier.lower()
+        ip = _client_ip()
+
+        wait = _lockout_minutes(attempt_key, ip)
+        if wait:
+            error = f'Too many attempts. Try again in {wait} minute{"s" if wait != 1 else ""}.'
+            return render_template('login.html', active_page='login', error=error,
+                                   next=next_url, username=identifier), 429
+
+        user = db['users'].find_one({'$or': [{'username': identifier}, {'email': identifier}]})
         if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
+            _clear_attempts(attempt_key, ip)
+            session.clear()
             session['user'] = user['username']
             session['role'] = user.get('role', 'member')
-            return redirect(url_for('index'))
-        return render_template('login.html', active_page='login', error='Invalid credentials. Please try again.')
-    return render_template('login.html', active_page='login')
+            session['session_version'] = user.get('session_version', 0)
+            session.permanent = bool(request.form.get('remember'))
+            return redirect(next_url)
+
+        _record_attempt(attempt_key, ip)
+        return render_template('login.html', active_page='login',
+                               error='Invalid credentials. Please try again.',
+                               next=next_url, username=identifier), 401
+
+    return render_template('login.html', active_page='login', next=next_url)
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
     session.clear()
     return redirect(url_for('index'))
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    reset = _find_reset(token)
+    user = db['users'].find_one({'_id': reset['user_id']}) if reset else None
+    if not user:
+        resp = render_template('reset_password.html', active_page='login', invalid=True), 400
+        return _no_referrer(resp)
+
+    if request.method == 'POST':
+        password = request.form.get('password', '').strip()
+        confirm = request.form.get('confirm_password', '').strip()
+        error = None
+        if len(password) < 8:
+            error = 'Password must be at least 8 characters.'
+        elif password != confirm:
+            error = 'Passwords do not match.'
+        if error:
+            resp = render_template('reset_password.html', active_page='login', invalid=False, error=error), 400
+            return _no_referrer(resp)
+
+        # Atomically consume the token so two concurrent POSTs can't both apply it.
+        consumed = db['password_resets'].find_one_and_delete(
+            {'token_hash': _hash_token(token), 'created_at': {'$gte': _utcnow() - RESET_TOKEN_TTL}})
+        if not consumed:
+            resp = render_template('reset_password.html', active_page='login', invalid=True), 400
+            return _no_referrer(resp)
+
+        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        db['users'].update_one({'_id': user['_id']},
+                               {'$set': {'password': hashed}, '$inc': {'session_version': 1}})
+        db['password_resets'].delete_many({'user_id': user['_id']})
+        _clear_attempts(user['username'].lower())
+        if user.get('email'):
+            _clear_attempts(user['email'].lower())
+        log_activity('password_reset', f'Password reset for {user["username"]}',
+                     user=user['username'], details={'username': user['username']})
+        flash('Password updated. Sign in with your new password.', 'success')
+        return redirect(url_for('login'))
+
+    return _no_referrer(render_template('reset_password.html', active_page='login', invalid=False))
 
 @app.route('/admin')
 @role_required('admin')
@@ -467,10 +653,14 @@ def admin_dashboard():
                 # Users don't affect the main stats shown
                 pass
 
+    reset_link = session.pop('_generated_reset_link', None)
+    reset_link_user = session.pop('_generated_reset_link_user', None)
+
     return render_template('admin.html', stats=stats, competitions=competitions,
                            awards=global_awards, team_awards=team_awards_list,
                            teams=teams, users=users, sponsors=sponsors,
-                           activities=activities, monthly_changes=monthly_changes)
+                           activities=activities, monthly_changes=monthly_changes,
+                           reset_link=reset_link, reset_link_user=reset_link_user)
 
 @app.route('/admin/update-stats', methods=['POST'])
 @role_required('admin')
@@ -924,17 +1114,27 @@ def admin_update_user(id):
         }
         if password:
             updates['password'] = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        db['users'].update_one({'_id': user['_id']}, {'$set': updates})
+
+        changes = [f for f in ('username', 'email', 'role') if user.get(f, '') != updates[f]]
+        if password:
+            changes.append('password')
+        # Any change that could let an existing session act as someone else
+        # (or with a role/password it shouldn't have) invalidates that session.
+        security_relevant = any(c in ('username', 'role', 'password') for c in changes)
+
+        update_ops = {'$set': updates}
+        if security_relevant:
+            update_ops['$inc'] = {'session_version': 1}
+        db['users'].update_one({'_id': user['_id']}, update_ops)
 
         # Keep the current session in sync when admins edit themselves
         if session.get('user') == user['username']:
             session['user'] = username
             session['role'] = role
+            if security_relevant:
+                session['session_version'] = user.get('session_version', 0) + 1
 
         flash(f'User "{username}" updated!', 'success')
-        changes = [f for f in ('username', 'email', 'role') if user.get(f, '') != updates[f]]
-        if password:
-            changes.append('password')
         log_activity(
             'user_update',
             f'Updated user: {username}',
@@ -972,6 +1172,34 @@ def admin_delete_user(id):
             )
     except Exception as e:
         flash(f'Error deleting user: {e}', 'error')
+    return redirect(url_for('admin_dashboard', _anchor='users'))
+
+@app.route('/admin/generate-reset-link/<id>', methods=['POST'])
+@role_required('admin')
+def admin_generate_reset_link(id):
+    try:
+        user = db['users'].find_one({'_id': ObjectId(id)})
+        if not user:
+            flash('User not found.', 'error')
+        else:
+            _ensure_auth_indexes()
+            token = secrets.token_urlsafe(32)
+            db['password_resets'].delete_many({'user_id': user['_id']})
+            db['password_resets'].insert_one({
+                'user_id': user['_id'],
+                'token_hash': _hash_token(token),
+                'created_at': _utcnow(),
+            })
+            session['_generated_reset_link'] = _build_reset_link(token)
+            session['_generated_reset_link_user'] = user['username']
+            flash(f'Reset link generated for {user["username"]}. Copy it below.', 'success')
+            log_activity(
+                'reset_link_generate',
+                f'Generated reset link for {user["username"]}',
+                details={'username': user['username']}
+            )
+    except Exception as e:
+        flash(f'Error generating reset link: {e}', 'error')
     return redirect(url_for('admin_dashboard', _anchor='users'))
 
 @app.route('/admin/save-sponsor', methods=['POST'])

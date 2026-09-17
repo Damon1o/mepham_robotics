@@ -1163,6 +1163,36 @@
         font-size: 0.9rem;
     }
 
+    .reset-link-box {
+        margin-bottom: 1rem;
+        padding: 0.85rem 1rem;
+        border: 2px solid var(--maroon-dark);
+        border-radius: 8px;
+        background: #fdf3f3;
+    }
+
+    .reset-link-label {
+        margin: 0 0 0.5rem;
+        font-size: 0.9rem;
+        color: #333;
+    }
+
+    .reset-link-row {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .reset-link-input {
+        flex: 1;
+        min-width: 0;
+        padding: 0.6rem 0.75rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        background: #fff;
+        color: #333;
+    }
+
     .user-filters {
         display: flex;
         gap: 0.75rem;

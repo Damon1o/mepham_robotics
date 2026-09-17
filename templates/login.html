@@ -1,83 +1,68 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | Mepham Robotics</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/icons/mephamrobotics.png') }}?v=1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/login.css') }}">
-</head>
+{% block title %}Member Login | Mepham Robotics{% endblock %}
+{% block meta_description %}Sign in to the Mepham Robotics member area.{% endblock %}
 
-<body>
-    <i data-lucide="settings" class="bg-gear" style="top: -50px; left: -50px;"></i>
-    <i data-lucide="settings" class="bg-gear" style="bottom: -100px; right: -50px; animation-direction: reverse; font-size: 30rem;"></i>
+{% block page_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/login.css') }}">
+{% endblock %}
 
-    <div class="login-container">
-        <!-- Illustration Side -->
-        <div class="illustration-side">
-            <div class="gear-overlay">
-                <svg class="main-gear-svg" viewBox="0 0 100 100">
-                    <path
-                        d="M50 35c-8.3 0-15 6.7-15 15s6.7 15 15 15 15-6.7 15-15-6.7-15-15-15zm41.2 10.3l-8.5-1.4c-.3-1.1-.7-2.1-1.1-3.2l5.1-6.9c.5-.7.4-1.7-.3-2.3l-5.7-5.7c-.7-.7-1.7-.7-2.3-.3l-6.9 5.1c-1-.5-2.1-.8-3.2-1.1l-1.4-8.5c-.1-.9-.9-1.5-1.8-1.5h-8c-.9 0-1.7.6-1.8 1.5l-1.4 8.5c-1.1.3-2.1.7-3.2 1.1l-6.9-5.1c-.7-.5-1.7-.4-2.3.3l-5.7 5.7c-.7.7-.7 1.7-.3 2.3l5.1 6.9c-.5 1-.8 2.1-1.1 3.2l-8.5 1.4c-.9.1-1.5.9-1.5 1.8v8c0 .9.6 1.7 1.5 1.8l8.5 1.4c.3 1.1.7 2.1 1.1 3.2l-5.1 6.9c-.5.7-.4 1.7.3 2.3l5.7 5.7c.7.7 1.7.7 2.3.3l6.9-5.1c1 .5 2.1.8 3.2 1.1l1.4 8.5c.1.9.9 1.5 1.8 1.5h8c.9 0 1.7-.6 1.8-1.5l1.4-8.5c1.1-.3 2.1-.7 3.2-1.1l6.9 5.1c.7.5 1.7.4 2.3-.3l5.7-5.7c.7-.7.7-1.7.3-2.3l-5.1-6.9c.5-1 .8-2.1 1.1-3.2l8.5-1.4c.9-.1 1.5-.9 1.5-1.8v-8c0-.9-.6-1.7-1.5-1.8z" />
-                </svg>
-            </div>
-            <div style="position: absolute; bottom: 20%; right: 20%; opacity: 0.1;">
-                <svg width="150" height="150" viewBox="0 0 100 100"
-                    style="animation: rotate 15s linear infinite reverse;">
-                    <path fill="var(--accent-gold)"
-                        d="M50 35c-8.3 0-15 6.7-15 15s6.7 15 15 15 15-6.7 15-15-6.7-15-15-15zm41.2 10.3l-8.5-1.4c-.3-1.1-.7-2.1-1.1-3.2l5.1-6.9c.5-.7.4-1.7-.3-2.3l-5.7-5.7c-.7-.7-1.7-.7-2.3-.3l-6.9 5.1c-1-.5-2.1-.8-3.2-1.1l-1.4-8.5c-.1-.9-.9-1.5-1.8-1.5h-8c-.9 0-1.7.6-1.8 1.5l-1.4 8.5c-1.1.3-2.1.7-3.2 1.1l-6.9-5.1c-.7-.5-1.7-.4-2.3.3l-5.7 5.7c-.7.7-.7 1.7-.3 2.3l5.1 6.9c-.5 1-.8 2.1-1.1 3.2l-8.5 1.4c-.9.1-1.5.9-1.5 1.8v8c0 .9.6 1.7 1.5 1.8l8.5 1.4c.3 1.1.7 2.1 1.1 3.2l-5.1 6.9c-.5.7-.4 1.7.3 2.3l5.7 5.7c.7.7 1.7.7 2.3.3l6.9-5.1c1 .5 2.1.8 3.2 1.1l1.4 8.5c.1.9.9 1.5 1.8 1.5h8c.9 0 1.7-.6 1.8-1.5l1.4-8.5c1.1-.3 2.1-.7 3.2-1.1l6.9 5.1c.7.5 1.7.4 2.3-.3l5.7-5.7c.7-.7.7-1.7.3-2.3l-5.1-6.9c.5-1 .8-2.1 1.1-3.2l8.5-1.4c.9-.1 1.5-.9 1.5-1.8v-8c0-.9-.6-1.7-1.5-1.8z" />
-                </svg>
+{% block content %}
+<section class="auth-section">
+    <div class="auth-card auth-card--split">
+        <div class="auth-visual">
+            <img src="{{ url_for('static', filename='assets/photos/carousel6.jpg') }}"
+                alt="Mepham Robotics team members with their robot" class="auth-visual-img">
+            <div class="auth-visual-copy">
+                <h1>Welcome back, Team 77628</h1>
+                <p>Sign in to reach member resources and the admin dashboard.</p>
             </div>
         </div>
 
-        <!-- Form Side -->
-        <div class="form-side">
-            <div class="login-header">
-                <h2>LOGIN</h2>
-            </div>
+        <div class="auth-panel">
+            <h2 class="auth-title">Member Login</h2>
 
-            <form id="loginForm" method="POST" action="{{ url_for('login') }}">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+            <p class="auth-flash auth-flash--{{ category }}" role="status">{{ message }}</p>
+            {% endfor %}
+            {% endwith %}
+
+            {% if error %}
+            <p class="auth-error" role="alert">{{ error }}</p>
+            {% endif %}
+
+            <form id="loginForm" class="auth-form" method="POST" action="{{ url_for('login') }}" data-native-submit>
+                <input type="hidden" name="next" value="{{ next }}">
                 <div class="form-group">
-                    <label for="username">Email</label>
-                    <input type="text" id="username" name="username" placeholder="user@mephamrobotics.com" required
-                        autocomplete="username">
+                    <label for="username">Username or email</label>
+                    <input type="text" id="username" name="username" value="{{ username or '' }}" required
+                        autocomplete="username" autocapitalize="none" spellcheck="false" autofocus>
                 </div>
-
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="••••••••" required
-                        autocomplete="current-password">
+                    <div class="password-field">
+                        <input type="password" id="password" name="password" required autocomplete="current-password">
+                        <button type="button" class="password-toggle" aria-controls="password"
+                            aria-label="Show password" aria-pressed="false">
+                            <i data-lucide="eye" class="icon-show"></i>
+                            <i data-lucide="eye-off" class="icon-hide"></i>
+                        </button>
+                    </div>
                 </div>
-
-                <button type="submit" class="login-btn">Login</button>
-                {% if error %}
-                <div class="error-message" style="display:block;">{{ error }}</div>
-                {% endif %}
-
-                <div class="form-footer">
-                    <label class="remember-me">
-                        <input type="checkbox"> Remember me
+                <div class="auth-row">
+                    <label class="auth-remember">
+                        <input type="checkbox" name="remember" value="1"> Remember me
                     </label>
-                    <a href="#" class="forgot-password">Forgot Password?</a>
+                    <span class="auth-hint">Forgot password? Contact a team admin for a reset link.</span>
                 </div>
-
-                <div class="back-to-site">
-                    <a href="{{ url_for('index') }}" class="back-to-site"><i data-lucide="arrow-left"></i> Back to Site</a>
-                </div>
+                <button type="submit" class="auth-submit">Sign in</button>
             </form>
         </div>
     </div>
+</section>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"
-        integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
-        crossorigin="anonymous"></script>
-    <script>
-        if (window.lucide) lucide.createIcons();
-    </script>
-</body>
-
-</html>
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/login.js') }}" defer></script>
+{% endblock %}

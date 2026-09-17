@@ -150,6 +150,22 @@ function resetUserForm() {
     document.getElementById('user_submit').innerText = 'Create User';
 }
 
+function copyResetLink() {
+    const input = document.getElementById('reset_link_output');
+    if (!input) return;
+    input.select();
+    const finish = (ok) => Admin.notify(ok ? 'Reset link copied' : 'Copy failed - select and copy manually', ok ? 'success' : 'error');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(() => finish(true), () => finish(false));
+    } else {
+        try {
+            finish(document.execCommand('copy'));
+        } catch (err) {
+            finish(false);
+        }
+    }
+}
+
 function showTeamAwards(teamNum) {
     const teamAwards = JSON.parse(document.getElementById('team_awards_data').textContent);
     const container = document.getElementById('team_awards_list');

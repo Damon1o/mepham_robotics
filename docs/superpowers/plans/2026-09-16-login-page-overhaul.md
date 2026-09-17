@@ -18,7 +18,7 @@ Spec: `docs/superpowers/specs/2026-09-16-login-page-overhaul-design.md`
 - Rate limit: 5 attempts per (key, IP) within 15 minutes. Reset tokens: `secrets.token_urlsafe(32)`, only the SHA-256 hash stored, valid 1 hour, single use.
 - Remember me: `PERMANENT_SESSION_LIFETIME` 30 days. Cookies: `HttpOnly`, `SameSite=Lax`, `Secure` only when the `VERCEL` env var is set.
 - Forgot-password never reveals whether an email matched.
-- Email env vars: `RESEND_API_KEY`, `RESEND_FROM`. No new runtime dependency in `requirements.txt`.
+- Optional env var: `PUBLIC_BASE_URL` (used to build absolute reset links when set). No new runtime dependency in `requirements.txt`.
 - Forms that must post to Flask carry `data-native-submit` (otherwise `static/js/script.js` sends them to a Google Form).
 - Passwords are `.strip()`ed on login, admin create, and reset, matching existing stored passwords.
 - Commit message style: short imperative sentence, no `feat:` prefix, ending with `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`.
@@ -1445,45 +1445,6 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ---
 
-### Task 5: Provision Resend and verify a real reset email
+### Task 5: Resend dropped by owner decision
 
-This task needs the project owner's accounts. An agent executing the plan stops at Step 1 and hands these steps to the user.
-
-**Files:** none (environment only)
-
-- [ ] **Step 1: User links the Vercel project**
-
-```bash
-npm i -g vercel
-vercel login
-vercel link
-```
-
-- [ ] **Step 2: User installs Resend from the Marketplace**
-
-```bash
-vercel integration add resend
-```
-
-If the CLI hands off to the browser, finish the install in the Vercel dashboard. Then in the Resend dashboard, add and verify a sending domain (DNS records).
-
-- [ ] **Step 3: User sets the sender**
-
-```bash
-vercel env add RESEND_FROM
-```
-
-Value: `Mepham Robotics <noreply@<verified-domain>>`, for Production, Preview, and Development.
-
-- [ ] **Step 4: Pull env vars and confirm names (never print values)**
-
-```bash
-vercel env pull .env.local --yes
-grep -o '^RESEND_[A-Z_]*' .env.local
-```
-
-Expected: `RESEND_API_KEY` and `RESEND_FROM`.
-
-- [ ] **Step 5: Live check on a preview deployment**
-
-Deploy a preview (`vercel`), open `/forgot-password` on the preview URL, and submit the email of a test account you control. Expected: an email arrives within a minute, the link opens the reset form on the preview host, and resetting lets you sign in with the new password.
+Resend was dropped on 2026-09-17 by owner decision (no Resend account, and the owner doesn't want one). The token-based reset flow stays, but there is no email delivery: an admin generates a reset link for a user in the admin user manager (`/admin/generate-reset-link/<id>`) and hands it to that person directly. The public `/forgot-password` route, its templates, and all Resend/email code were removed.
