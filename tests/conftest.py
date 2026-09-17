@@ -17,6 +17,7 @@ def db(monkeypatch):
     mock_db = mongomock.MongoClient()['mepham']
     monkeypatch.setattr(app_module, 'get_db', lambda: mock_db)
     monkeypatch.setattr(app_module, '_auth_indexes_ready', False, raising=False)
+    monkeypatch.setattr(app_module, '_contact_indexes_ready', False, raising=False)
     return mock_db
 
 

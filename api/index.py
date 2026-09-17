@@ -374,6 +374,64 @@ def _clear_attempts(key, ip=None):
         query['ip'] = ip
     db['login_attempts'].delete_many(query)
 
+# --- Contact form helpers ---
+CONTACT_MAX_ATTEMPTS = 3
+CONTACT_WINDOW = datetime.timedelta(minutes=15)
+CONTACT_NAME_MAX = 100
+CONTACT_EMAIL_MAX = 254
+CONTACT_MESSAGE_MAX = 4000
+_contact_indexes_ready = False
+
+def _ensure_contact_indexes():
+    global _contact_indexes_ready
+    if _contact_indexes_ready:
+        return
+    db['contact_attempts'].create_index('created_at', expireAfterSeconds=int(CONTACT_WINDOW.total_seconds()))
+    db['contact_attempts'].create_index([('key', 1), ('ip', 1)])
+    db['contact_messages'].create_index([('created_at', -1)])
+    _contact_indexes_ready = True
+
+def _contact_lockout_minutes(ip):
+    """Minutes until this IP may send another message, or 0 if not limited."""
+    since = _utcnow() - CONTACT_WINDOW
+    attempts = list(db['contact_attempts'].find(
+        {'key': 'contact', 'ip': ip, 'created_at': {'$gte': since}}).sort('created_at', 1))
+    if len(attempts) < CONTACT_MAX_ATTEMPTS:
+        return 0
+    unlock_at = attempts[0]['created_at'] + CONTACT_WINDOW
+    return max(1, math.ceil((unlock_at - _utcnow()).total_seconds() / 60))
+
+def _record_contact_attempt(ip):
+    _ensure_contact_indexes()
+    db['contact_attempts'].insert_one({'key': 'contact', 'ip': ip, 'created_at': _utcnow()})
+
+def _validate_contact(payload):
+    """Return (cleaned, error). cleaned is None when error is set."""
+    def _text(value):
+        return value.strip() if isinstance(value, str) else ''
+
+    name = _text(payload.get('name'))
+    email = _text(payload.get('email')).lower()
+    message = _text(payload.get('message'))
+
+    if not name:
+        return None, 'Please enter your name.'
+    if len(name) > CONTACT_NAME_MAX:
+        return None, f'Name must be {CONTACT_NAME_MAX} characters or fewer.'
+    if not email:
+        return None, 'Please enter your email address.'
+    if len(email) > CONTACT_EMAIL_MAX:
+        return None, f'Email must be {CONTACT_EMAIL_MAX} characters or fewer.'
+    local, _, domain = email.partition('@')
+    if not local or '.' not in domain or domain.startswith('.') or domain.endswith('.'):
+        return None, 'Please enter a valid email address.'
+    if not message:
+        return None, 'Please enter a message.'
+    if len(message) > CONTACT_MESSAGE_MAX:
+        return None, f'Message must be {CONTACT_MESSAGE_MAX} characters or fewer.'
+
+    return {'name': name, 'email': email, 'message': message}, None
+
 def _hash_token(token):
     return hashlib.sha256(token.encode('utf-8')).hexdigest()
 
@@ -1348,6 +1406,34 @@ def api_matches():
         })
 
     return jsonify({'matches': results})
+
+@app.route('/api/contact', methods=['POST'])
+def api_contact():
+    payload = request.get_json(silent=True) or {}
+
+    # Honeypot: bots fill the hidden field. Look successful, store nothing.
+    if (payload.get('website') or '').strip():
+        return jsonify({'ok': True})
+
+    ip = _client_ip()
+    locked = _contact_lockout_minutes(ip)
+    if locked:
+        minute_word = 'minute' if locked == 1 else 'minutes'
+        return jsonify({'error': f'Too many messages. Try again in {locked} {minute_word}.'}), 429
+
+    cleaned, error = _validate_contact(payload)
+    if error:
+        return jsonify({'error': error}), 400
+
+    _record_contact_attempt(ip)
+    db['contact_messages'].insert_one({
+        **cleaned,
+        'status': 'new',
+        'created_at': _utcnow(),
+        'ip': ip,
+        'user_agent': request.headers.get('User-Agent', '')[:200],
+    })
+    return jsonify({'ok': True})
 
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
