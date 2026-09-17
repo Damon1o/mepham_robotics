@@ -1,5 +1,10 @@
 import os
 import datetime
+import hashlib
+import html
+import math
+import re
+import secrets
 import logging
 from functools import wraps
 from bson import ObjectId
@@ -165,6 +170,7 @@ def get_activity_icon(activity_type):
         'sponsor_add': '🤝',
         'sponsor_update': '💼',
         'sponsor_delete': '🗑️',
+        'password_reset': '🔑',
     }
     return icons.get(activity_type, '📝')
 
@@ -185,6 +191,7 @@ def get_activity_title(activity_type):
         'sponsor_add': 'Sponsor added',
         'sponsor_update': 'Sponsor updated',
         'sponsor_delete': 'Sponsor deleted',
+        'password_reset': 'Password reset',
     }
     return titles.get(activity_type, 'Activity')
 
@@ -272,6 +279,97 @@ def role_required(role):
             return f(*args, **kwargs)
         return decorated
     return decorator
+
+# --- Auth helpers: rate limiting, reset tokens, email ---
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_WINDOW = datetime.timedelta(minutes=15)
+RESET_TOKEN_TTL = datetime.timedelta(hours=1)
+_auth_indexes_ready = False
+
+def _utcnow():
+    """Naive UTC now; MongoDB TTL indexes compare against UTC."""
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
+def _client_ip():
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    return forwarded.split(',')[0].strip() or request.remote_addr or ''
+
+def _ensure_auth_indexes():
+    global _auth_indexes_ready
+    if _auth_indexes_ready:
+        return
+    db['login_attempts'].create_index('created_at', expireAfterSeconds=int(LOGIN_WINDOW.total_seconds()))
+    db['login_attempts'].create_index([('key', 1), ('ip', 1)])
+    db['password_resets'].create_index('created_at', expireAfterSeconds=int(RESET_TOKEN_TTL.total_seconds()))
+    db['password_resets'].create_index('token_hash', unique=True)
+    _auth_indexes_ready = True
+
+def _lockout_minutes(key, ip):
+    """Minutes until (key, ip) may try again, or 0 if not locked out."""
+    since = _utcnow() - LOGIN_WINDOW
+    attempts = list(db['login_attempts'].find(
+        {'key': key, 'ip': ip, 'created_at': {'$gte': since}}).sort('created_at', 1))
+    if len(attempts) < LOGIN_MAX_ATTEMPTS:
+        return 0
+    unlock_at = attempts[0]['created_at'] + LOGIN_WINDOW
+    return max(1, math.ceil((unlock_at - _utcnow()).total_seconds() / 60))
+
+def _record_attempt(key, ip):
+    _ensure_auth_indexes()
+    db['login_attempts'].insert_one({'key': key, 'ip': ip, 'created_at': _utcnow()})
+
+def _clear_attempts(key, ip=None):
+    query = {'key': key}
+    if ip is not None:
+        query['ip'] = ip
+    db['login_attempts'].delete_many(query)
+
+def _hash_token(token):
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
+def send_email(to, subject, text, html_body):
+    """Send one email through Resend. Returns False instead of raising."""
+    api_key = os.getenv('RESEND_API_KEY')
+    sender = os.getenv('RESEND_FROM')
+    if not api_key or not sender:
+        app.logger.error('send_email: RESEND_API_KEY or RESEND_FROM is not set')
+        return False
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {api_key}'},
+            json={'from': sender, 'to': [to], 'subject': subject, 'text': text, 'html': html_body},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return True
+    except requests.RequestException:
+        app.logger.exception('send_email: Resend request failed')
+        return False
+
+def _reset_email_bodies(username, link):
+    text = (
+        f"Hi {username},\n\n"
+        f"Someone asked to reset your Mepham Robotics password. Use this link within 1 hour:\n\n"
+        f"{link}\n\n"
+        f"If you didn't ask for this, you can ignore this email."
+    )
+    safe_name = html.escape(username)
+    safe_link = html.escape(link, quote=True)
+    html_body = (
+        f"<p>Hi {safe_name},</p>"
+        f"<p>Someone asked to reset your Mepham Robotics password. This link works for 1 hour:</p>"
+        f"<p><a href=\"{safe_link}\" style=\"display:inline-block;padding:12px 20px;background:#800000;"
+        f"color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;\">Reset password</a></p>"
+        f"<p>If you didn't ask for this, you can ignore this email.</p>"
+    )
+    return text, html_body
+
+def _find_reset(token):
+    doc = db['password_resets'].find_one({'token_hash': _hash_token(token)})
+    if not doc or _utcnow() - doc['created_at'] > RESET_TOKEN_TTL:
+        return None
+    return doc
 
 @app.route('/')
 def index():
@@ -370,6 +468,60 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('index'))
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        ip = _client_ip()
+        key = f'reset:{email}'
+        if email and not _lockout_minutes(key, ip):
+            _record_attempt(key, ip)
+            user = db['users'].find_one({'email': {'$regex': f'^{re.escape(email)}$', '$options': 'i'}})
+            if user and user.get('email'):
+                token = secrets.token_urlsafe(32)
+                db['password_resets'].delete_many({'user_id': user['_id']})
+                db['password_resets'].insert_one({
+                    'user_id': user['_id'],
+                    'token_hash': _hash_token(token),
+                    'created_at': _utcnow(),
+                })
+                link = url_for('reset_password', token=token, _external=True)
+                text, html_body = _reset_email_bodies(user['username'], link)
+                send_email(user['email'], 'Reset your Mepham Robotics password', text, html_body)
+        return render_template('forgot_password.html', active_page='login', sent=True)
+    return render_template('forgot_password.html', active_page='login', sent=False)
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    reset = _find_reset(token)
+    user = db['users'].find_one({'_id': reset['user_id']}) if reset else None
+    if not user:
+        return render_template('reset_password.html', active_page='login', invalid=True), 400
+
+    if request.method == 'POST':
+        password = request.form.get('password', '').strip()
+        confirm = request.form.get('confirm_password', '').strip()
+        error = None
+        if len(password) < 8:
+            error = 'Password must be at least 8 characters.'
+        elif password != confirm:
+            error = 'Passwords do not match.'
+        if error:
+            return render_template('reset_password.html', active_page='login', invalid=False, error=error), 400
+
+        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        db['users'].update_one({'_id': user['_id']}, {'$set': {'password': hashed}})
+        db['password_resets'].delete_many({'user_id': user['_id']})
+        _clear_attempts(user['username'].lower())
+        if user.get('email'):
+            _clear_attempts(user['email'].lower())
+        log_activity('password_reset', f'Password reset for {user["username"]}',
+                     user=user['username'], details={'username': user['username']})
+        flash('Password updated. Sign in with your new password.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('reset_password.html', active_page='login', invalid=False)
 
 @app.route('/admin')
 @role_required('admin')
