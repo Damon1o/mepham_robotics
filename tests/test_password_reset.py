@@ -87,6 +87,7 @@ def test_admin_generate_reset_link_creates_working_link(client, db, make_user):
     doc = db['password_resets'].find_one({'user_id': target['_id']})
     assert doc is not None
     assert doc['token_hash'] == hashlib.sha256(token.encode()).hexdigest()
+    assert token not in str(doc)
 
     reset_resp = client.post(f'/reset-password/{token}',
                              data={'password': 'new-secure-pass', 'confirm_password': 'new-secure-pass'})
@@ -125,13 +126,14 @@ def test_admin_generate_reset_link_uses_public_base_url(client, db, make_user, m
     assert link.startswith('https://mepham.example.org/reset-password/')
 
 
-def test_admin_generate_reset_link_rejects_non_admin(client, db, make_user):
-    _login_as(client, make_user, 'member', 'rando')
+@pytest.mark.parametrize('role', ['member', 'editor'])
+def test_admin_generate_reset_link_rejects_non_admin(client, db, make_user, role):
+    _login_as(client, make_user, role, 'rando')
     target = make_user(username='alice', email='alice@example.com')
 
     resp = client.post(f'/admin/generate-reset-link/{target["_id"]}')
     assert resp.status_code == 302
-    assert resp.location != '/admin#users'
+    assert resp.location == '/'
     assert db['password_resets'].count_documents({'user_id': target['_id']}) == 0
 
 

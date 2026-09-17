@@ -1,5 +1,11 @@
 # Login Page Overhaul — Design Spec
 
+> **Superseded in part, 2026-09-17:** the owner has no Resend account, so email delivery,
+> the `RESEND_API_KEY`/`RESEND_FROM` env vars and the public `/forgot-password` page were dropped.
+> Reset tokens remain; an admin now generates a reset link from the admin user manager
+> (`POST /admin/generate-reset-link/<id>`) and hands it to the person. Optional `PUBLIC_BASE_URL`
+> sets the link's host.
+
 Date: 2026-09-16
 Scope: `templates/login.html`, new `templates/forgot_password.html` and `templates/reset_password.html`,
 `static/css/pages/login.css`, new `static/js/login.js`, auth code in `api/index.py`, form opt-out in
