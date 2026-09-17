@@ -1,3 +1,7 @@
+import os
+import subprocess
+import sys
+
 import pytest
 
 import api.index as app_module
@@ -114,3 +118,74 @@ def test_session_cookie_config():
     assert config['SESSION_COOKIE_HTTPONLY'] is True
     assert config['SESSION_COOKIE_SAMESITE'] == 'Lax'
     assert config['PERMANENT_SESSION_LIFETIME'].days == 30
+
+
+def test_password_reset_invalidates_existing_session(client, db, make_user):
+    user = make_user()
+    client.post('/login', data={'username': 'alice', 'password': 'correct-horse'})
+    assert client.get('/standards').status_code == 200
+
+    token = 'a' * 43
+    db['password_resets'].insert_one({
+        'user_id': user['_id'],
+        'token_hash': app_module._hash_token(token),
+        'created_at': app_module._utcnow(),
+    })
+    resp = client.post(f'/reset-password/{token}',
+                       data={'password': 'brand-new-pass', 'confirm_password': 'brand-new-pass'})
+    assert resp.status_code == 302
+
+    resp2 = client.get('/standards')
+    assert resp2.status_code == 302
+    assert resp2.location.startswith('/login')
+
+
+def test_demoted_user_loses_role_required_access(client, db, make_user):
+    make_user(role='admin')
+    client.post('/login', data={'username': 'alice', 'password': 'correct-horse'})
+    assert client.get('/admin').status_code == 200
+
+    db['users'].update_one({'username': 'alice'},
+                           {'$set': {'role': 'member'}, '$inc': {'session_version': 1}})
+    resp = client.get('/admin')
+    assert resp.status_code == 302
+    assert resp.location.startswith('/login')
+
+
+def test_deleted_user_session_rejected(client, db, make_user):
+    make_user()
+    client.post('/login', data={'username': 'alice', 'password': 'correct-horse'})
+    assert client.get('/standards').status_code == 200
+
+    db['users'].delete_one({'username': 'alice'})
+    resp = client.get('/standards')
+    assert resp.status_code == 302
+    assert resp.location.startswith('/login')
+
+
+def test_user_without_session_version_field_can_login(client, db, make_user):
+    make_user()
+    assert 'session_version' not in db['users'].find_one({'username': 'alice'})
+    resp = client.post('/login', data={'username': 'alice', 'password': 'correct-horse'})
+    assert resp.status_code == 302
+    assert client.get('/standards').status_code == 200
+
+
+def test_secret_key_required_on_vercel_without_env_var():
+    """Importing the app on Vercel with no SECRET_KEY must fail loudly instead of
+    falling back to the insecure dev key. Run in a subprocess so this doesn't
+    disturb the already-imported api.index module used by the rest of the suite.
+    """
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env = os.environ.copy()
+    env['VERCEL'] = '1'
+    env['SECRET_KEY'] = ''  # present-but-empty so python-dotenv won't fill it from .env
+    env.setdefault('MONGO_URI', 'mongodb://tests-use-mongomock')
+
+    result = subprocess.run(
+        [sys.executable, '-c', 'import api.index'],
+        cwd=root, env=env, capture_output=True, text=True,
+    )
+
+    assert result.returncode != 0
+    assert 'SECRET_KEY' in result.stderr

@@ -84,7 +84,15 @@ _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 app = Flask(__name__,
             template_folder=os.path.join(_root, 'templates'),
             static_folder=os.path.join(_root, 'static'))
-app.secret_key = os.getenv('SECRET_KEY', 'dev-fallback-key')
+_secret_key = os.getenv('SECRET_KEY')
+if not _secret_key:
+    if os.getenv('VERCEL'):
+        raise RuntimeError(
+            'SECRET_KEY environment variable is not set. Refusing to start on Vercel '
+            'with the insecure dev fallback key.'
+        )
+    _secret_key = 'dev-fallback-key'
+app.secret_key = _secret_key
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
@@ -278,10 +286,27 @@ def _safe_next(target):
 def _login_redirect():
     return redirect(url_for('login', next=request.full_path.rstrip('?')))
 
+def _current_db_user():
+    """Look up the DB user backing the current session.
+
+    Returns the user doc (role, session_version) or None if there is no
+    session, the user no longer exists, or the session predates a password
+    reset / role change / deletion (session_version mismatch). Missing
+    session_version on either side is treated as 0, so existing users and
+    sessions keep working without a migration.
+    """
+    if 'user' not in session:
+        return None
+    user = db['users'].find_one({'username': session['user']}, {'role': 1, 'session_version': 1})
+    if not user or user.get('session_version', 0) != session.get('session_version', 0):
+        return None
+    return user
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'user' not in session:
+        if _current_db_user() is None:
+            session.clear()
             return _login_redirect()
         return f(*args, **kwargs)
     return decorated
@@ -290,9 +315,13 @@ def role_required(role):
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
-            if 'user' not in session:
+            user = _current_db_user()
+            if user is None:
+                session.clear()
                 return _login_redirect()
-            if session.get('role') != role and session.get('role') != 'admin':
+            db_role = user.get('role', 'member')
+            session['role'] = db_role
+            if db_role != role and db_role != 'admin':
                 flash('You do not have permission to access that page.', 'error')
                 return redirect(url_for('index'))
             return f(*args, **kwargs)
@@ -500,6 +529,7 @@ def login():
             session.clear()
             session['user'] = user['username']
             session['role'] = user.get('role', 'member')
+            session['session_version'] = user.get('session_version', 0)
             session.permanent = bool(request.form.get('remember'))
             return redirect(next_url)
 
@@ -571,7 +601,8 @@ def reset_password(token):
             return _no_referrer(resp)
 
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        db['users'].update_one({'_id': user['_id']}, {'$set': {'password': hashed}})
+        db['users'].update_one({'_id': user['_id']},
+                               {'$set': {'password': hashed}, '$inc': {'session_version': 1}})
         db['password_resets'].delete_many({'user_id': user['_id']})
         _clear_attempts(user['username'].lower())
         if user.get('email'):
@@ -1136,17 +1167,27 @@ def admin_update_user(id):
         }
         if password:
             updates['password'] = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        db['users'].update_one({'_id': user['_id']}, {'$set': updates})
+
+        changes = [f for f in ('username', 'email', 'role') if user.get(f, '') != updates[f]]
+        if password:
+            changes.append('password')
+        # Any change that could let an existing session act as someone else
+        # (or with a role/password it shouldn't have) invalidates that session.
+        security_relevant = any(c in ('username', 'role', 'password') for c in changes)
+
+        update_ops = {'$set': updates}
+        if security_relevant:
+            update_ops['$inc'] = {'session_version': 1}
+        db['users'].update_one({'_id': user['_id']}, update_ops)
 
         # Keep the current session in sync when admins edit themselves
         if session.get('user') == user['username']:
             session['user'] = username
             session['role'] = role
+            if security_relevant:
+                session['session_version'] = user.get('session_version', 0) + 1
 
         flash(f'User "{username}" updated!', 'success')
-        changes = [f for f in ('username', 'email', 'role') if user.get(f, '') != updates[f]]
-        if password:
-            changes.append('password')
         log_activity(
             'user_update',
             f'Updated user: {username}',
