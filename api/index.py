@@ -84,6 +84,12 @@ app = Flask(__name__,
             template_folder=os.path.join(_root, 'templates'),
             static_folder=os.path.join(_root, 'static'))
 app.secret_key = os.getenv('SECRET_KEY', 'dev-fallback-key')
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=bool(os.getenv('VERCEL')),
+    PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=30),
+)
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 
 @app.template_filter('collapse_ws')
@@ -259,11 +265,20 @@ def inject_global_data():
 
 USER_ROLES = ('member', 'editor', 'admin')
 
+def _safe_next(target):
+    """Only allow same-site relative paths as post-login redirects."""
+    if target and target.startswith('/') and not target.startswith(('//', '/\\')):
+        return target
+    return url_for('index')
+
+def _login_redirect():
+    return redirect(url_for('login', next=request.full_path.rstrip('?')))
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user' not in session:
-            return redirect(url_for('login'))
+            return _login_redirect()
         return f(*args, **kwargs)
     return decorated
 
@@ -272,7 +287,7 @@ def role_required(role):
         @wraps(f)
         def decorated(*args, **kwargs):
             if 'user' not in session:
-                return redirect(url_for('login'))
+                return _login_redirect()
             if session.get('role') != role and session.get('role') != 'admin':
                 flash('You do not have permission to access that page.', 'error')
                 return redirect(url_for('index'))
@@ -451,18 +466,37 @@ def notebook():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    next_url = _safe_next(request.values.get('next'))
+    if 'user' in session:
+        return redirect(next_url)
+
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
+        identifier = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
-        user = db['users'].find_one({
-            '$or': [{'username': username}, {'email': username}]
-        })
+        attempt_key = identifier.lower()
+        ip = _client_ip()
+
+        wait = _lockout_minutes(attempt_key, ip)
+        if wait:
+            error = f'Too many attempts. Try again in {wait} minute{"s" if wait != 1 else ""}.'
+            return render_template('login.html', active_page='login', error=error,
+                                   next=next_url, username=identifier), 429
+
+        user = db['users'].find_one({'$or': [{'username': identifier}, {'email': identifier}]})
         if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
+            _clear_attempts(attempt_key, ip)
+            session.clear()
             session['user'] = user['username']
             session['role'] = user.get('role', 'member')
-            return redirect(url_for('index'))
-        return render_template('login.html', active_page='login', error='Invalid credentials. Please try again.')
-    return render_template('login.html', active_page='login')
+            session.permanent = bool(request.form.get('remember'))
+            return redirect(next_url)
+
+        _record_attempt(attempt_key, ip)
+        return render_template('login.html', active_page='login',
+                               error='Invalid credentials. Please try again.',
+                               next=next_url, username=identifier), 401
+
+    return render_template('login.html', active_page='login', next=next_url)
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
