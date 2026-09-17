@@ -2,9 +2,7 @@ import os
 import datetime
 import urllib.parse
 import hashlib
-import html
 import math
-import re
 import secrets
 import logging
 from functools import wraps
@@ -186,6 +184,7 @@ def get_activity_icon(activity_type):
         'sponsor_update': '💼',
         'sponsor_delete': '🗑️',
         'password_reset': '🔑',
+        'reset_link_generate': '🔗',
     }
     return icons.get(activity_type, '📝')
 
@@ -207,6 +206,7 @@ def get_activity_title(activity_type):
         'sponsor_update': 'Sponsor updated',
         'sponsor_delete': 'Sponsor deleted',
         'password_reset': 'Password reset',
+        'reset_link_generate': 'Reset link generated',
     }
     return titles.get(activity_type, 'Activity')
 
@@ -377,43 +377,12 @@ def _clear_attempts(key, ip=None):
 def _hash_token(token):
     return hashlib.sha256(token.encode('utf-8')).hexdigest()
 
-def send_email(to, subject, text, html_body):
-    """Send one email through Resend. Returns False instead of raising."""
-    api_key = os.getenv('RESEND_API_KEY')
-    sender = os.getenv('RESEND_FROM')
-    if not api_key or not sender:
-        app.logger.error('send_email: RESEND_API_KEY or RESEND_FROM is not set')
-        return False
-    try:
-        response = requests.post(
-            'https://api.resend.com/emails',
-            headers={'Authorization': f'Bearer {api_key}'},
-            json={'from': sender, 'to': [to], 'subject': subject, 'text': text, 'html': html_body},
-            timeout=10,
-        )
-        response.raise_for_status()
-        return True
-    except requests.RequestException:
-        app.logger.exception('send_email: Resend request failed')
-        return False
-
-def _reset_email_bodies(username, link):
-    text = (
-        f"Hi {username},\n\n"
-        f"Someone asked to reset your Mepham Robotics password. Use this link within 1 hour:\n\n"
-        f"{link}\n\n"
-        f"If you didn't ask for this, you can ignore this email."
-    )
-    safe_name = html.escape(username)
-    safe_link = html.escape(link, quote=True)
-    html_body = (
-        f"<p>Hi {safe_name},</p>"
-        f"<p>Someone asked to reset your Mepham Robotics password. This link works for 1 hour:</p>"
-        f"<p><a href=\"{safe_link}\" style=\"display:inline-block;padding:12px 20px;background:#800000;"
-        f"color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;\">Reset password</a></p>"
-        f"<p>If you didn't ask for this, you can ignore this email.</p>"
-    )
-    return text, html_body
+def _build_reset_link(token):
+    """Build the absolute reset-password link for a freshly issued token."""
+    public_base = os.getenv('PUBLIC_BASE_URL', '')
+    if public_base:
+        return public_base.rstrip('/') + url_for('reset_password', token=token)
+    return url_for('reset_password', token=token, _external=True)
 
 def _find_reset(token):
     _ensure_auth_indexes()
@@ -546,34 +515,6 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('index'))
-
-@app.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        ip = _client_ip()
-        key = f'reset:{email}'
-        if email and not _lockout_minutes(key, ip):
-            _record_attempt(key, ip)
-            user = db['users'].find_one({'email': {'$regex': f'^{re.escape(email)}$', '$options': 'i'}})
-            if user and user.get('email'):
-                token = secrets.token_urlsafe(32)
-                db['password_resets'].delete_many({'user_id': user['_id']})
-                db['password_resets'].insert_one({
-                    'user_id': user['_id'],
-                    'token_hash': _hash_token(token),
-                    'created_at': _utcnow(),
-                })
-                public_base = os.getenv('PUBLIC_BASE_URL', '')
-                if public_base:
-                    link = public_base.rstrip('/') + url_for('reset_password', token=token)
-                else:
-                    link = url_for('reset_password', token=token, _external=True)
-                text, html_body = _reset_email_bodies(user['username'], link)
-                # Result ignored deliberately so the response doesn't reveal whether the email matched.
-                send_email(user['email'], 'Reset your Mepham Robotics password', text, html_body)
-        return render_template('forgot_password.html', active_page='login', sent=True)
-    return render_template('forgot_password.html', active_page='login', sent=False)
 
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
@@ -712,10 +653,14 @@ def admin_dashboard():
                 # Users don't affect the main stats shown
                 pass
 
+    reset_link = session.pop('_generated_reset_link', None)
+    reset_link_user = session.pop('_generated_reset_link_user', None)
+
     return render_template('admin.html', stats=stats, competitions=competitions,
                            awards=global_awards, team_awards=team_awards_list,
                            teams=teams, users=users, sponsors=sponsors,
-                           activities=activities, monthly_changes=monthly_changes)
+                           activities=activities, monthly_changes=monthly_changes,
+                           reset_link=reset_link, reset_link_user=reset_link_user)
 
 @app.route('/admin/update-stats', methods=['POST'])
 @role_required('admin')
@@ -1227,6 +1172,34 @@ def admin_delete_user(id):
             )
     except Exception as e:
         flash(f'Error deleting user: {e}', 'error')
+    return redirect(url_for('admin_dashboard', _anchor='users'))
+
+@app.route('/admin/generate-reset-link/<id>', methods=['POST'])
+@role_required('admin')
+def admin_generate_reset_link(id):
+    try:
+        user = db['users'].find_one({'_id': ObjectId(id)})
+        if not user:
+            flash('User not found.', 'error')
+        else:
+            _ensure_auth_indexes()
+            token = secrets.token_urlsafe(32)
+            db['password_resets'].delete_many({'user_id': user['_id']})
+            db['password_resets'].insert_one({
+                'user_id': user['_id'],
+                'token_hash': _hash_token(token),
+                'created_at': _utcnow(),
+            })
+            session['_generated_reset_link'] = _build_reset_link(token)
+            session['_generated_reset_link_user'] = user['username']
+            flash(f'Reset link generated for {user["username"]}. Copy it below.', 'success')
+            log_activity(
+                'reset_link_generate',
+                f'Generated reset link for {user["username"]}',
+                details={'username': user['username']}
+            )
+    except Exception as e:
+        flash(f'Error generating reset link: {e}', 'error')
     return redirect(url_for('admin_dashboard', _anchor='users'))
 
 @app.route('/admin/save-sponsor', methods=['POST'])

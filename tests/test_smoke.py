@@ -4,7 +4,8 @@ def test_login_page_opts_out_of_form_interceptor(client):
     assert b'data-native-submit' in resp.data
 
 
-def test_login_page_links_to_forgot_password(client):
+def test_login_page_has_no_forgot_password_link(client):
     resp = client.get('/login')
-    assert b'href="/forgot-password"' in resp.data
+    assert b'href="/forgot-password"' not in resp.data
     assert b'name="remember"' in resp.data
+    assert b'contact a team admin' in resp.data.lower()

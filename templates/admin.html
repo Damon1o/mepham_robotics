@@ -520,6 +520,18 @@
         <span class="role-badge editor">{{ users|selectattr('role', 'equalto', 'editor')|list|length }} editor</span>
         <span class="role-badge member">{{ users|selectattr('role', 'equalto', 'member')|list|length }} member</span>
     </div>
+
+    {% if reset_link %}
+    <div class="reset-link-box" role="status">
+        <p class="reset-link-label">Reset link for <strong>{{ reset_link_user }}</strong> (valid 1 hour, single use):</p>
+        <div class="reset-link-row">
+            <input type="text" id="reset_link_output" class="reset-link-input" value="{{ reset_link }}" readonly
+                onclick="this.select()" aria-label="Generated reset link">
+            <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
+                onclick="copyResetLink()">Copy</button>
+        </div>
+    </div>
+    {% endif %}
     <div class="user-filters">
         <input type="search" id="users_filter" class="panel-filter" aria-label="Filter users"
             placeholder="Filter users by username or email...">
@@ -551,6 +563,10 @@
                     data-email="{{ user.email }}" data-role="{{ user.role }}"
                     aria-label="Edit user: {{ user.username }}"
                     onclick="editUser(this.dataset)">Edit</button>
+                <form action="{{ url_for('admin_generate_reset_link', id=user._id) }}" method="POST" class="inline-form">
+                    <button type="submit" class="admin-btn admin-btn-secondary admin-btn-small"
+                        aria-label="Generate reset link for {{ user.username }}">Reset link</button>
+                </form>
                 {% if user.username != session.user %}
                 <form action="{{ url_for('admin_delete_user', id=user._id) }}" method="POST" class="inline-form"
                     onsubmit="return confirmDelete(this, 'user')">

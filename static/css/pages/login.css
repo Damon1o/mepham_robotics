@@ -1,4 +1,4 @@
-/* Page styles: login, forgot password, reset password */
+/* Page styles: login, reset password */
 
 .auth-section {
     display: flex;
@@ -187,6 +187,11 @@
     text-underline-offset: 3px;
 }
 
+.auth-hint {
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
 .auth-submit {
     width: 100%;
     padding: 0.9rem 1rem;
@@ -261,7 +266,8 @@
     color: #d4a0a1;
 }
 
-[data-theme="dark"] .auth-intro {
+[data-theme="dark"] .auth-intro,
+[data-theme="dark"] .auth-hint {
     color: #bbb;
 }
 
