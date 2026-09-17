@@ -379,8 +379,8 @@ function showToast(message, type = 'info') {
 
     forms.forEach(form => {
         form.addEventListener('submit', function (e) {
-            // IGNORE ADMIN, LOGIN, AND CHATBOT FORMS
-            if (this.id === 'loginForm' || this.id === 'chatbot-form' || this.getAttribute('action')?.startsWith('/admin')) {
+            // Forms marked data-native-submit (auth pages), admin forms, and the chatbot post normally
+            if (this.hasAttribute('data-native-submit') || this.id === 'chatbot-form' || this.getAttribute('action')?.startsWith('/admin')) {
                 return;
             }
 
@@ -427,10 +427,6 @@ function showToast(message, type = 'info') {
                 formData.append(ENTRY_IDS.name, 'Newsletter Subscriber');
                 formData.append(ENTRY_IDS.email, email);
                 formData.append(ENTRY_IDS.message, 'Newsletter Subscription Request from Footer');
-            } else if (this.id === 'loginForm') {
-                // Keep login logic separate or handle elsewhere if needed
-                // For now, let's just let it pass or handle explicitly
-                return;
             }
 
             // Submission logic
