@@ -76,6 +76,26 @@ def test_protected_page_redirects_to_login_with_next(client):
     assert resp.location == '/login?next=/standards'
 
 
+def test_login_with_stale_session_cookie_still_logs_in(client, make_user, db):
+    make_user()
+    client.post('/login', data={'username': 'alice', 'password': 'correct-horse'})
+    # Simulate a password reset (or role change) bumping session_version after
+    # this browser already has a session cookie.
+    db['users'].update_one({'username': 'alice'}, {'$inc': {'session_version': 1}})
+
+    resp = client.post('/login', data={'username': 'alice', 'password': 'correct-horse'})
+    assert resp.status_code == 302
+    assert resp.location == '/'
+
+    user = db['users'].find_one({'username': 'alice'})
+    with client.session_transaction() as s:
+        assert s['user'] == 'alice'
+        assert s['session_version'] == user.get('session_version', 0)
+
+    protected = client.get('/standards')
+    assert protected.status_code == 200
+
+
 def test_signed_in_user_is_redirected_away_from_login(client, make_user):
     make_user()
     with client.session_transaction() as s:

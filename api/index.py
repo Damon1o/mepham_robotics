@@ -139,7 +139,7 @@ def log_activity(activity_type, description, user=None, details=None):
         activity = {
             'type': activity_type,
             'description': description,
-            'user': user or (session.get('username') if 'username' in session else 'System'),
+            'user': user or (session.get('user') if 'user' in session else 'System'),
             'timestamp': datetime.datetime.now(),
             'details': details or {}
         }
@@ -320,7 +320,8 @@ def role_required(role):
                 session.clear()
                 return _login_redirect()
             db_role = user.get('role', 'member')
-            session['role'] = db_role
+            if session.get('role') != db_role:
+                session['role'] = db_role
             if db_role != role and db_role != 'admin':
                 flash('You do not have permission to access that page.', 'error')
                 return redirect(url_for('index'))
@@ -508,8 +509,9 @@ def notebook():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     next_url = _safe_next(request.values.get('next'))
-    if 'user' in session:
+    if _current_db_user() is not None:
         return redirect(next_url)
+    session.clear()
 
     if request.method == 'POST':
         identifier = request.form.get('username', '').strip()
