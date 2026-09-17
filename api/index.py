@@ -185,6 +185,9 @@ def get_activity_icon(activity_type):
         'sponsor_delete': '🗑️',
         'password_reset': '🔑',
         'reset_link_generate': '🔗',
+        'message_read': '📬',
+        'message_archive': '🗄️',
+        'message_delete': '🗑️',
     }
     return icons.get(activity_type, '📝')
 
@@ -207,6 +210,9 @@ def get_activity_title(activity_type):
         'sponsor_delete': 'Sponsor deleted',
         'password_reset': 'Password reset',
         'reset_link_generate': 'Reset link generated',
+        'message_read': 'Message read',
+        'message_archive': 'Message archived',
+        'message_delete': 'Message deleted',
     }
     return titles.get(activity_type, 'Activity')
 
@@ -714,11 +720,21 @@ def admin_dashboard():
     reset_link = session.pop('_generated_reset_link', None)
     reset_link_user = session.pop('_generated_reset_link_user', None)
 
+    messages = []
+    for m in db['contact_messages'].find().sort('created_at', -1).limit(200):
+        m['_id'] = str(m['_id'])
+        created = m.get('created_at')
+        m['display_date'] = created.strftime('%b %d, %Y @ %I:%M %p') if created else ''
+        m['status'] = m.get('status', 'new')
+        messages.append(m)
+    unread_messages = sum(1 for m in messages if m['status'] == 'new')
+
     return render_template('admin.html', stats=stats, competitions=competitions,
                            awards=global_awards, team_awards=team_awards_list,
                            teams=teams, users=users, sponsors=sponsors,
                            activities=activities, monthly_changes=monthly_changes,
-                           reset_link=reset_link, reset_link_user=reset_link_user)
+                           reset_link=reset_link, reset_link_user=reset_link_user,
+                           messages=messages, unread_messages=unread_messages)
 
 @app.route('/admin/update-stats', methods=['POST'])
 @role_required('admin')
@@ -1259,6 +1275,33 @@ def admin_generate_reset_link(id):
     except Exception as e:
         flash(f'Error generating reset link: {e}', 'error')
     return redirect(url_for('admin_dashboard', _anchor='users'))
+
+@app.route('/admin/messages/<id>/<action>', methods=['POST'])
+@role_required('admin')
+def admin_message_action(id, action):
+    """Mark a contact message read, archive it, or delete it."""
+    if action not in ('read', 'archive', 'delete'):
+        flash('Unknown message action.', 'error')
+        return redirect(url_for('admin_dashboard', _anchor='messages'))
+    try:
+        message = db['contact_messages'].find_one({'_id': ObjectId(id)})
+        if not message:
+            flash('Message not found.', 'error')
+        elif action == 'delete':
+            db['contact_messages'].delete_one({'_id': message['_id']})
+            flash('Message deleted.', 'success')
+            # Log the sender only - never the message body.
+            log_activity('message_delete', f'Deleted message from {message.get("email", "unknown")}',
+                         details={'message_id': str(message['_id'])})
+        else:
+            status = 'read' if action == 'read' else 'archived'
+            db['contact_messages'].update_one({'_id': message['_id']}, {'$set': {'status': status}})
+            flash(f'Message marked {status}.', 'success')
+            log_activity(f'message_{action}', f'Message from {message.get("email", "unknown")} marked {status}',
+                         details={'message_id': str(message['_id'])})
+    except Exception as e:
+        flash(f'Error updating message: {e}', 'error')
+    return redirect(url_for('admin_dashboard', _anchor='messages'))
 
 @app.route('/admin/save-sponsor', methods=['POST'])
 @role_required('admin')

@@ -3,7 +3,7 @@
 {% block title %}Admin Dashboard | Mepham Robotics{% endblock %}
 
 {% block page_styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v=2">
 
 <script src="{{ url_for('static', filename='js/admin.js') }}" defer></script>
 <script id="team_awards_data" type="application/json">
@@ -133,6 +133,9 @@
         data-tab="users" tabindex="-1"><i data-lucide="user"></i> Users</a>
     <a href="#activity" role="tab" id="tab-activity" aria-controls="panel-activity" aria-selected="false"
         data-tab="activity" tabindex="-1"><i data-lucide="clipboard-list"></i> Activity</a>
+    <a href="#messages" role="tab" id="tab-messages" aria-controls="panel-messages" aria-selected="false"
+        data-tab="messages" tabindex="-1"><i data-lucide="mail"></i> Messages{% if unread_messages %}
+        <span class="message-badge">{{ unread_messages }}</span>{% endif %}</a>
 </nav>
 
 <div class="admin-grid">
@@ -654,6 +657,74 @@
         <i data-lucide="clipboard-list" class="empty-state-icon"></i>
         <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No recent activity</p>
         <p style="color: #888;">Activity will appear here as you make changes</p>
+    </div>
+</div>
+</section>
+
+<section class="admin-panel" data-panel="messages" id="panel-messages" role="tabpanel" aria-labelledby="tab-messages" hidden>
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2><i data-lucide="mail"></i> Contact Messages</h2>
+    </div>
+    <div class="user-summary">
+        <span>{{ messages|length }} message{{ 's' if messages|length != 1 }}</span>
+        <span class="status-badge new">{{ messages|selectattr('status', 'equalto', 'new')|list|length }} new</span>
+        <span class="status-badge read">{{ messages|selectattr('status', 'equalto', 'read')|list|length }} read</span>
+        <span class="status-badge archived">{{ messages|selectattr('status', 'equalto', 'archived')|list|length }} archived</span>
+    </div>
+
+    <div class="message-filters" role="group" aria-label="Filter messages by status">
+        <button type="button" class="message-filter active" data-status="">All</button>
+        <button type="button" class="message-filter" data-status="new">New</button>
+        <button type="button" class="message-filter" data-status="read">Read</button>
+        <button type="button" class="message-filter" data-status="archived">Archived</button>
+    </div>
+
+    <div class="data-list message-list">
+        {% for message in messages %}
+        <article class="data-item message-item" data-status="{{ message.status }}">
+            <div class="message-summary">
+                <button type="button" class="message-toggle" aria-expanded="false"
+                    aria-controls="message-body-{{ message._id }}">
+                    <span class="message-from">{{ message.name }}</span>
+                    <span class="message-email">{{ message.email }}</span>
+                    <span class="message-excerpt">{{ message.message|truncate(80) }}</span>
+                </button>
+                <span class="message-meta">
+                    <span class="status-badge {{ message.status }}">{{ message.status }}</span>
+                    <span class="message-date">{{ message.display_date }}</span>
+                </span>
+            </div>
+            <div class="message-body" id="message-body-{{ message._id }}" hidden>
+                <p class="message-text">{{ message.message }}</p>
+                <div class="data-item-actions">
+                    {% if message.status != 'read' %}
+                    <form action="{{ url_for('admin_message_action', id=message._id, action='read') }}"
+                        method="POST" class="inline-form">
+                        <button type="submit" class="admin-btn admin-btn-secondary admin-btn-small">Mark read</button>
+                    </form>
+                    {% endif %}
+                    {% if message.status != 'archived' %}
+                    <form action="{{ url_for('admin_message_action', id=message._id, action='archive') }}"
+                        method="POST" class="inline-form">
+                        <button type="submit" class="admin-btn admin-btn-secondary admin-btn-small">Archive</button>
+                    </form>
+                    {% endif %}
+                    <form action="{{ url_for('admin_message_action', id=message._id, action='delete') }}"
+                        method="POST" class="inline-form"
+                        onsubmit="return confirmDelete(this, 'message')">
+                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </article>
+        {% else %}
+        <div class="empty-state">
+            <i data-lucide="mail" class="empty-state-icon"></i>
+            <p class="empty-state-title">No messages yet</p>
+            <p class="empty-state-hint">Messages sent from the contact page appear here</p>
+        </div>
+        {% endfor %}
     </div>
 </div>
 </section>

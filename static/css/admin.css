@@ -1309,3 +1309,179 @@
             gap: 0;
         }
     }
+
+    /* --- CONTACT MESSAGES PANEL --- */
+    .message-badge {
+        display: inline-block;
+        min-width: 1.4rem;
+        padding: 0.1rem 0.4rem;
+        margin-left: 0.4rem;
+        border-radius: 999px;
+        background: var(--maroon-dark);
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-align: center;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: #e9ecef;
+        color: #333;
+    }
+
+    .status-badge.new {
+        background: var(--maroon-dark);
+        color: #fff;
+    }
+
+    .status-badge.read {
+        background: #ffd700;
+        color: #333;
+    }
+
+    .status-badge.archived {
+        background: #d5d5d5;
+        color: #555;
+    }
+
+    .message-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .message-filter {
+        padding: 0.4rem 1rem;
+        border: 2px solid #ddd;
+        border-radius: 999px;
+        background: #fff;
+        color: #444;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .message-filter:hover {
+        border-color: var(--maroon-dark);
+    }
+
+    .message-filter.active {
+        background: var(--maroon-dark);
+        border-color: var(--maroon-dark);
+        color: #fff;
+    }
+
+    /* .data-item is a 3-column grid; messages stack instead. */
+    .message-item {
+        display: block;
+    }
+
+    .message-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        width: 100%;
+    }
+
+    .message-toggle {
+        display: flex;
+        align-items: baseline;
+        gap: 0.75rem;
+        flex: 1;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+        font: inherit;
+        color: inherit;
+    }
+
+    .message-from {
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .message-email {
+        color: #666;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    .message-excerpt {
+        color: #777;
+        font-size: 0.85rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .message-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        white-space: nowrap;
+    }
+
+    .message-date {
+        color: #888;
+        font-size: 0.8rem;
+    }
+
+    .message-body {
+        border-top: 1px solid #eee;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        width: 100%;
+    }
+
+    .message-text {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        margin: 0 0 1rem;
+        line-height: 1.6;
+        text-align: left;
+    }
+
+    .message-body .data-item-actions {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 0.5rem;
+    }
+
+    .empty-state-title {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state-hint {
+        color: #888;
+    }
+
+    @media (max-width: 768px) {
+        .message-summary {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .message-toggle {
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .message-excerpt {
+            white-space: normal;
+        }
+    }

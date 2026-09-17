@@ -512,6 +512,7 @@ const AdminTabs = (function () {
 document.addEventListener('DOMContentLoaded', () => AdminTabs.init());
 
 document.addEventListener('DOMContentLoaded', function () {
+    initMessagesPanel();
     Admin.attachListFilter('#events_filter', '#panel-events .event-item');
     Admin.attachListFilter('#awards_filter', '#panel-awards .award-item');
     Admin.attachListFilter('#teams_filter', '#panel-teams .data-list > .data-item');
@@ -540,3 +541,32 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 5000);
     });
 });
+
+// --- CONTACT MESSAGES PANEL ---
+function initMessagesPanel() {
+    const panel = document.getElementById('panel-messages');
+    if (!panel) return;
+
+    const items = Array.from(panel.querySelectorAll('.message-item'));
+
+    panel.querySelectorAll('.message-filter').forEach(button => {
+        button.addEventListener('click', () => {
+            panel.querySelectorAll('.message-filter').forEach(b => b.classList.remove('active'));
+            button.classList.add('active');
+            const wanted = button.dataset.status;
+            items.forEach(item => {
+                item.hidden = Boolean(wanted) && item.dataset.status !== wanted;
+            });
+        });
+    });
+
+    panel.querySelectorAll('.message-toggle').forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            const body = document.getElementById(toggle.getAttribute('aria-controls'));
+            if (!body) return;
+            const open = body.hidden;
+            body.hidden = !open;
+            toggle.setAttribute('aria-expanded', String(open));
+        });
+    });
+}
