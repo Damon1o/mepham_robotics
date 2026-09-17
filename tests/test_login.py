@@ -58,7 +58,8 @@ def test_next_redirect_is_honored(client, make_user):
     assert resp.location == '/admin#users'
 
 
-@pytest.mark.parametrize('target', ['//evil.com', 'https://evil.com', '/\\evil.com', 'evil.com', ''])
+@pytest.mark.parametrize('target', ['//evil.com', 'https://evil.com', '/\\evil.com', 'evil.com', '',
+                                     '/\t/evil.com', '/\n/evil.com', '/\r/evil.com'])
 def test_unsafe_next_falls_back_to_home(client, make_user, target):
     make_user()
     resp = client.post('/login', data={'username': 'alice', 'password': 'correct-horse', 'next': target})

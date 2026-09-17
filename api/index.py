@@ -1,5 +1,6 @@
 import os
 import datetime
+import urllib.parse
 import hashlib
 import html
 import math
@@ -267,8 +268,11 @@ USER_ROLES = ('member', 'editor', 'admin')
 
 def _safe_next(target):
     """Only allow same-site relative paths as post-login redirects."""
-    if target and target.startswith('/') and not target.startswith(('//', '/\\')):
-        return target
+    if (target and target.startswith('/') and not target.startswith(('//', '/\\'))
+            and not any(ord(c) < 0x21 or c == '\\' for c in target)):
+        parsed = urllib.parse.urlsplit(target)
+        if not parsed.scheme and not parsed.netloc:
+            return target
     return url_for('index')
 
 def _login_redirect():
@@ -306,6 +310,7 @@ def _utcnow():
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 def _client_ip():
+    # Trusted: Vercel overwrites X-Forwarded-For with the real client IP (spoofable if hosted elsewhere).
     forwarded = request.headers.get('X-Forwarded-For', '')
     return forwarded.split(',')[0].strip() or request.remote_addr or ''
 
@@ -381,10 +386,17 @@ def _reset_email_bodies(username, link):
     return text, html_body
 
 def _find_reset(token):
+    _ensure_auth_indexes()
     doc = db['password_resets'].find_one({'token_hash': _hash_token(token)})
     if not doc or _utcnow() - doc['created_at'] > RESET_TOKEN_TTL:
         return None
     return doc
+
+def _no_referrer(rv):
+    """Wrap a view return value and set Referrer-Policy: no-referrer (keeps reset tokens out of Referer)."""
+    resp = app.make_response(rv)
+    resp.headers['Referrer-Policy'] = 'no-referrer'
+    return resp
 
 @app.route('/')
 def index():
@@ -520,8 +532,13 @@ def forgot_password():
                     'token_hash': _hash_token(token),
                     'created_at': _utcnow(),
                 })
-                link = url_for('reset_password', token=token, _external=True)
+                public_base = os.getenv('PUBLIC_BASE_URL', '')
+                if public_base:
+                    link = public_base.rstrip('/') + url_for('reset_password', token=token)
+                else:
+                    link = url_for('reset_password', token=token, _external=True)
                 text, html_body = _reset_email_bodies(user['username'], link)
+                # Result ignored deliberately so the response doesn't reveal whether the email matched.
                 send_email(user['email'], 'Reset your Mepham Robotics password', text, html_body)
         return render_template('forgot_password.html', active_page='login', sent=True)
     return render_template('forgot_password.html', active_page='login', sent=False)
@@ -531,7 +548,8 @@ def reset_password(token):
     reset = _find_reset(token)
     user = db['users'].find_one({'_id': reset['user_id']}) if reset else None
     if not user:
-        return render_template('reset_password.html', active_page='login', invalid=True), 400
+        resp = render_template('reset_password.html', active_page='login', invalid=True), 400
+        return _no_referrer(resp)
 
     if request.method == 'POST':
         password = request.form.get('password', '').strip()
@@ -542,7 +560,15 @@ def reset_password(token):
         elif password != confirm:
             error = 'Passwords do not match.'
         if error:
-            return render_template('reset_password.html', active_page='login', invalid=False, error=error), 400
+            resp = render_template('reset_password.html', active_page='login', invalid=False, error=error), 400
+            return _no_referrer(resp)
+
+        # Atomically consume the token so two concurrent POSTs can't both apply it.
+        consumed = db['password_resets'].find_one_and_delete(
+            {'token_hash': _hash_token(token), 'created_at': {'$gte': _utcnow() - RESET_TOKEN_TTL}})
+        if not consumed:
+            resp = render_template('reset_password.html', active_page='login', invalid=True), 400
+            return _no_referrer(resp)
 
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         db['users'].update_one({'_id': user['_id']}, {'$set': {'password': hashed}})
@@ -555,7 +581,7 @@ def reset_password(token):
         flash('Password updated. Sign in with your new password.', 'success')
         return redirect(url_for('login'))
 
-    return render_template('reset_password.html', active_page='login', invalid=False)
+    return _no_referrer(render_template('reset_password.html', active_page='login', invalid=False))
 
 @app.route('/admin')
 @role_required('admin')

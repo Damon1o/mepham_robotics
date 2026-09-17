@@ -83,6 +83,7 @@ def test_reset_rejects_unknown_token(client):
     resp = client.get('/reset-password/not-a-real-token')
     assert resp.status_code == 400
     assert b'/forgot-password' in resp.data
+    assert resp.headers['Referrer-Policy'] == 'no-referrer'
 
 
 @pytest.mark.parametrize('password,confirm,message', [
@@ -96,6 +97,14 @@ def test_reset_validates_password(client, make_user, sent, password, confirm, me
                        data={'password': password, 'confirm_password': confirm})
     assert resp.status_code == 400
     assert message in resp.data
+
+
+def test_reset_link_uses_public_base_url(client, make_user, sent, monkeypatch):
+    monkeypatch.setenv('PUBLIC_BASE_URL', 'https://mepham.example.org')
+    make_user(email='alice@example.com')
+    client.post('/forgot-password', data={'email': 'alice@example.com'})
+    link = re.search(r'https?://\S+', sent[0]['text']).group(0)
+    assert link.startswith('https://mepham.example.org/reset-password/')
 
 
 def test_forgot_password_is_rate_limited(client, make_user, sent):
