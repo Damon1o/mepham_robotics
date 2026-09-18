@@ -386,6 +386,8 @@ CONTACT_WINDOW = datetime.timedelta(minutes=15)
 CONTACT_NAME_MAX = 100
 CONTACT_EMAIL_MAX = 254
 CONTACT_MESSAGE_MAX = 4000
+# Topics the contact form offers. Anything else is stored as 'general'.
+CONTACT_TOPICS = ('join', 'sponsor', 'general')
 _contact_indexes_ready = False
 
 def _ensure_contact_indexes():
@@ -419,6 +421,9 @@ def _validate_contact(payload):
     name = _text(payload.get('name'))
     email = _text(payload.get('email')).lower()
     message = _text(payload.get('message'))
+    topic = _text(payload.get('topic')).lower()
+    if topic not in CONTACT_TOPICS:
+        topic = 'general'
 
     if not name:
         return None, 'Please enter your name.'
@@ -436,7 +441,7 @@ def _validate_contact(payload):
     if len(message) > CONTACT_MESSAGE_MAX:
         return None, f'Message must be {CONTACT_MESSAGE_MAX} characters or fewer.'
 
-    return {'name': name, 'email': email, 'message': message}, None
+    return {'name': name, 'email': email, 'message': message, 'topic': topic}, None
 
 def _hash_token(token):
     return hashlib.sha256(token.encode('utf-8')).hexdigest()

@@ -691,6 +691,9 @@
                     <span class="message-excerpt">{{ message.message|truncate(80) }}</span>
                 </button>
                 <span class="message-meta">
+                    {% if message.topic %}
+                    <span class="topic-badge topic-{{ message.topic }}">{{ message.topic }}</span>
+                    {% endif %}
                     <span class="status-badge {{ message.status }}">{{ message.status }}</span>
                     <span class="message-date">{{ message.display_date }}</span>
                 </span>

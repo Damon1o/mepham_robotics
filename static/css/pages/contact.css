@@ -1,269 +1,455 @@
-/* Page styles: contact */
+/* Page styles: contact
+   ------------------------------------------------------------------
+   Sections, in document order:
+     1. Hero
+     2. Routing cards
+     3. Contact section (console + rail)
+     4. Map
+     5. FAQ overrides
+     6. Closing CTA
+     7. Dark mode
+     8. Responsive
+     9. Reduced motion
+   ------------------------------------------------------------------ */
 
-.hero-image {
-    background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
-    url('../../assets/photos/carousel8.jpg') center/cover;
-    min-height: 60vh;
+.contact-page-surface,
+.contact-routes,
+.contact-section,
+.map-section,
+.contact-closing {
+    --panel: #fff;
+    --panel-line: var(--text-dark);
+    --panel-shadow: 10px 10px 0px rgba(148, 69, 71, 0.2);
+    --panel-radius: 20px;
 }
 
-/* --- Moved from styles.css: contact-page-only rules --- */
+/* ================================================================
+   1. HERO
+   ================================================================ */
 
-.map-container {
-    max-width: 1190px;
-    margin: 0 auto;
-    background: white;
-    border-radius: 16px;
-    border: 3px solid #1a1a1a;
-    overflow: hidden;
-    box-shadow: 10px 10px 0px rgba(148, 69, 71, 0.2);
+.contact-hero {
+    background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.92) 100%),
+        url('../../assets/photos/carousel8.jpg') center/cover;
+    min-height: 68vh;
 }
 
-.map-placeholder {
-    height: 300px;
-    background: linear-gradient(135deg, #e0e0e0, #f0f0f0);
-    display: flex;
-    flex-direction: column;
+.contact-hero-eyebrow {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    color: #666;
-}
-
-.map-embed {
-    display: block;
-    width: 100%;
-    height: 350px;
-    border: 0;
-}
-
-.map-placeholder .map-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-}
-
-.map-embed {
-    width: 100%;
-    height: 300px;
-    border: none;
-}
-
-.meeting-schedule h3 {
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+    padding: 0.5rem 1.25rem;
+    border: 2px solid rgba(255, 215, 0, 0.7);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.25);
     font-family: 'Space Mono', monospace;
-    margin-bottom: 1rem;
-}
-
-.next-meeting {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.meeting-details {
-    opacity: 0.9;
-}
-
-.contact-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.content-container {
-    background: white;
-    padding: 3rem;
-    border-radius: 20px;
-    border: 3px solid var(--text-dark);
-    box-shadow: 10px 10px 0px rgba(148, 69, 71, 0.2);
-}
-
-.content-container h1 {
-    font-size: 3rem;
-    font-family: 'Space Mono', monospace;
-    color: var(--maroon-dark);
-    margin-bottom: 2rem;
-}
-
-.submit-btn {
-    font-family: 'Space Mono', monospace;
-    background: linear-gradient(135deg, var(--maroon-dark), var(--maroon-light));
-    color: #fff;
-    border: 3px solid var(--text-dark);
-    padding: 1.2rem 2.5rem;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    margin-top: 1rem;
-    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+    font-size: 0.8rem;
+    letter-spacing: 2px;
     text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.submit-btn:hover {
-    transform: translate(-3px, -3px);
-    box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(135deg, var(--maroon-light), var(--maroon-accent));
-}
-
-.contact-details {
-    margin-top: 4rem;
-    padding-top: 3rem;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-
-.contact-socials a {
-    color: var(--maroon-dark);
-    transition: all 0.3s ease;
-}
-
-.contact-socials a [data-lucide] {
-    width: 30px;
-    height: 30px;
-}
-
-.contact-socials a:hover {
     color: var(--accent-gold);
-    transform: translate(-3px, -3px);
+    animation: none;
+    opacity: 1;
 }
 
-.detail-item {
-    padding: 1.5rem;
-    background: rgba(148, 69, 71, 0.03);
-    border-radius: 16px;
-    border: 1px dashed rgba(148, 69, 71, 0.2);
+.contact-hero-stats {
+    list-style: none;
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2.5rem;
+    padding: 0;
+    opacity: 0;
+    animation: scaleIn 0.8s ease-out 0.9s forwards;
 }
 
-.detail-item h4 {
-    margin: 0;
-    font-size: 1.1rem;
+.contact-hero-stats li {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    padding: 0.85rem 1.4rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 14px;
+    backdrop-filter: blur(4px);
 }
 
-.detail-item p {
-    margin: 0;
-    font-family: var(--font-display);
-    color: var(--text-dark);
+.contact-hero-stats [data-lucide] {
+    width: 22px;
+    height: 22px;
+    color: var(--accent-gold);
+    flex-shrink: 0;
 }
 
-.meeting-schedule {
-    max-width: 600px;
-    margin: 0 auto;
-    background: white;
-    border: 3px solid var(--text-dark);
-    border-radius: 24px;
-    overflow: hidden;
-    box-shadow: 10px 10px 0px var(--maroon-dark);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.contact-hero-stats span {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    text-align: left;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.75);
 }
 
-.meeting-schedule:hover {
-    transform: scale(1.02);
-    box-shadow: 15px 15px 0px var(--maroon-light);
-}
-
-.schedule-header {
-    background: var(--maroon-dark);
-    color: white;
-    padding: 1.5rem;
-    border-bottom: 3px solid var(--text-dark);
-}
-
-.schedule-header h3 {
-    margin: 0;
+.contact-hero-stats strong {
     font-family: 'Space Mono', monospace;
-    font-size: 1.5rem;
+    font-size: 1.05rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #fff;
 }
 
-.schedule-body {
-    padding: 2.5rem;
+/* ================================================================
+   2. ROUTING CARDS
+   ================================================================ */
+
+.contact-routes {
+    padding: var(--spacing-xl) var(--spacing-md) var(--spacing-lg);
+    background: var(--bg-light);
 }
 
-.next-meeting {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--maroon-dark);
-    margin-bottom: 0.5rem;
+.contact-routes-head {
+    max-width: 700px;
+    margin: 0 auto var(--spacing-lg);
+    text-align: center;
 }
 
-.meeting-details {
-    font-family: 'Space Mono', monospace;
+.contact-routes-head p {
     color: var(--text-light);
     font-size: 1.1rem;
 }
 
-.contact-socials {
-    grid-column: 1 / -1;
+.contact-routes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.route-card {
     display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 2.25rem;
+    background: var(--panel, #fff);
+    border: 3px solid var(--text-dark);
+    border-radius: var(--panel-radius, 20px);
+    box-shadow: 8px 8px 0px rgba(148, 69, 71, 0.18);
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.route-card:hover {
+    transform: translate(-4px, -4px);
+    box-shadow: 12px 12px 0px rgba(148, 69, 71, 0.28);
+}
+
+.route-icon {
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    gap: 1.5rem;
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    border: 3px solid var(--text-dark);
+    background: linear-gradient(135deg, var(--accent-gold), #ffed4e);
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
 }
 
-.detail-item {
-    margin-bottom: 2rem;
+.route-icon [data-lucide] {
+    width: 26px;
+    height: 26px;
+    color: var(--text-dark);
 }
 
-.detail-item h4 {
-    margin-bottom: 0.5rem;
-    font-size: 1.2rem;
+.route-card h3 {
     font-family: 'Space Mono', monospace;
+    font-size: 1.3rem;
     color: var(--maroon-dark);
+    margin: 0;
 }
 
-/* --- MAP PLACEHOLDER --- */
-.map-section {
-    padding: 2rem;
-    background: linear-gradient(135deg, #f8f8f8 0%, #ececec 100%);
+.route-card p {
+    margin: 0;
+    color: var(--text-light);
+    line-height: 1.65;
+    flex-grow: 1;
 }
 
-/* --- CONTACT PAGE --- */
+.route-btn {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.75rem 1.4rem;
+    background: transparent;
+    border: 3px solid var(--maroon-dark);
+    border-radius: 12px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--maroon-dark);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.route-btn:hover,
+.route-btn:focus-visible {
+    background: var(--maroon-dark);
+    color: #fff;
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0px rgba(148, 69, 71, 0.35);
+}
+
+.route-btn [data-lucide] {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--transition-fast);
+}
+
+.route-btn:hover [data-lucide] {
+    transform: translateX(4px);
+}
+
+/* ================================================================
+   3. CONTACT SECTION
+   ================================================================ */
+
 .contact-section {
-    padding: var(--spacing-xl) var(--spacing-md);
-    background: radial-gradient(circle at top right, rgba(148, 69, 71, 0.05), transparent 40%),
-        radial-gradient(circle at bottom left, rgba(255, 215, 0, 0.05), transparent 40%),
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-xl);
+    background: radial-gradient(circle at top right, rgba(148, 69, 71, 0.06), transparent 45%),
+        radial-gradient(circle at bottom left, rgba(255, 215, 0, 0.07), transparent 45%),
         var(--bg-light);
 }
 
-/* --- SCHEDULE SECTION --- */
-.schedule-section {
-    padding: var(--spacing-lg) var(--spacing-md);
-    text-align: center;
+.contact-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 3rem;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-@media (max-width: 768px) {
-    .contact-container {
-        grid-template-columns: 1fr;
+/* --- Form console --- */
+
+.contact-console {
+    background: var(--panel, #fff);
+    border: 3px solid var(--text-dark);
+    border-radius: var(--panel-radius, 20px);
+    box-shadow: var(--panel-shadow, 10px 10px 0px rgba(148, 69, 71, 0.2));
+    overflow: hidden;
+}
+
+.console-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1.4rem;
+    background: var(--maroon-dark);
+    border-bottom: 3px solid var(--text-dark);
+    font-family: 'Space Mono', monospace;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.85rem;
+}
+
+.console-dots {
+    display: inline-flex;
+    gap: 0.45rem;
+}
+
+.console-dots i {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.console-dots i:first-child {
+    background: var(--accent-gold);
+}
+
+.console-title {
+    letter-spacing: 1px;
+}
+
+.console-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.75rem;
+}
+
+.console-led {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+    animation: contactLedPulse 2.4s ease-out infinite;
+}
+
+@keyframes contactLedPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6);
+    }
+
+    70% {
+        box-shadow: 0 0 0 8px rgba(74, 222, 128, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
     }
 }
 
-[data-theme="dark"] .detail-item {
-    background: rgba(255, 215, 0, 0.05);
-    border-color: rgba(255, 215, 0, 0.2);
+.console-body {
+    padding: 2.75rem;
 }
 
-/* --- MEETING SCHEDULE --- */
-.meeting-schedule {
+.contact-heading {
+    text-align: left;
+    margin-bottom: 0.5rem;
+}
+
+.contact-heading::after {
+    left: 0;
+    transform: none;
+}
+
+.console-lede {
+    margin-bottom: 2.25rem;
+    color: var(--text-light);
+}
+
+/* Topic chips */
+
+.topic-field {
+    border: none;
+    padding: 0;
+    margin: 0 0 2rem;
+}
+
+.topic-field legend {
+    padding: 0;
+    margin-bottom: 0.8rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--maroon-dark);
+}
+
+.topic-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.topic-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.topic-option span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.2rem;
+    background: #fdfdfd;
+    border: 3px solid var(--text-dark);
+    border-radius: 999px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.topic-option span [data-lucide] {
+    width: 16px;
+    height: 16px;
+}
+
+.topic-option:hover span {
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0px rgba(148, 69, 71, 0.2);
+}
+
+.topic-option input:checked+span {
     background: linear-gradient(135deg, var(--maroon-dark), var(--maroon-light));
-    padding: 2rem;
-    border-radius: 16px;
-    border: 3px solid #1a1a1a;
-    color: white;
-    text-align: center;
-    margin: 2rem auto;
-    max-width: 500px;
+    color: #fff;
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.25);
 }
 
-/* --- Contact form: honeypot, status banners, submit --- */
+.topic-option input:focus-visible+span {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 3px;
+}
+
+/* Fields */
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.contact-console .form-group {
+    margin-bottom: 1.75rem;
+}
+
+.field-error {
+    display: none;
+    margin: 0.6rem 0 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #a32020;
+}
+
+.field-error.is-visible {
+    display: block;
+}
+
+.form-group input.has-error,
+.form-group textarea.has-error {
+    border-color: #a32020;
+    box-shadow: 4px 4px 0px rgba(163, 32, 32, 0.2);
+}
+
+.contact-console textarea {
+    resize: vertical;
+    min-height: 150px;
+}
+
+.message-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.char-counter {
+    margin: 0.6rem 0 0;
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    white-space: nowrap;
+}
+
+.char-counter.is-near-limit {
+    color: #a32020;
+    font-weight: 700;
+}
 
 /* Visually hidden, but not display:none - bots skip hidden-by-display fields. */
 .contact-honeypot {
@@ -278,21 +464,62 @@
     border: 0;
 }
 
-.contact-heading {
-    text-align: left;
-    margin-bottom: 2rem;
+/* Submit */
+
+.submit-btn {
+    font-family: 'Space Mono', monospace;
+    background: linear-gradient(135deg, var(--maroon-dark), var(--maroon-light));
+    color: #fff;
+    border: 3px solid var(--text-dark);
+    padding: 1.2rem 2.5rem;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.submit-btn:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, var(--maroon-light), var(--maroon-accent));
 }
 
 .contact-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
     width: 100%;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
 }
 
 .contact-submit:disabled {
     opacity: 0.7;
     cursor: not-allowed;
     transform: none;
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
 }
+
+.console-privacy {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.console-privacy [data-lucide] {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* Status banners */
 
 .contact-form-status {
     display: none;
@@ -319,9 +546,198 @@
     color: #a32020;
 }
 
-/* --- Map facade: Google is only contacted once the visitor asks --- */
+/* --- Info rail --- */
+
+.contact-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    position: sticky;
+    top: 2rem;
+}
+
+.rail-photo {
+    background: var(--panel, #fff);
+    border: 3px solid var(--text-dark);
+    border-radius: var(--panel-radius, 20px);
+    box-shadow: 8px 8px 0px rgba(148, 69, 71, 0.18);
+    overflow: hidden;
+}
+
+.rail-photo img {
+    display: block;
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    border-bottom: 3px solid var(--text-dark);
+}
+
+.rail-photo-caption {
+    margin: 0;
+    padding: 0.9rem 1.25rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--text-light);
+}
+
+.rail-card {
+    padding: 2rem;
+    background: var(--panel, #fff);
+    border: 3px solid var(--text-dark);
+    border-radius: var(--panel-radius, 20px);
+    box-shadow: 8px 8px 0px rgba(148, 69, 71, 0.18);
+}
+
+.rail-card h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 1.4rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 1.15rem;
+    color: var(--maroon-dark);
+}
+
+.rail-list {
+    list-style: none;
+    display: grid;
+    gap: 1.1rem;
+    margin: 0;
+    padding: 0;
+}
+
+.rail-list li {
+    display: grid;
+    gap: 0.25rem;
+    padding-bottom: 1.1rem;
+    border-bottom: 1px dashed rgba(148, 69, 71, 0.25);
+}
+
+.rail-list li:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.rail-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+
+.rail-list a {
+    color: var(--maroon-dark);
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: border-color var(--transition-fast);
+    word-break: break-word;
+}
+
+.rail-list a:hover {
+    border-bottom-color: var(--accent-gold);
+}
+
+.rail-socials {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.6rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.rail-socials a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 3px solid var(--text-dark);
+    border-radius: 12px;
+    color: var(--maroon-dark);
+    background: #fdfdfd;
+    transition: all var(--transition-fast);
+}
+
+.rail-socials a [data-lucide] {
+    width: 20px;
+    height: 20px;
+}
+
+.rail-socials a:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 5px 5px 0px rgba(148, 69, 71, 0.3);
+    color: var(--accent-gold);
+    background: var(--maroon-dark);
+}
+
+.rail-schedule {
+    background: linear-gradient(135deg, var(--maroon-dark), var(--maroon-light));
+    color: #fff;
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.25);
+}
+
+.rail-schedule h3 {
+    color: #fff;
+    margin-bottom: 1rem;
+}
+
+.schedule-days {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0 0 0.35rem;
+}
+
+.schedule-time {
+    margin: 0 0 1rem;
+    font-size: 1.05rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.schedule-note {
+    margin: 0;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.25);
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ================================================================
+   4. MAP
+   ================================================================ */
+
+.map-section {
+    padding: var(--spacing-xl) var(--spacing-md);
+    background: linear-gradient(135deg, #f4f4f4 0%, #e9e9e9 100%);
+}
+
+.map-heading {
+    max-width: 700px;
+    margin: 0 auto var(--spacing-lg);
+    text-align: center;
+}
+
+.map-heading p {
+    font-family: 'Space Mono', monospace;
+    color: var(--text-light);
+}
+
+.map-container {
+    max-width: 1190px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: var(--panel-radius, 20px);
+    border: 3px solid var(--text-dark);
+    overflow: hidden;
+    box-shadow: var(--panel-shadow, 10px 10px 0px rgba(148, 69, 71, 0.2));
+}
+
+/* Map facade: Google is only contacted once the visitor asks */
 .contact-map-facade {
-    aspect-ratio: 16 / 9;
+    /* Matches the height of the iframe that replaces it, so nothing jumps on load. */
+    min-height: 420px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -329,17 +745,23 @@
     gap: 1rem;
     padding: 2rem;
     text-align: center;
-    background: linear-gradient(135deg, #e8e8e8, #f4f4f4);
+    background:
+        repeating-linear-gradient(45deg, rgba(148, 69, 71, 0.04) 0 12px, transparent 12px 24px),
+        linear-gradient(135deg, #ececec, #f6f6f6);
 }
 
 .contact-map-facade.is-loaded {
     display: block;
     padding: 0;
-    aspect-ratio: auto;
+    min-height: 0;
+    background: none;
 }
 
-.contact-map-facade .map-embed {
-    height: 350px;
+.map-embed {
+    display: block;
+    width: 100%;
+    height: 420px;
+    border: 0;
 }
 
 .contact-map-caption {
@@ -379,60 +801,174 @@
     color: var(--text-light);
 }
 
-/* --- Dark mode --- */
-[data-theme="dark"] .contact-section {
+/* ================================================================
+   5. FAQ (page-level overrides on the shared accordion)
+   ================================================================ */
+
+.faq-section .faq-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    align-items: start;
+    gap: 1.25rem;
+    max-width: 1100px;
+}
+
+.faq-section .faq-item {
+    margin-bottom: 0;
+}
+
+/* ================================================================
+   6. CLOSING CTA
+   ================================================================ */
+
+.contact-closing {
+    padding: var(--spacing-xl) var(--spacing-md);
+    background: var(--bg-light);
+}
+
+.closing-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 3.5rem 2.5rem;
+    text-align: center;
+    background: linear-gradient(135deg, var(--maroon-dark), var(--maroon-light));
+    border: 3px solid var(--text-dark);
+    border-radius: 24px;
+    box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.25);
+    color: #fff;
+}
+
+.closing-inner h2 {
+    color: #fff;
+    margin-bottom: 1rem;
+}
+
+.closing-inner h2::after {
+    background: var(--accent-gold);
+}
+
+.closing-inner p {
+    max-width: 560px;
+    margin: 0 auto 2rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.closing-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    justify-content: center;
+}
+
+/* ================================================================
+   7. DARK MODE
+   ================================================================ */
+
+[data-theme="dark"] .contact-routes,
+[data-theme="dark"] .contact-section,
+[data-theme="dark"] .contact-closing {
     background: #181818;
 }
 
+[data-theme="dark"] .contact-routes-head p,
+[data-theme="dark"] .console-lede,
+[data-theme="dark"] .console-privacy,
+[data-theme="dark"] .route-card p,
+[data-theme="dark"] .rail-photo-caption,
+[data-theme="dark"] .rail-label,
+[data-theme="dark"] .char-counter,
+[data-theme="dark"] .map-heading p,
+[data-theme="dark"] .contact-map-note {
+    color: #9e9e9e;
+}
+
+[data-theme="dark"] .route-card,
+[data-theme="dark"] .contact-console,
+[data-theme="dark"] .rail-card,
+[data-theme="dark"] .rail-photo,
 [data-theme="dark"] .map-container {
     background: #1e1e1e;
     border-color: #444;
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .rail-photo img,
+[data-theme="dark"] .console-bar {
+    border-color: #444;
+}
+
+[data-theme="dark"] .route-card h3,
+[data-theme="dark"] .rail-card h3 {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .route-btn {
+    border-color: #d4a0a1;
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .route-btn:hover,
+[data-theme="dark"] .route-btn:focus-visible {
+    background: #d4a0a1;
+    color: #1a1a1a;
+}
+
+[data-theme="dark"] .topic-option span {
+    background: #262626;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .rail-socials a {
+    background: #262626;
+    border-color: #444;
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .rail-socials a:hover {
+    color: var(--accent-gold);
+}
+
+[data-theme="dark"] .rail-list a {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .rail-list li {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .rail-socials {
+    border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .rail-schedule {
+    background: linear-gradient(135deg, #5c1f20, #7a3a3c);
+}
+
+[data-theme="dark"] .rail-schedule h3 {
+    color: #fff;
+}
+
+[data-theme="dark"] .map-section {
+    background: #141414;
 }
 
 [data-theme="dark"] .contact-map-facade {
-    background: linear-gradient(135deg, #202020, #262626);
+    background:
+        repeating-linear-gradient(45deg, rgba(255, 215, 0, 0.03) 0 12px, transparent 12px 24px),
+        linear-gradient(135deg, #202020, #262626);
 }
 
 [data-theme="dark"] .contact-map-caption {
     color: #d4a0a1;
 }
 
-[data-theme="dark"] .contact-map-note {
-    color: #999;
+[data-theme="dark"] .field-error {
+    color: #ffb0b0;
 }
 
-[data-theme="dark"] .contact-details {
-    border-top-color: rgba(255, 255, 255, 0.12);
-}
-
-[data-theme="dark"] .detail-item p {
-    color: #bbb;
-}
-
-[data-theme="dark"] .contact-socials {
-    border-top-color: rgba(255, 255, 255, 0.12);
-}
-
-[data-theme="dark"] .contact-socials a {
-    color: #d4a0a1;
-}
-
-[data-theme="dark"] .contact-socials a:hover {
-    color: var(--accent-gold);
-}
-
-[data-theme="dark"] .schedule-section {
-    background: #181818;
-}
-
-[data-theme="dark"] .meeting-schedule h3,
-[data-theme="dark"] .schedule-header h3,
-[data-theme="dark"] .next-meeting {
-    color: #fff;
-}
-
-[data-theme="dark"] .meeting-details {
-    color: rgba(255, 255, 255, 0.85);
+[data-theme="dark"] .char-counter.is-near-limit {
+    color: #ffb0b0;
 }
 
 [data-theme="dark"] .contact-form-status--success {
@@ -447,18 +983,54 @@
     color: #ffb0b0;
 }
 
-/* --- Responsive --- */
-@media (max-width: 768px) {
+/* ================================================================
+   8. RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 1024px) {
     .contact-container {
         grid-template-columns: 1fr;
     }
 
-    .image-container {
-        order: 2;
+    .contact-rail {
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+    .console-body {
+        padding: 1.75rem;
     }
 
-    .content-container {
-        padding: 2rem;
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .contact-hero-stats {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    /* Keep the eyebrow clear of the fixed MENU button. */
+    .contact-hero .hero-content {
+        padding-top: 5.5rem;
+    }
+
+    .contact-map-facade {
+        min-height: 320px;
+    }
+
+    .route-card {
+        padding: 1.75rem;
+    }
+
+    .closing-inner {
+        padding: 2.5rem 1.5rem;
+    }
+
+    .map-embed {
+        height: 320px;
     }
 }
 
@@ -469,5 +1041,34 @@
 
     .contact-map-caption {
         font-size: 0.95rem;
+    }
+
+    .topic-options {
+        flex-direction: column;
+    }
+
+    .topic-option span {
+        justify-content: center;
+    }
+}
+
+/* ================================================================
+   9. REDUCED MOTION
+   ================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .console-led,
+    .contact-hero-stats {
+        animation: none;
+        opacity: 1;
+    }
+
+    .route-card:hover,
+    .route-btn:hover,
+    .rail-socials a:hover,
+    .submit-btn:hover,
+    .contact-map-load:hover {
+        transform: none;
     }
 }
