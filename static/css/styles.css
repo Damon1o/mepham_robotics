@@ -1135,7 +1135,6 @@ footer::before {
    ============================================ */
 
 
-
 /* --- PHOTO CAROUSEL --- */
 .photo-carousel-section {
     background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
@@ -1235,7 +1234,6 @@ footer::before {
 }
 
 
-
 /* --- ANIMATED STAT COUNTER --- */
 .stat-number {
     display: inline-block;
@@ -1256,15 +1254,6 @@ footer::before {
         transform: scale(1.1);
     }
 }
-
-
-
-
-
-
-
-
-
 
 
 @keyframes backgroundPulse {
@@ -1290,7 +1279,6 @@ footer::before {
         transform: translateX(-50%);
     }
 }
-
 
 
 /* --- TOAST NOTIFICATIONS --- */
@@ -1749,49 +1737,6 @@ footer::before {
     }
 }
 
-/* --- MAP PLACEHOLDER --- */
-.map-section {
-    padding: 2rem;
-    background: linear-gradient(135deg, #f8f8f8 0%, #ececec 100%);
-}
-
-.map-container {
-    max-width: 1190px;
-    margin: 0 auto;
-    background: white;
-    border-radius: 16px;
-    border: 3px solid #1a1a1a;
-    overflow: hidden;
-    box-shadow: 10px 10px 0px rgba(148, 69, 71, 0.2);
-}
-
-.map-placeholder {
-    height: 300px;
-    background: linear-gradient(135deg, #e0e0e0, #f0f0f0);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #666;
-}
-
-.map-embed {
-    display: block;
-    width: 100%;
-    height: 350px;
-    border: 0;
-}
-
-.map-placeholder .map-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-}
-
-.map-embed {
-    width: 100%;
-    height: 300px;
-    border: none;
-}
 
 /* --- SOCIAL LINKS --- */
 .social-section {
@@ -1856,31 +1801,6 @@ footer::before {
     border-color: var(--maroon-dark);
 }
 
-/* --- MEETING SCHEDULE --- */
-.meeting-schedule {
-    background: linear-gradient(135deg, var(--maroon-dark), var(--maroon-light));
-    padding: 2rem;
-    border-radius: 16px;
-    border: 3px solid #1a1a1a;
-    color: white;
-    text-align: center;
-    margin: 2rem auto;
-    max-width: 500px;
-}
-
-.meeting-schedule h3 {
-    font-family: 'Space Mono', monospace;
-    margin-bottom: 1rem;
-}
-
-.next-meeting {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.meeting-details {
-    opacity: 0.9;
-}
 
 /* --- FILTER TABS --- */
 .filter-tabs {
@@ -2677,106 +2597,6 @@ footer::before {
     overflow: hidden;
 }
 
-/* --- CONTACT PAGE --- */
-.contact-section {
-    padding: var(--spacing-xl) var(--spacing-md);
-    background: radial-gradient(circle at top right, rgba(148, 69, 71, 0.05), transparent 40%),
-        radial-gradient(circle at bottom left, rgba(255, 215, 0, 0.05), transparent 40%),
-        var(--bg-light);
-}
-
-.contact-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.content-container {
-    background: white;
-    padding: 3rem;
-    border-radius: 20px;
-    border: 3px solid var(--text-dark);
-    box-shadow: 10px 10px 0px rgba(148, 69, 71, 0.2);
-}
-
-.content-container h1 {
-    font-size: 3rem;
-    font-family: 'Space Mono', monospace;
-    color: var(--maroon-dark);
-    margin-bottom: 2rem;
-}
-
-.submit-btn {
-    font-family: 'Space Mono', monospace;
-    background: linear-gradient(135deg, var(--maroon-dark), var(--maroon-light));
-    color: #fff;
-    border: 3px solid var(--text-dark);
-    padding: 1.2rem 2.5rem;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    margin-top: 1rem;
-    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.submit-btn:hover {
-    transform: translate(-3px, -3px);
-    box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(135deg, var(--maroon-light), var(--maroon-accent));
-}
-
-.contact-details {
-    margin-top: 4rem;
-    padding-top: 3rem;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-
-.contact-socials a {
-    color: var(--maroon-dark);
-    transition: all 0.3s ease;
-}
-
-.contact-socials a [data-lucide] {
-    width: 30px;
-    height: 30px;
-}
-
-.contact-socials a:hover {
-    color: var(--accent-gold);
-    transform: translate(-3px, -3px);
-}
-
-.detail-item {
-    padding: 1.5rem;
-    background: rgba(148, 69, 71, 0.03);
-    border-radius: 16px;
-    border: 1px dashed rgba(148, 69, 71, 0.2);
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.detail-item h4 {
-    margin: 0;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.detail-item p {
-    margin: 0;
-    font-family: var(--font-display);
-    color: var(--text-dark);
-}
 
 .form-group {
     margin-bottom: 2rem;
@@ -2851,67 +2671,6 @@ footer::before {
     background-color: #fff;
 }
 
-/* --- SCHEDULE SECTION --- */
-.schedule-section {
-    padding: var(--spacing-lg) var(--spacing-md);
-    text-align: center;
-}
-
-.meeting-schedule {
-    max-width: 600px;
-    margin: 0 auto;
-    background: white;
-    border: 3px solid var(--text-dark);
-    border-radius: 24px;
-    overflow: hidden;
-    box-shadow: 10px 10px 0px var(--maroon-dark);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.meeting-schedule:hover {
-    transform: scale(1.02);
-    box-shadow: 15px 15px 0px var(--maroon-light);
-}
-
-.schedule-header {
-    background: var(--maroon-dark);
-    color: white;
-    padding: 1.5rem;
-    border-bottom: 3px solid var(--text-dark);
-}
-
-.schedule-header h3 {
-    margin: 0;
-    font-family: 'Space Mono', monospace;
-    font-size: 1.5rem;
-}
-
-.schedule-body {
-    padding: 2.5rem;
-}
-
-.next-meeting {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--maroon-dark);
-    margin-bottom: 0.5rem;
-}
-
-.meeting-details {
-    font-family: 'Space Mono', monospace;
-    color: var(--text-light);
-    font-size: 1.1rem;
-}
-
-.contact-socials {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: center;
-    gap: 1.5rem;
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
 
 .logout-link {
     margin-top: auto !important;
@@ -2993,16 +2752,6 @@ footer::before {
     font-size: 1.1rem;
 }
 
-.detail-item {
-    margin-bottom: 2rem;
-}
-
-.detail-item h4 {
-    margin-bottom: 0.5rem;
-    font-size: 1.2rem;
-    font-family: 'Space Mono', monospace;
-    color: var(--maroon-dark);
-}
 
 .social-links {
     display: flex;
@@ -3039,11 +2788,6 @@ footer::before {
     transition: filter 0.3s ease;
 }
 
-@media (max-width: 768px) {
-    .contact-container {
-        grid-template-columns: 1fr;
-    }
-}
 
 /* --- TEAM PAGES --- */
 .team-grid {
@@ -3212,10 +2956,6 @@ footer::before {
     color: #999;
 }
 
-[data-theme="dark"] .detail-item {
-    background: rgba(255, 215, 0, 0.05);
-    border-color: rgba(255, 215, 0, 0.2);
-}
 
 [data-theme="dark"] .newsletter-form input {
     background: #2a2a2a;
@@ -3234,8 +2974,6 @@ footer::before {
 [data-theme="dark"] .breadcrumb span {
     color: #aaa;
 }
-
-
 
 
 /* ============================================
@@ -4081,7 +3819,6 @@ footer::before {
 [data-theme="dark"] .sponsor-form h3 {
     color: #d4a0a1;
 }
-
 
 
 [data-theme="dark"] .tool-item {

@@ -379,8 +379,8 @@ function showToast(message, type = 'info') {
 
     forms.forEach(form => {
         form.addEventListener('submit', function (e) {
-            // Forms marked data-native-submit (auth pages), admin forms, and the chatbot post normally
-            if (this.hasAttribute('data-native-submit') || this.id === 'chatbot-form' || this.getAttribute('action')?.startsWith('/admin')) {
+            // Forms marked data-native-submit (auth pages), the contact form, admin forms, and the chatbot post normally
+            if (this.hasAttribute('data-native-submit') || this.id === 'contact-form' || this.id === 'chatbot-form' || this.getAttribute('action')?.startsWith('/admin')) {
                 return;
             }
 
@@ -409,11 +409,7 @@ function showToast(message, type = 'info') {
             const formData = new FormData();
 
             // Handle different form types
-            if (this.id === 'contact-form') {
-                formData.append(ENTRY_IDS.name, this.querySelector('[name="name"]')?.value || this.querySelector('[name*="354100800"]')?.value);
-                formData.append(ENTRY_IDS.email, this.querySelector('[name="email"]')?.value || this.querySelector('[name*="640342432"]')?.value);
-                formData.append(ENTRY_IDS.message, this.querySelector('[name="message"]')?.value || this.querySelector('[name*="1090696951"]')?.value);
-            } else if (this.id === 'sponsorForm') {
+            if (this.id === 'sponsorForm') {
                 const company = this.querySelector('[name="company"]')?.value || '';
                 const email = this.querySelector('[name="email"]')?.value || '';
                 const level = this.querySelector('select')?.value || '';
@@ -445,22 +441,9 @@ function showToast(message, type = 'info') {
             }).then(() => {
                 showToast('Success! Data transmitted.', 'success');
                 this.reset();
-
-                // Show inline success if it exists (for Contact page legacy support)
-                const successMsg = document.getElementById('form-success');
-                if (successMsg) {
-                    successMsg.style.display = 'block';
-                    setTimeout(() => { successMsg.style.display = 'none'; }, 6000);
-                }
             }).catch((err) => {
                 console.error('Submission error:', err);
                 showToast('Transmission failed. Please try again.', 'error');
-
-                const errorMsg = document.getElementById('form-error');
-                if (errorMsg) {
-                    errorMsg.style.display = 'block';
-                    setTimeout(() => { errorMsg.style.display = 'none'; }, 6000);
-                }
             }).finally(() => {
                 if (submitBtn) {
                     submitBtn.disabled = false;
@@ -485,6 +468,89 @@ function showToast(message, type = 'info') {
 })();
 
 
+
+// --- CONTACT FORM (posts to the Flask API, not Google Forms) ---
+(function initContactForm() {
+    const form = document.getElementById('contact-form');
+    if (!form) return;
+
+    const successBanner = document.getElementById('form-success');
+    const errorBanner = document.getElementById('form-error');
+    let hideTimer = null;
+
+    function showBanner(banner, text) {
+        [successBanner, errorBanner].forEach(el => el?.classList.remove('is-visible'));
+        if (!banner) return;
+        if (text) banner.textContent = text;
+        banner.classList.add('is-visible');
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => banner.classList.remove('is-visible'), 6000);
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Transmitting...';
+        }
+
+        const payload = {
+            name: form.querySelector('[name="name"]')?.value || '',
+            email: form.querySelector('[name="email"]')?.value || '',
+            message: form.querySelector('[name="message"]')?.value || '',
+            website: form.querySelector('[name="website"]')?.value || ''
+        };
+
+        try {
+            const response = await fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (response.ok) {
+                form.reset();
+                showBanner(successBanner);
+                showToast('Message sent!', 'success');
+            } else {
+                showBanner(errorBanner, data.error || 'Something went wrong. Please try again.');
+                showToast(data.error || 'Message not sent.', 'error');
+            }
+        } catch (err) {
+            console.error('Contact submission error:', err);
+            showBanner(errorBanner, 'Could not reach the server. Please try again later.');
+            showToast('Could not reach the server.', 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+    });
+})();
+
+// --- MAP FACADE (only contacts Google once the visitor asks for the map) ---
+(function initMapFacade() {
+    const facade = document.querySelector('.contact-map-facade');
+    if (!facade) return;
+
+    const button = facade.querySelector('.contact-map-load');
+    button?.addEventListener('click', () => {
+        const iframe = document.createElement('iframe');
+        iframe.src = facade.dataset.mapSrc;
+        iframe.className = 'map-embed';
+        iframe.title = 'Mepham High School location map';
+        iframe.loading = 'lazy';
+        iframe.referrerPolicy = 'no-referrer-when-downgrade';
+        iframe.allowFullscreen = true;
+        facade.replaceChildren(iframe);
+        facade.classList.add('is-loaded');
+    });
+})();
 
 // --- IMAGE LAZY LOADING WITH FADE ---
 (function initLazyLoad() {
@@ -537,10 +603,12 @@ function showToast(message, type = 'info') {
             faqItems.forEach(other => {
                 if (other !== item) {
                     other.classList.remove('active');
+                    other.querySelector('.faq-question')?.setAttribute('aria-expanded', 'false');
                 }
             });
             // Toggle current item
-            item.classList.toggle('active');
+            const nowOpen = item.classList.toggle('active');
+            question.setAttribute('aria-expanded', String(nowOpen));
         });
     });
 })();

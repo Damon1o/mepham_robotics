@@ -31,7 +31,7 @@ remains in the repo after Resend was removed), a public message archive, and a C
 | 3 | Messages land in a Google Sheet, outside the admin panel the club already uses | — |
 | 4 | Six inline `style=` attributes / blocks in the template, against the project rule that CSS lives in `static/css/pages/<page>.css` | `templates/contact.html` (h2, submit button, `#form-success`, `#form-error`) |
 | 5 | `static/css/pages/contact.css` holds only the hero override; every other contact rule sits in the 86 KB shared `styles.css` | `static/css/styles.css:2681-2760+` |
-| 6 | Zero `[data-theme="dark"]` rules for `.contact-section`, `.content-container`, `.detail-item`, `.faq-*`, `.map-*`, `.schedule-*` — the form card is hardcoded `background: white` | `static/css/styles.css` |
+| 6 | Dark mode is only half covered: grouped rules exist for `.content-container`, `.meeting-schedule`, `.detail-item`, `.detail-item h4` and `.map-section`, but nothing for `.contact-section`, `.contact-socials`, `.map-container`, `.schedule-section`, `.next-meeting`, `.meeting-details` or `.detail-item p` | `static/css/styles.css` |
 | 7 | `<label>` elements have no `for`, inputs have no `id`; FAQ buttons have no `aria-expanded`; the map `<iframe>` has no `title` | `templates/contact.html` |
 | 8 | Contact email is a personal district address (`damlin@bmchsd.com`); Facebook and X links point at bare `facebook.com` / `x.com` | `templates/contact.html` |
 | 9 | Google Maps iframe loads on every page view (third-party cookies, ~1 MB) even if nobody looks at the map | `templates/contact.html` |
@@ -155,7 +155,10 @@ Section order is unchanged — the page's structure is sound; it is the behavior
 - New classes are prefixed `contact-` where they are new (`contact-form-status`, `contact-honeypot`,
   `contact-map-facade`) so nothing collides.
 - Every class that sets a color or background gets a `[data-theme="dark"]` variant, following the site
-  convention: card background `#1e1e1e`, border `#444`, heading `#d4a0a1`, body text `#bbb`.
+  convention: card background `#1e1e1e`, border `#444`, heading `#d4a0a1`, body text `#bbb`. The existing
+  dark-mode rules are grouped across many pages' selectors (`[data-theme="dark"] .tier-card, ... .content-container, ...`);
+  those grouped rules stay in `styles.css` untouched, and the contact page's missing variants are added in
+  `contact.css`, which loads after.
 - Reuse existing tokens only: `--maroon-dark`, `--maroon-light`, `--accent-gold`, `--text-dark`,
   `--text-light`, `--bg-light`, `--spacing-*`, `--transition-base`. No new design language.
 
