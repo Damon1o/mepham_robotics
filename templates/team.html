@@ -2,18 +2,47 @@
 
 {% block title %}Team {{ team.team_number }} | Mepham Robotics Club{% endblock %}
 {% block meta_description %}Meet Team {{ team.team_number }} of the Mepham Robotics Club. View our robot specs, team
-members, and season goals.{% endblock %}
+members, competition results, and season goals.{% endblock %}
 {% block og_image %}{{ get_image_url(team.hero_image, external=True) }}{% endblock %}
 
 {% block page_styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team.css') }}?v=1">
 {% endblock %}
+
+{% block page_scripts %}
+{% if live_enabled and team.events %}
+<script type="application/json" id="team_event_photos">{{ event_photos|tojson }}</script>
+{% endif %}
+<script src="{{ url_for('static', filename='js/team.js') }}?v=1" defer></script>
+{% endblock %}
+
+{% set specs = [
+('Drive Train', team.specs.get('drive_train')),
+('Lift System', team.specs.get('lift_system')),
+('Intake', team.specs.get('intake')),
+('Auton Consistency', team.specs.get('auton_consistency'))
+]|selectattr('1')|list %}
+{% set award_total = team_awards|sum(attribute='count') %}
+{% set groups = team.members|roster_groups %}
+{% set has_notebook = team.notebook_link and team.notebook_link != '#' %}
 
 {% block content %}
 <div class="hero-image fade-in-section" style="--team-hero-image: url('{{ get_image_url(team.hero_image) }}')">
     <div class="hero-content">
         <h1>Team {{ team.team_number }}</h1>
         <p>{{ team.nickname or 'Build. Code. Compete.' }}</p>
+
+        {% if team.members or award_total or team.since or team.worlds_appearances or team.division %}
+        <ul class="identity-bar">
+            {% if team.division %}<li class="identity-stat identity-division">{{ team.division }}</li>{% endif %}
+            {% if team.members %}<li class="identity-stat">{{ team.members|length }} Members</li>{% endif %}
+            {% if award_total %}<li class="identity-stat">{{ award_total }} Awards</li>{% endif %}
+            {% if team.since %}<li class="identity-stat">Since {{ team.since }}</li>{% endif %}
+            {% if team.worlds_appearances %}
+            <li class="identity-stat identity-worlds">{{ team.worlds_appearances }}&times; Worlds</li>
+            {% endif %}
+        </ul>
+        {% endif %}
     </div>
     <div class="scroll-indicator"></div>
 </div>
@@ -24,84 +53,229 @@ members, and season goals.{% endblock %}
     <span class="current">Team {{ team.team_number }}</span>
 </nav>
 
-<section id="team" class="fade-in-section">
-    <div class="text-center">
-        <h2 class="ripple">Meet the Team</h2>
-    </div>
-    <div class="team-grid">
-        {% for member in team.members %}
-        <div class="team-card">
-            <img src="{{ get_image_url(member.photo) }}" alt="{{ member.name }}" class="team-img" loading="lazy">
-            <h3>{{ member.name }}</h3>
-            <p>{{ member.role }}</p>
+{% if seasons|length > 1 %}
+<nav class="season-switcher" aria-label="Season archive">
+    <span class="season-switcher-label">Season</span>
+    {% for season in seasons %}
+    <a class="season-pill {{ 'is-active' if season == active_season }}"
+        href="{{ url_for('team_page', team_number=team.team_number, season=season) }}" {% if season==active_season
+        %}aria-current="page" {% endif %}>{{ season }}</a>
+    {% endfor %}
+</nav>
+{% endif %}
+
+{% if live_enabled %}
+<!-- LIVE SKILLS (filled by static/js/team.js; removed if there is no live data) -->
+<section id="skills-panel" class="skills-panel fade-in-section" data-live-url="{{ url_for('team_live_data', team_number=team.team_number) }}"
+    aria-live="polite" aria-busy="true" hidden>
+    <div class="skills-inner">
+        <h2 class="ripple">World Skills Standing</h2>
+        <div class="skills-grid">
+            <div class="skills-tile skills-tile-primary">
+                <span class="skills-label">Combined</span>
+                <span class="skills-value" data-field="combined">—</span>
+            </div>
+            <div class="skills-tile">
+                <span class="skills-label">Driver</span>
+                <span class="skills-value" data-field="driver">—</span>
+            </div>
+            <div class="skills-tile">
+                <span class="skills-label">Programming</span>
+                <span class="skills-value" data-field="programming">—</span>
+            </div>
+            <div class="skills-tile">
+                <span class="skills-label">World Rank</span>
+                <span class="skills-value" data-field="rank">—</span>
+                <span class="skills-trend" data-field="trend"></span>
+            </div>
         </div>
-        {% endfor %}
+        <p class="skills-meta">
+            <span data-field="updated"></span>
+            <a class="skills-profile" data-field="profile" href="#" target="_blank" rel="noopener">View on RobotEvents</a>
+        </p>
     </div>
 </section>
+
+<!-- SEASON SCOREBOARD -->
+<section id="scoreboard-band" class="scoreboard-band fade-in-section" aria-live="polite" hidden>
+    <div class="scoreboard-inner">
+        <h2 class="ripple">This Season</h2>
+        <div class="scoreboard-grid">
+            <div class="scoreboard-stat">
+                <span class="scoreboard-value" data-field="competitions">0</span>
+                <span class="scoreboard-label">Competitions</span>
+                <span class="scoreboard-breakdown" data-field="breakdown"></span>
+            </div>
+            <div class="scoreboard-stat">
+                <span class="scoreboard-value" data-field="awards">0</span>
+                <span class="scoreboard-label">Awards</span>
+            </div>
+            <div class="scoreboard-stat scoreboard-crown" data-field="crown-wrap" hidden>
+                <span class="scoreboard-value" data-field="triple_crowns">0</span>
+                <span class="scoreboard-label">Triple Crowns</span>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
 
 {% include "partials/awards_grid.html" %}
 
-<section class="robot-showcase fade-in-section">
-    <h2 class="ripple">Interactive 3D View: "{{ team.nickname }}"</h2>
-    <div class="viewer-3d-container">
-        {% if team.stl_path %}
-        <p class="viewer-label">[ 3D CAD MODEL VIEWER: {{ team.stl_path.split('/')[-1] }} ]</p>
-        {% else %}
-        <p class="viewer-label">[ 3D CAD MODEL VIEWER PLACEHOLDER ]</p>
-        {% endif %}
-        <div class="viewer-controls">
-            <button class="viewer-btn">Rotate</button>
+{% if live_enabled %}
+<!-- EVENT RESULTS (filled by static/js/team.js) -->
+<section id="results-section" class="results-section fade-in-section" aria-live="polite" hidden>
+    <div class="text-center">
+        <h2 class="ripple">Competition Results</h2>
+    </div>
+    <div class="results-list" data-field="results"></div>
+</section>
+{% endif %}
+
+<!-- ROSTER -->
+<section id="team" class="roster-section fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">Meet the Team</h2>
+    </div>
+
+    {% if groups %}
+    {% for subteam, members in groups %}
+    <div class="roster-group">
+        {% if subteam %}<h3 class="roster-group-title">{{ subteam }}</h3>{% endif %}
+        <div class="roster-grid">
+            {% for member in members %}
+            <article class="roster-card">
+                {% set photo = member.photo|real_photo %}
+                {% if photo %}
+                <img src="{{ get_image_url(photo) }}" alt="{{ member.name }}" class="roster-photo"
+                    loading="lazy">
+                {% else %}
+                <span class="roster-initials" aria-hidden="true">{{ member.name|initials }}</span>
+                {% endif %}
+                <h4 class="roster-name">{{ member.name }}</h4>
+                {% set roles = member|member_roles %}
+                {% if roles %}
+                <ul class="roster-roles">
+                    {% for role in roles %}
+                    <li class="roster-role-chip">{{ role }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if member.since %}<p class="roster-since">Since {{ member.since }}</p>{% endif %}
+            </article>
+            {% endfor %}
         </div>
     </div>
+    {% endfor %}
+    {% else %}
+    <p class="roster-empty">Roster coming soon for this team.</p>
+    {% endif %}
+</section>
+
+<!-- ROBOT SHOWCASE -->
+<section class="robot-showcase fade-in-section">
+    <h2 class="ripple">Our Robot{% if team.nickname %}: "{{ team.nickname }}"{% endif %}</h2>
+
+    {% if team.stl_path %}
+    <div class="viewer-shell">
+        <div id="robot-viewer" class="viewer-canvas" data-stl="{{ get_image_url(team.stl_path) }}" role="img"
+            aria-label="Interactive 3D model of {{ team.nickname or team.team_number }}">
+            <p class="viewer-status">Loading 3D model…</p>
+        </div>
+        <div class="viewer-controls">
+            <button type="button" class="viewer-btn" id="viewer-reset">Reset View</button>
+            <span class="viewer-hint">Drag to rotate · scroll to zoom</span>
+        </div>
+    </div>
+    {% elif robot_photos %}
+    <div class="viewer-gallery">
+        {% for photo in robot_photos %}
+        <img src="{{ get_image_url(photo) }}" alt="{{ team.nickname or team.team_number }} robot photo"
+            class="viewer-gallery-photo" loading="lazy">
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="viewer-empty">CAD model not published for this robot yet.</p>
+    {% endif %}
+
     <p class="robot-tagline">"{{ team.tagline or 'Precision. Power. Performance.' }}"</p>
 </section>
 
+{% if specs %}
 <!-- ROBOT SPECS -->
 <section class="robot-specs fade-in-section">
-    <h2>Technical Specifications</h2>
+    <h2 class="ripple">Technical Specifications</h2>
     <div class="specs-container">
+        {% for label, value in specs %}
         <div class="spec-card">
-            <div class="spec-label">Drive Train</div>
-            <div class="spec-value">{{ team.specs.drive_train or 'TBA' }}</div>
+            <div class="spec-label">{{ label }}</div>
+            <div class="spec-value">{{ value }}</div>
         </div>
-        <div class="spec-card">
-            <div class="spec-label">Lift System</div>
-            <div class="spec-value">{{ team.specs.lift_system or 'TBA' }}</div>
-        </div>
-        <div class="spec-card">
-            <div class="spec-label">Intake</div>
-            <div class="spec-value">{{ team.specs.intake or 'TBA' }}</div>
-        </div>
-        <div class="spec-card">
-            <div class="spec-label">Auton Consistency</div>
-            <div class="spec-value">{{ team.specs.auton_consistency or 'TBA' }}</div>
-        </div>
+        {% endfor %}
     </div>
-    <div class="text-center" style="margin-top: 3rem;">
-        <a href="{{ team.notebook_link or '#' }}" class="download-btn">
+    {% if has_notebook %}
+    <div class="text-center specs-cta">
+        <a href="{{ team.notebook_link }}" class="download-btn">
             <i data-lucide="book" class="download-icon"></i>
             Engineering Notebook
         </a>
     </div>
+    {% endif %}
 </section>
+{% endif %}
 
+{% if team.goals %}
 <!-- SEASON GOALS -->
 <section class="goals-section fade-in-section">
     <h2 class="ripple">Season Goals</h2>
     <div class="goals-container">
         {% for goal in team.goals %}
-        <div class="goal-item">
+        {% set progress = [[goal.progress|default(0, true)|int, 0]|max, 100]|min %}
+        <div class="goal-item {{ 'goal-complete' if progress == 100 }}">
             <div class="goal-header">
-                <span class="goal-name">{{ goal.name }}</span>
-                <span class="goal-percent">{{ goal.progress }}%</span>
+                <span class="goal-name">
+                    {% if progress == 100 %}<i data-lucide="check" class="goal-check"></i>{% endif %}
+                    {{ goal.name }}
+                </span>
+                <span class="goal-percent">{{ progress }}%</span>
             </div>
-            <div class="progress-bar">
-                <div class="progress-fill" data-progress="{{ goal.progress|default(0) }}"
-                    style="width: {{ goal.progress|default(0) }}%;">
-                </div>
+            <div class="progress-bar" role="progressbar" aria-label="{{ goal.name }}"
+                aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-fill" data-progress="{{ progress }}"></div>
             </div>
         </div>
         {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if team.journey %}
+<!-- TEAM JOURNEY -->
+<section class="journey-section fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">Team Journey</h2>
+    </div>
+    <ol class="journey-list">
+        {% for milestone in team.journey %}
+        <li class="journey-item">
+            <span class="journey-date">{{ milestone.date }}</span>
+            <div class="journey-body">
+                <h3 class="journey-title">{{ milestone.title }}</h3>
+                {% if milestone.description %}<p>{{ milestone.description }}</p>{% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ol>
+</section>
+{% endif %}
+
+<!-- JOIN CTA -->
+<section class="teamcta-band fade-in-section">
+    <h2 class="ripple">Interested?</h2>
+    <p class="teamcta-copy">Mepham students can join any time — no experience needed. Come find us in the shop,
+        or reach out and we'll show you around.</p>
+    <div class="teamcta-actions">
+        <a href="{{ url_for('contact') }}" class="cta-button cta-primary">Join the Club</a>
+        <a href="{{ url_for('achievements') }}" class="cta-button">All Achievements</a>
     </div>
 </section>
 {% endblock %}

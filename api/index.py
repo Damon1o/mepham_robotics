@@ -15,6 +15,11 @@ from pymongo import MongoClient
 import requests
 import mimetypes
 
+try:  # package import on Vercel, flat import when run from the api/ directory
+    from api import robotevents
+except ImportError:  # pragma: no cover
+    import robotevents
+
 load_dotenv()
 
 # Vercel Blob configuration
@@ -103,6 +108,65 @@ app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 def collapse_whitespace(value):
     """Collapse newlines/indentation from wrapped Jinja block text so it's safe inside a single HTML attribute (og:*, twitter:*, meta description)."""
     return ' '.join(str(value).split())
+
+LEADERSHIP_KEYWORDS = ('captain', 'lead', 'president', 'mentor', 'director')
+
+
+@app.template_filter('member_roles')
+def member_roles(member):
+    """Every role a member holds. Falls back to the single legacy 'role' string."""
+    roles = member.get('roles') or []
+    roles = [r.strip() for r in roles if str(r).strip()]
+    if not roles and member.get('role'):
+        roles = [member['role'].strip()]
+    return roles
+
+
+def _is_leadership(member):
+    text = ' '.join(member_roles(member)).lower()
+    return any(word in text for word in LEADERSHIP_KEYWORDS)
+
+
+@app.template_filter('roster_groups')
+def roster_groups(members):
+    """Members grouped by sub-team, leadership first inside each group.
+
+    Groups keep the order the sub-teams first appear in, and members with no
+    sub-team fall into a single trailing group with an empty name, so a team
+    that never filled the field still renders as one plain grid.
+    """
+    order, grouped = [], {}
+    for member in members or []:
+        key = (member.get('subteam') or '').strip()
+        if key not in grouped:
+            grouped[key] = []
+            order.append(key)
+        grouped[key].append(member)
+
+    order.sort(key=lambda k: (k == '', k))
+    return [(key, sorted(grouped[key], key=lambda m: not _is_leadership(m))) for key in order]
+
+
+# Members saved before this revamp carry a default photo path that was never a real
+# file (the placeholder actually lives at assets/other/base.png), so those rows are
+# treated as having no photo and fall through to the initials avatar.
+PLACEHOLDER_PHOTOS = ('assets/profile/base.png', 'assets/other/base.png')
+
+
+@app.template_filter('real_photo')
+def real_photo(path):
+    if not path:
+        return ''
+    return '' if any(p in path for p in PLACEHOLDER_PHOTOS) else path
+
+
+@app.template_filter('initials')
+def initials(name):
+    parts = [p for p in str(name or '').split() if p]
+    if not parts:
+        return '?'
+    return (parts[0][0] + (parts[-1][0] if len(parts) > 1 else '')).upper()
+
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'stl'}
 
@@ -494,13 +558,63 @@ def donate():
 
 @app.route('/team/<team_number>')
 def team_page(team_number):
-    team = db['teams'].find_one({'team_number': team_number})
-    if not team:
+    docs = list(db['teams'].find({'team_number': team_number}))
+    if not docs:
         flash(f"Team {team_number} not found.", "error")
         return redirect(url_for('index'))
+
+    # One document per (team_number, season). Newest season wins unless ?season= names
+    # an existing one. Documents predating seasons have no 'season' key and sort last.
+    seasons = sorted({d['season'] for d in docs if d.get('season')}, reverse=True)
+    requested = request.args.get('season')
+    team = next((d for d in docs if d.get('season') == requested), None)
+    if team is None:
+        team = next((d for d in docs if d.get('season') == seasons[0]), docs[0]) if seasons else docs[0]
+
     team['_id'] = str(team['_id'])
-    team_awards = list(db['awards'].find({'team_number': team_number}).sort('_id', 1))  # ← FIXED
-    return render_template('team.html', team=team, team_awards=team_awards, active_page=team_number)
+    team.setdefault('specs', {})
+    team.setdefault('members', [])
+    team.setdefault('goals', [])
+    team.setdefault('journey', [])
+    team.setdefault('events', [])
+
+    # Photo strips are keyed by event name so team.js can attach them to the
+    # matching RobotEvents row without a second lookup.
+    event_photos = {e.get('name'): e.get('photos') or []
+                    for e in team['events'] if e.get('name') and e.get('photos')}
+
+    # Fallback for the robot showcase when no CAD model has been uploaded.
+    robot_photos = [p for photos in event_photos.values() for p in photos][:6]
+
+    team_awards = list(db['awards'].find({'team_number': team_number}).sort('_id', 1))
+    return render_template('team.html', team=team, team_awards=team_awards,
+                           event_photos=event_photos, robot_photos=robot_photos,
+                           seasons=seasons, active_season=team.get('season'),
+                           live_enabled=bool(os.environ.get('ROBOTEVENTS_TOKEN')),
+                           active_page=team_number)
+
+@app.route('/api/team/<team_number>/live')
+def team_live_data(team_number):
+    """Live RobotEvents data for the team page's skills, scoreboard and results panels.
+
+    204 when there is no token, no matching RobotEvents team, or nothing to show.
+    The page renders without these panels in that case, so this never fails hard.
+    """
+    team = db['teams'].find_one({'team_number': team_number})
+    if not team:
+        return Response(status=204)
+
+    lookup_number = team.get('robotevents_number') or team_number
+    try:
+        summary = robotevents.team_summary(db, lookup_number)
+    except Exception:
+        app.logger.exception('Live team data failed for %s', team_number)
+        return Response(status=204)
+
+    if not summary:
+        return Response(status=204)
+    return jsonify(summary)
+
 
 @app.route('/safety-quiz')
 def safety_quiz():
@@ -886,6 +1000,20 @@ def admin_save_team():
             'notebook_link': request.form.get('notebook_link', '#')
         }
 
+        # Optional profile fields. A blank input stores nothing rather than an empty
+        # string or a misleading 0, so the team page can hide what was never filled in.
+        for field in ('season', 'division', 'robotevents_number'):
+            value = (request.form.get(field) or '').strip()
+            if value:
+                team_data[field] = value
+        for field in ('since', 'worlds_appearances'):
+            value = (request.form.get(field) or '').strip()
+            if value:
+                try:
+                    team_data[field] = int(value)
+                except ValueError:
+                    pass
+
         # Add file URLs if uploaded
         if hero_image_url:
             team_data['hero_image'] = hero_image_url
@@ -910,12 +1038,27 @@ def admin_save_team():
                 # Use existing photo path from hidden field
                 member_photo_url = request.form.get(f'member_photo_path_{i}', 'static/assets/profile/base.png')
 
-            members.append({
+            member = {
                 'name': request.form.get(f'member_name_{i}'),
                 'role': request.form.get(f'member_role_{i}'),
                 'user_id': request.form.get(f'member_user_{i}'),
                 'photo': member_photo_url
-            })
+            }
+
+            roles = [r.strip() for r in (request.form.get(f'member_roles_{i}') or '').split(',') if r.strip()]
+            if roles:
+                member['roles'] = roles
+            subteam = (request.form.get(f'member_subteam_{i}') or '').strip()
+            if subteam:
+                member['subteam'] = subteam
+            since = (request.form.get(f'member_since_{i}') or '').strip()
+            if since:
+                try:
+                    member['since'] = int(since)
+                except ValueError:
+                    pass
+
+            members.append(member)
             i += 1
 
         team_data['members'] = members
@@ -927,6 +1070,15 @@ def admin_save_team():
                           'progress': int(request.form.get(f'goal_progress_{j}', 0))})
             j += 1
         team_data['goals'] = goals
+
+        journey = []
+        k = 0
+        while f'journey_title_{k}' in request.form:
+            journey.append({'date': request.form.get(f'journey_date_{k}', ''),
+                            'title': request.form.get(f'journey_title_{k}', ''),
+                            'description': request.form.get(f'journey_description_{k}', '')})
+            k += 1
+        team_data['journey'] = journey
 
         if team_id and len(team_id) == 24:
             # Update existing team - handle old file deletion

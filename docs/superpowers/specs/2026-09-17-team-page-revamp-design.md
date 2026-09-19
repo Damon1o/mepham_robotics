@@ -1,183 +1,206 @@
 # Team Page Revamp — Design Spec
 
 Date: 2026-09-17
-Scope: `templates/team.html`, `static/css/pages/team.css`, new `static/js/team.js`, cleanup in `static/css/styles.css`, new `tests/test_team_page.py`
+Reference site for **features**: [overclock.co](https://overclock.co) (VEX team 16099, Flushing NY)
+Visual style: **unchanged Mepham** — maroon/gold, thick-border cards, offset shadows, Space Mono headings
 
-Route: `/team/<team_number>` → `api/index.py:team_page()` → `render_template('team.html', team=team, team_awards=team_awards)`
+Scope: `templates/team.html`, `templates/partials/*`, `static/css/pages/team.css`, `static/js/team.js`,
+new `api/robotevents.py`, route additions in `api/index.py`, admin team form in `templates/admin.html` +
+`static/js/admin.js`, new tests.
+
+Route today: `/team/<team_number>` → `api/index.py:team_page()` → `team`, `team_awards`.
 
 ## Goal
 
-`/team/<number>` is the deepest page on the site and the weakest. Today it is six stacked bands with no
-identity layer, a dead 3D viewer that has never rendered anything, a spec grid that prints "TBA" four
-times for most teams, and ~30 team-only rules squatting in the 86 KB shared `styles.css` — against the
-project rule that page styles live in `static/css/pages/<page>.css`.
+Turn `/team/<number>` from a static brochure into the team's live season hub, matching the *capabilities*
+overclock.co gives its teams — live world skills standing, a season scoreboard, a real roster with roles
+and tenure, per-event results, event photo galleries, a season archive — while keeping Mepham's existing
+visual language exactly as it is.
 
-The revamp keeps every section the page already has, makes each one degrade honestly when data is
-missing, replaces the fake 3D viewer with a working one, and moves team-only CSS into `team.css`.
+Nothing on this page adopts overclock's look. Every new block is built from the Mepham tokens already in
+`styles.css`: `--maroon-dark #800000`, `--maroon-light #944547`, `--accent-gold #ffd700`,
+`--text-dark #1a1a1a`, `border: 3px solid var(--text-dark)`, `border-radius: 16px`,
+`box-shadow: 8px 8px 0 rgba(148,69,71,0.2)`, hover `translate(-4px,-4px)`, `'Space Mono'` headings,
+`.ripple` section headings, `fade-in-section` reveal, dark mode via `[data-theme="dark"]`.
 
-**Hard requirement: the Competition Awards display stays.** `templates/partials/awards_grid.html` is
-included as-is, in the same position, and is not edited by this work.
+**Hard requirement: the Competition Awards display stays.** `templates/partials/awards_grid.html` keeps
+its markup, its `.award-*` classes, its shimmer/border/layout modifiers and its position on the page. New
+award-related UI is added *around* it, never in place of it.
 
-Out of scope: admin-panel schema changes (no new team fields), a new visual language, changes to
-`nav_teams`, and anything touching the `awards` collection.
+## Feature Map — overclock.co → Mepham team page
 
-## Current State
+| overclock.co feature | What we build | Data source |
+|---|---|---|
+| Roster grouped by division, each team headed `7 MEMBERS · 7× WORLDS` | Team identity bar in the hero | new admin fields + existing `members` |
+| Member card: initials avatar, name, multiple role chips, `Since 2022` | Roster card rebuild | `members[].roles`, `.since` (new), photo still optional |
+| `/skills` live world standings with driver/programming split, rank trend, percentile | **Live Skills panel** scoped to this one team | RobotEvents API v2 |
+| Season achievements strip: `15 competitions (5 local, 8 signature, 2 worlds) · 27 awards · 2 Triple Crowns` | **Season Scoreboard** above the awards grid | RobotEvents events + awards, with manual override |
+| `/awards` detailed award history | **Existing awards grid — kept** — plus a season award list under it | `awards` collection (unchanged) + RobotEvents |
+| Event recap pages with 230-photo galleries | **Event Results timeline**, each event expandable to its photo strip | RobotEvents events + `team.events[].photos` |
+| Season selector 2025–26 … 2017–18 | **Season switcher** on the team page | new `season` field + `?season=` query param |
+| `/journey` team history | **Team Journey** timeline | new `team.journey[]` |
+| `/interested`, `/faq` | **Join CTA** band | static |
+| `/pit/login` members area | Link to the existing `/login` when signed out; nothing new | existing auth |
+| Sponsors, press coverage, Chinese version | **Out of scope** — site-global concerns, not a team page |
 
-| Thing | Problem |
-|-------|---------|
-| Hero | Title + nickname only. No sense of how big the team is or how it is doing |
-| Meet the Team | Flat grid, no ordering, breaks on a missing `member.photo` |
-| Competition Awards | **Works. Keep exactly as-is.** |
-| Interactive 3D View | Placeholder text and a "Rotate" button wired to nothing. `team.stl_path` is uploaded to Vercel Blob by the admin panel and then never used |
-| Technical Specs | Four hardcoded fields, each printing "TBA" when unset |
-| Season Goals | Fine. Needs accessibility attributes; `.progress-fill` animation already lives in `static/js/script.js:578` |
-| CSS | `.team-img`, `.robot-*`, `.viewer-*`, `.spec*`, `.goal*`, `.progress-*`, `.download-*` are used only by `team.html` but live in `styles.css` |
-| Heading `<h2>` on specs | Missing `.ripple`, unlike every other section |
-| Bare team | **Crashes.** A team document with only `team_number` returns HTTP 500: `jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'specs'`. Verified against the current template on 2026-09-17. The revamp's data-guarded rendering fixes this |
+## Page Structure (top to bottom)
 
-## Section Map
+1. **Hero** — existing hero image, team number, nickname, tagline.
+   Identity bar under it: `12 MEMBERS · 8 AWARDS · SINCE 2019 · 2× WORLDS`. Each stat omitted when its
+   value is missing or zero. Season switcher pill row sits at the right of the bar.
+2. **Breadcrumb** — unchanged.
+3. **Live Skills panel** — the marquee feature. Combined score, driver score, programming score, world
+   rank, region rank, percentile, and a rank-trend marker (`▲ / ▼ / NEW`), plus `Updated <relative time>`
+   and a link to the team's RobotEvents page. Loads async; renders a skeleton first.
+4. **Season Scoreboard** — competitions counted by kind (local / signature / championship), awards won
+   this season, and a "Triple Crown" badge when an event yielded Tournament Champion + Excellence +
+   Skills Champion.
+5. **Competition Awards** — **the existing `awards_grid.html` include, untouched.** Under it, a
+   chronological list of this season's awards with event name and date.
+6. **Event Results** — per-event rows: date, event name, level badge, qualification record, elimination
+   result, awards, skills rank at that event. A row with photos expands to a horizontal photo strip;
+   clicking a photo opens a lightbox.
+7. **Roster** — sub-team grouped (Mechanical / Electrical / Programming / Notebook, or ungrouped when no
+   sub-team is set), leadership first inside each group. Card: photo or initials avatar, name, role chips,
+   `Since <year>`.
+8. **Robot Showcase** — working STL viewer when `team.stl_path` is set (three.js, lazy, CDN-pinned);
+   otherwise a robot photo gallery; otherwise the tagline alone. The dead "Rotate" button is deleted.
+9. **Technical Specifications** — only the fields that have values. Never "TBA". Section hidden when empty.
+   Engineering Notebook button only when `notebook_link` is real (the save route defaults it to `'#'`).
+10. **Season Goals** — existing bars plus `role="progressbar"`, ARIA values, 0–100 clamp, and a gold
+    complete state at 100%.
+11. **Team Journey** — timeline of this team's milestones, reusing the about page's timeline classes.
+12. **Join CTA** — "Interested?" band → `/contact` and `/achievements`.
 
-| # | Section | Change |
-|---|---------|--------|
-| 1 | Hero | Keep image + nickname. Add a stat strip: members, awards won, season goals tracked |
-| 2 | Breadcrumb | Unchanged |
-| 3 | Roster ("Meet the Team") | New classes `roster-*`. Leadership-first ordering, photo fallback, optional profile link |
-| 4 | **Competition Awards** | **Untouched.** `{% include "partials/awards_grid.html" %}` stays in place |
-| 5 | Robot Showcase | Real STL viewer when `team.stl_path` is set; honest empty state when it is not |
-| 6 | Technical Specs | Render only the specs that have values; hide the whole section when none do |
-| 7 | Season Goals | Add ARIA, an empty state, and a done state at 100% |
-| 8 | Join CTA | New closing band linking to `/contact` and `/achievements` |
+Full-bleed only for sections that paint a background: Live Skills, Season Scoreboard, Technical Specs.
 
-Rhythm follows the about-page convention: only sections that paint a background go full-bleed (Robot
-Showcase and Technical Specs, both dark). The rest sit inside the standard 1200px container.
+## RobotEvents Integration
 
-## Section Detail
+The single biggest thing overclock has that we do not: real competition data. Everything live comes from
+the RobotEvents v2 API.
 
-### 1. Hero stat strip
+- **New module** `api/robotevents.py`, using `requests` (already in `requirements.txt`).
+- **Auth**: bearer token in `ROBOTEVENTS_TOKEN`. **Absent token is a supported state** — every live
+  section hides itself and the page renders exactly as it would offline. No crash, no error banner.
+- **Endpoints** (verify shapes against the live docs during implementation, do not trust this table
+  blindly): `GET /api/v2/teams?number[]=&program[]=` for the team id, then `/teams/{id}/events`,
+  `/teams/{id}/awards`, `/teams/{id}/rankings`, and the season skills endpoint for driver/programming.
+- **Team number mapping**: a new optional `robotevents_number` field on the team; falls back to
+  `team_number`. Mepham numbers such as `77628A` are already RobotEvents-shaped.
+- **Caching**: a `re_cache` MongoDB collection, one document per request key, with a fetched-at timestamp
+  and a TTL index. Skills 30 min, events/awards 6 h. On an API error or timeout, **serve the stale
+  document** rather than showing nothing; label the panel with its real age.
+- **Delivery**: the page never blocks on the API. `team_page()` renders immediately; `static/js/team.js`
+  calls a new `GET /api/team/<team_number>/live` JSON route and fills the skeleton. A 2.5 s upstream
+  timeout keeps the Vercel function well inside its budget.
+- **Rate limiting**: the JSON route is cached server-side by the same `re_cache`, so a traffic spike
+  produces one upstream call per TTL window, not one per visitor.
+- **Rank trend**: computed locally. Each skills fetch appends `{date, rank, score}` to a capped
+  `re_history` document for the team; the trend marker compares today's rank with the newest entry older
+  than 24 h. `NEW` when there is no prior entry.
 
-Three chips below the tagline, inside `.hero-content`:
+## Data Model Additions
 
-| Chip | Source | Hidden when |
-|------|--------|-------------|
-| `{{ team.members|length }} Members` | `team.members` | list empty |
-| `{{ team_awards|sum(attribute='count') }} Awards` | `team_awards` | sum is 0 |
-| `{{ team.goals|length }} Season Goals` | `team.goals` | list empty |
+All optional, all back-compatible — a team document that lacks every one of them still renders.
 
-If all three are empty the strip does not render — no zero chips. The awards count is derived from the
-same `team_awards` the awards grid already receives; no new query, no route change.
+**Team**
 
-### 2. Roster
+| Field | Type | Use |
+|---|---|---|
+| `season` | string, `"2025-26"` | Which season this document describes; drives the season switcher |
+| `division` | string | "High School" / "Middle School" badge |
+| `since` | int year | `SINCE 2019` in the identity bar |
+| `worlds_appearances` | int | `2× WORLDS` in the identity bar |
+| `robotevents_number` | string | Override when the RobotEvents number differs |
+| `journey` | list of `{date, title, description}` | Team Journey timeline |
+| `events` | list of `{name, date, photos[]}` | Photo strips attached to Event Results rows |
 
-Markup moves off the shared `.team-card` (also used by `about.html` and `notebook.html` — do **not**
-restyle it) onto new `roster-card` / `roster-grid` / `roster-photo` classes.
+**Member** (inside `team.members`)
 
-- **Ordering**: leadership first. Sort in the template with a Jinja filter over a role-keyword list
-  (`captain`, `lead`, `president`, `mentor`), everyone else after, each group in its existing order.
-  No data change — this reads the existing free-text `member.role`.
-- **Photo fallback**: `member.photo or 'static/assets/profile/base.png'`, matching the default the save
-  route in `api/index.py` already writes. `loading="lazy"` stays.
-- **Role line**: rendered only when `member.role` is set.
-- **Profile link**: `member.user_id` is already stored. Only link if a public profile route exists at
-  implementation time — verify with grep; if there is none, render plain text and do not invent a route.
-- **Empty state**: "Roster coming soon for this team." instead of an empty grid.
+| Field | Type | Use |
+|---|---|---|
+| `roles` | list of strings | Role chips. Falls back to the existing single `role` string |
+| `since` | int year | `Since 2022` line |
+| `subteam` | string | Roster grouping |
 
-### 3. Robot Showcase — the 3D viewer
+The existing `role`, `name`, `photo`, `user_id` keys are untouched, so no migration is required and no
+existing team document breaks.
 
-The current placeholder is removed. Replacement, in order of preference:
+## Season Switcher
 
-**Chosen: a real STL viewer, lazily loaded.**
+Teams are stored one document per team number today. Seasons are added by storing one document per
+`(team_number, season)` pair; the route picks `?season=` when given, otherwise the newest `season` value,
+otherwise the sole document. The switcher renders only when more than one season exists — a club with one
+season sees no dead control. The route must keep working for documents with no `season` field at all.
 
-- `three` + `STLLoader` + `OrbitControls` from a pinned CDN build, loaded from a new
-  `static/js/team.js` and only when `#robot-viewer[data-stl]` is present on the page. Pages without an
-  STL pay nothing.
-- The canvas gets `role="img"` and an `aria-label` naming the robot, plus visible caption text — a WebGL
-  canvas is invisible to screen readers otherwise.
-- Controls: drag to rotate, scroll to zoom, plus a real Reset View button (the existing dead "Rotate"
-  button is deleted, not rewired).
-- Failure path: if WebGL is unavailable or the STL fails to fetch, the container swaps to the same empty
-  state used when there is no STL. No console-only failures, no spinner that never resolves.
-- `prefers-reduced-motion`: no auto-spin; the model loads static and only moves on user input.
+## Degradation Rules
 
-**Empty state** (no `stl_path`, or viewer failed): the hero image again is not interesting — instead show
-the tagline card alone with a short line, "CAD model not published for this robot yet." The section still
-renders so the tagline keeps its home.
+Every one of these is a test, not a hope:
 
-*Alternative if the club does not want a CDN dependency:* delete the showcase section entirely and move
-`team.tagline` under the hero. Cheaper, and honest. This spec assumes the viewer; switching costs one
-task.
-
-### 4. Technical Specs
-
-Specs stay the same four admin fields (`drive_train`, `lift_system`, `intake`, `auton_consistency`) —
-no admin form or save-route change. What changes is rendering:
-
-- Build a list in the template from the four fields, dropping any that are falsy.
-- Render one `.spec-card` per surviving entry. Never print "TBA".
-- If nothing survives, the entire `robot-specs` section does not render.
-- The Engineering Notebook button renders only when `team.notebook_link` is set and is not `'#'` (the
-  save route defaults it to `'#'`, so this check matters).
-- Section `<h2>` gains `.ripple` to match every other heading on the page.
-
-### 5. Season Goals
-
-- `.progress-bar` gets `role="progressbar"`, `aria-valuenow`, `aria-valuemin="0"`, `aria-valuemax="100"`,
-  and `aria-label` with the goal name.
-- Progress clamped to 0–100 in the template (`goal.progress|default(0)|int`); a bad admin entry must not
-  paint a bar past its track.
-- A goal at 100% gets a `.goal-complete` modifier: gold fill and a check icon next to the name.
-- Empty `team.goals` hides the section.
-- The existing `IntersectionObserver` in `static/js/script.js:578` already animates `.progress-fill`;
-  keep the `data-progress` attribute contract it reads. Do not duplicate that logic in `team.js`.
-
-### 6. Join CTA
-
-Closing band, no background paint: one line of copy plus two buttons — "Join the Club" → `/contact`,
-"All Achievements" → `/achievements`, using the existing `.cta-button` / `.cta-primary` classes.
+- No `ROBOTEVENTS_TOKEN` → Live Skills, Season Scoreboard and Event Results hide. Page is 200.
+- Token present, API down, no cache → same as above. Page is 200.
+- Token present, API down, stale cache → data shown, labelled with its real age.
+- Team document with only `team_number` → page is 200. *(It currently returns HTTP 500:
+  `jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'specs'` — verified 2026-09-17.)*
+- No members / no goals / no specs / no awards → each section hides itself. The awards grid keeps its own
+  existing "No awards recorded for this team yet" state, which stays as written.
+- No STL and no robot photos → showcase shows the tagline alone.
 
 ## CSS Architecture
 
-- Every rule for this page ends in `static/css/pages/team.css`. `templates/team.html` ends with zero
-  `style=` attributes, except the one existing custom-property carrier on the hero
-  (`style="--team-hero-image: url(...)"`), which passes data, not style, and has no CSS-file equivalent.
-- **Move** (cut from `styles.css`, paste into `team.css`, unchanged unless noted): `.robot-specs`,
+- Every rule for this page lives in `static/css/pages/team.css`. `templates/team.html` ends with exactly
+  one `style=` — the hero's `--team-hero-image` custom property, which carries data.
+- **Move** from `styles.css` to `team.css` (team-only, verified by grep): `.robot-specs`,
   `.specs-container`, `.spec-card`, `.spec-label`, `.spec-value`, `.goals-section`, `.goals-container`,
   `.goal-item`, `.goal-header`, `.goal-name`, `.goal-percent`, `.progress-bar`, `.progress-fill`,
   `.download-btn`, `.download-icon`, `.robot-showcase`, `.robot-tagline`, `.team-img`, and the
-  `.specs-container` media query near line 2568. Approximate line anchors in the current `styles.css`:
-  336–341 (a shared selector list — edit, do not delete), 1622–1740, 2035–2100, 2455–2470, 2568, 3075–3090.
-  Re-grep before cutting; the login work has moved lines since.
-- **Delete**: `.viewer-3d-container`, `.viewer-label`, `.viewer-controls`, `.viewer-btn` — the new viewer
-  brings its own classes and these are used by nothing else.
-- **Do not touch**: `.team-grid`, `.team-card` (shared with `about.html` and `notebook.html`),
-  `.hero-image`, `.scroll-indicator`, `.award-*`, `.cta-*`, `.breadcrumb`.
-- New classes are prefixed by section, not by page: `roster-`, `viewer-`, `spec-`, `goal-`, `teamcta-`.
-  Before adding any new class name, grep `static/css/styles.css` and `templates/` for it.
-- Reuse existing tokens only: `--maroon-dark: #800000`, `--maroon-light: #944547`,
-  `--accent-gold: #ffd700`, `--accent-light: #f1f1f1`, `--text-dark: #1a1a1a`, `--text-light: #666`,
-  `--bg-light: #fafafa`, `--spacing-*`, `--transition-base`. Card look: `border: 3px solid var(--text-dark)`,
-  `border-radius: 16px`, `box-shadow: 8px 8px 0px rgba(148, 69, 71, 0.2)`, hover `translate(-4px, -4px)`.
-- Every new class that sets a color or background gets a `[data-theme="dark"]` variant: card background
-  `#1e1e1e`, border `#444`, heading `#d4a0a1`, body `#bbb`. The specs band is already dark in both themes;
-  leave its palette alone.
+  `.specs-container` media query. Re-grep for line numbers before cutting.
+- **Delete**: `.viewer-3d-container`, `.viewer-label`, `.viewer-controls`, `.viewer-btn`.
+- **Never touch**: `.team-grid`, `.team-card` (shared with `about.html` and `notebook.html`),
+  `.award-*`, `.hero-image`, `.scroll-indicator`, `.cta-*`, `.breadcrumb`, the timeline classes.
+- New classes by section: `identity-`, `skills-`, `scoreboard-`, `results-`, `roster-`, `viewer-`,
+  `journey-`, `teamcta-`. Grep every new name against `styles.css` and `templates/` before using it.
+- Each new class that sets a color gets a `[data-theme="dark"]` variant: card `#1e1e1e`, border `#444`,
+  heading `#d4a0a1`, body `#bbb`.
 
-## Responsive Behavior
+## Accessibility
 
-- Hero stat chips: row, wrapping to two lines under 600px. No horizontal scroll.
-- Roster grid: `repeat(auto-fit, minmax(220px, 1fr))`, 1 column under 480px.
-- Viewer: `aspect-ratio: 16/9` down to 768px, then `4/3` so the model does not become a letterbox slit.
-- Specs: existing `auto-fit, minmax(200px, 1fr)` behavior kept.
-- Goals: unchanged; full width at every size.
+- Live panels are `aria-live="polite"`; the skeleton is `aria-busy="true"` until filled.
+- Rank trend markers carry text, not colour alone: `▲ Up 4`, not a green arrow by itself.
+- Progress bars get `role="progressbar"` with `aria-valuenow/min/max` and the goal name as label.
+- The WebGL canvas gets `role="img"` and an `aria-label`; the gallery lightbox traps focus, closes on
+  Escape, and returns focus to the thumbnail.
+- Initials avatars are decorative (`aria-hidden`) because the name is already text beside them.
+- `prefers-reduced-motion`: no model auto-spin, no counter count-up animations.
+
+## Responsive
+
+- Identity bar: one row, wrapping to two lines under 700px.
+- Live Skills: 3 columns → 2 at 900px → 1 at 560px.
+- Event Results: table-like rows become stacked cards under 768px.
+- Roster: `auto-fit, minmax(220px, 1fr)`, single column under 480px.
+- Viewer: `16/9`, then `4/3` under 768px.
+- No horizontal scroll at 1440 / 768 / 375px.
 
 ## Verification
 
-- `pytest` green, including a new `tests/test_team_page.py` (uses the mongomock `client` fixture in
-  `tests/conftest.py`).
-- `/team/<number>` renders 200 for a fully populated team and for a bare `{team_number}`-only team.
-- **Awards grid present in both cases** — assert `Competition Awards` in the HTML. This is a regression
-  guard, not a nicety.
-- No `TBA` string anywhere in the rendered page.
-- `grep -c 'style="' templates/team.html` returns 1 (the hero custom property, and nothing else).
-- Every `/static/` URL in the rendered page resolves 200.
-- Light and dark themes both legible; layout holds at 1440px, 768px, 375px with no horizontal scroll.
-- With an STL: model renders and orbits. Without: empty state, and the network log shows three.js was
-  never fetched.
+- `pytest` green, including new tests for the RobotEvents layer (upstream mocked — **no network in tests**).
+- `/team/<n>` is 200 for: a fully populated team, a bare `team_number`-only team, and with
+  `ROBOTEVENTS_TOKEN` unset.
+- **`Competition Awards` present in every one of those renders** — a regression guard, run in every task.
+- No `TBA` anywhere in the output.
+- `grep -c 'style="' templates/team.html` returns 1.
+- Every `/static/` URL in the render resolves 200.
+- Light and dark both legible at 1440 / 768 / 375px.
+- With no STL, the network log shows three.js was never fetched.
+
+## Open Questions
+
+1. **RobotEvents token** — someone with a RobotEvents account must generate one and set
+   `ROBOTEVENTS_TOKEN` in Vercel (all environments) and `.env.local`. Until then the live sections ship
+   hidden. This does not block any other task.
+2. **Season backfill** — the archive is only as deep as the team documents that exist. Past seasons need
+   someone to enter them in the admin panel; the switcher appears on its own once a second season exists.
+3. **Event photos** — the Event Results photo strips need uploads. Overclock's 230-photo galleries are
+   their strongest content; ours will be empty until photos are added, and rows without photos simply do
+   not expand.
