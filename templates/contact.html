@@ -11,7 +11,7 @@ information.{% endblock %}
 {% endblock %}
 
 {% block page_styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/contact.css') }}?v=8">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/contact.css') }}?v=9">
 {% endblock %}
 
 {% block content %}
@@ -34,65 +34,19 @@ information.{% endblock %}
 </nav>
 
 <!-- ============================================================
-     DECK: station panel + form
+     FORM DECK
      ============================================================ -->
 <div class="deck">
 
-    <!-- LEFT: station panel -->
-    <aside class="deck-station">
-        <span class="station-watermark" aria-hidden="true">77628</span>
-
-        <div class="station-top">
+    <main class="deck-form" id="contact">
+        <div class="form-head">
+            <h2 class="form-title">Talk to the builders.</h2>
             <p class="station-status" data-meeting-status>
                 <span class="status-dot" aria-hidden="true"></span>
                 <span class="status-text">Checking the lab schedule…</span>
             </p>
-
-            <h2 class="station-title">Talk to<br>the builders.</h2>
-            <p class="station-lede">
-                Students, parents, sponsors, press — every message goes to the same inbox and a person
-                on the team reads it. No forms lost in a void.
-            </p>
         </div>
 
-        <dl class="station-board">
-            <div class="board-row">
-                <dt>Email</dt>
-                <dd><a href="mailto:damlin@bmchsd.com">damlin@bmchsd.com</a></dd>
-            </div>
-            <div class="board-row">
-                <dt>Lab</dt>
-                <dd>Room LL01, Wellington C. Mepham HS</dd>
-            </div>
-            <div class="board-row">
-                <dt>Meets</dt>
-                <dd>Tuesday &amp; Friday · 3:00–5:00 PM</dd>
-            </div>
-            <div class="board-row">
-                <dt>Program</dt>
-                <dd>VEX V5 Robotics Competition</dd>
-            </div>
-            <div class="board-row">
-                <dt>Reply</dt>
-                <dd>Usually within 48 hours</dd>
-            </div>
-        </dl>
-
-        <div class="station-foot">
-            <a href="https://instagram.com/mephamrobotics" target="_blank" rel="noopener" title="Instagram">
-                <i data-lucide="instagram"></i>
-            </a>
-            <a href="mailto:damlin@bmchsd.com" title="Email">
-                <i data-lucide="mail"></i>
-            </a>
-            <a href="#find-us" title="Directions">
-                <i data-lucide="map-pin"></i>
-            </a>
-        </div>
-    </aside>
-
-    <!-- RIGHT: the form -->
-    <main class="deck-form" id="contact">
         <fieldset class="channel-switch">
             <legend>Who are you writing as?</legend>
             <div class="channel-options" role="radiogroup">
@@ -178,6 +132,39 @@ information.{% endblock %}
         <div id="form-error" class="contact-form-status contact-form-status--error" role="alert">
             Something went wrong. Please try again.
         </div>
+
+        <dl class="contact-strip">
+            <div class="strip-item">
+                <dt>Email</dt>
+                <dd><a href="mailto:damlin@bmchsd.com">damlin@bmchsd.com</a></dd>
+            </div>
+            <div class="strip-item">
+                <dt>Lab</dt>
+                <dd>Room LL01, Wellington C. Mepham HS</dd>
+            </div>
+            <div class="strip-item">
+                <dt>Meets</dt>
+                <dd>Tuesday &amp; Friday · 3:00–5:00 PM</dd>
+            </div>
+            <div class="strip-item">
+                <dt>Reply</dt>
+                <dd>Usually within 48 hours</dd>
+            </div>
+            <div class="strip-item strip-socials">
+                <dt>Follow</dt>
+                <dd>
+                    <a href="https://instagram.com/mephamrobotics" target="_blank" rel="noopener" title="Instagram">
+                        <i data-lucide="instagram"></i>
+                    </a>
+                    <a href="mailto:damlin@bmchsd.com" title="Email">
+                        <i data-lucide="mail"></i>
+                    </a>
+                    <a href="#find-us" title="Directions">
+                        <i data-lucide="map-pin"></i>
+                    </a>
+                </dd>
+            </div>
+        </dl>
     </main>
 </div>
 
