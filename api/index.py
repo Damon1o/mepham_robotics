@@ -506,9 +506,12 @@ def team_page(team_number):
     event_photos = {e.get('name'): e.get('photos') or []
                     for e in team['events'] if e.get('name') and e.get('photos')}
 
+    # Fallback for the robot showcase when no CAD model has been uploaded.
+    robot_photos = [p for photos in event_photos.values() for p in photos][:6]
+
     team_awards = list(db['awards'].find({'team_number': team_number}).sort('_id', 1))
     return render_template('team.html', team=team, team_awards=team_awards,
-                           event_photos=event_photos,
+                           event_photos=event_photos, robot_photos=robot_photos,
                            seasons=seasons, active_season=team.get('season'),
                            live_enabled=bool(os.environ.get('ROBOTEVENTS_TOKEN')),
                            active_page=team_number)

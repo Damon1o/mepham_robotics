@@ -298,9 +298,143 @@
             });
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', loadLiveData);
-    } else {
+    // --- STL viewer --------------------------------------------------------
+
+    const THREE_VERSION = '0.160.0';
+    const THREE_BASE = 'https://cdn.jsdelivr.net/npm/three@' + THREE_VERSION;
+
+    function viewerFailed(host, message) {
+        const shell = host.closest('.viewer-shell') || host;
+        shell.innerHTML = '';
+        const note = document.createElement('p');
+        note.className = 'viewer-empty';
+        note.textContent = message;
+        shell.appendChild(note);
+    }
+
+    function hasWebGL() {
+        try {
+            const canvas = document.createElement('canvas');
+            return !!(window.WebGLRenderingContext &&
+                (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+        } catch (err) {
+            return false;
+        }
+    }
+
+    function startViewer(host) {
+        const url = host.dataset.stl;
+        if (!url) return;
+
+        if (!hasWebGL()) {
+            viewerFailed(host, 'Your browser cannot display the 3D model.');
+            return;
+        }
+
+        Promise.all([
+            import(THREE_BASE + '/build/three.module.js'),
+            import(THREE_BASE + '/examples/jsm/loaders/STLLoader.js'),
+            import(THREE_BASE + '/examples/jsm/controls/OrbitControls.js')
+        ]).then(function (mods) {
+            const THREE = mods[0];
+            const STLLoader = mods[1].STLLoader;
+            const OrbitControls = mods[2].OrbitControls;
+
+            const width = host.clientWidth || 800;
+            const height = host.clientHeight || 450;
+
+            const scene = new THREE.Scene();
+            scene.background = null;
+
+            const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 5000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(width, height);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+            const key = new THREE.DirectionalLight(0xffffff, 0.9);
+            key.position.set(1, 1, 1);
+            scene.add(key);
+
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            // Auto-spin is motion the viewer did not ask for.
+            controls.autoRotate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            controls.autoRotateSpeed = 1.2;
+
+            new STLLoader().load(url, function (geometry) {
+                geometry.computeBoundingBox();
+                geometry.center();
+
+                const size = geometry.boundingBox.getSize(new THREE.Vector3());
+                const extent = Math.max(size.x, size.y, size.z) || 1;
+
+                const mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({
+                    color: 0x944547, specular: 0x222222, shininess: 40
+                }));
+                mesh.rotation.x = -Math.PI / 2;
+                scene.add(mesh);
+
+                camera.position.set(0, extent * 0.8, extent * 2);
+                controls.target.set(0, 0, 0);
+                controls.saveState();
+                controls.update();
+
+                host.innerHTML = '';
+                host.appendChild(renderer.domElement);
+
+                const reset = document.getElementById('viewer-reset');
+                if (reset) reset.addEventListener('click', function () { controls.reset(); });
+
+                window.addEventListener('resize', function () {
+                    const w = host.clientWidth || width;
+                    const h = host.clientHeight || height;
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(w, h);
+                });
+
+                (function animate() {
+                    requestAnimationFrame(animate);
+                    controls.update();
+                    renderer.render(scene, camera);
+                })();
+            }, undefined, function () {
+                viewerFailed(host, 'The 3D model could not be loaded.');
+            });
+        }).catch(function () {
+            viewerFailed(host, 'The 3D viewer could not be loaded.');
+        });
+    }
+
+    function initViewer() {
+        const host = document.querySelector('#robot-viewer[data-stl]');
+        if (!host) return; // No model: three.js is never fetched.
+
+        if (!('IntersectionObserver' in window)) {
+            startViewer(host);
+            return;
+        }
+
+        const observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    observer.disconnect();
+                    startViewer(host);
+                }
+            });
+        }, { rootMargin: '200px' });
+        observer.observe(host);
+    }
+
+    function boot() {
         loadLiveData();
+        initViewer();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
     }
 })();

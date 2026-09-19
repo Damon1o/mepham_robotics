@@ -294,6 +294,30 @@ def test_event_photos_only_published_with_live_enabled(client, team_factory, mon
     assert 'States' in body
 
 
+def test_viewer_rendered_when_stl_present(client, team_factory):
+    team_factory()
+    body = html(client)[1]
+    assert 'id="robot-viewer"' in body
+    assert 'data-stl="https://blob.example.com/robot.stl"' in body
+    assert 'Reset View' in body
+
+
+def test_no_viewer_and_no_dead_button_without_stl(client, team_factory):
+    team_factory(stl_path='')
+    body = html(client)[1]
+    assert 'robot-viewer' not in body
+    assert 'Rotate</button>' not in body
+    assert 'CAD model not published' in body
+
+
+def test_photo_gallery_replaces_viewer_when_photos_exist(client, team_factory):
+    team_factory(stl_path='', events=[{'name': 'States',
+                                       'photos': ['static/assets/photos/hero.png']}])
+    body = html(client)[1]
+    assert 'viewer-gallery' in body
+    assert 'CAD model not published' not in body
+
+
 def test_missing_team_redirects(client):
     resp = client.get('/team/nope')
     assert resp.status_code == 302

@@ -173,6 +173,29 @@ members, competition results, and season goals.{% endblock %}
 <!-- ROBOT SHOWCASE -->
 <section class="robot-showcase fade-in-section">
     <h2 class="ripple">Our Robot{% if team.nickname %}: "{{ team.nickname }}"{% endif %}</h2>
+
+    {% if team.stl_path %}
+    <div class="viewer-shell">
+        <div id="robot-viewer" class="viewer-canvas" data-stl="{{ get_image_url(team.stl_path) }}" role="img"
+            aria-label="Interactive 3D model of {{ team.nickname or team.team_number }}">
+            <p class="viewer-status">Loading 3D model…</p>
+        </div>
+        <div class="viewer-controls">
+            <button type="button" class="viewer-btn" id="viewer-reset">Reset View</button>
+            <span class="viewer-hint">Drag to rotate · scroll to zoom</span>
+        </div>
+    </div>
+    {% elif robot_photos %}
+    <div class="viewer-gallery">
+        {% for photo in robot_photos %}
+        <img src="{{ get_image_url(photo) }}" alt="{{ team.nickname or team.team_number }} robot photo"
+            class="viewer-gallery-photo" loading="lazy">
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="viewer-empty">CAD model not published for this robot yet.</p>
+    {% endif %}
+
     <p class="robot-tagline">"{{ team.tagline or 'Precision. Power. Performance.' }}"</p>
 </section>
 
