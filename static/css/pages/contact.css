@@ -800,6 +800,11 @@
     color: #fff;
 }
 
+/* The band is meant to sit flush against the footer, so drop the global gap. */
+.closing-band+footer {
+    margin-top: 0;
+}
+
 .closing-band p {
     margin: 0;
     font-family: var(--font-display);
