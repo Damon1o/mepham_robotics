@@ -11,74 +11,42 @@ information.{% endblock %}
 {% endblock %}
 
 {% block page_styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/contact.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/contact.css') }}?v=9">
 {% endblock %}
 
 {% block content %}
+<div class="hero-image contact-hero">
+    <div class="hero-content">
+        <h1>Contact</h1>
+        <p>Get In Touch</p>
+        <div class="hero-cta">
+            <a href="#contact" class="cta-button cta-primary">Send a Message</a>
+            <a href="#find-us" class="cta-button cta-secondary">Find the Lab</a>
+        </div>
+    </div>
+    <div class="scroll-indicator"></div>
+</div>
+
+<nav class="breadcrumb">
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="separator">›</span>
+    <span class="current">Contact</span>
+</nav>
 
 <!-- ============================================================
-     DECK: station panel + form, both above the fold
+     FORM DECK
      ============================================================ -->
 <div class="deck">
 
-    <!-- LEFT: station panel -->
-    <aside class="deck-station">
-        <span class="station-watermark" aria-hidden="true">77628</span>
-
-        <div class="station-top">
+    <main class="deck-form" id="contact">
+        <div class="form-head">
+            <h2 class="form-title">Talk to the builders.</h2>
             <p class="station-status" data-meeting-status>
                 <span class="status-dot" aria-hidden="true"></span>
                 <span class="status-text">Checking the lab schedule…</span>
             </p>
-
-            <h1 class="station-title">Talk to<br>the builders.</h1>
-            <p class="station-lede">
-                Students, parents, sponsors, press — every message goes to the same inbox and a person
-                on the team reads it. No forms lost in a void.
-            </p>
         </div>
 
-        <dl class="station-board">
-            <div class="board-row">
-                <dt>Email</dt>
-                <dd><a href="mailto:damlin@bmchsd.com">damlin@bmchsd.com</a></dd>
-            </div>
-            <div class="board-row">
-                <dt>Lab</dt>
-                <dd>Room 123, Wellington C. Mepham HS</dd>
-            </div>
-            <div class="board-row">
-                <dt>Meets</dt>
-                <dd>Tuesday &amp; Friday · 3:00–5:00 PM</dd>
-            </div>
-            <div class="board-row">
-                <dt>Program</dt>
-                <dd>VEX V5 Robotics Competition</dd>
-            </div>
-            <div class="board-row">
-                <dt>Reply</dt>
-                <dd>Usually within 48 hours</dd>
-            </div>
-        </dl>
-
-        <div class="station-foot">
-            <a href="https://instagram.com/mephamrobotics" target="_blank" rel="noopener" title="Instagram">
-                <i data-lucide="instagram"></i>
-            </a>
-            <a href="mailto:damlin@bmchsd.com" title="Email">
-                <i data-lucide="mail"></i>
-            </a>
-            <a href="#find-us" title="Directions">
-                <i data-lucide="map-pin"></i>
-            </a>
-            <span class="station-crumbs">
-                <a href="{{ url_for('index') }}">Home</a> / Contact
-            </span>
-        </div>
-    </aside>
-
-    <!-- RIGHT: the form itself, no scrolling required -->
-    <main class="deck-form" id="contact">
         <fieldset class="channel-switch">
             <legend>Who are you writing as?</legend>
             <div class="channel-options" role="radiogroup">
@@ -164,6 +132,39 @@ information.{% endblock %}
         <div id="form-error" class="contact-form-status contact-form-status--error" role="alert">
             Something went wrong. Please try again.
         </div>
+
+        <dl class="contact-strip">
+            <div class="strip-item">
+                <dt>Email</dt>
+                <dd><a href="mailto:damlin@bmchsd.com">damlin@bmchsd.com</a></dd>
+            </div>
+            <div class="strip-item">
+                <dt>Lab</dt>
+                <dd>Room LL01, Wellington C. Mepham HS</dd>
+            </div>
+            <div class="strip-item">
+                <dt>Meets</dt>
+                <dd>Tuesday &amp; Friday · 3:00–5:00 PM</dd>
+            </div>
+            <div class="strip-item">
+                <dt>Reply</dt>
+                <dd>Usually within 48 hours</dd>
+            </div>
+            <div class="strip-item strip-socials">
+                <dt>Follow</dt>
+                <dd>
+                    <a href="https://instagram.com/mephamrobotics" target="_blank" rel="noopener" title="Instagram">
+                        <i data-lucide="instagram"></i>
+                    </a>
+                    <a href="mailto:damlin@bmchsd.com" title="Email">
+                        <i data-lucide="mail"></i>
+                    </a>
+                    <a href="#find-us" title="Directions">
+                        <i data-lucide="map-pin"></i>
+                    </a>
+                </dd>
+            </div>
+        </dl>
     </main>
 </div>
 
@@ -174,7 +175,7 @@ information.{% endblock %}
     <div class="find-us-inner">
         <div class="find-us-copy">
             <p class="section-kicker">Find us</p>
-            <h2>Room 123, after the last bell.</h2>
+            <h2>Room LL01, after the last bell.</h2>
             <p>
                 We're in the tech wing at Wellington C. Mepham High School in North Bellmore. Walk in during
                 any Tuesday or Friday meeting — no appointment, no experience, nothing to bring.
@@ -199,87 +200,86 @@ information.{% endblock %}
 </section>
 
 <!-- ============================================================
-     FAQ - filtered by the channel picked above
+     FAQ - every question is listed; answers open on click
      ============================================================ -->
 <section class="faq-section">
     <div class="faq-head">
         <p class="section-kicker">Answers</p>
         <h2>Before you write</h2>
-        <p class="faq-filter-note" data-faq-note>Showing questions for future members.</p>
     </div>
 
     <div class="faq-container">
-        <div class="faq-item" data-channel="join">
+        <div class="faq-item">
             <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-1">
                 How do I join the robotics club?
                 <span class="faq-icon">+</span>
             </button>
             <div class="faq-answer" id="faq-answer-1">
-                <p>Just show up to any of our meetings! We welcome students of all skill levels. You can also email
+                <p>Just show up to any of our meetings. We welcome students of all skill levels. You can also email
                     us or talk to your guidance counselor.</p>
             </div>
         </div>
-        <div class="faq-item" data-channel="join">
+        <div class="faq-item">
             <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-2">
                 Do I need prior experience?
                 <span class="faq-icon">+</span>
             </button>
             <div class="faq-answer" id="faq-answer-2">
-                <p>No experience required! We teach everything from basic mechanics to advanced programming.
+                <p>No experience required. We teach everything from basic mechanics to advanced programming.
                     Everyone starts somewhere.</p>
             </div>
         </div>
-        <div class="faq-item" data-channel="join">
-            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-4">
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
                 What is the time commitment?
                 <span class="faq-icon">+</span>
             </button>
-            <div class="faq-answer" id="faq-answer-4">
+            <div class="faq-answer" id="faq-answer-3">
                 <p>We meet twice a week during the school year. Before competitions, there may be additional
                     practice sessions on weekends.</p>
             </div>
         </div>
-        <div class="faq-item" data-channel="join">
-            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-5">
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-4">
                 Is there a membership fee?
                 <span class="faq-icon">+</span>
             </button>
-            <div class="faq-answer" id="faq-answer-5">
+            <div class="faq-answer" id="faq-answer-4">
                 <p>No, there is no membership fee to join the Mepham Robotics Club. All students are welcome to join
-                    for free!</p>
+                    for free.</p>
             </div>
         </div>
-        <div class="faq-item" data-channel="sponsor">
-            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-6">
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-5">
                 How can my company sponsor the team?
                 <span class="faq-icon">+</span>
             </button>
-            <div class="faq-answer" id="faq-answer-6">
+            <div class="faq-answer" id="faq-answer-5">
                 <p>We'd love to hear from you. See the <a href="{{ url_for('donate') }}">support page</a> for
                     sponsorship levels, or send us a message using the form above.</p>
             </div>
         </div>
-        <div class="faq-item" data-channel="sponsor">
-            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-7">
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-6">
                 What does a sponsorship actually pay for?
                 <span class="faq-icon">+</span>
             </button>
-            <div class="faq-answer" id="faq-answer-7">
+            <div class="faq-answer" id="faq-answer-6">
                 <p>Competition registration, V5 parts and spares, tools, travel to events, and the materials
                     students use to prototype. Parts and machining time are just as welcome as money.</p>
             </div>
         </div>
-        <div class="faq-item" data-channel="general">
-            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
+        <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-7">
                 When and where do you meet?
                 <span class="faq-icon">+</span>
             </button>
-            <div class="faq-answer" id="faq-answer-3">
-                <p>We meet every Tuesday and Friday from 3:00 PM to 5:00 PM in Room 123 at Wellington C. Mepham High
+            <div class="faq-answer" id="faq-answer-7">
+                <p>We meet every Tuesday and Friday from 3:00 PM to 5:00 PM in Room LL01 at Wellington C. Mepham High
                     School.</p>
             </div>
         </div>
-        <div class="faq-item" data-channel="general">
+        <div class="faq-item">
             <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-8">
                 Can the team come to our event?
                 <span class="faq-icon">+</span>
@@ -290,10 +290,7 @@ information.{% endblock %}
             </div>
         </div>
     </div>
-
-    <button type="button" class="faq-show-all" data-faq-show-all hidden>Show every question</button>
 </section>
-
 <!-- ============================================================
      CLOSING BAND
      ============================================================ -->
