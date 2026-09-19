@@ -2,6 +2,11 @@ import os
 import datetime
 import urllib.parse
 import hashlib
+import hmac
+import time
+import threading
+import csv
+from io import StringIO
 import math
 import secrets
 import logging
@@ -9,7 +14,8 @@ from functools import wraps
 from bson import ObjectId
 import bcrypt
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
+from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 from pymongo import MongoClient
 import requests
@@ -98,21 +104,57 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=30),
 )
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
+# Refuse oversized request bodies before they are buffered into memory.
+MAX_UPLOAD_BYTES = 8 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = MAX_UPLOAD_BYTES
 
 @app.template_filter('collapse_ws')
 def collapse_whitespace(value):
     """Collapse newlines/indentation from wrapped Jinja block text so it's safe inside a single HTML attribute (og:*, twitter:*, meta description)."""
     return ' '.join(str(value).split())
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'stl'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'stl'}
+IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+def file_extension(filename):
+    """Lowercase extension without the dot, or '' when there isn't one."""
+    return filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+
+def allowed_file(filename, allowed=ALLOWED_EXTENSIONS):
+    return file_extension(filename) in allowed
+
+def blob_path(*segments):
+    """Build a Vercel Blob key from untrusted segments.
+
+    Every segment is run through secure_filename so a crafted team number,
+    member name or sponsor name cannot escape its folder (``../``) or inject
+    extra path separators into the blob key.
+    """
+    safe = [secure_filename(str(seg)) or 'file' for seg in segments]
+    return '/'.join(safe)
+
+def checked_upload(file, *segments, allowed=ALLOWED_EXTENSIONS, stem='file'):
+    """Validate an uploaded file's extension, then store it under a safe key.
+
+    Raises ValueError for a rejected extension so the caller's error handling
+    surfaces it to the admin instead of writing an attacker-named blob.
+    """
+    ext = file_extension(file.filename or '')
+    if ext not in allowed:
+        raise ValueError(
+            f'"{file.filename}" is not an accepted file type '
+            f'({", ".join(sorted(allowed))}).')
+    stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    return upload_to_vercel_blob(file, blob_path(*segments, f'{stem}_{stamp}.{ext}'))
 
 def get_time_ago(timestamp):
     """Convert timestamp to human-readable time ago string"""
-    now = datetime.datetime.now()
+    now = _utcnow()
+    if timestamp.tzinfo is not None:
+        timestamp = timestamp.astimezone(datetime.timezone.utc).replace(tzinfo=None)
     diff = now - timestamp
+    if diff.total_seconds() < 0:
+        return "Just now"
 
     if diff.days > 365:
         years = diff.days // 365
@@ -138,7 +180,7 @@ def log_activity(activity_type, description, user=None, details=None):
             'type': activity_type,
             'description': description,
             'user': user or (session.get('user') if 'user' in session else 'System'),
-            'timestamp': datetime.datetime.now(),
+            'timestamp': _utcnow(),
             'details': details or {}
         }
         db['activities'].insert_one(activity)
@@ -337,7 +379,11 @@ def role_required(role):
 
 # --- Auth helpers: rate limiting, reset tokens, email ---
 LOGIN_MAX_ATTEMPTS = 5
+# A botnet can rotate IPs, so an account also locks after this many failures
+# across *all* addresses inside the same window.
+LOGIN_MAX_ACCOUNT_ATTEMPTS = 20
 LOGIN_WINDOW = datetime.timedelta(minutes=15)
+PASSWORD_MIN_LENGTH = 8
 RESET_TOKEN_TTL = datetime.timedelta(hours=1)
 _auth_indexes_ready = False
 
@@ -355,20 +401,32 @@ def _ensure_auth_indexes():
     if _auth_indexes_ready:
         return
     db['login_attempts'].create_index('created_at', expireAfterSeconds=int(LOGIN_WINDOW.total_seconds()))
-    db['login_attempts'].create_index([('key', 1), ('ip', 1)])
+    db['login_attempts'].create_index([('key', 1), ('ip', 1), ('created_at', 1)])
     db['password_resets'].create_index('created_at', expireAfterSeconds=int(RESET_TOKEN_TTL.total_seconds()))
     db['password_resets'].create_index('token_hash', unique=True)
     _auth_indexes_ready = True
 
-def _lockout_minutes(key, ip):
-    """Minutes until (key, ip) may try again, or 0 if not locked out."""
+def _window_lockout(query, limit):
+    """Minutes until the oldest attempt in the window ages out, or 0."""
     since = _utcnow() - LOGIN_WINDOW
     attempts = list(db['login_attempts'].find(
-        {'key': key, 'ip': ip, 'created_at': {'$gte': since}}).sort('created_at', 1))
-    if len(attempts) < LOGIN_MAX_ATTEMPTS:
+        dict(query, created_at={'$gte': since})).sort('created_at', 1).limit(limit))
+    if len(attempts) < limit:
         return 0
     unlock_at = attempts[0]['created_at'] + LOGIN_WINDOW
     return max(1, math.ceil((unlock_at - _utcnow()).total_seconds() / 60))
+
+
+def _lockout_minutes(key, ip):
+    """Minutes until this account may try again from this IP, or 0.
+
+    Two limits apply: a tight one for this (account, IP) pair, and a looser
+    account-wide one so rotating source addresses does not reset the counter.
+    """
+    return max(
+        _window_lockout({'key': key, 'ip': ip}, LOGIN_MAX_ATTEMPTS),
+        _window_lockout({'key': key}, LOGIN_MAX_ACCOUNT_ATTEMPTS),
+    )
 
 def _record_attempt(key, ip):
     _ensure_auth_indexes()
@@ -379,6 +437,39 @@ def _clear_attempts(key, ip=None):
     if ip is not None:
         query['ip'] = ip
     db['login_attempts'].delete_many(query)
+
+# --- Generic per-IP rate limiting for public JSON endpoints ---
+RATE_LIMIT_TTL = datetime.timedelta(hours=1)
+_rate_limit_index_ready = False
+
+
+def _ensure_rate_limit_index():
+    global _rate_limit_index_ready
+    if _rate_limit_index_ready:
+        return
+    db['rate_limits'].create_index('created_at',
+                                   expireAfterSeconds=int(RATE_LIMIT_TTL.total_seconds()))
+    db['rate_limits'].create_index([('bucket', 1), ('ip', 1), ('created_at', 1)])
+    _rate_limit_index_ready = True
+
+
+def rate_limit(bucket, ip, limit, window):
+    """Record a hit and report whether this IP is over the limit.
+
+    Returns the number of seconds until the caller may retry, or 0 when the
+    request is allowed. The hit is recorded either way, so hammering a locked
+    bucket keeps it locked.
+    """
+    _ensure_rate_limit_index()
+    now = _utcnow()
+    db['rate_limits'].insert_one({'bucket': bucket, 'ip': ip, 'created_at': now})
+    hits = list(db['rate_limits'].find(
+        {'bucket': bucket, 'ip': ip, 'created_at': {'$gte': now - window}}
+    ).sort('created_at', 1).limit(limit + 1))
+    if len(hits) <= limit:
+        return 0
+    return max(1, int((hits[0]['created_at'] + window - now).total_seconds()))
+
 
 # --- Contact form helpers ---
 CONTACT_MAX_ATTEMPTS = 3
@@ -413,6 +504,11 @@ def _record_contact_attempt(ip):
     _ensure_contact_indexes()
     db['contact_attempts'].insert_one({'key': 'contact', 'ip': ip, 'created_at': _utcnow()})
 
+def _looks_like_email(email):
+    local, _, domain = email.partition('@')
+    return bool(local) and '.' in domain and not domain.startswith('.') and not domain.endswith('.')
+
+
 def _validate_contact(payload):
     """Return (cleaned, error). cleaned is None when error is set."""
     def _text(value):
@@ -433,8 +529,7 @@ def _validate_contact(payload):
         return None, 'Please enter your email address.'
     if len(email) > CONTACT_EMAIL_MAX:
         return None, f'Email must be {CONTACT_EMAIL_MAX} characters or fewer.'
-    local, _, domain = email.partition('@')
-    if not local or '.' not in domain or domain.startswith('.') or domain.endswith('.'):
+    if not _looks_like_email(email):
         return None, 'Please enter a valid email address.'
     if not message:
         return None, 'Please enter a message.'
@@ -466,6 +561,138 @@ def _no_referrer(rv):
     resp.headers['Referrer-Policy'] = 'no-referrer'
     return resp
 
+# --- CSRF protection -------------------------------------------------------
+# Every state-changing request must echo a per-session token. The check is a
+# before_request hook rather than a per-view decorator so new routes are
+# protected by default instead of by remembering to opt in.
+CSRF_FIELD = '_csrf_token'
+CSRF_HEADER = 'X-CSRF-Token'
+SAFE_METHODS = {'GET', 'HEAD', 'OPTIONS', 'TRACE'}
+
+
+def csrf_token():
+    token = session.get(CSRF_FIELD)
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session[CSRF_FIELD] = token
+    return token
+
+
+app.jinja_env.globals['csrf_token'] = csrf_token
+
+
+def _submitted_csrf_token():
+    if request.form.get(CSRF_FIELD):
+        return request.form[CSRF_FIELD]
+    if request.headers.get(CSRF_HEADER):
+        return request.headers[CSRF_HEADER]
+    if request.is_json:
+        return (request.get_json(silent=True) or {}).get(CSRF_FIELD, '')
+    return ''
+
+
+@app.before_request
+def verify_csrf():
+    if request.method in SAFE_METHODS or app.config.get('WTF_CSRF_DISABLED'):
+        return None
+    expected = session.get(CSRF_FIELD, '')
+    submitted = _submitted_csrf_token()
+    if not expected or not submitted or not hmac.compare_digest(str(submitted), expected):
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Your session expired. Refresh the page and try again.'}), 400
+        abort(400)
+    return None
+
+
+@app.errorhandler(400)
+def bad_request(e):
+    return render_template('400.html'), 400
+
+
+@app.errorhandler(413)
+def payload_too_large(e):
+    megabytes = MAX_UPLOAD_BYTES // (1024 * 1024)
+    if request.path.startswith('/api/'):
+        return jsonify({'error': f'File too large (max {megabytes} MB).'}), 413
+    flash(f'That file is too large. The limit is {megabytes} MB.', 'error')
+    return redirect(request.referrer or url_for('index')), 302
+
+
+# --- Security headers ------------------------------------------------------
+# The admin dashboard still carries inline handlers, so it gets a CSP that
+# allows them. Every public page runs under a CSP with no inline script.
+_SCRIPT_CDNS = "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com"
+_BASE_CSP = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "connect-src 'self'",
+    # The donation page embeds a Givebutter campaign widget.
+    "frame-src https://givebutter.com",
+]
+
+
+def _csp_for(path):
+    script_src = f"script-src 'self' {_SCRIPT_CDNS}"
+    if path.startswith('/admin') or path.startswith('/notebook') or path.startswith('/resources'):
+        script_src += " 'unsafe-inline'"
+    return '; '.join(_BASE_CSP + [script_src])
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('X-Frame-Options', 'DENY')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault(
+        'Permissions-Policy', 'geolocation=(), microphone=(), camera=(), interest-cohort=()')
+    response.headers.setdefault('Content-Security-Policy', _csp_for(request.path))
+    if os.getenv('VERCEL'):
+        response.headers.setdefault(
+            'Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    return response
+
+
+# --- Static asset versioning ----------------------------------------------
+# Static files are served with `immutable` and a one-year max-age, so a URL
+# without a version can pin a stale stylesheet in a browser for a year. This
+# stamps every url_for('static', ...) with the file's modification time, which
+# makes the aggressive caching safe and removes the hand-maintained ?v=N.
+_static_versions = {}
+
+
+def _static_version(filename):
+    if filename not in _static_versions:
+        try:
+            mtime = os.path.getmtime(os.path.join(app.static_folder, filename))
+        except OSError:
+            mtime = 0
+        _static_versions[filename] = format(int(mtime) & 0xFFFFFFF, 'x')
+    return _static_versions[filename]
+
+
+@app.url_defaults
+def add_static_version(endpoint, values):
+    if endpoint == 'static' and values.get('filename'):
+        values.setdefault('v', _static_version(values['filename']))
+
+
+@app.route('/healthz')
+def healthz():
+    """Liveness probe that also confirms the database answers."""
+    try:
+        get_db().command('ping')
+        return jsonify({'status': 'ok', 'database': 'up'})
+    except Exception:
+        logger.exception('healthz: database ping failed')
+        return jsonify({'status': 'degraded', 'database': 'down'}), 503
+
+
 @app.route('/')
 def index():
     stats = db['site_metadata'].find_one({'_id': 'global_stats'}) or {
@@ -493,9 +720,16 @@ def achievements():
 def contact():
     return render_template('contact.html', active_page='contact')
 
+CONTACT_EMAIL = os.getenv('CONTACT_EMAIL', 'mephamrobotics@gmail.com')
+
+
 @app.route('/donate')
 def donate():
-    return render_template('donate.html', active_page='donate')
+    # The embed only renders once a campaign id is configured; until then the
+    # template shows an email fallback instead of a broken Givebutter frame.
+    return render_template('donate.html', active_page='donate',
+                           givebutter_campaign_id=os.getenv('GIVEBUTTER_CAMPAIGN_ID', ''),
+                           contact_email=CONTACT_EMAIL)
 
 @app.route('/team/<team_number>')
 def team_page(team_number):
@@ -580,7 +814,7 @@ def login():
 
     return render_template('login.html', active_page='login', next=next_url)
 
-@app.route('/logout', methods=['POST', 'GET'])
+@app.route('/logout', methods=['POST'])
 def logout():
     session.clear()
     return redirect(url_for('index'))
@@ -597,8 +831,8 @@ def reset_password(token):
         password = request.form.get('password', '').strip()
         confirm = request.form.get('confirm_password', '').strip()
         error = None
-        if len(password) < 8:
-            error = 'Password must be at least 8 characters.'
+        if len(password) < PASSWORD_MIN_LENGTH:
+            error = f'Password must be at least {PASSWORD_MIN_LENGTH} characters.'
         elif password != confirm:
             error = 'Passwords do not match.'
         if error:
@@ -733,13 +967,15 @@ def admin_dashboard():
         m['status'] = m.get('status', 'new')
         messages.append(m)
     unread_messages = sum(1 for m in messages if m['status'] == 'new')
+    subscriber_count = db['newsletter_subscribers'].count_documents({})
 
     return render_template('admin.html', stats=stats, competitions=competitions,
                            awards=global_awards, team_awards=team_awards_list,
                            teams=teams, users=users, sponsors=sponsors,
                            activities=activities, monthly_changes=monthly_changes,
                            reset_link=reset_link, reset_link_user=reset_link_user,
-                           messages=messages, unread_messages=unread_messages)
+                           messages=messages, unread_messages=unread_messages,
+                           subscriber_count=subscriber_count)
 
 @app.route('/admin/update-stats', methods=['POST'])
 @role_required('admin')
@@ -751,12 +987,10 @@ def admin_update_stats():
             'awards_count': int(request.form.get('awards_count', 0)),
             'hours_built': int(request.form.get('hours_built', 0))
         }
+        # Read the old numbers *before* writing, otherwise every delta is zero.
+        prev_stats = db['site_metadata'].find_one({'_id': 'global_stats'}) or {}
         db['site_metadata'].update_one({'_id': 'global_stats'}, {'$set': data}, upsert=True)
         flash('Statistics updated successfully!', 'success')
-
-        # Log activity with change calculations
-        # Get previous stats to calculate changes
-        prev_stats = db['site_metadata'].find_one({'_id': 'global_stats'}) or {}
         changes = {
             'teams_change': data['teams_count'] - prev_stats.get('teams_count', 0),
             'members_change': data['members_count'] - prev_stats.get('members_count', 0),
@@ -864,19 +1098,15 @@ def admin_save_team():
 
         # Upload hero image if provided
         if 'hero_image' in request.files and request.files['hero_image'].filename:
-            hero_image_file = request.files['hero_image']
-            hero_image_url = upload_to_vercel_blob(
-                hero_image_file,
-                f'teams/{team_number}/hero_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.{hero_image_file.filename.split(".")[-1]}'
-            )
+            hero_image_url = checked_upload(
+                request.files['hero_image'], 'teams', team_number,
+                allowed=IMAGE_EXTENSIONS, stem='hero')
 
         # Upload STL file if provided
         if 'stl_file' in request.files and request.files['stl_file'].filename:
-            stl_file = request.files['stl_file']
-            stl_file_url = upload_to_vercel_blob(
-                stl_file,
-                f'teams/{team_number}/model_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.stl'
-            )
+            stl_file_url = checked_upload(
+                request.files['stl_file'], 'teams', team_number,
+                allowed={'stl'}, stem='model')
 
         team_data = {
             'team_number': team_number,
@@ -906,11 +1136,11 @@ def admin_save_team():
             # Check if a new photo was uploaded for this member
             member_photo_key = f'member_photo_{i}'
             if member_photo_key in request.files and request.files[member_photo_key].filename:
-                member_photo_file = request.files[member_photo_key]
-                member_photo_url = upload_to_vercel_blob(
-                    member_photo_file,
-                    f'teams/{team_number}/members/{request.form.get(f"member_name_{i}").replace(" ", "_")}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.{member_photo_file.filename.split(".")[-1]}'
-                )
+                member_photo_url = checked_upload(
+                    request.files[member_photo_key],
+                    'teams', team_number, 'members',
+                    allowed=IMAGE_EXTENSIONS,
+                    stem=request.form.get(f'member_name_{i}') or 'member')
             else:
                 # Use existing photo path from hidden field
                 member_photo_url = request.form.get(f'member_photo_path_{i}', 'static/assets/profile/base.png')
@@ -988,6 +1218,13 @@ def admin_save_team():
         flash(f'Error saving team: {e}', 'error')
     return redirect(url_for('admin_dashboard'))
 
+def _team_blob_urls(team):
+    """Every Vercel Blob URL a team document points at."""
+    urls = [team.get('hero_image'), team.get('stl_path')]
+    urls += [m.get('photo') for m in team.get('members', [])]
+    return [u for u in urls if isinstance(u, str) and u.startswith('http')]
+
+
 @app.route('/admin/delete-team/<id>', methods=['POST'])
 @role_required('admin')
 def admin_delete_team(id):
@@ -995,6 +1232,14 @@ def admin_delete_team(id):
         # Get team info before deleting for logging
         team = db['teams'].find_one({'_id': ObjectId(id)})
         db['teams'].delete_one({'_id': ObjectId(id)})
+        if team:
+            # Drop the team's own award counters and blobs so nothing is orphaned.
+            db['awards'].delete_many({'team_number': team.get('team_number')})
+            for url in _team_blob_urls(team):
+                try:
+                    delete_from_vercel_blob(url)
+                except Exception:
+                    logger.exception('Failed to delete blob %s for deleted team', url)
         flash('Team removed.', 'success')
 
         # Log activity
@@ -1036,7 +1281,7 @@ def admin_update_awards():
                 if count_change != 0:
                     total_change += count_change
                     award_changes.append({
-                        'name': prev_award.get('name', 'Unknown') if prev_award else 'Unknown',
+                        'name': prev_award.get('title', 'Unknown') if prev_award else 'Unknown',
                         'change': count_change
                     })
 
@@ -1090,7 +1335,7 @@ def admin_update_team_awards():
                     total_change += count_change
                     team_award_changes.append({
                         'team': prev_award.get('team_number', 'Unknown') if prev_award else 'Unknown',
-                        'award': prev_award.get('name', 'Unknown') if prev_award else 'Unknown',
+                        'award': prev_award.get('title', 'Unknown') if prev_award else 'Unknown',
                         'change': count_change
                     })
 
@@ -1127,6 +1372,9 @@ def admin_create_user():
         password = request.form.get('password', '').strip()
         if not username or not password:
             flash('Username and password are required.', 'error')
+            return redirect(url_for('admin_dashboard', _anchor='users'))
+        if len(password) < PASSWORD_MIN_LENGTH:
+            flash(f'Password must be at least {PASSWORD_MIN_LENGTH} characters.', 'error')
             return redirect(url_for('admin_dashboard', _anchor='users'))
         if db['users'].find_one({'username': username}):
             flash('Username already exists.', 'error')
@@ -1175,6 +1423,9 @@ def admin_update_user(id):
         role = request.form.get('role', 'member')
         if not username:
             flash('Username is required.', 'error')
+            return redirect(url_for('admin_dashboard', _anchor='users'))
+        if password and len(password) < PASSWORD_MIN_LENGTH:
+            flash(f'Password must be at least {PASSWORD_MIN_LENGTH} characters.', 'error')
             return redirect(url_for('admin_dashboard', _anchor='users'))
         if role not in USER_ROLES:
             flash('Invalid role.', 'error')
@@ -1318,11 +1569,9 @@ def admin_save_sponsor():
         # Handle logo upload
         logo_url = None
         if 'logo' in request.files and request.files['logo'].filename:
-            logo_file = request.files['logo']
-            logo_url = upload_to_vercel_blob(
-                logo_file,
-                f'sponsors/{name.replace(" ", "_")}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.{logo_file.filename.split(".")[-1]}'
-            )
+            logo_url = checked_upload(
+                request.files['logo'], 'sponsors',
+                allowed=IMAGE_EXTENSIONS, stem=name or 'sponsor')
 
         sponsor_data = {
             'name': name,
@@ -1399,13 +1648,33 @@ def admin_delete_sponsor(id):
     return redirect(url_for('admin_dashboard'))
 
 ROBOTEVENTS_TEAM_NUMBERS = ['77628D', '77628P']
+MATCHES_CACHE_SECONDS = 300
+_matches_cache = {'expires_at': 0.0, 'payload': None}
+_matches_cache_lock = threading.Lock()
+
 
 @app.route('/api/matches')
 def api_matches():
-    """Proxy RobotEvents match data so the API key never reaches the browser."""
+    """Proxy RobotEvents match data so the API key never reaches the browser.
+
+    Results are cached for a few minutes: every visitor hitting this endpoint
+    otherwise costs one upstream call per team plus a team lookup.
+    """
+    with _matches_cache_lock:
+        if _matches_cache['payload'] is not None and time.time() < _matches_cache['expires_at']:
+            return jsonify(_matches_cache['payload'])
+
+    payload = _fetch_matches()
+    with _matches_cache_lock:
+        _matches_cache['payload'] = payload
+        _matches_cache['expires_at'] = time.time() + MATCHES_CACHE_SECONDS
+    return jsonify(payload)
+
+
+def _fetch_matches():
     api_key = os.getenv('ROBOTEVENTS_API_KEY')
     if not api_key:
-        return jsonify({'matches': []})
+        return {'matches': []}
 
     headers = {'Authorization': f'Bearer {api_key}', 'Accept': 'application/json'}
 
@@ -1414,14 +1683,14 @@ def api_matches():
             resp = requests.get(f'https://www.robotevents.com/api/v2/{endpoint}', headers=headers, timeout=8)
             resp.raise_for_status()
             return resp.json()
-        except Exception as e:
-            print(f"RobotEvents fetch error: {e}")
+        except Exception:
+            logger.warning('RobotEvents fetch failed for %s', endpoint, exc_info=True)
             return None
 
     number_qs = '&'.join(f'number[]={n}' for n in ROBOTEVENTS_TEAM_NUMBERS)
     teams_data = fetch(f'teams?{number_qs}')
     if not teams_data or not teams_data.get('data'):
-        return jsonify({'matches': []})
+        return {'matches': []}
 
     all_matches = []
     for team in teams_data['data']:
@@ -1453,7 +1722,7 @@ def api_matches():
             'score': f"{red['score']} - {blue['score']}" if red['score'] is not None else None,
         })
 
-    return jsonify({'matches': results})
+    return {'matches': results}
 
 @app.route('/api/contact', methods=['POST'])
 def api_contact():
@@ -1483,23 +1752,126 @@ def api_contact():
     })
     return jsonify({'ok': True})
 
+CHAT_MESSAGE_MAX = 1000
+CHAT_RATE_LIMIT = 20
+CHAT_RATE_WINDOW = datetime.timedelta(minutes=10)
+CHAT_TIMEOUT_SECONDS = 20
+CHAT_SYSTEM_PROMPT = (
+    "You are Steven, the official AI assistant for the Mepham Robotics Club "
+    "(VEX V5 Team 77628). Be helpful, enthusiastic about robotics, and concise."
+)
+
+
+NEWSLETTER_RATE_LIMIT = 5
+NEWSLETTER_RATE_WINDOW = datetime.timedelta(hours=1)
+_newsletter_index_ready = False
+
+
+def _ensure_newsletter_index():
+    global _newsletter_index_ready
+    if _newsletter_index_ready:
+        return
+    db['newsletter_subscribers'].create_index('email', unique=True)
+    db['newsletter_subscribers'].create_index([('created_at', -1)])
+    _newsletter_index_ready = True
+
+
+@app.route('/api/newsletter', methods=['POST'])
+def api_newsletter():
+    """Store a footer newsletter signup.
+
+    Re-subscribing is idempotent and reports success either way, so the form
+    cannot be used to probe whether an address is already on the list.
+    """
+    payload = request.get_json(silent=True) or {}
+
+    # Honeypot, same as the contact form.
+    if (payload.get('website') or '').strip():
+        return jsonify({'ok': True})
+
+    email = payload.get('email')
+    email = email.strip().lower() if isinstance(email, str) else ''
+    if not email or len(email) > CONTACT_EMAIL_MAX or not _looks_like_email(email):
+        return jsonify({'error': 'Please enter a valid email address.'}), 400
+
+    retry_after = rate_limit('newsletter', _client_ip(),
+                             NEWSLETTER_RATE_LIMIT, NEWSLETTER_RATE_WINDOW)
+    if retry_after:
+        return jsonify({'error': 'Too many signups from this network. Try again later.'}), 429
+
+    _ensure_newsletter_index()
+    db['newsletter_subscribers'].update_one(
+        {'email': email},
+        {'$setOnInsert': {'email': email,
+                          'created_at': _utcnow(),
+                          'unsubscribe_token': secrets.token_urlsafe(24)}},
+        upsert=True)
+    return jsonify({'ok': True, 'message': "You're on the list."})
+
+
+@app.route('/unsubscribe/<token>')
+def unsubscribe(token):
+    removed = db['newsletter_subscribers'].delete_one({'unsubscribe_token': token})
+    return render_template('unsubscribe.html', active_page='unsubscribe',
+                           removed=removed.deleted_count > 0)
+
+
+@app.route('/admin/subscribers.csv')
+@role_required('admin')
+def admin_subscribers_csv():
+    """Download the newsletter list so it can be pasted into a mail tool."""
+    buffer = StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(['email', 'subscribed_at'])
+    for sub in db['newsletter_subscribers'].find().sort('created_at', -1):
+        created = sub.get('created_at')
+        writer.writerow([sub.get('email', ''),
+                         created.strftime('%Y-%m-%d %H:%M') if created else ''])
+    return Response(
+        buffer.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="newsletter-subscribers.csv"'})
+
+
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
-    data = request.get_json()
-    user_message = data.get('message')
+    """Proxy the chatbot upstream. Public, so it is capped and rate limited:
+    without both, anyone could drain the API key with a loop."""
+    data = request.get_json(silent=True) or {}
+    user_message = (data.get('message') or '').strip() if isinstance(data.get('message'), str) else ''
     if not user_message:
-        return {'error': 'No message provided'}, 400
+        return jsonify({'error': 'No message provided'}), 400
+    if len(user_message) > CHAT_MESSAGE_MAX:
+        return jsonify({'error': f'Message must be {CHAT_MESSAGE_MAX} characters or fewer.'}), 400
+
+    retry_after = rate_limit('chat', _client_ip(), CHAT_RATE_LIMIT, CHAT_RATE_WINDOW)
+    if retry_after:
+        minutes = max(1, math.ceil(retry_after / 60))
+        return jsonify({
+            'error': f'Steven needs a breather. Try again in {minutes} '
+                     f'{"minute" if minutes == 1 else "minutes"}.'
+        }), 429
+
+    if not os.getenv('CHATBOT_API_KEY'):
+        return jsonify({'error': 'The assistant is offline right now.'}), 503
+
     try:
         response = requests.post(
             os.getenv('CHATBOT_API_URL', "https://ai.hackclub.com/proxy/v1/chat/completions"),
-            headers={"Authorization": f"Bearer {os.getenv('CHATBOT_API_KEY')}", "Content-Type": "application/json"},
+            headers={"Authorization": f"Bearer {os.getenv('CHATBOT_API_KEY')}",
+                     "Content-Type": "application/json"},
             json={"model": os.getenv('CHATBOT_MODEL', "gpt-4o-mini"),
-                  "messages": [{"role": "system", "content": "You are Steven, the official AI assistant for the Mepham Robotics Club (VEX V5 Team 77628). Be helpful, enthusiastic about robotics, and concise."},
-                                {"role": "user", "content": user_message}]})
+                  "messages": [{"role": "system", "content": CHAT_SYSTEM_PROMPT},
+                               {"role": "user", "content": user_message}]},
+            timeout=CHAT_TIMEOUT_SECONDS)
         response.raise_for_status()
-        return {'reply': response.json()['choices'][0]['message']['content']}
+        return jsonify({'reply': response.json()['choices'][0]['message']['content']})
+    except requests.Timeout:
+        logger.warning('api_chat: upstream timed out')
+        return jsonify({'error': 'Steven took too long to answer. Try again.'}), 504
     except Exception:
-        return {'error': 'Failed to process request'}, 500
+        logger.exception('api_chat: upstream request failed')
+        return jsonify({'error': 'Failed to process request'}), 502
 
 @app.context_processor
 def inject_user():
@@ -1511,6 +1883,7 @@ STATIC_PUBLIC_PAGES = [
     ('achievements', 0.8, 'weekly'),
     ('donate', 0.7, 'monthly'),
     ('contact', 0.6, 'monthly'),
+    ('safety_quiz', 0.5, 'yearly'),
     ('privacy', 0.3, 'yearly'),
     ('credits_page', 0.3, 'yearly'),
 ]
@@ -1524,6 +1897,7 @@ def robots_txt():
         'Disallow: /login',
         'Disallow: /logout',
         'Disallow: /api/',
+        'Disallow: /unsubscribe/',
         f"Sitemap: {url_for('sitemap_xml', _external=True)}",
     ]
     return Response('\n'.join(lines), mimetype='text/plain')
@@ -1567,6 +1941,10 @@ def internal_server_error(e):
 
 @app.errorhandler(Exception)
 def handle_unexpected_error(e):
+    # Let Flask's own HTTP errors (404, 400, 413, ...) keep their status and
+    # their dedicated handlers instead of collapsing everything into a 500.
+    if isinstance(e, HTTPException):
+        return e
     logger.exception("Unhandled exception: %s", e)
     return render_template('500.html'), 500
 

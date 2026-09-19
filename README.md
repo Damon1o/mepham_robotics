@@ -4,45 +4,77 @@
 
 ## Build. Code. Compete.
 
-Welcome to the official repository for the **Mepham Robotics Club** (Team 77628) website. We are a student-led robotics organization from Wellington C. Mepham High School, competing in the VEX V5 Robotics Competition.
-
-## Mission
-
-Our mission is to foster an inclusive environment where students can thrive in STEM. We focus on:
-- **Excellence**: In mechanical design and autonomous programming.
-- **Collaboration**: Working together to find the best engineering solutions.
-- **Innovation**: Encouraging creative thinking to solve complex challenges.
+The official site for the **Mepham Robotics Club** (Team 77628), a student-led team from Wellington C. Mepham High
+School competing in the VEX V5 Robotics Competition.
 
 ## Tech Stack
 
-- **HTML5 & CSS3**: Clean, semantic structure with custom CSS for a premium aesthetic.
-- **JavaScript**: Interactive features including navigation, search, and countdown timers.
-- **Google Fonts**: [Balsamiq Sans](https://fonts.google.com/specimen/Balsamiq+Sans) and [Space Mono](https://fonts.google.com/specimen/Space+Mono).
-- **VEX V5**: Our robots are programmed in C++ and Python.
+- **Flask 3** on Python, deployed as a Vercel function (`api/index.py`)
+- **MongoDB** for teams, awards, competitions, users, contact messages, and newsletter subscribers
+- **Vercel Blob** for uploaded hero images, member photos, sponsor logos, and STL models
+- **Jinja2** templates with plain CSS and vanilla JavaScript — no build step
+- Fonts: [Balsamiq Sans](https://fonts.google.com/specimen/Balsamiq+Sans) and
+  [Space Mono](https://fonts.google.com/specimen/Space+Mono)
 
 ## Project Structure
 
 ```text
-├── assets/             # Images, icons, and static photos
-├── css/                # Main styling (styles.css)
-├── js/                 # Main logic (script.js)
-├── index.html          # Homepage
-├── app.py              # Main Flask application and server logic
-├── templates/          # Jinja2 templates for dynamic rendering
-│   ├── team.html       # Unified dynamic team profile template
-│   ├── admin.html      # Command Center (Admin Dashboard)
-│   └── ...             # Other site pages
-├── static/             # Static assets (css, js, uploads)
-└── ...
+api/index.py            # The entire Flask application: routes, auth, admin, JSON APIs
+templates/              # Jinja2 templates (base.html holds the site chrome)
+  partials/             # Shared fragments
+static/css/styles.css   # Global design system + dark theme
+static/css/pages/       # One stylesheet per page — no styles live in templates
+static/js/script.js     # Site-wide behaviour (nav, search, forms, chatbot, animations)
+static/js/theme.js      # Theme bootstrap, loaded before first paint
+static/js/admin.js      # Admin dashboard behaviour
+tests/                  # pytest suite, backed by mongomock
+docs/superpowers/       # Design specs and implementation plans
 ```
 
-## Upcoming Events
+## Running Locally
 
-Check the `index.html` file or the website's timeline section for information on upcoming competitions at:
-- Sanford H. Calhoun HS
-- Wellington C. Mepham HS
-- John F. Kennedy HS
+```bash
+python -m venv .venv && .venv/Scripts/activate   # Windows
+pip install -r requirements-dev.txt
+python api/index.py
+```
+
+The app reads configuration from `.env` (see below) and serves on <http://127.0.0.1:5000>.
+
+## Environment Variables
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `MONGO_URI` | yes | MongoDB connection string |
+| `SECRET_KEY` | yes in production | Signs the session cookie. Startup fails on Vercel without it. |
+| `BLOB_READ_WRITE_TOKEN` | for uploads | Vercel Blob token |
+| `PUBLIC_BASE_URL` | optional | Base URL used when building password-reset links |
+| `ROBOTEVENTS_API_KEY` | optional | Enables `/api/matches`; results are cached for 5 minutes |
+| `CHATBOT_API_KEY` | optional | Enables the on-site assistant; without it the widget reports it is offline |
+| `CHATBOT_API_URL`, `CHATBOT_MODEL` | optional | Override the assistant's upstream and model |
+| `GIVEBUTTER_CAMPAIGN_ID` | optional | Renders the donation embed; without it the page shows an email fallback |
+| `CONTACT_EMAIL` | optional | Address shown in fallbacks |
+
+## Tests
+
+```bash
+python -m pytest
+```
+
+The suite runs against `mongomock`, so no database is needed. It covers authentication, password reset, the contact
+and newsletter endpoints, CSRF enforcement, security headers, upload validation, rate limiting, and that every page
+renders.
+
+## Security Notes
+
+- Every non-`GET` request must carry a CSRF token (`_csrf_token` field or `X-CSRF-Token` header). The check is a
+  `before_request` hook, so new routes are protected by default.
+- Public pages are served under a Content-Security-Policy with no inline script. Adding an `onclick=` attribute or an
+  inline `<script>` to a public template will silently break it — `tests/test_pages.py` guards against this.
+- Uploads are restricted by extension, capped at 8 MB, and stored under keys built with `secure_filename`.
+- Sign-in attempts are rate limited per (account, IP) and per account, so rotating addresses does not reset the count.
+- `/api/contact`, `/api/newsletter`, and `/api/chat` are rate limited per IP and validate their input.
 
 ## Support Us
 
-We are always looking for sponsors and donations to help us acquire new parts and compete at the highest level. Visit `donate.html` for more information.
+We're always looking for sponsors. See the [support page](/donate) for sponsorship levels, or use the contact form.

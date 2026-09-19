@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#7a1420">
     <title>{% block title %}Mepham Robotics Club{% endblock %}</title>
     <meta name="description"
         content="{% filter collapse_ws %}{% block meta_description %}Mepham Robotics Club (Team 77628) — Building robots, coding futures, and competing in VEX Robotics.{% endblock %}{% endfilter %}">
@@ -29,25 +31,30 @@
         href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:wght@400;700&display=swap"
         rel="stylesheet">
     {% endblock %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=3">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/icons/mephamrobotics.png') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/icons/mephamrobotics.png') }}">
     {% block head_scripts %}{% endblock %}
     {% block page_styles %}{% endblock %}
 </head>
 
 <body{% if current_user %} data-current-user="{{ current_user }}" {% endif %}>
 
-    <button class="menu-toggle" onclick="toggleNav()"><i data-lucide="menu"></i> MENU</button>
-    <div id="overlay" class="overlay" onclick="toggleNav()"></div>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
 
-    <div id="mySidenav" class="sidenav">
-        <button class="close-btn" onclick="toggleNav()">&times;</button>
+    <button class="menu-toggle" data-nav-toggle aria-controls="mySidenav" aria-expanded="false"><i
+            data-lucide="menu"></i> MENU</button>
+    <div id="overlay" class="overlay" data-nav-toggle></div>
+
+    <div id="mySidenav" class="sidenav" aria-label="Main navigation">
+        <button class="close-btn" data-nav-toggle aria-label="Close navigation">&times;</button>
 
         <div class="nav-links">
             <a href="{{ url_for('index') }}" {% if active_page=='index' %} class="active" {% endif %}>Home</a>
             <a href="{{ url_for('about') }}" {% if active_page=='about' %} class="active" {% endif %}>About</a>
 
-            <button class="dropdown-btn" onclick="toggleDropdown()">Team</button>
+            <button class="dropdown-btn" data-dropdown-toggle aria-controls="teamDropdown"
+                aria-expanded="false">Team</button>
             <div id="teamDropdown" class="dropdown-container">
                 {% for n_team in nav_teams %}
                 <a href="{{ url_for('team_page', team_number=n_team.team_number) }}" {% if
@@ -60,6 +67,10 @@
             <a href="{{ url_for('donate') }}" {% if active_page=='donate' %} class="active" {% endif %}>Donate</a>
             <a href="{{ url_for('contact') }}" {% if active_page=='contact' %} class="active" {% endif %}>Contact</a>
 
+            <button type="button" class="nav-search-btn">
+                <i data-lucide="search"></i> Search <kbd>Ctrl</kbd>+<kbd>K</kbd>
+            </button>
+
             {% if 'user' in session and session.get('role') == 'admin' %}
             <a href="{{ url_for('admin_dashboard') }}" {% if active_page=='admin' %} class="active" {% endif %}>Admin
                 Panel</a>
@@ -67,8 +78,14 @@
         </div>
 
         <div class="nav-footer">
+            <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch colour theme">
+                <i data-lucide="sun-moon"></i><span data-theme-label>System theme</span>
+            </button>
             {% if 'user' in session %}
-            <a href="{{ url_for('logout') }}" class="login-btn">Logout ({{ session['user'] }})</a>
+            <form method="POST" action="{{ url_for('logout') }}" class="logout-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="login-btn">Logout ({{ session['user'] }})</button>
+            </form>
             {% else %}
             <a href="{{ url_for('login') }}" class="login-btn">Member Login</a>
             {% endif %}
@@ -76,17 +93,21 @@
     </div>
 
     <div class="search-overlay">
-        <button class="search-close">&times;</button>
+        <button class="search-close" aria-label="Close search">&times;</button>
         <div class="search-container">
             <div class="search-input-wrapper">
                 <span class="search-icon"><i data-lucide="search"></i></span>
-                <input type="text" placeholder="Search pages... (Ctrl+K)" autocomplete="off">
+                <label class="visually-hidden" for="site-search">Search pages</label>
+                <input type="text" id="site-search" placeholder="Search pages... (Ctrl+K)"
+                    autocomplete="off" role="combobox" aria-expanded="false" aria-controls="search-results">
             </div>
-            <div class="search-results"></div>
+            <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
         </div>
     </div>
 
-    {% block content %}{% endblock %}
+    <main id="main-content">
+        {% block content %}{% endblock %}
+    </main>
 
     <footer>
         <div class="footer-grid">
@@ -120,10 +141,15 @@
             <div class="footer-col footer-newsletter">
                 <h4><i data-lucide="mail"></i> Stay Updated</h4>
                 <p>Get competition results and team news in your inbox.</p>
-                <form class="footer-newsletter-form">
-                    <input type="email" name="email" placeholder="your@email.com" required>
+                <form class="footer-newsletter-form" novalidate>
+                    <label class="visually-hidden" for="newsletter-email">Email address</label>
+                    <input type="email" id="newsletter-email" name="email" placeholder="your@email.com"
+                        autocomplete="email" required>
+                    <input type="text" name="website" class="visually-hidden" tabindex="-1" autocomplete="off"
+                        aria-hidden="true">
                     <button type="submit">Subscribe</button>
                 </form>
+                <p class="footer-newsletter-status" role="status" aria-live="polite"></p>
             </div>
         </div>
         <p class="footer-copyright">&copy; 2026 Mepham Robotics Club | Build. Code. Compete.</p>
@@ -146,7 +172,7 @@
                     </div>
                 </div>
             </div>
-            <form id="chatbot-form" onsubmit="event.preventDefault();">
+            <form id="chatbot-form">
                 <div id="chatbot-input-area">
                     <div class="chatbot-input-wrapper">
                         <input type="text" id="chatbot-input" placeholder="Type here" autocomplete="off" required>
@@ -176,7 +202,7 @@
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"
         integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
         crossorigin="anonymous" defer></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}?v=5" defer></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
     {% block page_scripts %}{% endblock %}
     </body>
 

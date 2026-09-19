@@ -5,3 +5,25 @@
     border-bottom: 4px solid var(--text-dark);
     min-height: 60vh;
 }
+
+/* Sponsor inquiry form — moved out of donate.html so no styles live in markup. */
+.sponsor-inquiry-title {
+    text-align: center;
+}
+
+.sponsor-submit {
+    width: 100%;
+}
+
+.sponsor-form-status {
+    margin-top: 0.75rem;
+    min-height: 1.25rem;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.donate-embed-fallback {
+    padding: 2rem;
+    text-align: center;
+    line-height: 1.7;
+}

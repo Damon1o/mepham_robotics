@@ -285,3 +285,21 @@
         gap: 2rem;
     }
 }
+
+/* --- DARK THEME ---------------------------------------------------------- */
+[data-theme="dark"] .donation-cta {
+    background: #181818;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .timeline-card,
+[data-theme="dark"] .stat-item {
+    background: #1e1e1e;
+    border-color: #444;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .timeline-card .location,
+[data-theme="dark"] .timeline-card .time {
+    color: #bbb;
+}

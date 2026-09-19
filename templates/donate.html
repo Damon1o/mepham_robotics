@@ -40,8 +40,17 @@ build the future.{% endblock %}
 
         <!-- Givebutter Embed -->
         <div class="givebutter-container">
-            <iframe src="https://givebutter.com/embed/c/YOUR_CAMPAIGN_ID" frameborder="0" scrolling="yes" width="100%"
-                height="600" seamless allowpaymentrequest></iframe>
+            {% if givebutter_campaign_id %}
+            <iframe src="https://givebutter.com/embed/c/{{ givebutter_campaign_id }}" title="Donate to Mepham Robotics"
+                loading="lazy" frameborder="0" scrolling="yes" width="100%" height="600" seamless
+                allowpaymentrequest></iframe>
+            {% else %}
+            <p class="donate-embed-fallback">
+                Our online donation form is being set up. In the meantime, email
+                <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> and we'll send you a link, or use the
+                sponsorship form below.
+            </p>
+            {% endif %}
         </div>
 
         <div class="text-center" style="margin-top: 2rem;">
@@ -118,21 +127,21 @@ build the future.{% endblock %}
 <!-- CORPORATE SPONSOR INQUIRY -->
 <section class="sponsor-inquiry-section fade-in-section">
     <div class="content-page">
-        <h2 class="ripple" style="text-align:center;">Become a Corporate Sponsor</h2>
+        <h2 class="ripple sponsor-inquiry-title">Become a Corporate Sponsor</h2>
         <div class="sponsor-form">
             <h3>Partner with Us</h3>
-            <form id="sponsorForm">
+            <form id="sponsorForm" novalidate>
                 <div class="form-group">
-                    <label>Company Name</label>
-                    <input type="text" name="company" required>
+                    <label for="sponsor-company">Company Name</label>
+                    <input type="text" id="sponsor-company" name="company" autocomplete="organization" required>
                 </div>
                 <div class="form-group">
-                    <label>Contact Email</label>
-                    <input type="email" name="email" required>
+                    <label for="sponsor-email">Contact Email</label>
+                    <input type="email" id="sponsor-email" name="email" autocomplete="email" required>
                 </div>
                 <div class="form-group">
-                    <label>Sponsorship Level Interest</label>
-                    <select name="level">
+                    <label for="sponsor-level">Sponsorship Level Interest</label>
+                    <select id="sponsor-level" name="level">
                         <option>Bronze ($50+)</option>
                         <option>Silver ($150+)</option>
                         <option>Gold ($500+)</option>
@@ -141,11 +150,14 @@ build the future.{% endblock %}
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Message</label>
-                    <textarea name="message" rows="4" required></textarea>
+                    <label for="sponsor-message">Message</label>
+                    <textarea id="sponsor-message" name="message" rows="4" required></textarea>
                 </div>
-                <button type="submit" class="cta-button cta-primary" style="width:100%;">Send Inquiry</button>
+                <input type="text" name="website" class="visually-hidden" tabindex="-1" autocomplete="off"
+                    aria-hidden="true">
+                <button type="submit" class="cta-button cta-primary sponsor-submit">Send Inquiry</button>
             </form>
+            <p class="sponsor-form-status" role="status" aria-live="polite"></p>
         </div>
     </div>
 </section>

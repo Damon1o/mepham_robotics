@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 — Page Not Found | Mepham Robotics</title>
+    <title>400 — Bad Request | Mepham Robotics</title>
     <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -15,10 +15,10 @@
     <div class="error-page">
         <div class="error-content">
             <i data-lucide="bot" class="error-emoji"></i>
-            <div class="error-code">404</div>
-            <p class="error-message">Robot Lost in the Field!</p>
-            <p class="error-submessage">The page you're looking for has either been moved, deleted, or never existed —
-                kind of like our first autonomous routine.</p>
+            <div class="error-code">400</div>
+            <p class="error-message">Request Rejected</p>
+            <p class="error-submessage">That form was submitted with an expired or missing security token, usually because the page sat open for a long time. Reload the page and try again —
+                nothing was changed.</p>
             <div class="error-actions">
                 <a href="{{ url_for('index') }}" class="cta-button cta-primary">Go Home</a>
                 <a href="{{ url_for('contact') }}" class="cta-button cta-secondary">Contact Us</a>

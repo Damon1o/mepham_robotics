@@ -63,9 +63,7 @@ Robotics. Join the legacy.{% endblock %}
     </div>
     <p class="countdown-event">{{ competition.name if competition else "TBD" }}</p>
     {% if competition %}
-    <script>
-        window.COUNTDOWN_DATE = "{{ competition.date.isoformat() }}";
-    </script>
+    <span class="visually-hidden" data-countdown-date="{{ competition.date.isoformat() }}"></span>
     {% endif %}
 </section>
 

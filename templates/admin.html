@@ -3,7 +3,7 @@
 {% block title %}Admin Dashboard | Mepham Robotics{% endblock %}
 
 {% block page_styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 
 <script src="{{ url_for('static', filename='js/admin.js') }}" defer></script>
 <script id="team_awards_data" type="application/json">
@@ -146,6 +146,7 @@
             <h2><i data-lucide="chart-column"></i> Site Statistics</h2>
         </div>
         <form action="{{ url_for('admin_update_stats') }}" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label>Teams Count</label>
                 <input type="number" name="teams_count" value="{{ stats.teams_count }}" required>
@@ -191,6 +192,7 @@
                         onclick="editEvent(this.dataset.id, this.dataset.name, this.dataset.location, this.dataset.date)">Edit</button>
                     <form action="{{ url_for('admin_delete_competition', comp_id=comp._id) }}" method="POST"
                         style="margin: 0;" onsubmit="return confirmDelete(this, 'event')">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
                             aria-label="Delete event: {{ comp.name }}">Delete</button>
                     </form>
@@ -206,6 +208,7 @@
             style="font-size: 1rem; margin-bottom: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">Add New Event
         </h3>
         <form id="event_form" action="{{ url_for('admin_add_competition') }}" data-default-action="{{ url_for('admin_add_competition') }}" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label>Event Name</label>
                 <input type="text" name="comp_name" placeholder="e.g. Regional Qualifiers" required>
@@ -236,6 +239,7 @@
         <input type="search" id="awards_filter" class="panel-filter" aria-label="Filter awards"
             placeholder="Filter awards by name...">
         <form action="{{ url_for('admin_update_awards') }}" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="data-list">
                 {% for award in awards %}
                 <div class="data-item award-item">
@@ -278,6 +282,7 @@
 
         <form action="{{ url_for('admin_update_team_awards') }}" method="POST" id="team_awards_form"
             style="display: none;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div id="team_awards_list" class="data-list"
                 style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem; max-height: none;">
                 <!-- Dynamically populated -->
@@ -330,6 +335,7 @@
                         onclick="editTeam(this.dataset.team)">Edit</button>
                     <form action="{{ url_for('admin_delete_team', id=team._id) }}" method="POST" style="margin: 0;"
                         onsubmit="return confirmDelete(this, 'team')">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
                             aria-label="Delete team: {{ team.nickname }}">Delete</button>
                     </form>
@@ -342,6 +348,7 @@
             style="font-size: 1.25rem; margin-bottom: 1.5rem; border-top: 2px solid #eee; padding-top: 1.5rem;">Create
             New Team</h3>
         <form id="team_form" action="{{ url_for('admin_save_team') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" id="team_id" name="team_id">
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
@@ -459,6 +466,7 @@
                         onclick="editSponsor(this.dataset.id, this.dataset.name, this.dataset.website, this.dataset.level)">Edit</button>
                     <form action="{{ url_for('admin_delete_sponsor', id=sponsor._id) }}" method="POST" style="margin: 0;"
                         onsubmit="return confirmDelete(this, 'sponsor')">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
                             aria-label="Delete sponsor: {{ sponsor.name }}">Delete</button>
                     </form>
@@ -479,6 +487,7 @@
         style="font-size: 1.1rem; margin-bottom: 1rem; border-top: 2px solid #eee; padding-top: 1.5rem;">Add New Sponsor
     </h3>
     <form id="sponsor_form" action="{{ url_for('admin_save_sponsor') }}" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" id="sponsor_id" name="sponsor_id">
         <div class="form-group">
             <label>Sponsor Name</label>
@@ -567,12 +576,14 @@
                     aria-label="Edit user: {{ user.username }}"
                     onclick="editUser(this.dataset)">Edit</button>
                 <form action="{{ url_for('admin_generate_reset_link', id=user._id) }}" method="POST" class="inline-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="admin-btn admin-btn-secondary admin-btn-small"
                         aria-label="Generate reset link for {{ user.username }}">Reset link</button>
                 </form>
                 {% if user.username != session.user %}
                 <form action="{{ url_for('admin_delete_user', id=user._id) }}" method="POST" class="inline-form"
                     onsubmit="return confirmDelete(this, 'user')">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
                         aria-label="Delete user: {{ user.username }}">Delete</button>
                 </form>
@@ -588,6 +599,7 @@
     <h3 id="user_form_title" class="user-form-title">Create New User</h3>
     <form action="{{ url_for('admin_create_user') }}" data-default-action="{{ url_for('admin_create_user') }}"
         method="POST" id="userForm">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label for="username">Username</label>
             <input type="text" id="username" name="username" placeholder="Enter username" required>
@@ -664,6 +676,18 @@
 <section class="admin-panel" data-panel="messages" id="panel-messages" role="tabpanel" aria-labelledby="tab-messages" hidden>
 <div class="admin-card">
     <div class="admin-card-header">
+        <h2><i data-lucide="send"></i> Newsletter</h2>
+    </div>
+    <div class="user-summary">
+        <span>{{ subscriber_count }} subscriber{{ 's' if subscriber_count != 1 }}</span>
+        <a class="admin-btn" href="{{ url_for('admin_subscribers_csv') }}" download>
+            <i data-lucide="download"></i> Export CSV
+        </a>
+    </div>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2><i data-lucide="mail"></i> Contact Messages</h2>
     </div>
     <div class="user-summary">
@@ -704,18 +728,21 @@
                     {% if message.status != 'read' %}
                     <form action="{{ url_for('admin_message_action', id=message._id, action='read') }}"
                         method="POST" class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="admin-btn admin-btn-secondary admin-btn-small">Mark read</button>
                     </form>
                     {% endif %}
                     {% if message.status != 'archived' %}
                     <form action="{{ url_for('admin_message_action', id=message._id, action='archive') }}"
                         method="POST" class="inline-form">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="admin-btn admin-btn-secondary admin-btn-small">Archive</button>
                     </form>
                     {% endif %}
                     <form action="{{ url_for('admin_message_action', id=message._id, action='delete') }}"
                         method="POST" class="inline-form"
                         onsubmit="return confirmDelete(this, 'message')">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
                     </form>
                 </div>

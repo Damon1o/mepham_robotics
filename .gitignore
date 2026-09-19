@@ -20,3 +20,7 @@ Thumbs.db
 # Uploads (user-generated, served via Vercel Blob instead)
 static/uploads/
 .env*
+
+# Browser automation artifacts
+.playwright-mcp/
+*.png.tmp
