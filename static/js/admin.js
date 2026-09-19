@@ -1,4 +1,13 @@
 // Extracted from templates/admin.html inline <script> blocks
+
+// Stored team data is written straight into innerHTML templates below, so every
+// interpolated value goes through this first.
+function esc(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function editEvent(id, name, location, dateStr) {
     document.getElementById('event_form_title').innerText = 'Edit Event';
     document.getElementById('event_form').action = '/admin/update-competition/' + id;
@@ -22,14 +31,30 @@ function addMemberRow(data = {}) {
     row.className = 'dynamic-row';
     row.innerHTML = `
         <button type="button" class="remove-btn" aria-label="Remove member" onclick="this.parentElement.remove()">&times;</button>
-        <input type="hidden" name="member_photo_path_${i}" value="${data.photo || 'static/assets/profile/base.png'}">
+        <input type="hidden" name="member_photo_path_${i}" value="${esc(data.photo || 'static/assets/profile/base.png')}">
         <div class="form-group">
             <label>Member Name</label>
-            <input type="text" name="member_name_${i}" value="${data.name || ''}" required>
+            <input type="text" name="member_name_${i}" value="${esc(data.name)}" required>
         </div>
         <div class="form-group">
             <label>Role</label>
-            <input type="text" name="member_role_${i}" value="${data.role || ''}" required>
+            <input type="text" name="member_role_${i}" value="${esc(data.role)}" required>
+        </div>
+        <div class="form-group">
+            <label>Additional Roles (comma separated)</label>
+            <input type="text" name="member_roles_${i}" value="${esc((data.roles || []).join(', '))}" placeholder="Captain, Programmer">
+        </div>
+        <div class="form-group">
+            <label>Sub-Team</label>
+            <select name="member_subteam_${i}">
+                <option value="">-- Ungrouped --</option>
+                ${['Mechanical', 'Electrical', 'Programming', 'Notebook & Outreach']
+            .map(s => `<option value="${s}"${data.subteam === s ? ' selected' : ''}>${s}</option>`).join('')}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Member Since (year)</label>
+            <input type="number" name="member_since_${i}" min="1990" max="2100" value="${esc(data.since)}">
         </div>
         <div class="form-group">
             <label>Link User Account (Optional)</label>
@@ -40,7 +65,7 @@ function addMemberRow(data = {}) {
         <div class="form-group">
             <label>Profile Image (${data.photo ? 'Current exists' : 'Default used'})</label>
             <input type="file" name="member_photo_${i}" accept="image/*" onchange="previewMemberImage(this, ${i})">
-            ${data.photo ? `<div class="image-preview" id="member_preview_${i}"><img src="${data.photo}" alt="Current photo" style="max-width: 100px; max-height: 100px;"></div>` : ''}
+            ${data.photo ? `<div class="image-preview" id="member_preview_${i}"><img src="${esc(data.photo)}" alt="Current photo" style="max-width: 100px; max-height: 100px;"></div>` : ''}
         </div>
     `;
 
@@ -67,11 +92,35 @@ function addGoalRow(data = {}) {
         <button type="button" class="remove-btn" aria-label="Remove goal" onclick="this.parentElement.remove()">&times;</button>
         <div class="form-group">
             <label>Goal Name</label>
-            <input type="text" name="goal_name_${i}" value="${data.name || ''}" required>
+            <input type="text" name="goal_name_${i}" value="${esc(data.name)}" required>
         </div>
         <div class="form-group">
             <label>Progress (${data.progress || 0}%)</label>
             <input type="range" name="goal_progress_${i}" value="${data.progress || 0}" min="0" max="100" oninput="this.previousElementSibling.innerText = 'Progress (' + this.value + '%)'">
+        </div>
+    `;
+    container.appendChild(row);
+}
+
+let journeyCount = 0;
+function addJourneyRow(data = {}) {
+    const container = document.getElementById('journey_container');
+    const i = journeyCount++;
+    const row = document.createElement('div');
+    row.className = 'dynamic-row';
+    row.innerHTML = `
+        <button type="button" class="remove-btn" aria-label="Remove milestone" onclick="this.parentElement.remove()">&times;</button>
+        <div class="form-group">
+            <label>Date</label>
+            <input type="text" name="journey_date_${i}" value="${esc(data.date)}" placeholder="e.g. Nov 2025" required>
+        </div>
+        <div class="form-group">
+            <label>Title</label>
+            <input type="text" name="journey_title_${i}" value="${esc(data.title)}" required>
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea name="journey_description_${i}" rows="2">${esc(data.description)}</textarea>
         </div>
     `;
     container.appendChild(row);
@@ -89,15 +138,24 @@ function editTeam(teamJson) {
     document.getElementsByName('intake')[0].value = team.specs.intake || '';
     document.getElementsByName('auton_consistency')[0].value = team.specs.auton_consistency || '';
     document.getElementsByName('notebook_link')[0].value = team.notebook_link || '#';
+    document.getElementsByName('season')[0].value = team.season || '';
+    document.getElementsByName('division')[0].value = team.division || '';
+    document.getElementsByName('since')[0].value = team.since || '';
+    document.getElementsByName('worlds_appearances')[0].value = team.worlds_appearances || '';
+    document.getElementsByName('robotevents_number')[0].value = team.robotevents_number || '';
 
     // Clear and rebuild dynamic rows
     document.getElementById('members_container').innerHTML = '';
     memberCount = 0;
-    team.members.forEach(m => addMemberRow(m));
+    (team.members || []).forEach(m => addMemberRow(m));
 
     document.getElementById('goals_container').innerHTML = '';
     goalCount = 0;
-    team.goals.forEach(g => addGoalRow(g));
+    (team.goals || []).forEach(g => addGoalRow(g));
+
+    document.getElementById('journey_container').innerHTML = '';
+    journeyCount = 0;
+    (team.journey || []).forEach(j => addJourneyRow(j));
 
     window.scrollTo({ top: document.getElementById('team_form_card').offsetTop - 50, behavior: 'smooth' });
 }
@@ -205,8 +263,10 @@ function resetTeamForm() {
     document.getElementById('team_form').reset();
     document.getElementById('members_container').innerHTML = '';
     document.getElementById('goals_container').innerHTML = '';
+    document.getElementById('journey_container').innerHTML = '';
     memberCount = 0;
     goalCount = 0;
+    journeyCount = 0;
 }
 
 // New enhanced functions

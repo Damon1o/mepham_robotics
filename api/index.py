@@ -830,6 +830,20 @@ def admin_save_team():
             'notebook_link': request.form.get('notebook_link', '#')
         }
 
+        # Optional profile fields. A blank input stores nothing rather than an empty
+        # string or a misleading 0, so the team page can hide what was never filled in.
+        for field in ('season', 'division', 'robotevents_number'):
+            value = (request.form.get(field) or '').strip()
+            if value:
+                team_data[field] = value
+        for field in ('since', 'worlds_appearances'):
+            value = (request.form.get(field) or '').strip()
+            if value:
+                try:
+                    team_data[field] = int(value)
+                except ValueError:
+                    pass
+
         # Add file URLs if uploaded
         if hero_image_url:
             team_data['hero_image'] = hero_image_url
@@ -854,12 +868,27 @@ def admin_save_team():
                 # Use existing photo path from hidden field
                 member_photo_url = request.form.get(f'member_photo_path_{i}', 'static/assets/profile/base.png')
 
-            members.append({
+            member = {
                 'name': request.form.get(f'member_name_{i}'),
                 'role': request.form.get(f'member_role_{i}'),
                 'user_id': request.form.get(f'member_user_{i}'),
                 'photo': member_photo_url
-            })
+            }
+
+            roles = [r.strip() for r in (request.form.get(f'member_roles_{i}') or '').split(',') if r.strip()]
+            if roles:
+                member['roles'] = roles
+            subteam = (request.form.get(f'member_subteam_{i}') or '').strip()
+            if subteam:
+                member['subteam'] = subteam
+            since = (request.form.get(f'member_since_{i}') or '').strip()
+            if since:
+                try:
+                    member['since'] = int(since)
+                except ValueError:
+                    pass
+
+            members.append(member)
             i += 1
 
         team_data['members'] = members
@@ -871,6 +900,15 @@ def admin_save_team():
                           'progress': int(request.form.get(f'goal_progress_{j}', 0))})
             j += 1
         team_data['goals'] = goals
+
+        journey = []
+        k = 0
+        while f'journey_title_{k}' in request.form:
+            journey.append({'date': request.form.get(f'journey_date_{k}', ''),
+                            'title': request.form.get(f'journey_title_{k}', ''),
+                            'description': request.form.get(f'journey_description_{k}', '')})
+            k += 1
+        team_data['journey'] = journey
 
         if team_id and len(team_id) == 24:
             # Update existing team - handle old file deletion

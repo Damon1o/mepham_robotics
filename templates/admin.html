@@ -361,6 +361,34 @@
                         <input type="text" name="notebook_link" placeholder="URL to notebook">
                     </div>
                     <div class="form-group">
+                        <label>Season</label>
+                        <input type="text" name="season" placeholder="e.g. 2025-26">
+                        <div class="form-hint">One team profile per season. Adding a second season turns on
+                            the season switcher on the team page.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Division</label>
+                        <select name="division">
+                            <option value="">-- Not set --</option>
+                            <option value="High School">High School</option>
+                            <option value="Middle School">Middle School</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Competing Since (year)</label>
+                        <input type="number" name="since" min="1990" max="2100" placeholder="e.g. 2019">
+                    </div>
+                    <div class="form-group">
+                        <label>Worlds Appearances</label>
+                        <input type="number" name="worlds_appearances" min="0" max="99" placeholder="e.g. 2">
+                    </div>
+                    <div class="form-group">
+                        <label>RobotEvents Number (Optional)</label>
+                        <input type="text" name="robotevents_number" placeholder="defaults to team number">
+                        <div class="form-hint">Only set this if the RobotEvents listing uses a different
+                            number. Drives the live skills panel.</div>
+                    </div>
+                    <div class="form-group">
                         <label>Hero Image</label>
                         <input type="file" name="hero_image" accept="image/*"
                             onchange="previewImage(this, 'heroImagePreview')">
@@ -406,6 +434,15 @@
                     <div id="goals_container"></div>
                     <p class="form-fieldset-empty-hint">No goals added yet.</p>
                     <button type="button" class="add-more-btn" onclick="addGoalRow()">+ Add Goal</button>
+                </fieldset>
+            </div>
+
+            <div style="margin-top: 2rem;">
+                <fieldset class="form-fieldset">
+                    <legend>Team Journey</legend>
+                    <div id="journey_container"></div>
+                    <p class="form-fieldset-empty-hint">No journey milestones added yet.</p>
+                    <button type="button" class="add-more-btn" onclick="addJourneyRow()">+ Add Milestone</button>
                 </fieldset>
             </div>
 
