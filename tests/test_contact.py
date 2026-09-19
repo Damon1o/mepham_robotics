@@ -71,6 +71,22 @@ def test_message_html_is_stored_verbatim(client, db):
     assert db['contact_messages'].find_one()['message'] == '<script>alert(1)</script>'
 
 
+@pytest.mark.parametrize('sent, stored', [
+    ('join', 'join'),
+    ('sponsor', 'sponsor'),
+    ('general', 'general'),
+    ('SPONSOR', 'sponsor'),
+    ('nonsense', 'general'),
+    (None, 'general'),
+])
+def test_topic_is_normalized_to_the_allowed_set(client, db, sent, stored):
+    payload = dict(VALID)
+    if sent is not None:
+        payload['topic'] = sent
+    assert post(client, payload).status_code == 200
+    assert db['contact_messages'].find_one()['topic'] == stored
+
+
 def test_contact_page_no_longer_uses_google_forms(client):
     resp = client.get('/contact')
     assert resp.status_code == 200

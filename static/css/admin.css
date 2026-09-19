@@ -1350,6 +1350,27 @@
         color: #555;
     }
 
+    /* Topic the sender picked on the contact form. */
+    .topic-badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        border: 1px solid currentColor;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: transparent;
+        color: #666;
+    }
+
+    .topic-badge.topic-join {
+        color: #1b7a3c;
+    }
+
+    .topic-badge.topic-sponsor {
+        color: #8a6100;
+    }
+
     .message-filters {
         display: flex;
         flex-wrap: wrap;

@@ -487,11 +487,146 @@ function showToast(message, type = 'info') {
         hideTimer = setTimeout(() => banner.classList.remove('is-visible'), 6000);
     }
 
+    // --- Live character counter on the message field ---
+    const messageField = form.querySelector('[name="message"]');
+    const counter = form.querySelector('[data-counter-current]');
+    if (messageField && counter) {
+        const limit = Number(messageField.getAttribute('maxlength')) || 4000;
+        const updateCounter = () => {
+            const used = messageField.value.length;
+            counter.textContent = used;
+            counter.parentElement.classList.toggle('is-near-limit', used > limit * 0.9);
+        };
+        messageField.addEventListener('input', updateCounter);
+        updateCounter();
+    }
+
+    // --- Inline field validation ---
+    function fieldError(name, value) {
+        const text = value.trim();
+        if (name === 'name') {
+            return text ? '' : 'Please enter your name.';
+        }
+        if (name === 'email') {
+            if (!text) return 'Please enter your email address.';
+            // Same shape check the API applies, so the user sees it before the round trip.
+            const at = text.indexOf('@');
+            const local = at > -1 ? text.slice(0, at) : '';
+            const domain = at > -1 ? text.slice(at + 1) : '';
+            if (!local || !domain.includes('.') || domain.startsWith('.') || domain.endsWith('.')) {
+                return 'Please enter a valid email address.';
+            }
+            return '';
+        }
+        if (name === 'message') {
+            return text ? '' : 'Please enter a message.';
+        }
+        return '';
+    }
+
+    function setFieldError(field, message) {
+        const slot = form.querySelector(`[data-error-for="${field.name}"]`);
+        field.classList.toggle('has-error', Boolean(message));
+        field.setAttribute('aria-invalid', message ? 'true' : 'false');
+        if (slot) {
+            slot.textContent = message;
+            slot.classList.toggle('is-visible', Boolean(message));
+        }
+    }
+
+    const validatedFields = ['name', 'email', 'message']
+        .map(name => form.querySelector(`[name="${name}"]`))
+        .filter(Boolean);
+
+    validatedFields.forEach(field => {
+        field.addEventListener('blur', () => setFieldError(field, fieldError(field.name, field.value)));
+        field.addEventListener('input', () => {
+            if (field.classList.contains('has-error')) {
+                setFieldError(field, fieldError(field.name, field.value));
+            }
+        });
+    });
+
+    // --- Channel switch drives the form copy and which questions show below ---
+    const CHANNELS = {
+        join: {
+            lede: "Tell us your grade and what you're curious about — building, coding, driving, or design. " +
+                'No experience needed, and you can join mid-season.',
+            label: 'What would you like to know?',
+            note: 'Showing questions for future members.'
+        },
+        sponsor: {
+            lede: 'Let us know what you have in mind — funding, parts, machining time, or mentoring. ' +
+                'We can send the sponsorship packet and this season\'s budget.',
+            label: 'What would you like to support?',
+            note: 'Showing questions for sponsors.'
+        },
+        general: {
+            lede: 'Press, outreach invites, event requests, or anything that does not fit a box. ' +
+                'Include dates and a location if you are inviting us somewhere.',
+            label: 'How can we help?',
+            note: 'Showing general questions.'
+        }
+    };
+
+    const channelInputs = [...document.querySelectorAll('[name="topic"]')];
+    const ledeEl = document.querySelector('[data-channel-lede]');
+    const messageLabel = document.querySelector('[data-message-label]');
+    const faqNote = document.querySelector('[data-faq-note]');
+    const faqItems = [...document.querySelectorAll('.faq-section .faq-item[data-channel]')];
+    const showAllBtn = document.querySelector('[data-faq-show-all]');
+    let showingAllFaqs = false;
+
+    function applyChannel(value) {
+        const channel = CHANNELS[value] || CHANNELS.general;
+        if (ledeEl) ledeEl.textContent = channel.lede;
+        if (messageLabel) messageLabel.textContent = channel.label;
+
+        if (faqItems.length) {
+            const matches = faqItems.filter(item => item.dataset.channel === value);
+            faqItems.forEach(item => {
+                item.hidden = !showingAllFaqs && !matches.includes(item);
+            });
+            if (faqNote) {
+                faqNote.textContent = showingAllFaqs ? 'Showing every question.' : channel.note;
+            }
+            if (showAllBtn) showAllBtn.hidden = showingAllFaqs || matches.length === faqItems.length;
+        }
+    }
+
+    channelInputs.forEach(input => {
+        input.addEventListener('change', () => {
+            showingAllFaqs = false;
+            if (showAllBtn) showAllBtn.textContent = 'Show every question';
+            applyChannel(input.value);
+        });
+    });
+
+    showAllBtn?.addEventListener('click', () => {
+        showingAllFaqs = true;
+        showAllBtn.hidden = true;
+        applyChannel(channelInputs.find(i => i.checked)?.value || 'general');
+    });
+
+    applyChannel(channelInputs.find(i => i.checked)?.value || 'join');
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        // Stop at the first invalid field rather than making the user wait on a round trip.
+        let firstInvalid = null;
+        validatedFields.forEach(field => {
+            const message = fieldError(field.name, field.value);
+            setFieldError(field, message);
+            if (message && !firstInvalid) firstInvalid = field;
+        });
+        if (firstInvalid) {
+            firstInvalid.focus();
+            return;
+        }
+
         const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn ? submitBtn.textContent : '';
+        const originalHTML = submitBtn ? submitBtn.innerHTML : '';
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.textContent = 'Transmitting...';
@@ -501,6 +636,8 @@ function showToast(message, type = 'info') {
             name: form.querySelector('[name="name"]')?.value || '',
             email: form.querySelector('[name="email"]')?.value || '',
             message: form.querySelector('[name="message"]')?.value || '',
+            // The channel radios sit outside the <form> and join it via form="contact-form".
+            topic: document.querySelector('[name="topic"]:checked')?.value || '',
             website: form.querySelector('[name="website"]')?.value || ''
         };
 
@@ -514,6 +651,11 @@ function showToast(message, type = 'info') {
 
             if (response.ok) {
                 form.reset();
+                if (counter) {
+                    counter.textContent = '0';
+                    counter.parentElement.classList.remove('is-near-limit');
+                }
+                validatedFields.forEach(field => setFieldError(field, ''));
                 showBanner(successBanner);
                 showToast('Message sent!', 'success');
             } else {
@@ -527,10 +669,51 @@ function showToast(message, type = 'info') {
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
+                submitBtn.innerHTML = originalHTML;
+                window.lucide?.createIcons();
             }
         }
     });
+})();
+
+// --- MEETING STATUS (is the lab open right now?) ---
+(function initMeetingStatus() {
+    const badge = document.querySelector('[data-meeting-status]');
+    if (!badge) return;
+
+    const text = badge.querySelector('.status-text');
+    const MEETING_DAYS = [2, 5]; // Tuesday, Friday
+    const START_HOUR = 15;
+    const END_HOUR = 17;
+    const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    function render() {
+        const now = new Date();
+        const isMeetingDay = MEETING_DAYS.includes(now.getDay());
+        const hour = now.getHours();
+
+        if (isMeetingDay && hour >= START_HOUR && hour < END_HOUR) {
+            badge.classList.add('is-open');
+            text.textContent = 'In the lab right now — until 5:00 PM';
+            return;
+        }
+
+        badge.classList.remove('is-open');
+
+        // Walk forward to the next meeting day, counting today only if it hasn't started yet.
+        for (let offset = 0; offset <= 7; offset++) {
+            const day = (now.getDay() + offset) % 7;
+            if (!MEETING_DAYS.includes(day)) continue;
+            if (offset === 0 && hour >= START_HOUR) continue;
+
+            const when = offset === 0 ? 'today' : offset === 1 ? 'tomorrow' : DAY_NAMES[day];
+            text.textContent = `Next meeting ${when} at 3:00 PM`;
+            return;
+        }
+    }
+
+    render();
+    setInterval(render, 60000);
 })();
 
 // --- MAP FACADE (only contacts Google once the visitor asks for the map) ---
