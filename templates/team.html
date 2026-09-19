@@ -9,6 +9,13 @@ members, competition results, and season goals.{% endblock %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team.css') }}">
 {% endblock %}
 
+{% block page_scripts %}
+{% if live_enabled and team.events %}
+<script type="application/json" id="team_event_photos">{{ event_photos|tojson }}</script>
+{% endif %}
+<script src="{{ url_for('static', filename='js/team.js') }}" defer></script>
+{% endblock %}
+
 {% set specs = [
 ('Drive Train', team.specs.get('drive_train')),
 ('Lift System', team.specs.get('lift_system')),
@@ -57,6 +64,73 @@ members, competition results, and season goals.{% endblock %}
 </nav>
 {% endif %}
 
+{% if live_enabled %}
+<!-- LIVE SKILLS (filled by static/js/team.js; removed if there is no live data) -->
+<section id="skills-panel" class="skills-panel fade-in-section" data-live-url="{{ url_for('team_live_data', team_number=team.team_number) }}"
+    aria-live="polite" aria-busy="true" hidden>
+    <div class="skills-inner">
+        <h2 class="ripple">World Skills Standing</h2>
+        <div class="skills-grid">
+            <div class="skills-tile skills-tile-primary">
+                <span class="skills-label">Combined</span>
+                <span class="skills-value" data-field="combined">—</span>
+            </div>
+            <div class="skills-tile">
+                <span class="skills-label">Driver</span>
+                <span class="skills-value" data-field="driver">—</span>
+            </div>
+            <div class="skills-tile">
+                <span class="skills-label">Programming</span>
+                <span class="skills-value" data-field="programming">—</span>
+            </div>
+            <div class="skills-tile">
+                <span class="skills-label">World Rank</span>
+                <span class="skills-value" data-field="rank">—</span>
+                <span class="skills-trend" data-field="trend"></span>
+            </div>
+        </div>
+        <p class="skills-meta">
+            <span data-field="updated"></span>
+            <a class="skills-profile" data-field="profile" href="#" target="_blank" rel="noopener">View on RobotEvents</a>
+        </p>
+    </div>
+</section>
+
+<!-- SEASON SCOREBOARD -->
+<section id="scoreboard-band" class="scoreboard-band fade-in-section" aria-live="polite" hidden>
+    <div class="scoreboard-inner">
+        <h2 class="ripple">This Season</h2>
+        <div class="scoreboard-grid">
+            <div class="scoreboard-stat">
+                <span class="scoreboard-value" data-field="competitions">0</span>
+                <span class="scoreboard-label">Competitions</span>
+                <span class="scoreboard-breakdown" data-field="breakdown"></span>
+            </div>
+            <div class="scoreboard-stat">
+                <span class="scoreboard-value" data-field="awards">0</span>
+                <span class="scoreboard-label">Awards</span>
+            </div>
+            <div class="scoreboard-stat scoreboard-crown" data-field="crown-wrap" hidden>
+                <span class="scoreboard-value" data-field="triple_crowns">0</span>
+                <span class="scoreboard-label">Triple Crowns</span>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% include "partials/awards_grid.html" %}
+
+{% if live_enabled %}
+<!-- EVENT RESULTS (filled by static/js/team.js) -->
+<section id="results-section" class="results-section fade-in-section" aria-live="polite" hidden>
+    <div class="text-center">
+        <h2 class="ripple">Competition Results</h2>
+    </div>
+    <div class="results-list" data-field="results"></div>
+</section>
+{% endif %}
+
 <!-- ROSTER -->
 <section id="team" class="roster-section fade-in-section">
     <div class="text-center">
@@ -95,8 +169,6 @@ members, competition results, and season goals.{% endblock %}
     <p class="roster-empty">Roster coming soon for this team.</p>
     {% endif %}
 </section>
-
-{% include "partials/awards_grid.html" %}
 
 <!-- ROBOT SHOWCASE -->
 <section class="robot-showcase fade-in-section">

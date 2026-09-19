@@ -501,8 +501,14 @@ def team_page(team_number):
     team.setdefault('journey', [])
     team.setdefault('events', [])
 
+    # Photo strips are keyed by event name so team.js can attach them to the
+    # matching RobotEvents row without a second lookup.
+    event_photos = {e.get('name'): e.get('photos') or []
+                    for e in team['events'] if e.get('name') and e.get('photos')}
+
     team_awards = list(db['awards'].find({'team_number': team_number}).sort('_id', 1))
     return render_template('team.html', team=team, team_awards=team_awards,
+                           event_photos=event_photos,
                            seasons=seasons, active_season=team.get('season'),
                            live_enabled=bool(os.environ.get('ROBOTEVENTS_TOKEN')),
                            active_page=team_number)

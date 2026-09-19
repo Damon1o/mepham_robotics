@@ -261,6 +261,39 @@ def test_no_inline_styles(client, team_factory):
     assert content.count('--team-hero-image') == 1
 
 
+def test_live_sections_present_with_token(client, team_factory, monkeypatch):
+    monkeypatch.setenv('ROBOTEVENTS_TOKEN', 'test-token')
+    team_factory()
+    body = html(client)[1]
+    assert 'id="skills-panel"' in body
+    assert 'id="scoreboard-band"' in body
+    assert 'id="results-section"' in body
+    # Skeletons ship hidden; team.js reveals them only once real data arrives.
+    assert 'aria-busy="true"' in body
+
+
+def test_live_panels_point_at_the_json_route(client, team_factory, monkeypatch):
+    monkeypatch.setenv('ROBOTEVENTS_TOKEN', 'test-token')
+    team_factory()
+    assert 'data-live-url="/api/team/77628A/live"' in html(client)[1]
+
+
+def test_team_js_always_loaded(client, team_factory):
+    team_factory()
+    assert 'js/team.js' in html(client)[1]
+
+
+def test_event_photos_only_published_with_live_enabled(client, team_factory, monkeypatch):
+    monkeypatch.delenv('ROBOTEVENTS_TOKEN', raising=False)
+    team_factory(events=[{'name': 'States', 'photos': ['static/assets/photos/hero.png']}])
+    assert 'team_event_photos' not in html(client)[1]
+
+    monkeypatch.setenv('ROBOTEVENTS_TOKEN', 'test-token')
+    body = html(client)[1]
+    assert 'team_event_photos' in body
+    assert 'States' in body
+
+
 def test_missing_team_redirects(client):
     resp = client.get('/team/nope')
     assert resp.status_code == 302
