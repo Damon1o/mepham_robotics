@@ -1054,3 +1054,47 @@ body.has-lightbox {
 [data-theme="dark"] .goals-section {
     background: #151515;
 }
+
+/* --- Browser-pass corrections --- */
+
+/* A sub-team with a single member should not stretch one card across the row,
+   and a short row should sit centred rather than hugging the left edge. */
+.roster-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
+    justify-content: center;
+    justify-items: center;
+}
+
+.roster-card {
+    width: 100%;
+    max-width: 280px;
+}
+
+/* The showcase band is dark in both themes, so its body copy cannot use the
+   light-background text colours. */
+.robot-showcase .viewer-empty,
+.robot-showcase .viewer-status,
+.robot-showcase .viewer-hint {
+    color: #ddd;
+}
+
+/* .cta-secondary in styles.css is white-on-dark; this band is light, so the
+   secondary action gets the site's dark-outline treatment instead. */
+.teamcta-actions .cta-button:not(.cta-primary) {
+    background: #fff;
+    color: var(--text-dark);
+    border: 3px solid var(--text-dark);
+    box-shadow: 6px 6px 0px rgba(148, 69, 71, 0.2);
+}
+
+.teamcta-actions .cta-button:not(.cta-primary):hover {
+    background: var(--accent-gold);
+    transform: translate(-3px, -3px);
+    box-shadow: 9px 9px 0px rgba(148, 69, 71, 0.25);
+}
+
+[data-theme="dark"] .teamcta-actions .cta-button:not(.cta-primary) {
+    background: #1e1e1e;
+    color: #f1f1f1;
+    border-color: #444;
+}

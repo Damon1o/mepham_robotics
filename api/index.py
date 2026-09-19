@@ -147,6 +147,19 @@ def roster_groups(members):
     return [(key, sorted(grouped[key], key=lambda m: not _is_leadership(m))) for key in order]
 
 
+# Members saved before this revamp carry a default photo path that was never a real
+# file (the placeholder actually lives at assets/other/base.png), so those rows are
+# treated as having no photo and fall through to the initials avatar.
+PLACEHOLDER_PHOTOS = ('assets/profile/base.png', 'assets/other/base.png')
+
+
+@app.template_filter('real_photo')
+def real_photo(path):
+    if not path:
+        return ''
+    return '' if any(p in path for p in PLACEHOLDER_PHOTOS) else path
+
+
 @app.template_filter('initials')
 def initials(name):
     parts = [p for p in str(name or '').split() if p]

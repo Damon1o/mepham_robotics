@@ -300,6 +300,9 @@
 
     // --- STL viewer --------------------------------------------------------
 
+    // The raw examples/jsm files import a bare "three" specifier, which a browser
+    // cannot resolve without an import map. jsDelivr's /+esm builds rewrite that to
+    // the same three@0.160.0/+esm URL used below, so all three share one instance.
     const THREE_VERSION = '0.160.0';
     const THREE_BASE = 'https://cdn.jsdelivr.net/npm/three@' + THREE_VERSION;
 
@@ -332,9 +335,9 @@
         }
 
         Promise.all([
-            import(THREE_BASE + '/build/three.module.js'),
-            import(THREE_BASE + '/examples/jsm/loaders/STLLoader.js'),
-            import(THREE_BASE + '/examples/jsm/controls/OrbitControls.js')
+            import(THREE_BASE + '/+esm'),
+            import(THREE_BASE + '/examples/jsm/loaders/STLLoader.js/+esm'),
+            import(THREE_BASE + '/examples/jsm/controls/OrbitControls.js/+esm')
         ]).then(function (mods) {
             const THREE = mods[0];
             const STLLoader = mods[1].STLLoader;

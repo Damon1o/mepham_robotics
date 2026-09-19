@@ -6,14 +6,14 @@ members, competition results, and season goals.{% endblock %}
 {% block og_image %}{{ get_image_url(team.hero_image, external=True) }}{% endblock %}
 
 {% block page_styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team.css') }}?v=1">
 {% endblock %}
 
 {% block page_scripts %}
 {% if live_enabled and team.events %}
 <script type="application/json" id="team_event_photos">{{ event_photos|tojson }}</script>
 {% endif %}
-<script src="{{ url_for('static', filename='js/team.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/team.js') }}?v=1" defer></script>
 {% endblock %}
 
 {% set specs = [
@@ -144,8 +144,9 @@ members, competition results, and season goals.{% endblock %}
         <div class="roster-grid">
             {% for member in members %}
             <article class="roster-card">
-                {% if member.photo %}
-                <img src="{{ get_image_url(member.photo) }}" alt="{{ member.name }}" class="roster-photo"
+                {% set photo = member.photo|real_photo %}
+                {% if photo %}
+                <img src="{{ get_image_url(photo) }}" alt="{{ member.name }}" class="roster-photo"
                     loading="lazy">
                 {% else %}
                 <span class="roster-initials" aria-hidden="true">{{ member.name|initials }}</span>

@@ -150,9 +150,20 @@ def test_goals_section_hidden_when_empty(client, team_factory):
 
 # --- roster ----------------------------------------------------------------
 
-def test_member_photo_fallback(client, team_factory):
-    team_factory()
-    assert 'static/assets/profile/base.png' in html(client)[1]
+def test_member_photo_rendered_when_real(client, team_factory):
+    team_factory(members=[{'name': 'Bo Diaz', 'role': 'Builder',
+                           'photo': 'https://blob.example.com/bo.png'}])
+    assert 'https://blob.example.com/bo.png' in html(client)[1]
+
+
+def test_legacy_placeholder_photo_falls_back_to_initials(client, team_factory):
+    # The old member default pointed at a file that never existed; those rows
+    # must render initials rather than a broken image.
+    team_factory(members=[{'name': 'Bo Diaz', 'role': 'Builder',
+                           'photo': 'static/assets/profile/base.png'}])
+    body = html(client)[1]
+    assert 'static/assets/profile/base.png' not in body
+    assert 'roster-initials' in body
 
 
 def test_member_initials_avatar_when_no_photo(client, team_factory):
