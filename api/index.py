@@ -430,13 +430,31 @@ def donate():
 
 @app.route('/team/<team_number>')
 def team_page(team_number):
-    team = db['teams'].find_one({'team_number': team_number})
-    if not team:
+    docs = list(db['teams'].find({'team_number': team_number}))
+    if not docs:
         flash(f"Team {team_number} not found.", "error")
         return redirect(url_for('index'))
+
+    # One document per (team_number, season). Newest season wins unless ?season= names
+    # an existing one. Documents predating seasons have no 'season' key and sort last.
+    seasons = sorted({d['season'] for d in docs if d.get('season')}, reverse=True)
+    requested = request.args.get('season')
+    team = next((d for d in docs if d.get('season') == requested), None)
+    if team is None:
+        team = next((d for d in docs if d.get('season') == seasons[0]), docs[0]) if seasons else docs[0]
+
     team['_id'] = str(team['_id'])
-    team_awards = list(db['awards'].find({'team_number': team_number}).sort('_id', 1))  # ← FIXED
-    return render_template('team.html', team=team, team_awards=team_awards, active_page=team_number)
+    team.setdefault('specs', {})
+    team.setdefault('members', [])
+    team.setdefault('goals', [])
+    team.setdefault('journey', [])
+    team.setdefault('events', [])
+
+    team_awards = list(db['awards'].find({'team_number': team_number}).sort('_id', 1))
+    return render_template('team.html', team=team, team_awards=team_awards,
+                           seasons=seasons, active_season=team.get('season'),
+                           live_enabled=bool(os.environ.get('ROBOTEVENTS_TOKEN')),
+                           active_page=team_number)
 
 @app.route('/safety-quiz')
 def safety_quiz():
