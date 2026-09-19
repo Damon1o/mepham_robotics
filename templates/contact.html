@@ -11,220 +11,205 @@ information.{% endblock %}
 {% endblock %}
 
 {% block page_styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/contact.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/contact.css') }}?v=4">
 {% endblock %}
 
 {% block content %}
-<div class="hero-image contact-hero">
-    <div class="hero-content">
-        <p class="contact-hero-eyebrow"><i data-lucide="radio"></i> Team 77628 &middot; Channel Open</p>
-        <h1>Get In Touch</h1>
-        <p>Let's Connect</p>
-        <div class="hero-cta">
-            <a href="#contact" class="cta-button cta-primary">Send Message</a>
-            <a href="{{ url_for('about') }}" class="cta-button cta-secondary">Meet the Team</a>
+
+<!-- ============================================================
+     DECK: station panel + form, both above the fold
+     ============================================================ -->
+<div class="deck">
+
+    <!-- LEFT: station panel -->
+    <aside class="deck-station">
+        <span class="station-watermark" aria-hidden="true">77628</span>
+
+        <div class="station-top">
+            <p class="station-status" data-meeting-status>
+                <span class="status-dot" aria-hidden="true"></span>
+                <span class="status-text">Checking the lab schedule…</span>
+            </p>
+
+            <h1 class="station-title">Talk to<br>the builders.</h1>
+            <p class="station-lede">
+                Students, parents, sponsors, press — every message goes to the same inbox and a person
+                on the team reads it. No forms lost in a void.
+            </p>
         </div>
-        <ul class="contact-hero-stats">
-            <li><i data-lucide="clock"></i><span><strong>48 hours</strong>Typical reply time</span></li>
-            <li><i data-lucide="calendar-days"></i><span><strong>Tue &amp; Fri</strong>3:00 – 5:00 PM</span></li>
-            <li><i data-lucide="door-open"></i><span><strong>Room 123</strong>Walk-ins welcome</span></li>
-        </ul>
-    </div>
-    <div class="scroll-indicator"></div>
+
+        <dl class="station-board">
+            <div class="board-row">
+                <dt>Email</dt>
+                <dd><a href="mailto:damlin@bmchsd.com">damlin@bmchsd.com</a></dd>
+            </div>
+            <div class="board-row">
+                <dt>Lab</dt>
+                <dd>Room 123, Wellington C. Mepham HS</dd>
+            </div>
+            <div class="board-row">
+                <dt>Meets</dt>
+                <dd>Tuesday &amp; Friday · 3:00–5:00 PM</dd>
+            </div>
+            <div class="board-row">
+                <dt>Program</dt>
+                <dd>VEX V5 Robotics Competition</dd>
+            </div>
+            <div class="board-row">
+                <dt>Reply</dt>
+                <dd>Usually within 48 hours</dd>
+            </div>
+        </dl>
+
+        <div class="station-foot">
+            <a href="https://instagram.com/mephamrobotics" target="_blank" rel="noopener" title="Instagram">
+                <i data-lucide="instagram"></i>
+            </a>
+            <a href="mailto:damlin@bmchsd.com" title="Email">
+                <i data-lucide="mail"></i>
+            </a>
+            <a href="#find-us" title="Directions">
+                <i data-lucide="map-pin"></i>
+            </a>
+            <span class="station-crumbs">
+                <a href="{{ url_for('index') }}">Home</a> / Contact
+            </span>
+        </div>
+    </aside>
+
+    <!-- RIGHT: the form itself, no scrolling required -->
+    <main class="deck-form" id="contact">
+        <fieldset class="channel-switch">
+            <legend>Who are you writing as?</legend>
+            <div class="channel-options" role="radiogroup">
+                <label class="channel-option">
+                    <input type="radio" name="topic" value="join" form="contact-form" checked>
+                    <span>
+                        <i data-lucide="user-plus"></i>
+                        <strong>Future member</strong>
+                        <small>Joining the team</small>
+                    </span>
+                </label>
+                <label class="channel-option">
+                    <input type="radio" name="topic" value="sponsor" form="contact-form">
+                    <span>
+                        <i data-lucide="handshake"></i>
+                        <strong>Sponsor</strong>
+                        <small>Funding or parts</small>
+                    </span>
+                </label>
+                <label class="channel-option">
+                    <input type="radio" name="topic" value="general" form="contact-form">
+                    <span>
+                        <i data-lucide="message-circle"></i>
+                        <strong>Everyone else</strong>
+                        <small>Press &amp; outreach</small>
+                    </span>
+                </label>
+            </div>
+        </fieldset>
+
+        <p class="channel-lede" data-channel-lede>
+            Tell us your grade and what you're curious about — building, coding, driving, or design.
+            No experience needed, and you can join mid-season.
+        </p>
+
+        <form id="contact-form" novalidate>
+            <div class="field-row">
+                <div class="field">
+                    <input type="text" id="contact-name" name="name" placeholder=" " maxlength="100"
+                        autocomplete="name" aria-describedby="error-name" required>
+                    <label for="contact-name">Your name</label>
+                    <p class="field-error" id="error-name" data-error-for="name"></p>
+                </div>
+                <div class="field">
+                    <input type="email" id="contact-email" name="email" placeholder=" " maxlength="254"
+                        autocomplete="email" aria-describedby="error-email" required>
+                    <label for="contact-email">Email address</label>
+                    <p class="field-error" id="error-email" data-error-for="email"></p>
+                </div>
+            </div>
+
+            <div class="field field-message">
+                <textarea id="contact-message" name="message" rows="7" placeholder=" " maxlength="4000"
+                    aria-describedby="error-message contact-counter" required></textarea>
+                <label for="contact-message" data-message-label>What would you like to know?</label>
+                <div class="field-foot">
+                    <p class="field-error" id="error-message" data-error-for="message"></p>
+                    <p class="char-counter" id="contact-counter" aria-live="polite">
+                        <span data-counter-current>0</span> / 4000
+                    </p>
+                </div>
+            </div>
+
+            <div class="contact-honeypot" aria-hidden="true">
+                <label for="contact-website">Website</label>
+                <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="send-btn">
+                    <span>Send message</span>
+                    <i data-lucide="arrow-right"></i>
+                </button>
+                <p class="form-privacy">
+                    <i data-lucide="lock"></i> Your email is only used to reply.
+                </p>
+            </div>
+        </form>
+
+        <div id="form-success" class="contact-form-status contact-form-status--success" role="status">
+            Message sent. Someone on the team will get back to you.
+        </div>
+        <div id="form-error" class="contact-form-status contact-form-status--error" role="alert">
+            Something went wrong. Please try again.
+        </div>
+    </main>
 </div>
 
-<!-- BREADCRUMBS -->
-<nav class="breadcrumb">
-    <a href="{{ url_for('index') }}">Home</a>
-    <span class="separator">›</span>
-    <span class="current">Contact</span>
-</nav>
-
-<!-- ROUTING CARDS -->
-<section class="contact-routes fade-in-section">
-    <div class="contact-routes-head">
-        <h2 class="ripple">Pick A Channel</h2>
-        <p>Tell us why you're writing and the message lands with the right person faster.</p>
-    </div>
-    <div class="contact-routes-grid">
-        <article class="route-card" data-route="join">
-            <span class="route-icon"><i data-lucide="user-plus"></i></span>
-            <h3>Join the team</h3>
-            <p>Students and parents asking about membership, tryouts, or what a season looks like.</p>
-            <button type="button" class="route-btn" data-topic="join">
-                Start here <i data-lucide="arrow-right"></i>
-            </button>
-        </article>
-        <article class="route-card" data-route="sponsor">
-            <span class="route-icon"><i data-lucide="handshake"></i></span>
-            <h3>Sponsor or partner</h3>
-            <p>Businesses, alumni, and mentors who want to back the team or supply parts.</p>
-            <button type="button" class="route-btn" data-topic="sponsor">
-                Start here <i data-lucide="arrow-right"></i>
-            </button>
-        </article>
-        <article class="route-card" data-route="general">
-            <span class="route-icon"><i data-lucide="message-circle"></i></span>
-            <h3>General &amp; press</h3>
-            <p>Outreach invites, event requests, media questions, or anything else entirely.</p>
-            <button type="button" class="route-btn" data-topic="general">
-                Start here <i data-lucide="arrow-right"></i>
-            </button>
-        </article>
-    </div>
-</section>
-
-<section id="contact" class="contact-section fade-in-section">
-    <div class="contact-container">
-
-        <!-- FORM CONSOLE -->
-        <div class="contact-console">
-            <div class="console-bar">
-                <span class="console-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                <span class="console-title">transmission.form</span>
-                <span class="console-status"><span class="console-led" aria-hidden="true"></span>Online</span>
-            </div>
-
-            <div class="console-body">
-                <h2 class="contact-heading">Send a message</h2>
-                <p class="console-lede">Fill it out and it lands in the team inbox. We read every one.</p>
-
-                <form id="contact-form" novalidate>
-                    <fieldset class="topic-field">
-                        <legend>What is this about?</legend>
-                        <div class="topic-options">
-                            <label class="topic-option">
-                                <input type="radio" name="topic" value="join" checked>
-                                <span><i data-lucide="user-plus"></i> Joining</span>
-                            </label>
-                            <label class="topic-option">
-                                <input type="radio" name="topic" value="sponsor">
-                                <span><i data-lucide="handshake"></i> Sponsorship</span>
-                            </label>
-                            <label class="topic-option">
-                                <input type="radio" name="topic" value="general">
-                                <span><i data-lucide="message-circle"></i> General</span>
-                            </label>
-                        </div>
-                    </fieldset>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="contact-name">Full Name</label>
-                            <input type="text" id="contact-name" name="name" placeholder="Your Name" maxlength="100"
-                                autocomplete="name" aria-describedby="error-name" required>
-                            <p class="field-error" id="error-name" data-error-for="name"></p>
-                        </div>
-                        <div class="form-group">
-                            <label for="contact-email">E-mail</label>
-                            <input type="email" id="contact-email" name="email" placeholder="email@example.com"
-                                maxlength="254" autocomplete="email" aria-describedby="error-email" required>
-                            <p class="field-error" id="error-email" data-error-for="email"></p>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="contact-message">Message</label>
-                        <textarea id="contact-message" name="message" rows="6" placeholder="How can we help?"
-                            maxlength="4000" aria-describedby="error-message contact-counter" required></textarea>
-                        <div class="message-foot">
-                            <p class="field-error" id="error-message" data-error-for="message"></p>
-                            <p class="char-counter" id="contact-counter" aria-live="polite">
-                                <span data-counter-current>0</span> / 4000
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="contact-honeypot" aria-hidden="true">
-                        <label for="contact-website">Website</label>
-                        <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off">
-                    </div>
-
-                    <button type="submit" class="submit-btn contact-submit">
-                        <i data-lucide="send"></i> Initialize Transmission
-                    </button>
-                    <p class="console-privacy">
-                        <i data-lucide="shield-check"></i>
-                        We only use your email to reply. Nothing is shared or sold.
-                    </p>
-                </form>
-
-                <div id="form-success" class="contact-form-status contact-form-status--success" role="status">
-                    Message transmitted successfully! We'll get back to you soon.
-                </div>
-                <div id="form-error" class="contact-form-status contact-form-status--error" role="alert">
-                    Something went wrong. Please try again.
-                </div>
-            </div>
-        </div>
-
-        <!-- INFO RAIL -->
-        <aside class="contact-rail">
-            <div class="rail-photo">
-                <img src="{{ url_for('static', filename='assets/photos/newyork.jpg') }}" alt="Mepham Robotics in NYC"
-                    loading="lazy">
-                <p class="rail-photo-caption">The team on the road in New York City</p>
-            </div>
-
-            <div class="rail-card">
-                <h3><i data-lucide="at-sign"></i> Direct lines</h3>
-                <ul class="rail-list">
-                    <li>
-                        <span class="rail-label">Email</span>
-                        <a href="mailto:damlin@bmchsd.com">damlin@bmchsd.com</a>
-                    </li>
-                    <li>
-                        <span class="rail-label">Location</span>
-                        <span>Wellington C. Mepham HS<br>North Bellmore, NY</span>
-                    </li>
-                    <li>
-                        <span class="rail-label">Program</span>
-                        <span>VEX V5 Robotics Competition</span>
-                    </li>
-                </ul>
-                <div class="rail-socials">
-                    <a href="https://instagram.com/mephamrobotics" target="_blank" rel="noopener" title="Instagram">
-                        <i data-lucide="instagram"></i>
-                    </a>
-                    <a href="mailto:damlin@bmchsd.com" title="Email">
-                        <i data-lucide="mail"></i>
-                    </a>
-                </div>
-            </div>
-
-            <div class="rail-card rail-schedule">
-                <h3><i data-lucide="calendar"></i> Next meeting</h3>
-                <p class="schedule-days">Tuesdays &amp; Fridays</p>
-                <p class="schedule-time">3:00 PM – 5:00 PM &middot; Room 123</p>
-                <p class="schedule-note">Drop in during any meeting — no appointment, no experience needed.</p>
-            </div>
-        </aside>
-    </div>
-</section>
-
-<!-- MAP SECTION -->
-<section class="map-section fade-in-section">
-    <div class="map-heading">
-        <h2 class="ripple">Find The Lab</h2>
-        <p>Room 123, Wellington C. Mepham High School, North Bellmore, NY</p>
-    </div>
-    <div class="map-container">
-        <div class="contact-map-facade"
-            data-map-src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3025.932292543359!2d-73.54547492397614!3d40.67546077139915!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c27e9652ff1c0d%3A0xf758cff5fe1b37ac!2sWellington%20C.%20Mepham%20High%20School!5e0!3m2!1sen!2sus!4v1769884579961!5m2!1sen!2sus">
-            <p class="contact-map-caption">
-                <i data-lucide="map-pin"></i> Wellington C. Mepham High School, North Bellmore, NY
+<!-- ============================================================
+     FIND US
+     ============================================================ -->
+<section class="find-us" id="find-us">
+    <div class="find-us-inner">
+        <div class="find-us-copy">
+            <p class="section-kicker">Find us</p>
+            <h2>Room 123, after the last bell.</h2>
+            <p>
+                We're in the tech wing at Wellington C. Mepham High School in North Bellmore. Walk in during
+                any Tuesday or Friday meeting — no appointment, no experience, nothing to bring.
             </p>
-            <button type="button" class="contact-map-load">Load map</button>
-            <p class="contact-map-note">Loading the map contacts Google Maps.</p>
+            <a class="find-us-link" href="https://www.google.com/maps/search/?api=1&query=Wellington+C.+Mepham+High+School"
+                target="_blank" rel="noopener">
+                Open in Google Maps <i data-lucide="external-link"></i>
+            </a>
+        </div>
+
+        <div class="find-us-map">
+            <div class="contact-map-facade"
+                data-map-src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3025.932292543359!2d-73.54547492397614!3d40.67546077139915!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c27e9652ff1c0d%3A0xf758cff5fe1b37ac!2sWellington%20C.%20Mepham%20High%20School!5e0!3m2!1sen!2sus!4v1769884579961!5m2!1sen!2sus">
+                <p class="contact-map-caption">
+                    <i data-lucide="map-pin"></i> Wellington C. Mepham High School
+                </p>
+                <button type="button" class="contact-map-load">Load the map</button>
+                <p class="contact-map-note">Loading the map contacts Google Maps.</p>
+            </div>
         </div>
     </div>
 </section>
 
-<!-- FAQ SECTION -->
-<section class="faq-section fade-in-section">
-    <h2 class="ripple">Frequently Asked Questions</h2>
+<!-- ============================================================
+     FAQ - filtered by the channel picked above
+     ============================================================ -->
+<section class="faq-section">
+    <div class="faq-head">
+        <p class="section-kicker">Answers</p>
+        <h2>Before you write</h2>
+        <p class="faq-filter-note" data-faq-note>Showing questions for future members.</p>
+    </div>
+
     <div class="faq-container">
-        <div class="faq-item">
+        <div class="faq-item" data-channel="join">
             <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-1">
                 How do I join the robotics club?
                 <span class="faq-icon">+</span>
@@ -234,7 +219,7 @@ information.{% endblock %}
                     us or talk to your guidance counselor.</p>
             </div>
         </div>
-        <div class="faq-item">
+        <div class="faq-item" data-channel="join">
             <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-2">
                 Do I need prior experience?
                 <span class="faq-icon">+</span>
@@ -244,17 +229,7 @@ information.{% endblock %}
                     Everyone starts somewhere.</p>
             </div>
         </div>
-        <div class="faq-item">
-            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
-                When and where do you meet?
-                <span class="faq-icon">+</span>
-            </button>
-            <div class="faq-answer" id="faq-answer-3">
-                <p>We meet every Tuesday and Friday from 3:00 PM to 5:00 PM in Room 123 at Wellington C. Mepham High
-                    School.</p>
-            </div>
-        </div>
-        <div class="faq-item">
+        <div class="faq-item" data-channel="join">
             <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-4">
                 What is the time commitment?
                 <span class="faq-icon">+</span>
@@ -264,7 +239,7 @@ information.{% endblock %}
                     practice sessions on weekends.</p>
             </div>
         </div>
-        <div class="faq-item">
+        <div class="faq-item" data-channel="join">
             <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-5">
                 Is there a membership fee?
                 <span class="faq-icon">+</span>
@@ -274,7 +249,7 @@ information.{% endblock %}
                     for free!</p>
             </div>
         </div>
-        <div class="faq-item">
+        <div class="faq-item" data-channel="sponsor">
             <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-6">
                 How can my company sponsor the team?
                 <span class="faq-icon">+</span>
@@ -284,18 +259,49 @@ information.{% endblock %}
                     sponsorship levels, or send us a message using the form above.</p>
             </div>
         </div>
+        <div class="faq-item" data-channel="sponsor">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-7">
+                What does a sponsorship actually pay for?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-7">
+                <p>Competition registration, V5 parts and spares, tools, travel to events, and the materials
+                    students use to prototype. Parts and machining time are just as welcome as money.</p>
+            </div>
+        </div>
+        <div class="faq-item" data-channel="general">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
+                When and where do you meet?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-3">
+                <p>We meet every Tuesday and Friday from 3:00 PM to 5:00 PM in Room 123 at Wellington C. Mepham High
+                    School.</p>
+            </div>
+        </div>
+        <div class="faq-item" data-channel="general">
+            <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-8">
+                Can the team come to our event?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer" id="faq-answer-8">
+                <p>Often, yes. We bring robots to school and community events when the schedule allows. Send the
+                    date, location, and rough audience size and we'll tell you quickly.</p>
+            </div>
+        </div>
     </div>
+
+    <button type="button" class="faq-show-all" data-faq-show-all hidden>Show every question</button>
 </section>
 
-<!-- CLOSING CTA -->
-<section class="contact-closing fade-in-section">
-    <div class="closing-inner">
-        <h2>Still deciding?</h2>
-        <p>Read what the team has been building, or see how sponsors keep the robots running.</p>
-        <div class="closing-actions">
-            <a href="{{ url_for('about') }}" class="cta-button cta-primary">About the club</a>
-            <a href="{{ url_for('donate') }}" class="cta-button cta-secondary">Support us</a>
-        </div>
+<!-- ============================================================
+     CLOSING BAND
+     ============================================================ -->
+<section class="closing-band">
+    <p>Not ready to write yet?</p>
+    <div class="closing-band-actions">
+        <a href="{{ url_for('about') }}">See what we build <i data-lucide="arrow-right"></i></a>
+        <a href="{{ url_for('donate') }}">Support the team <i data-lucide="arrow-right"></i></a>
     </div>
 </section>
 {% endblock %}

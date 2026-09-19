@@ -547,15 +547,68 @@ function showToast(message, type = 'info') {
         });
     });
 
-    // --- Routing cards jump to the form with the topic preselected ---
-    document.querySelectorAll('.route-btn[data-topic]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const radio = form.querySelector(`[name="topic"][value="${btn.dataset.topic}"]`);
-            if (radio) radio.checked = true;
-            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => form.querySelector('[name="name"]')?.focus({ preventScroll: true }), 500);
+    // --- Channel switch drives the form copy and which questions show below ---
+    const CHANNELS = {
+        join: {
+            lede: "Tell us your grade and what you're curious about — building, coding, driving, or design. " +
+                'No experience needed, and you can join mid-season.',
+            label: 'What would you like to know?',
+            note: 'Showing questions for future members.'
+        },
+        sponsor: {
+            lede: 'Let us know what you have in mind — funding, parts, machining time, or mentoring. ' +
+                'We can send the sponsorship packet and this season\'s budget.',
+            label: 'What would you like to support?',
+            note: 'Showing questions for sponsors.'
+        },
+        general: {
+            lede: 'Press, outreach invites, event requests, or anything that does not fit a box. ' +
+                'Include dates and a location if you are inviting us somewhere.',
+            label: 'How can we help?',
+            note: 'Showing general questions.'
+        }
+    };
+
+    const channelInputs = [...document.querySelectorAll('[name="topic"]')];
+    const ledeEl = document.querySelector('[data-channel-lede]');
+    const messageLabel = document.querySelector('[data-message-label]');
+    const faqNote = document.querySelector('[data-faq-note]');
+    const faqItems = [...document.querySelectorAll('.faq-section .faq-item[data-channel]')];
+    const showAllBtn = document.querySelector('[data-faq-show-all]');
+    let showingAllFaqs = false;
+
+    function applyChannel(value) {
+        const channel = CHANNELS[value] || CHANNELS.general;
+        if (ledeEl) ledeEl.textContent = channel.lede;
+        if (messageLabel) messageLabel.textContent = channel.label;
+
+        if (faqItems.length) {
+            const matches = faqItems.filter(item => item.dataset.channel === value);
+            faqItems.forEach(item => {
+                item.hidden = !showingAllFaqs && !matches.includes(item);
+            });
+            if (faqNote) {
+                faqNote.textContent = showingAllFaqs ? 'Showing every question.' : channel.note;
+            }
+            if (showAllBtn) showAllBtn.hidden = showingAllFaqs || matches.length === faqItems.length;
+        }
+    }
+
+    channelInputs.forEach(input => {
+        input.addEventListener('change', () => {
+            showingAllFaqs = false;
+            if (showAllBtn) showAllBtn.textContent = 'Show every question';
+            applyChannel(input.value);
         });
     });
+
+    showAllBtn?.addEventListener('click', () => {
+        showingAllFaqs = true;
+        showAllBtn.hidden = true;
+        applyChannel(channelInputs.find(i => i.checked)?.value || 'general');
+    });
+
+    applyChannel(channelInputs.find(i => i.checked)?.value || 'join');
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -583,7 +636,8 @@ function showToast(message, type = 'info') {
             name: form.querySelector('[name="name"]')?.value || '',
             email: form.querySelector('[name="email"]')?.value || '',
             message: form.querySelector('[name="message"]')?.value || '',
-            topic: form.querySelector('[name="topic"]:checked')?.value || '',
+            // The channel radios sit outside the <form> and join it via form="contact-form".
+            topic: document.querySelector('[name="topic"]:checked')?.value || '',
             website: form.querySelector('[name="website"]')?.value || ''
         };
 
@@ -620,6 +674,46 @@ function showToast(message, type = 'info') {
             }
         }
     });
+})();
+
+// --- MEETING STATUS (is the lab open right now?) ---
+(function initMeetingStatus() {
+    const badge = document.querySelector('[data-meeting-status]');
+    if (!badge) return;
+
+    const text = badge.querySelector('.status-text');
+    const MEETING_DAYS = [2, 5]; // Tuesday, Friday
+    const START_HOUR = 15;
+    const END_HOUR = 17;
+    const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    function render() {
+        const now = new Date();
+        const isMeetingDay = MEETING_DAYS.includes(now.getDay());
+        const hour = now.getHours();
+
+        if (isMeetingDay && hour >= START_HOUR && hour < END_HOUR) {
+            badge.classList.add('is-open');
+            text.textContent = 'In the lab right now — until 5:00 PM';
+            return;
+        }
+
+        badge.classList.remove('is-open');
+
+        // Walk forward to the next meeting day, counting today only if it hasn't started yet.
+        for (let offset = 0; offset <= 7; offset++) {
+            const day = (now.getDay() + offset) % 7;
+            if (!MEETING_DAYS.includes(day)) continue;
+            if (offset === 0 && hour >= START_HOUR) continue;
+
+            const when = offset === 0 ? 'today' : offset === 1 ? 'tomorrow' : DAY_NAMES[day];
+            text.textContent = `Next meeting ${when} at 3:00 PM`;
+            return;
+        }
+    }
+
+    render();
+    setInterval(render, 60000);
 })();
 
 // --- MAP FACADE (only contacts Google once the visitor asks for the map) ---
