@@ -109,6 +109,52 @@ def collapse_whitespace(value):
     """Collapse newlines/indentation from wrapped Jinja block text so it's safe inside a single HTML attribute (og:*, twitter:*, meta description)."""
     return ' '.join(str(value).split())
 
+LEADERSHIP_KEYWORDS = ('captain', 'lead', 'president', 'mentor', 'director')
+
+
+@app.template_filter('member_roles')
+def member_roles(member):
+    """Every role a member holds. Falls back to the single legacy 'role' string."""
+    roles = member.get('roles') or []
+    roles = [r.strip() for r in roles if str(r).strip()]
+    if not roles and member.get('role'):
+        roles = [member['role'].strip()]
+    return roles
+
+
+def _is_leadership(member):
+    text = ' '.join(member_roles(member)).lower()
+    return any(word in text for word in LEADERSHIP_KEYWORDS)
+
+
+@app.template_filter('roster_groups')
+def roster_groups(members):
+    """Members grouped by sub-team, leadership first inside each group.
+
+    Groups keep the order the sub-teams first appear in, and members with no
+    sub-team fall into a single trailing group with an empty name, so a team
+    that never filled the field still renders as one plain grid.
+    """
+    order, grouped = [], {}
+    for member in members or []:
+        key = (member.get('subteam') or '').strip()
+        if key not in grouped:
+            grouped[key] = []
+            order.append(key)
+        grouped[key].append(member)
+
+    order.sort(key=lambda k: (k == '', k))
+    return [(key, sorted(grouped[key], key=lambda m: not _is_leadership(m))) for key in order]
+
+
+@app.template_filter('initials')
+def initials(name):
+    parts = [p for p in str(name or '').split() if p]
+    if not parts:
+        return '?'
+    return (parts[0][0] + (parts[-1][0] if len(parts) > 1 else '')).upper()
+
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'stl'}
 
 def allowed_file(filename):

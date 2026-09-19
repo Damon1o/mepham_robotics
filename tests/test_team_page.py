@@ -199,7 +199,7 @@ def test_identity_bar_stats(client, team_factory, award_factory):
     assert '2 Members' in body
     assert '3 Awards' in body
     assert 'Since 2019' in body
-    assert '2&#215; Worlds' in body or '2× Worlds' in body
+    assert '2&times; Worlds' in body or '2× Worlds' in body
 
 
 def test_identity_bar_omits_missing_stats(client, db):

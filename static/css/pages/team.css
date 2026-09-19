@@ -5,3 +5,355 @@
     var(--team-hero-image) center/cover;
     min-height: 60vh;
 }
+
+/* --- HERO IDENTITY BAR --- */
+
+.identity-bar {
+    list-style: none;
+    margin: var(--spacing-md) 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--spacing-xs);
+}
+
+.identity-stat {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.35);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 999px;
+    padding: 0.4rem 1rem;
+    white-space: nowrap;
+}
+
+.identity-division {
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--maroon-dark);
+    border-color: #fff;
+}
+
+.identity-worlds {
+    background: var(--accent-gold);
+    color: var(--text-dark);
+    border-color: var(--text-dark);
+    font-weight: 700;
+}
+
+/* --- SEASON SWITCHER --- */
+
+.season-switcher {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md) var(--spacing-sm);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.season-switcher-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-right: var(--spacing-xs);
+}
+
+.season-pill {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    text-decoration: none;
+    color: var(--text-dark);
+    background: #fff;
+    border: 3px solid var(--text-dark);
+    border-radius: 999px;
+    padding: 0.3rem 0.9rem;
+    transition: var(--transition-base);
+}
+
+.season-pill:hover,
+.season-pill:focus-visible {
+    background: var(--accent-gold);
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0px rgba(148, 69, 71, 0.2);
+}
+
+.season-pill.is-active {
+    background: var(--maroon-dark);
+    color: #fff;
+}
+
+[data-theme="dark"] .season-switcher-label {
+    color: #bbb;
+}
+
+[data-theme="dark"] .season-pill {
+    background: #1e1e1e;
+    border-color: #444;
+    color: #f1f1f1;
+}
+
+[data-theme="dark"] .season-pill.is-active {
+    background: var(--maroon-light);
+    border-color: #d4a0a1;
+}
+
+/* --- ROSTER --- */
+
+.roster-group {
+    margin-top: var(--spacing-lg);
+}
+
+.roster-group-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--maroon-dark);
+    border-bottom: 3px solid var(--maroon-dark);
+    display: inline-block;
+    padding-bottom: 0.3rem;
+    margin-bottom: var(--spacing-md);
+}
+
+.roster-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.roster-card {
+    background: #fff;
+    border: 3px solid var(--text-dark);
+    border-radius: 16px;
+    box-shadow: 8px 8px 0px rgba(148, 69, 71, 0.2);
+    padding: var(--spacing-md);
+    text-align: center;
+    transition: var(--transition-base);
+}
+
+.roster-card:hover {
+    transform: translate(-4px, -4px);
+    box-shadow: 12px 12px 0px rgba(148, 69, 71, 0.25);
+}
+
+.roster-photo,
+.roster-initials {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    border: 3px solid var(--maroon-dark);
+    object-fit: cover;
+    margin: 0 auto var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.roster-initials {
+    background: var(--maroon-dark);
+    color: var(--accent-gold);
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.roster-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.05rem;
+    margin: 0 0 var(--spacing-xs);
+    color: var(--text-dark);
+}
+
+.roster-roles {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+.roster-role-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: var(--accent-light);
+    border: 2px solid var(--text-dark);
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+    color: var(--text-dark);
+}
+
+.roster-since {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin: var(--spacing-xs) 0 0;
+}
+
+.roster-empty {
+    text-align: center;
+    color: var(--text-light);
+    opacity: 0.8;
+    padding: var(--spacing-lg) 0;
+}
+
+[data-theme="dark"] .roster-card {
+    background: #1e1e1e;
+    border-color: #444;
+}
+
+[data-theme="dark"] .roster-name {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .roster-group-title {
+    color: #d4a0a1;
+    border-bottom-color: #d4a0a1;
+}
+
+[data-theme="dark"] .roster-role-chip {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #f1f1f1;
+}
+
+[data-theme="dark"] .roster-since,
+[data-theme="dark"] .roster-empty {
+    color: #bbb;
+}
+
+/* --- GOALS: complete state --- */
+
+.goal-check {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.1em;
+    color: var(--accent-gold);
+}
+
+.goal-complete .progress-fill {
+    background: var(--accent-gold);
+}
+
+.goal-complete .goal-percent {
+    color: var(--accent-gold);
+    font-weight: 700;
+}
+
+/* --- SPECS --- */
+
+.specs-cta {
+    margin-top: var(--spacing-lg);
+}
+
+/* --- TEAM JOURNEY --- */
+
+.journey-list {
+    list-style: none;
+    margin: var(--spacing-lg) auto 0;
+    padding: 0 0 0 var(--spacing-md);
+    max-width: 800px;
+    border-left: 3px solid var(--maroon-dark);
+}
+
+.journey-item {
+    position: relative;
+    padding: 0 0 var(--spacing-lg) var(--spacing-md);
+}
+
+.journey-item::before {
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--spacing-md) - 11px);
+    top: 0.35rem;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent-gold);
+    border: 3px solid var(--text-dark);
+}
+
+.journey-date {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--maroon-dark);
+}
+
+.journey-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    margin: 0.2rem 0 0.4rem;
+    color: var(--text-dark);
+}
+
+.journey-body p {
+    margin: 0;
+    color: var(--text-light);
+}
+
+[data-theme="dark"] .journey-list {
+    border-left-color: #d4a0a1;
+}
+
+[data-theme="dark"] .journey-date,
+[data-theme="dark"] .journey-title {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .journey-body p {
+    color: #bbb;
+}
+
+/* --- JOIN CTA --- */
+
+.teamcta-band {
+    text-align: center;
+}
+
+.teamcta-copy {
+    max-width: 640px;
+    margin: 0 auto var(--spacing-lg);
+    color: var(--text-light);
+}
+
+.teamcta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--spacing-sm);
+}
+
+[data-theme="dark"] .teamcta-copy {
+    color: #bbb;
+}
+
+/* --- RESPONSIVE --- */
+
+@media (max-width: 700px) {
+    .identity-bar {
+        gap: 0.35rem;
+    }
+
+    .identity-stat {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .roster-grid {
+        grid-template-columns: 1fr;
+    }
+}
