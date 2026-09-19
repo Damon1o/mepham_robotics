@@ -874,3 +874,183 @@ body.has-lightbox {
         aspect-ratio: 4 / 3;
     }
 }
+
+/* --- Moved from styles.css: rules used only by this page --- */
+
+.robot-specs {
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+}
+
+.robot-specs h2 {
+    text-align: center;
+    color: white;
+    margin-bottom: 3rem;
+}
+
+.specs-container {
+    max-width: 800px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.spec-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.spec-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-gold);
+    transform: scale(1.05);
+}
+
+.spec-label {
+    color: var(--accent-gold);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+}
+
+.spec-value {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.goals-section {
+    padding: 4rem 2rem;
+    background: white;
+}
+
+.goals-section h2 {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.goals-container {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.goal-item {
+    margin-bottom: 2rem;
+}
+
+.goal-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.goal-name {
+    font-weight: 700;
+    color: #333;
+}
+
+.goal-percent {
+    font-family: 'Space Mono', monospace;
+    color: var(--maroon-dark);
+}
+
+.progress-bar {
+    height: 24px;
+    background: #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #1a1a1a;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--maroon-dark), var(--accent-gold));
+    border-radius: 10px;
+    transition: width 1s ease-out;
+    position: relative;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+.robot-showcase {
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    text-align: center;
+}
+
+.robot-showcase h2 {
+    color: white;
+    margin-bottom: 2rem;
+}
+
+.robot-tagline {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.2rem;
+}
+
+.download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, var(--accent-gold), #ffed4e);
+    color: #1a1a1a;
+    text-decoration: none;
+    border-radius: 12px;
+    border: 3px solid #1a1a1a;
+    font-family: var(--font-display);
+    font-weight: 700;
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.download-btn:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.25);
+}
+
+.download-icon {
+    font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+    .specs-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* These three painted bands were part of the shared full-bleed selector list in
+   styles.css. Their rules now live here, so they carry their own full-bleed. */
+.robot-specs,
+.goals-section,
+.robot-showcase {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.robot-specs > *:not(.specs-container),
+.goals-section > *:not(.goals-container),
+.robot-showcase > * {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+[data-theme="dark"] .goals-section {
+    background: #151515;
+}

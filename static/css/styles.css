@@ -333,11 +333,8 @@ section {
 .donation-cta,
 .faq-section,
 .donation-tiers,
-.robot-specs,
-.goals-section,
 .map-section,
 .impact-section,
-.robot-showcase,
 .live-results-section,
 .contact-section,
 .team-awards {
@@ -1619,99 +1616,21 @@ footer::before {
 }
 
 /* --- ROBOT SPECS TABLE --- */
-.robot-specs {
-    padding: 4rem 2rem;
-    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-}
 
-.robot-specs h2 {
-    text-align: center;
-    color: white;
-    margin-bottom: 3rem;
-}
 
-.specs-container {
-    max-width: 800px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-}
 
-.spec-card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 1.5rem;
-    text-align: center;
-    transition: all 0.3s ease;
-}
 
-.spec-card:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: var(--accent-gold);
-    transform: scale(1.05);
-}
 
-.spec-label {
-    color: var(--accent-gold);
-    font-family: 'Space Mono', monospace;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 0.5rem;
-}
 
-.spec-value {
-    color: white;
-    font-size: 1.5rem;
-    font-weight: 700;
-}
 
 /* --- PROGRESS BARS --- */
-.goals-section {
-    padding: 4rem 2rem;
-    background: white;
-}
 
-.goals-section h2 {
-    text-align: center;
-    margin-bottom: 3rem;
-}
 
-.goals-container {
-    max-width: 700px;
-    margin: 0 auto;
-}
 
-.goal-item {
-    margin-bottom: 2rem;
-}
 
-.goal-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
-}
 
-.goal-name {
-    font-weight: 700;
-    color: #333;
-}
 
-.goal-percent {
-    font-family: 'Space Mono', monospace;
-    color: var(--maroon-dark);
-}
 
-.progress-bar {
-    height: 24px;
-    background: #e0e0e0;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 2px solid #1a1a1a;
-}
 
 .timeline-card .timeline-content {
     background: transparent;
@@ -1723,21 +1642,7 @@ footer::before {
     margin: 0;
 }
 
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--maroon-dark), var(--accent-gold));
-    border-radius: 10px;
-    transition: width 1s ease-out;
-    position: relative;
-}
 
-.progress-fill::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    animation: shimmer 2s infinite;
-}
 
 @keyframes shimmer {
     0% {
@@ -2032,16 +1937,7 @@ footer::before {
 }
 
 /* --- ROBOT SHOWCASE --- */
-.robot-showcase {
-    padding: 4rem 2rem;
-    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-    text-align: center;
-}
 
-.robot-showcase h2 {
-    color: white;
-    margin-bottom: 2rem;
-}
 
 .robot-image-container {
     max-width: 600px;
@@ -2068,36 +1964,10 @@ footer::before {
     margin-bottom: 1rem;
 }
 
-.robot-tagline {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 1.2rem;
-}
 
 /* --- DOWNLOAD BUTTON --- */
-.download-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 1rem 2rem;
-    background: linear-gradient(135deg, var(--accent-gold), #ffed4e);
-    color: #1a1a1a;
-    text-decoration: none;
-    border-radius: 12px;
-    border: 3px solid #1a1a1a;
-    font-family: var(--font-display);
-    font-weight: 700;
-    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
-}
 
-.download-btn:hover {
-    transform: translate(-3px, -3px);
-    box-shadow: 9px 9px 0px rgba(0, 0, 0, 0.25);
-}
 
-.download-icon {
-    font-size: 1.2rem;
-}
 
 /* --- RESPONSIVE FOR NEW COMPONENTS --- */
 @media (max-width: 768px) {
@@ -2452,46 +2322,10 @@ footer::before {
 }
 
 /* --- 3D VIEWER CONTAINER --- */
-.viewer-3d-container {
-    max-width: 800px;
-    margin: 0 auto;
-    background: #e0e0e0;
-    aspect-ratio: 16/9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 16px;
-    border: 3px solid #1a1a1a;
-    position: relative;
-    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.1);
-}
 
-.viewer-label {
-    color: #666;
-    font-family: 'Space Mono', monospace;
-    font-size: 1.2rem;
-}
 
-.viewer-controls {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-}
 
-.viewer-btn {
-    background: var(--maroon-dark);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background 0.2s;
-}
 
-.viewer-btn:hover {
-    background: var(--maroon-light);
-}
 
 /* --- LIVE MATCH RESULTS --- */
 .live-results-section {
@@ -2565,9 +2399,6 @@ footer::before {
 }
 
 @media (max-width: 768px) {
-    .specs-container {
-        grid-template-columns: repeat(2, 1fr);
-    }
 
     .tier-card {
         margin-bottom: 1rem;
@@ -3072,22 +2903,7 @@ footer::before {
     box-shadow: 20px 20px 0px rgba(148, 69, 71, 0.3);
 }
 
-.team-img {
-    width: 160px;
-    height: 160px;
-    border-radius: 50%;
-    border: 5px solid var(--maroon-dark);
-    margin-bottom: 2rem;
-    object-fit: cover;
-    background: #f8f8f8;
-    transition: all 0.3s ease;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
 
-.team-card:hover .team-img {
-    transform: scale(1.1) rotate(5deg);
-    border-color: var(--accent-gold);
-}
 
 .team-card h3 {
     color: var(--maroon-dark);
