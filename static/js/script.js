@@ -547,65 +547,37 @@ function showToast(message, type = 'info') {
         });
     });
 
-    // --- Channel switch drives the form copy and which questions show below ---
+    // --- Channel switch rewrites the form's guidance and the message label ---
     const CHANNELS = {
         join: {
-            lede: "Tell us your grade and what you're curious about — building, coding, driving, or design. " +
+            lede: "Tell us your grade and what you're curious about \u2014 building, coding, driving, or design. " +
                 'No experience needed, and you can join mid-season.',
-            label: 'What would you like to know?',
-            note: 'Showing questions for future members.'
+            label: 'What would you like to know?'
         },
         sponsor: {
-            lede: 'Let us know what you have in mind — funding, parts, machining time, or mentoring. ' +
+            lede: 'Let us know what you have in mind \u2014 funding, parts, machining time, or mentoring. ' +
                 'We can send the sponsorship packet and this season\'s budget.',
-            label: 'What would you like to support?',
-            note: 'Showing questions for sponsors.'
+            label: 'What would you like to support?'
         },
         general: {
             lede: 'Press, outreach invites, event requests, or anything that does not fit a box. ' +
                 'Include dates and a location if you are inviting us somewhere.',
-            label: 'How can we help?',
-            note: 'Showing general questions.'
+            label: 'How can we help?'
         }
     };
 
     const channelInputs = [...document.querySelectorAll('[name="topic"]')];
     const ledeEl = document.querySelector('[data-channel-lede]');
     const messageLabel = document.querySelector('[data-message-label]');
-    const faqNote = document.querySelector('[data-faq-note]');
-    const faqItems = [...document.querySelectorAll('.faq-section .faq-item[data-channel]')];
-    const showAllBtn = document.querySelector('[data-faq-show-all]');
-    let showingAllFaqs = false;
 
     function applyChannel(value) {
         const channel = CHANNELS[value] || CHANNELS.general;
         if (ledeEl) ledeEl.textContent = channel.lede;
         if (messageLabel) messageLabel.textContent = channel.label;
-
-        if (faqItems.length) {
-            const matches = faqItems.filter(item => item.dataset.channel === value);
-            faqItems.forEach(item => {
-                item.hidden = !showingAllFaqs && !matches.includes(item);
-            });
-            if (faqNote) {
-                faqNote.textContent = showingAllFaqs ? 'Showing every question.' : channel.note;
-            }
-            if (showAllBtn) showAllBtn.hidden = showingAllFaqs || matches.length === faqItems.length;
-        }
     }
 
     channelInputs.forEach(input => {
-        input.addEventListener('change', () => {
-            showingAllFaqs = false;
-            if (showAllBtn) showAllBtn.textContent = 'Show every question';
-            applyChannel(input.value);
-        });
-    });
-
-    showAllBtn?.addEventListener('click', () => {
-        showingAllFaqs = true;
-        showAllBtn.hidden = true;
-        applyChannel(channelInputs.find(i => i.checked)?.value || 'general');
+        input.addEventListener('change', () => applyChannel(input.value));
     });
 
     applyChannel(channelInputs.find(i => i.checked)?.value || 'join');

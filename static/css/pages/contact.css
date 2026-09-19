@@ -1,10 +1,10 @@
 /* Page styles: contact
    ------------------------------------------------------------------
-   Layout is a two-pane deck (station panel + form) that fills the first
-   screen, then three full-width bands below it.
+   A shared hero and breadcrumb sit on top, then a two-pane deck (station
+   panel + form), then three full-width bands.
 
      1. Shared
-     2. Deck: station panel
+     2. Hero + deck: station panel
      3. Deck: form
      4. Find us
      5. FAQ
@@ -53,6 +53,7 @@
 }
 
 /* The shared h2 underline belongs to centered headings, not these. */
+.station-title::after,
 .find-us h2::after,
 .faq-head h2::after {
     display: none;
@@ -72,13 +73,19 @@
 }
 
 /* ================================================================
-   2. DECK: STATION PANEL
+   2. HERO + DECK: STATION PANEL
    ================================================================ */
+
+.contact-hero {
+    background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.92) 100%),
+        url('../../assets/photos/carousel8.jpg') center/cover;
+    min-height: 62vh;
+}
 
 .deck {
     display: grid;
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-    min-height: 100vh;
+    margin-top: 1rem;
     background: var(--paper);
 }
 
@@ -88,7 +95,7 @@
     flex-direction: column;
     justify-content: space-between;
     gap: 3rem;
-    padding: 7rem 4rem 3rem;
+    padding: 4rem 4rem 3rem;
     overflow: hidden;
     background:
         radial-gradient(circle at 15% 15%, rgba(255, 215, 0, 0.14), transparent 45%),
@@ -176,7 +183,10 @@
     }
 }
 
+/* Overrides the shared centered-h2 treatment. */
 .station-title {
+    text-align: left;
+    width: auto;
     margin: 0 0 1.5rem;
     font-family: var(--font-display);
     font-size: clamp(2.75rem, 5vw, 4.75rem);
@@ -262,24 +272,6 @@
     height: 18px;
 }
 
-.station-crumbs {
-    margin-left: auto;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.75rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.45);
-}
-
-.station-crumbs a {
-    color: rgba(255, 255, 255, 0.7);
-    text-decoration: none;
-}
-
-.station-crumbs a:hover {
-    color: var(--accent-gold);
-}
-
 /* ================================================================
    3. DECK: FORM
    ================================================================ */
@@ -288,7 +280,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 7rem 4.5rem 4rem;
+    padding: 4rem 4.5rem;
     background: var(--paper);
 }
 
@@ -710,7 +702,7 @@
     color: var(--text-light);
 }
 
-.faq-section .faq-container {
+.faq-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
     align-items: start;
@@ -719,7 +711,8 @@
     margin: 0 auto;
 }
 
-/* Flat rules instead of the shared card treatment. */
+/* Flat rules instead of the shared card treatment; answers stay collapsed
+   until the question is clicked. */
 .faq-section .faq-item {
     margin: 0;
     background: none;
@@ -732,10 +725,6 @@
 .faq-section .faq-item:hover {
     transform: none;
     box-shadow: none;
-}
-
-.faq-section .faq-item[hidden] {
-    display: none;
 }
 
 .faq-section .faq-question {
@@ -760,29 +749,14 @@
 
 .faq-section .faq-answer p {
     max-width: 58ch;
+    line-height: 1.75;
     color: var(--text-light);
 }
 
-.faq-show-all {
-    display: block;
-    margin: 2.5rem auto 0;
-    padding: 0.75rem 1.75rem;
-    border: 1px solid var(--rule, rgba(20, 16, 15, 0.14));
-    border-radius: 999px;
-    background: transparent;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text-dark);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.faq-show-all:hover {
-    background: var(--ink, #14100f);
-    border-color: var(--ink, #14100f);
-    color: #fff;
+.faq-section .faq-answer a {
+    color: var(--maroon-dark);
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 /* ================================================================
@@ -907,18 +881,136 @@
         repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 10px, transparent 10px 20px);
 }
 
-[data-theme="dark"] .find-us-link {
+[data-theme="dark"] .find-us-link,
+[data-theme="dark"] .faq-section .faq-answer a {
     color: #e6b8b9;
 }
 
-[data-theme="dark"] .faq-show-all {
-    color: #f0ebe8;
-    border-color: rgba(255, 255, 255, 0.18);
+[data-theme="dark"] /* ================================================================
+   6. CLOSING BAND
+   ================================================================ */
+
+.closing-band {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 3rem 4rem;
+    background: var(--ink, #14100f);
+    color: #fff;
 }
 
-[data-theme="dark"] .faq-show-all:hover {
+/* The band is meant to sit flush against the footer, so drop the global gap. */
+.closing-band+footer {
+    margin-top: 0;
+}
+
+.closing-band p {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+}
+
+.closing-band-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.closing-band-actions a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    text-decoration: none;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.35);
+}
+
+.closing-band-actions a:hover {
+    border-bottom-color: var(--accent-gold);
+}
+
+.closing-band-actions [data-lucide] {
+    width: 15px;
+    height: 15px;
+    transition: transform var(--transition-fast);
+}
+
+.closing-band-actions a:hover [data-lucide] {
+    transform: translateX(4px);
+}
+
+/* ================================================================
+   7. DARK MODE
+   ================================================================ */
+
+[data-theme="dark"] .deck {
+    --paper: #151313;
+    --rule: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="dark"] .deck-form,
+[data-theme="dark"] .faq-section {
+    background: #151313;
+}
+
+[data-theme="dark"] .find-us {
+    background: #1b1919;
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .find-us h2,
+[data-theme="dark"] .faq-head h2,
+[data-theme="dark"] .channel-option strong,
+[data-theme="dark"] .contact-map-caption,
+[data-theme="dark"] .faq-section .faq-question {
+    color: #f0ebe8;
+}
+
+[data-theme="dark"] .channel-option span {
+    background: #201d1d;
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="dark"] .channel-option input:checked+span {
     background: var(--maroon-dark);
     border-color: var(--maroon-dark);
+}
+
+[data-theme="dark"] .field input,
+[data-theme="dark"] .field textarea {
+    color: #f0ebe8;
+    border-bottom-color: rgba(255, 255, 255, 0.18);
+}
+
+[data-theme="dark"] .send-btn,
+[data-theme="dark"] .contact-map-load {
+    background: var(--maroon-dark);
+}
+
+[data-theme="dark"] .send-btn:hover,
+[data-theme="dark"] .contact-map-load:hover {
+    background: var(--maroon-light);
+}
+
+[data-theme="dark"] .find-us-map {
+    background: #201d1d;
+}
+
+[data-theme="dark"] .contact-map-facade {
+    background-image:
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 10px, transparent 10px 20px);
+}
+
+[data-theme="dark"] .find-us-link,
+[data-theme="dark"] .faq-section .faq-answer a {
+    color: #e6b8b9;
 }
 
 [data-theme="dark"] .closing-band {
@@ -946,11 +1038,11 @@
     }
 
     .deck-station {
-        padding: 7rem 2.5rem 3rem;
+        padding: 3rem 2.5rem;
     }
 
     .deck-form {
-        padding: 3.5rem 2.5rem;
+        padding: 3rem 2.5rem;
     }
 
     .find-us-inner {
@@ -970,7 +1062,7 @@
 
 @media (max-width: 700px) {
     .deck-station {
-        padding: 6.5rem 1.5rem 2.5rem;
+        padding: 2.5rem 1.5rem;
         gap: 2.5rem;
     }
 
@@ -1010,17 +1102,12 @@
         flex-wrap: wrap;
     }
 
-    .station-crumbs {
-        width: 100%;
-        margin-left: 0;
-    }
-
     .find-us,
     .faq-section {
         padding: 3.5rem 1.5rem;
     }
 
-    .faq-section .faq-container {
+    .faq-container {
         gap: 0;
     }
 
