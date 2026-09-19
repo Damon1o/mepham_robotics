@@ -1,4 +1,6 @@
 """Newsletter signup, unsubscribe, and the admin CSV export."""
+import pytest
+
 import api.index as app_module
 
 
@@ -74,6 +76,31 @@ def test_csv_export_requires_admin(client, make_user):
     make_user(username='member', password='member-password', role='member')
     client.post('/login', data={'username': 'member', 'password': 'member-password'})
     assert client.get('/admin/subscribers.csv').status_code == 302
+
+
+@pytest.mark.parametrize('value,expected', [
+    ('=HYPERLINK("http://evil")', "'=HYPERLINK(\"http://evil\")"),
+    ('+1234', "'+1234"),
+    ('-cmd', "'-cmd"),
+    ('@SUM(A1)', "'@SUM(A1)"),
+    ('\tinjected', "'\tinjected"),
+    ('fan@example.com', 'fan@example.com'),
+    (None, ''),
+])
+def test_csv_safe_neutralises_formulas(value, expected):
+    assert app_module.csv_safe(value) == expected
+
+
+def test_csv_export_neutralises_formula_addresses(client, db, make_user):
+    """A subscriber can pick their own address, and it lands in a spreadsheet
+    an admin opens."""
+    db['newsletter_subscribers'].insert_one(
+        {'email': '=HYPERLINK("http://evil.example","click")@example.com',
+         'created_at': app_module._utcnow()})
+    _admin(client, make_user)
+    body = client.get('/admin/subscribers.csv').get_data(as_text=True)
+    assert '"\'=HYPERLINK' in body
+    assert not any(line.startswith('=') for line in body.splitlines())
 
 
 def test_csv_export_lists_subscribers(client, db, make_user):

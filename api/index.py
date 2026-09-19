@@ -1816,6 +1816,19 @@ def unsubscribe(token):
                            removed=removed.deleted_count > 0)
 
 
+# Spreadsheets treat a cell starting with one of these as a formula, so an
+# address like `=HYPERLINK("http://evil")@example.com` would execute when an
+# admin opens the export. Prefixing a quote keeps the value as text.
+CSV_FORMULA_PREFIXES = ('=', '+', '-', '@', '\t', '\r')
+
+
+def csv_safe(value):
+    text = '' if value is None else str(value)
+    if text.startswith(CSV_FORMULA_PREFIXES):
+        return "'" + text
+    return text
+
+
 @app.route('/admin/subscribers.csv')
 @role_required('admin')
 def admin_subscribers_csv():
@@ -1825,8 +1838,8 @@ def admin_subscribers_csv():
     writer.writerow(['email', 'subscribed_at'])
     for sub in db['newsletter_subscribers'].find().sort('created_at', -1):
         created = sub.get('created_at')
-        writer.writerow([sub.get('email', ''),
-                         created.strftime('%Y-%m-%d %H:%M') if created else ''])
+        writer.writerow([csv_safe(sub.get('email', '')),
+                         csv_safe(created.strftime('%Y-%m-%d %H:%M') if created else '')])
     return Response(
         buffer.getvalue(),
         mimetype='text/csv',
