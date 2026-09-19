@@ -36,6 +36,23 @@ Our mission is to foster an inclusive environment where students can thrive in S
 └── ...
 ```
 
+## Environment Variables
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `MONGO_URI` | yes | MongoDB connection string |
+| `SECRET_KEY` | yes on Vercel | Flask session signing; the app refuses to boot without it in production |
+| `BLOB_READ_WRITE_TOKEN` | for uploads | Vercel Blob storage for team and member images |
+| `ROBOTEVENTS_TOKEN` | optional | RobotEvents API v2 token. Powers the live skills panel, season scoreboard and event results on team pages. Without it those sections are simply not rendered -- nothing else changes. |
+
+Generate a RobotEvents token from a RobotEvents account, then set it in `.env.local` for
+development and in the Vercel project settings for every environment. To confirm the API
+returns what the client expects:
+
+```bash
+python -m api.robotevents probe 77628A
+```
+
 ## Upcoming Events
 
 Check the `index.html` file or the website's timeline section for information on upcoming competitions at:
