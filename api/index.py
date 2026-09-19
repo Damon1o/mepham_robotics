@@ -15,6 +15,11 @@ from pymongo import MongoClient
 import requests
 import mimetypes
 
+try:  # package import on Vercel, flat import when run from the api/ directory
+    from api import robotevents
+except ImportError:  # pragma: no cover
+    import robotevents
+
 load_dotenv()
 
 # Vercel Blob configuration
@@ -455,6 +460,29 @@ def team_page(team_number):
                            seasons=seasons, active_season=team.get('season'),
                            live_enabled=bool(os.environ.get('ROBOTEVENTS_TOKEN')),
                            active_page=team_number)
+
+@app.route('/api/team/<team_number>/live')
+def team_live_data(team_number):
+    """Live RobotEvents data for the team page's skills, scoreboard and results panels.
+
+    204 when there is no token, no matching RobotEvents team, or nothing to show.
+    The page renders without these panels in that case, so this never fails hard.
+    """
+    team = db['teams'].find_one({'team_number': team_number})
+    if not team:
+        return Response(status=204)
+
+    lookup_number = team.get('robotevents_number') or team_number
+    try:
+        summary = robotevents.team_summary(db, lookup_number)
+    except Exception:
+        app.logger.exception('Live team data failed for %s', team_number)
+        return Response(status=204)
+
+    if not summary:
+        return Response(status=204)
+    return jsonify(summary)
+
 
 @app.route('/safety-quiz')
 def safety_quiz():
