@@ -4369,3 +4369,17 @@ textarea:focus-visible,
 [data-theme="dark"] .page-updated {
     color: #888;
 }
+
+/* Safety quiz results (moved out of JS-injected inline styles). */
+.quiz-results-title {
+    margin-bottom: 1rem;
+}
+
+.quiz-results-text {
+    margin-bottom: 2rem;
+    color: #666;
+}
+
+[data-theme="dark"] .quiz-results-text {
+    color: #bbb;
+}

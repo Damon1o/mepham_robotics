@@ -181,3 +181,18 @@ def test_404_still_returns_404(client):
 def test_healthz_reports_up(client):
     body = client.get('/healthz').get_json()
     assert body['status'] == 'ok'
+
+
+def test_csp_allows_the_contact_map_embed(client):
+    csp = client.get('/contact').headers['Content-Security-Policy']
+    frame_src = csp.split('frame-src')[1].split(';')[0]
+    assert 'https://www.google.com' in frame_src
+    assert 'https://givebutter.com' in frame_src
+
+
+@pytest.mark.parametrize('path', ['/notebook', '/resources', '/glossary'])
+def test_member_pages_run_the_strict_csp(client, make_user, path):
+    make_user(username='mem', password='mem-password', role='member')
+    client.post('/login', data={'username': 'mem', 'password': 'mem-password'})
+    csp = client.get(path).headers['Content-Security-Policy']
+    assert "'unsafe-inline'" not in csp.split('script-src')[1]

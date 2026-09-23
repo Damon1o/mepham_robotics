@@ -117,3 +117,40 @@ def test_missing_static_file_still_builds_a_url(client):
     import api.index as module
     module._static_versions.clear()
     assert module._static_version('does/not/exist.css') == '0'
+
+
+# --- Runtime-injected handlers --------------------------------------------
+# The inline-handler checks above only see server-rendered HTML. A handler
+# written into an innerHTML template string in the JS bundle is blocked by the
+# CSP just the same, which is how the safety quiz's buttons died unnoticed.
+JS_BUNDLES_UNDER_STRICT_CSP = ['static/js/script.js', 'static/js/login.js',
+                               'static/js/theme.js']
+
+
+@pytest.mark.parametrize('bundle', JS_BUNDLES_UNDER_STRICT_CSP)
+def test_js_bundles_inject_no_inline_handlers(bundle):
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    source = (root / bundle).read_text(encoding='utf-8')
+    hits = re.findall(r'\son(?:click|change|submit|input|keyup|keydown|load|error)\s*=\s*["\']', source)
+    assert not hits, f'{bundle} injects inline handlers: {hits}'
+
+
+@pytest.mark.parametrize('path', MEMBER_PAGES)
+def test_member_pages_have_no_inline_script(signed_in, path):
+    page = signed_in('member').get(path).get_data(as_text=True)
+    for attribute in ('onclick=', 'onsubmit=', 'onchange=', 'onerror='):
+        assert attribute not in page, f'{attribute} found on {path}'
+    for attributes, body in re.findall(r'<script\b([^>]*)>(.*?)</script>', page, re.S):
+        assert 'src=' in attributes or not body.strip(), f'inline script on {path}'
+
+
+def test_safety_quiz_breadcrumb_stays_public(client):
+    page = client.get('/safety-quiz').get_data(as_text=True)
+    assert 'href="/resources' not in page
+
+
+def test_notebook_faq_is_accessible(signed_in):
+    page = signed_in('member').get('/notebook').get_data(as_text=True)
+    assert 'aria-controls="notebook-template-answer"' in page
+    assert 'id="notebook-template-answer"' in page

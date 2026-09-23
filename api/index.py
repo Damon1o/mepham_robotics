@@ -620,7 +620,7 @@ def payload_too_large(e):
 
 # --- Security headers ------------------------------------------------------
 # The admin dashboard still carries inline handlers, so it gets a CSP that
-# allows them. Every public page runs under a CSP with no inline script.
+# allows them. Every other page runs under a CSP with no inline script.
 _SCRIPT_CDNS = "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com"
 _BASE_CSP = [
     "default-src 'self'",
@@ -632,14 +632,15 @@ _BASE_CSP = [
     "font-src 'self' https://fonts.gstatic.com data:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "connect-src 'self'",
-    # The donation page embeds a Givebutter campaign widget.
-    "frame-src https://givebutter.com",
+    # The donation page embeds a Givebutter widget; the contact page loads a
+    # Google Maps embed on request.
+    "frame-src https://givebutter.com https://www.google.com",
 ]
 
 
 def _csp_for(path):
     script_src = f"script-src 'self' {_SCRIPT_CDNS}"
-    if path.startswith('/admin') or path.startswith('/notebook') or path.startswith('/resources'):
+    if path.startswith('/admin'):
         script_src += " 'unsafe-inline'"
     return '; '.join(_BASE_CSP + [script_src])
 

@@ -85,12 +85,3 @@ endblock %}
 </section>
 {% endblock %}
 
-{% block page_scripts %}
-<script>
-    // Display user name if available in localStorage
-    const userName = localStorage.getItem('username');
-    if (userName) {
-        document.getElementById('userNameDisplay').textContent = userName.toUpperCase();
-    }
-</script>
-{% endblock %}

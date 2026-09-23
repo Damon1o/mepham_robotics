@@ -1157,40 +1157,53 @@ function showToast(message, type = 'info') {
         const cq = questions[current];
         const progress = ((current) / questions.length) * 100;
         container.innerHTML = `
-            <div class="quiz-progress"><div class="quiz-progress-fill" style="width:${progress}%"></div></div>
+            <div class="quiz-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress)}"><div class="quiz-progress-fill"></div></div>
             <div class="quiz-question-card">
                 <div class="quiz-question-num">Question ${current + 1} of ${questions.length}</div>
                 <div class="quiz-question-text">${cq.q}</div>
                 <div class="quiz-options">
-                    ${cq.opts.map((o, i) => `<button class="quiz-option ${answers[current] === i ? 'selected' : ''}" data-idx="${i}">${o}</button>`).join('')}
+                    ${cq.opts.map((o, i) => `<button type="button" class="quiz-option ${answers[current] === i ? 'selected' : ''}" data-idx="${i}" aria-pressed="${answers[current] === i}">${o}</button>`).join('')}
                 </div>
             </div>
             <div class="quiz-nav">
-                <button class="quiz-btn" onclick="quizPrev()" ${current === 0 ? 'disabled' : ''}><i data-lucide="arrow-left"></i> Back</button>
-                <button class="quiz-btn quiz-btn-primary" onclick="quizNext()" ${answers[current] === -1 ? 'disabled' : ''}>
+                <button type="button" class="quiz-btn" data-quiz-nav="prev" ${current === 0 ? 'disabled' : ''}><i data-lucide="arrow-left"></i> Back</button>
+                <button type="button" class="quiz-btn quiz-btn-primary" data-quiz-nav="next" ${answers[current] === -1 ? 'disabled' : ''}>
                     ${current === questions.length - 1 ? 'Finish' : 'Next <i data-lucide="arrow-right"></i>'}
                 </button>
             </div>
         `;
+        // Set through the DOM rather than an inline style attribute.
+        container.querySelector('.quiz-progress-fill').style.width = `${progress}%`;
         refreshLucideIcons();
     }
 
+    // One delegated listener for answers and navigation. The public page runs
+    // under a CSP with no inline script, so injected onclick= attributes are
+    // blocked; data attributes plus this handler are not.
     container.addEventListener('click', function (e) {
         const opt = e.target.closest('.quiz-option');
-        if (!opt) return;
-        answers[current] = parseInt(opt.dataset.idx);
+        if (opt) {
+            answers[current] = parseInt(opt.dataset.idx, 10);
+            render();
+            return;
+        }
+
+        const nav = e.target.closest('[data-quiz-nav]');
+        if (!nav || nav.disabled) return;
+        const action = nav.dataset.quizNav;
+        if (action === 'next' && answers[current] !== -1) {
+            current++;
+        } else if (action === 'prev' && current > 0) {
+            current--;
+        } else if (action === 'restart') {
+            current = 0;
+            answers = new Array(questions.length).fill(-1);
+        } else {
+            return;
+        }
         render();
+        container.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
-
-    window.quizNext = function () {
-        if (answers[current] === -1) return;
-        current++;
-        render();
-    };
-
-    window.quizPrev = function () {
-        if (current > 0) { current--; render(); }
-    };
 
     function showResults() {
         let score = 0;
@@ -1200,10 +1213,10 @@ function showToast(message, type = 'info') {
         container.innerHTML = `
             <div class="quiz-results">
                 <div class="quiz-score-circle ${pass ? 'pass' : 'fail'}">${pct}%</div>
-                <h2 style="margin-bottom:1rem">${pass ? '<i data-lucide="party-popper"></i> You Passed!' : '<i data-lucide="circle-x"></i> Not Quite'}</h2>
-                <p style="color:#666;margin-bottom:2rem">You got ${score} out of ${questions.length} correct.
+                <h2 class="quiz-results-title">${pass ? '<i data-lucide="party-popper"></i> You Passed!' : '<i data-lucide="circle-x"></i> Not Quite'}</h2>
+                <p class="quiz-results-text">You got ${score} out of ${questions.length} correct.
                 ${pass ? 'Great job — you know your workshop safety!' : 'Review the safety guidelines and try again.'}</p>
-                <button class="quiz-btn quiz-btn-primary" onclick="location.reload()">Try Again</button>
+                <button type="button" class="quiz-btn quiz-btn-primary" data-quiz-nav="restart">Try Again</button>
             </div>
         `;
         refreshLucideIcons();
@@ -1302,9 +1315,11 @@ function showToast(message, type = 'info') {
         msgDiv.className = `chatbot-msg ${sender}`;
 
         // Parse markdown for the bot, sanitized against XSS before insertion
-        if (sender === 'bot' && window.marked) {
-            const rawHtml = marked.parse(text);
-            msgDiv.innerHTML = window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
+        // Model output is steerable by whoever types the prompt, so it is only
+        // rendered as HTML when the sanitizer is actually present. If the
+        // DOMPurify CDN failed to load, show plain text instead of raw HTML.
+        if (sender === 'bot' && window.marked && window.DOMPurify) {
+            msgDiv.innerHTML = DOMPurify.sanitize(marked.parse(text));
         } else {
             msgDiv.textContent = text;
         }

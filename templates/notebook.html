@@ -25,11 +25,11 @@
 
     <div style="margin:2rem 0;">
         <div class="faq-item" style="margin-bottom:1rem;">
-            <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+            <button class="faq-question" aria-expanded="false" aria-controls="notebook-template-answer">
                 <span><i data-lucide="pencil-line"></i> Entry Template — How We Document</span>
                 <span class="faq-icon">+</span>
             </button>
-            <div class="faq-answer">
+            <div class="faq-answer" id="notebook-template-answer">
                 <p>Every notebook entry includes:</p>
                 <ul style="padding-left:1.5rem;margin-top:0.5rem;">
                     <li><strong>Date & Attendees</strong> — who was there</li>
