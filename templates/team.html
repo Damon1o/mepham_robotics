@@ -42,17 +42,15 @@ members, and season goals.{% endblock %}
 {% include "partials/awards_grid.html" %}
 
 <section class="robot-showcase fade-in-section">
-    <h2 class="ripple">Interactive 3D View: "{{ team.nickname }}"</h2>
+    <h2 class="ripple">The Robot: "{{ team.nickname }}"</h2>
+    {% if team.stl_path %}
     <div class="viewer-3d-container">
-        {% if team.stl_path %}
-        <p class="viewer-label">[ 3D CAD MODEL VIEWER: {{ team.stl_path.split('/')[-1] }} ]</p>
-        {% else %}
-        <p class="viewer-label">[ 3D CAD MODEL VIEWER PLACEHOLDER ]</p>
-        {% endif %}
-        <div class="viewer-controls">
-            <button class="viewer-btn">Rotate</button>
-        </div>
+        <a href="{{ team.stl_path }}" class="download-btn" download>
+            <i data-lucide="box" class="download-icon" aria-hidden="true"></i>
+            Download CAD model (.stl)
+        </a>
     </div>
+    {% endif %}
     <p class="robot-tagline">"{{ team.tagline or 'Precision. Power. Performance.' }}"</p>
 </section>
 
@@ -77,12 +75,14 @@ members, and season goals.{% endblock %}
             <div class="spec-value">{{ team.specs.auton_consistency or 'TBA' }}</div>
         </div>
     </div>
-    <div class="text-center" style="margin-top: 3rem;">
-        <a href="{{ team.notebook_link or '#' }}" class="download-btn">
-            <i data-lucide="book" class="download-icon"></i>
+    {% if team.notebook_link and team.notebook_link != '#' %}
+    <div class="text-center team-notebook-cta">
+        <a href="{{ team.notebook_link }}" class="download-btn" target="_blank" rel="noopener">
+            <i data-lucide="book" class="download-icon" aria-hidden="true"></i>
             Engineering Notebook
         </a>
     </div>
+    {% endif %}
 </section>
 
 <!-- SEASON GOALS -->
@@ -96,9 +96,7 @@ members, and season goals.{% endblock %}
                 <span class="goal-percent">{{ goal.progress }}%</span>
             </div>
             <div class="progress-bar">
-                <div class="progress-fill" data-progress="{{ goal.progress|default(0) }}"
-                    style="width: {{ goal.progress|default(0) }}%;">
-                </div>
+                <div class="progress-fill" data-progress="{{ goal.progress|default(0) }}"></div>
             </div>
         </div>
         {% endfor %}

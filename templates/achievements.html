@@ -32,13 +32,6 @@ results.{% endblock %}
         <h2 class="ripple">All-Time VEX V5 Competition Awards</h2>
     </div>
 
-    <div class="filter-tabs">
-        <button class="filter-tab active" data-filter="all">All Seasons</button>
-        <button class="filter-tab" data-filter="2024-2025">2024-2025</button>
-        <button class="filter-tab" data-filter="2023-2024">2023-2024</button>
-        <button class="filter-tab" data-filter="2022-2023">2022-2023</button>
-    </div>
-
     <div class="awards-grid">
         {% for award in global_awards %}
         <div
@@ -51,13 +44,16 @@ results.{% endblock %}
             <div class="award-title">{{ award.title }}</div>
         </div>
         {% endfor %}
+        {% if not global_awards %}
+        <p class="awards-empty">Award history is being added. Check back after our next competition!</p>
+        {% endif %}
     </div>
 </section>
 
 <section class="live-results-section fade-in-section">
     <div class="text-center">
-        <h2 class="ripple" style="margin-bottom: 2rem;">Live Match Results</h2>
-        <p style="margin-bottom: 2rem; color: #666;">Real-time scores from our latest competition</p>
+        <h2 class="ripple results-heading">Live Match Results</h2>
+        <p class="results-lede">Recent scores from our latest competition, straight from RobotEvents</p>
     </div>
 
     <div class="results-table-container">
@@ -70,32 +66,14 @@ results.{% endblock %}
                     <th>Score</th>
                 </tr>
             </thead>
-            <tbody id="live-results-body">
+            <tbody id="live-results-body" aria-live="polite">
                 <tr>
-                    <td>Q-12</td>
-                    <td class="alliance-red" style="text-align: center;"><a
-                            href="{{ url_for('team_page', team_number='77628D') }}">77628D</a>, 1234A</td>
-                    <td class="alliance-blue" style="text-align: center;">5678B, 9999Z</td>
-                    <td class="match-score">45 - 30</td>
-                </tr>
-                <tr>
-                    <td>Q-18</td>
-                    <td class="alliance-red" style="text-align: center;">4444X, 5555Y</td>
-                    <td class="alliance-blue" style="text-align: center;"><a
-                            href="{{ url_for('team_page', team_number='77628P') }}">77628P</a>, 2222C</td>
-                    <td class="match-score">22 - 68</td>
-                </tr>
-                <tr>
-                    <td>Q-25</td>
-                    <td class="alliance-red" style="text-align: center;"><a
-                            href="{{ url_for('team_page', team_number='77628D') }}">77628D</a>, 8888K</td>
-                    <td class="alliance-blue" style="text-align: center;">1111J, 3333L</td>
-                    <td class="match-status-live" style="text-align: right;">In Progress...</td>
+                    <td colspan="4" class="results-status">Loading match results…</td>
                 </tr>
             </tbody>
         </table>
     </div>
-    <div class="text-center" style="margin-top: 1rem;">
+    <div class="text-center results-credit">
         <small>Data provided by RobotEvents API</small>
     </div>
 </section>

@@ -5,3 +5,7 @@
     var(--team-hero-image) center/cover;
     min-height: 60vh;
 }
+
+.text-center.team-notebook-cta {
+    margin-top: 3rem;
+}

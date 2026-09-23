@@ -831,7 +831,12 @@ def team_page(team_number):
         flash(f"Team {team_number} not found.", "error")
         return redirect(url_for('index'))
     team['_id'] = str(team['_id'])
-    team_awards = list(db['awards'].find({'team_number': team_number}).sort('_id', 1))  # ← FIXED
+    # Older or hand-made team documents can lack these; the template reads
+    # straight into them, and a missing one turned the page into a 500.
+    team.setdefault('specs', {})
+    team['members'] = team.get('members') or []
+    team['goals'] = team.get('goals') or []
+    team_awards = list(db['awards'].find({'team_number': team_number}).sort('_id', 1))
     return render_template('team.html', team=team, team_awards=team_awards, active_page=team_number)
 
 @app.route('/safety-quiz')

@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/icons/mephamrobotics.png') }}">
 </head>
 
@@ -16,7 +17,7 @@
         <div class="error-content">
             <i data-lucide="settings" class="error-emoji"></i>
             <div class="error-code">500</div>
-            <p class="error-message">Something Slipped a Gear</p>
+            <h1 class="error-message">Something Slipped a Gear</h1>
             <p class="error-submessage">We hit a snag on our end — our team's already been notified. Please try
                 again in a few minutes.</p>
             <div class="error-actions">

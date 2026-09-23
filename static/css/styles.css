@@ -3410,7 +3410,10 @@ footer::before {
     margin-bottom: 2rem;
 }
 
-.glossary-section h3 {
+.content-page .glossary-section h2 {
+    /* glossary h2 reset */
+    margin-top: 0;
+    text-align: start;
     font-family: 'Space Mono', monospace;
     font-size: 1.8rem;
     color: var(--maroon-dark);
@@ -3419,7 +3422,7 @@ footer::before {
     margin-bottom: 1rem;
 }
 
-[data-theme="dark"] .glossary-section h3 {
+[data-theme="dark"] .content-page .glossary-section h2 {
     color: #d4a0a1;
     border-bottom-color: rgba(255, 215, 0, 0.4);
 }
@@ -3692,7 +3695,7 @@ footer::before {
     border-color: #444;
 }
 
-.font-specimen h4 {
+.font-specimen h3 {
     font-size: 0.85rem;
     font-family: 'Space Mono', monospace;
     color: var(--maroon-dark);
@@ -4394,4 +4397,31 @@ textarea:focus-visible,
     width: 16px;
     height: 16px;
     flex-shrink: 0;
+}
+
+/* Moved out of inline style attributes in the templates. */
+
+.chatbot-send-icon {
+    width: 20px;
+    height: 20px;
+    fill: white;
+}
+
+.page-back-cta {
+    text-align:center;
+    margin-top:3rem;
+}
+
+/* Scoped: .content-page p would otherwise override the colour. */
+.content-page .page-subtitle {
+    text-align:center;
+    color:#999;
+    margin-top:-1rem;
+    margin-bottom:2rem;
+}
+
+/* Resource card titles are h2s for the outline; they don't take the
+   global h2 underline. */
+.resource-card .resource-title::after {
+    display: none;
 }

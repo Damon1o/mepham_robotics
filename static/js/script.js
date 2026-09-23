@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- TIMELINE ANIMATION ---
-    const timelineContainers = document.querySelectorAll('.timeline-container');
+    const timelineContainers = document.querySelectorAll('.timeline-card');
 
     if (timelineContainers.length > 0) {
         const timelineObserver = new IntersectionObserver((entries) => {
@@ -790,29 +790,6 @@ function showToast(message, type = 'info') {
     });
 })();
 
-// --- IMAGE LAZY LOADING WITH FADE ---
-(function initLazyLoad() {
-    const images = document.querySelectorAll('img[data-src]');
-
-    if (images.length === 0) return;
-
-    const imageObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.style.opacity = '0';
-                img.onload = () => {
-                    img.style.transition = 'opacity 0.5s ease';
-                    img.style.opacity = '1';
-                };
-                imageObserver.unobserve(img);
-            }
-        });
-    });
-
-    images.forEach(img => imageObserver.observe(img));
-})();
 
 // --- ACTIVE NAV HIGHLIGHTING ---
 (function initActiveNav() {
@@ -851,33 +828,6 @@ function showToast(message, type = 'info') {
     });
 })();
 
-// --- FILTER TABS ---
-(function initFilterTabs() {
-    const tabs = document.querySelectorAll('.filter-tab');
-    const filterItems = document.querySelectorAll('[data-season]');
-
-    if (tabs.length === 0) return;
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Update active tab
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            const filter = tab.dataset.filter;
-
-            // Filter items
-            filterItems.forEach(item => {
-                if (filter === 'all' || item.dataset.season === filter) {
-                    item.style.display = '';
-                    item.style.animation = 'fadeIn 0.5s ease';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-    });
-})();
 
 // --- PROGRESS BAR ANIMATION ---
 (function initProgressBars() {
@@ -910,10 +860,15 @@ function showToast(message, type = 'info') {
 
     if (!daysEl) return;
 
+    const dateEl = document.querySelector('[data-countdown-date]');
+    if (!dateEl) {
+        document.querySelector('.countdown-section')?.setAttribute('hidden', '');
+        return;
+    }
+
     // The next competition's date comes from the template as a data attribute
     // (an inline script would be blocked by the public page CSP).
-    const dateEl = document.querySelector('[data-countdown-date]');
-    const dateStr = dateEl?.dataset.countdownDate || window.COUNTDOWN_DATE || "Feb 22, 2026 07:30:00";
+    const dateStr = dateEl.dataset.countdownDate;
     const countDownDate = new Date(dateStr).getTime();
 
     const updateTimer = setInterval(function () {
@@ -927,15 +882,18 @@ function showToast(message, type = 'info') {
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         // Display results with leading zeros
-        daysEl.innerHTML = days < 10 ? '0' + days : days;
-        hoursEl.innerHTML = hours < 10 ? '0' + hours : hours;
-        minutesEl.innerHTML = minutes < 10 ? '0' + minutes : minutes;
-        secondsEl.innerHTML = seconds < 10 ? '0' + seconds : seconds;
+        daysEl.textContent = days < 10 ? '0' + days : days;
+        hoursEl.textContent = hours < 10 ? '0' + hours : hours;
+        minutesEl.textContent = minutes < 10 ? '0' + minutes : minutes;
+        secondsEl.textContent = seconds < 10 ? '0' + seconds : seconds;
 
         // If the count down is finished, write some text
         if (distance < 0) {
             clearInterval(updateTimer);
-            document.querySelector(".countdown-container").innerHTML = "<h3 style='color:var(--accent-gold)'>COMPETITION DAY!</h3>";
+            const day = document.createElement('h3');
+            day.className = 'countdown-today';
+            day.textContent = 'COMPETITION DAY!';
+            document.querySelector('.countdown-container').replaceChildren(day);
         }
     }, 1000);
 })();
@@ -1036,11 +994,8 @@ function showToast(message, type = 'info') {
         if (input) { input.value = ''; input.focus(); }
         const results = overlay.querySelector('.search-results');
         if (results) results.textContent = '';
-        // close sidenav if open
-        const nav = document.querySelector('.sidenav');
-        const ov = document.querySelector('.nav-overlay');
-        if (nav) nav.classList.remove('active');
-        if (ov) ov.classList.remove('active');
+        // Close the side nav if it is open, then lock page scroll for the overlay.
+        toggleNav(false);
         document.body.style.overflow = 'hidden';
     }
 
@@ -1233,6 +1188,10 @@ function showToast(message, type = 'info') {
     const resultsBody = document.getElementById('live-results-body');
     if (!resultsBody) return;
 
+    function showStatus(message) {
+        resultsBody.innerHTML = `<tr><td colspan="4" class="results-status">${escapeHtml(message)}</td></tr>`;
+    }
+
     function escapeHtml(str) {
         const div = document.createElement('div');
         div.textContent = str;
@@ -1247,12 +1206,13 @@ function showToast(message, type = 'info') {
             data = await response.json();
         } catch (error) {
             console.error('Match fetch error:', error);
+            showStatus('Match results are unavailable right now.');
             return;
         }
 
         const matches = data.matches || [];
         if (matches.length === 0) {
-            resultsBody.innerHTML = '<tr><td colspan="4" style="text-align:center">No recent matches found.</td></tr>';
+            showStatus('No recent matches found.');
             return;
         }
 
@@ -1263,8 +1223,8 @@ function showToast(message, type = 'info') {
             return `
                 <tr>
                     <td>${escapeHtml(match.name)}</td>
-                    <td class="alliance-red" style="text-align: center;">${escapeHtml(match.red_teams)}</td>
-                    <td class="alliance-blue" style="text-align: center;">${escapeHtml(match.blue_teams)}</td>
+                    <td class="alliance-red">${escapeHtml(match.red_teams)}</td>
+                    <td class="alliance-blue">${escapeHtml(match.blue_teams)}</td>
                     <td class="${statusClass}">${escapeHtml(scoreDisplay)}</td>
                 </tr>
             `;

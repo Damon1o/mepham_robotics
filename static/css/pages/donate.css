@@ -27,3 +27,18 @@
     text-align: center;
     line-height: 1.7;
 }
+
+/* Moved out of inline style attributes in the templates. */
+
+.text-center.donate-note {
+    margin-top: 2rem;
+}
+
+.donate-note-text {
+    font-size: 0.95rem;
+    color: #999;
+}
+
+.ripple.impact-heading {
+    color: white;
+}

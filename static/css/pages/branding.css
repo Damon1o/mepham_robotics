@@ -1,0 +1,45 @@
+/* Page styles: branding */
+
+/* Moved out of inline style attributes in the templates. */
+
+.specimen-text.specimen-display-body {
+    font-family:'Balsamiq Sans',cursive;
+    font-weight:400;
+    font-size:1.5rem;
+}
+
+.specimen-text.specimen-display-bold {
+    font-family:'Balsamiq Sans',cursive;
+    font-weight:700;
+}
+
+.specimen-text.specimen-mono-body {
+    font-family:'Space Mono',monospace;
+    font-weight:400;
+    font-size:1.5rem;
+}
+
+.specimen-text.specimen-mono-bold {
+    font-family:'Space Mono',monospace;
+    font-weight:700;
+}
+
+.color-preview.swatch-bg-light {
+    background:#f8f5f0;
+}
+
+.color-preview.swatch-gold {
+    background:#FFD700;
+}
+
+.color-preview.swatch-maroon-dark {
+    background:#800000;
+}
+
+.color-preview.swatch-maroon-light {
+    background:#944547;
+}
+
+.color-preview.swatch-text-dark {
+    background:#1a1a1a;
+}

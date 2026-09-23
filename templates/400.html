@@ -8,15 +8,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/icons/mephamrobotics.png') }}">
 </head>
 
 <body>
     <div class="error-page">
         <div class="error-content">
-            <i data-lucide="bot" class="error-emoji"></i>
+            <i data-lucide="bot" class="error-emoji" aria-hidden="true"></i>
             <div class="error-code">400</div>
-            <p class="error-message">Request Rejected</p>
+            <h1 class="error-message">Request Rejected</h1>
             <p class="error-submessage">That form was submitted with an expired or missing security token, usually because the page sat open for a long time. Reload the page and try again —
                 nothing was changed.</p>
             <div class="error-actions">

@@ -1,0 +1,55 @@
+/* Page styles: notebook */
+
+/* Moved out of inline style attributes in the templates. */
+
+.notebook-checklist {
+    padding-left:1.5rem;
+    margin-top:0.5rem;
+}
+
+.content-page .notebook-empty {
+    color:#999;
+    font-style:italic;
+}
+
+.notebook-entries {
+    margin:2rem 0;
+}
+
+.notebook-log {
+    width:100%;
+    border-collapse:collapse;
+    font-family:'Space Mono',monospace;
+    font-size:0.85rem;
+}
+
+.notebook-log-cell {
+    padding:0.75rem 1rem;
+    color:#999;
+}
+
+.notebook-log-head {
+    background:var(--maroon-dark);
+    color:white;
+}
+
+.notebook-log-row {
+    border-bottom:1px solid #e0e0e0;
+}
+
+.notebook-log-scroll {
+    overflow-x:auto;
+}
+
+.notebook-log-th {
+    padding:1rem;
+    text-align:left;
+}
+
+.subteam-grid.notebook-process {
+    margin-bottom:2rem;
+}
+
+.faq-item.notebook-template {
+    margin-bottom:1rem;
+}

@@ -5,3 +5,44 @@
     url('../../assets/photos/carousel7.jpg') center/cover;
     min-height: 60vh;
 }
+
+/* Live match results: headings, loading/empty state, credit line. */
+.ripple.results-heading {
+    margin-bottom: 2rem;
+}
+
+.results-lede {
+    margin-bottom: 2rem;
+    color: #666;
+}
+
+[data-theme="dark"] .results-lede {
+    color: #bbb;
+}
+
+.results-table .results-status {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: #666;
+}
+
+[data-theme="dark"] .results-table .results-status {
+    color: #bbb;
+}
+
+.results-table .alliance-red,
+.results-table .alliance-blue {
+    text-align: center;
+}
+
+.text-center.results-credit {
+    margin-top: 1rem;
+}
+
+.awards-grid .awards-empty {
+    grid-column: 1 / -1;
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-light);
+    opacity: 0.7;
+}

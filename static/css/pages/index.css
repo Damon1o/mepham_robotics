@@ -303,3 +303,24 @@
 [data-theme="dark"] .timeline-card .time {
     color: #bbb;
 }
+
+/* Countdown and upcoming events. */
+.ripple.countdown-heading {
+    margin-bottom: 2rem;
+    color: white;
+}
+
+.countdown-section[hidden] {
+    display: none;
+}
+
+.countdown-container .countdown-today {
+    color: var(--accent-gold);
+}
+
+.timeline-wrapper .timeline-empty {
+    padding: 2rem;
+    text-align: center;
+    color: var(--accent-light);
+    opacity: 0.7;
+}

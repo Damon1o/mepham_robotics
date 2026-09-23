@@ -8,15 +8,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/icons/mephamrobotics.png') }}">
 </head>
 
 <body>
     <div class="error-page">
         <div class="error-content">
-            <i data-lucide="bot" class="error-emoji"></i>
+            <i data-lucide="bot" class="error-emoji" aria-hidden="true"></i>
             <div class="error-code">404</div>
-            <p class="error-message">Robot Lost in the Field!</p>
+            <h1 class="error-message">Robot Lost in the Field!</h1>
             <p class="error-submessage">The page you're looking for has either been moved, deleted, or never existed —
                 kind of like our first autonomous routine.</p>
             <div class="error-actions">
