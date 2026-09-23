@@ -94,8 +94,8 @@ def test_blob_path_never_returns_empty_segment():
     ('robot', False),
     ('robot.png.html', False),
 ])
-def test_allowed_file(filename, ok):
-    assert app_module.allowed_file(filename, app_module.IMAGE_EXTENSIONS) is ok
+def test_image_extension_check(filename, ok):
+    assert (app_module.file_extension(filename) in app_module.IMAGE_EXTENSIONS) is ok
 
 
 def test_checked_upload_rejects_bad_extension(monkeypatch):
@@ -167,9 +167,7 @@ def test_rate_limit_allows_then_blocks(client, db):
 def test_unexpected_error_returns_500_status(client, monkeypatch):
     monkeypatch.setattr(app_module, 'get_db',
                         lambda: (_ for _ in ()).throw(RuntimeError('boom')))
-    resp = client.get('/contact?crash=1')
-    # /contact itself needs no database, so force the failure through a view
-    # that does.
+    # A view that queries the database directly, so the failure propagates.
     resp = client.get('/team/77628')
     assert resp.status_code == 500
 

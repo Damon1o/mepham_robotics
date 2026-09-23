@@ -24,6 +24,8 @@ import mimetypes
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 # Vercel Blob configuration
 BLOB_READ_WRITE_TOKEN = os.getenv('BLOB_READ_WRITE_TOKEN')
 BLOB_BASE_URL = 'https://blob.vercel-storage.com'
@@ -59,7 +61,10 @@ def upload_to_vercel_blob(file, filename=None):
         result = response.json()
         return result.get('url')
     else:
-        raise Exception(f"Failed to upload to Vercel Blob: {response.status_code} - {response.text}")
+        # The response body is logged, not raised: it lands in an admin flash
+        # message otherwise, and Blob error bodies can echo request details.
+        logger.error('Vercel Blob upload failed: %s %s', response.status_code, response.text[:500])
+        raise RuntimeError(f'Blob upload failed with status {response.status_code}')
 
 def delete_from_vercel_blob(url):
     """Delete a file from Vercel Blob storage"""
@@ -82,7 +87,7 @@ def delete_from_vercel_blob(url):
     )
 
     if response.status_code != 200:
-        print(f"Warning: Failed to delete blob {url}: {response.status_code} - {response.text}")
+        logger.warning('Failed to delete blob %s: %s %s', url, response.status_code, response.text[:500])
 
 # Resolve absolute paths so Vercel can find templates/static regardless of working directory
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -98,13 +103,15 @@ if not _secret_key:
         )
     _secret_key = 'dev-fallback-key'
 app.secret_key = _secret_key
+if os.getenv('VERCEL') and not os.getenv('MONGO_URI'):
+    # Fail the deploy loudly instead of returning a 500 from every request.
+    raise RuntimeError('MONGO_URI environment variable is not set.')
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_COOKIE_SECURE=bool(os.getenv('VERCEL')),
     PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=30),
 )
-app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 # Refuse oversized request bodies before they are buffered into memory.
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
 app.config['MAX_CONTENT_LENGTH'] = MAX_UPLOAD_BYTES
@@ -114,15 +121,11 @@ def collapse_whitespace(value):
     """Collapse newlines/indentation from wrapped Jinja block text so it's safe inside a single HTML attribute (og:*, twitter:*, meta description)."""
     return ' '.join(str(value).split())
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'stl'}
 IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
 
 def file_extension(filename):
     """Lowercase extension without the dot, or '' when there isn't one."""
     return filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
-
-def allowed_file(filename, allowed=ALLOWED_EXTENSIONS):
-    return file_extension(filename) in allowed
 
 def blob_path(*segments):
     """Build a Vercel Blob key from untrusted segments.
@@ -134,7 +137,11 @@ def blob_path(*segments):
     safe = [secure_filename(str(seg)) or 'file' for seg in segments]
     return '/'.join(safe)
 
-def checked_upload(file, *segments, allowed=ALLOWED_EXTENSIONS, stem='file'):
+class UserFacingError(ValueError):
+    """An error whose message is written for the admin and safe to show."""
+
+
+def checked_upload(file, *segments, allowed, stem='file'):
     """Validate an uploaded file's extension, then store it under a safe key.
 
     Raises ValueError for a rejected extension so the caller's error handling
@@ -142,7 +149,7 @@ def checked_upload(file, *segments, allowed=ALLOWED_EXTENSIONS, stem='file'):
     """
     ext = file_extension(file.filename or '')
     if ext not in allowed:
-        raise ValueError(
+        raise UserFacingError(
             f'"{file.filename}" is not an accepted file type '
             f'({", ".join(sorted(allowed))}).')
     stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -185,8 +192,8 @@ def log_activity(activity_type, description, user=None, details=None):
             'details': details or {}
         }
         db['activities'].insert_one(activity)
-    except Exception as e:
-        print(f"Failed to log activity: {e}")
+    except Exception:
+        logger.exception('Failed to log activity %s', activity_type)
 
 def seed_team_awards(team_number):
     """Give a newly created team its own copy of every award category, starting at 0."""
@@ -262,15 +269,50 @@ def get_activity_title(activity_type):
 # --- MongoDB Connection (lazy) ---
 _client = None
 _db = None
+_db_lock = threading.Lock()
+
+
+def _ensure_core_indexes(database):
+    """Indexes for the queries every page view makes.
+
+    Each is created on its own so one failure (for example a unique index
+    over data that already has duplicates) is logged without taking the site
+    down or skipping the rest.
+    """
+    specs = [
+        ('users', 'username', {'unique': True}),
+        ('users', 'email', {}),
+        ('teams', 'team_number', {'unique': True}),
+        ('awards', 'team_number', {}),
+        ('competitions', 'date', {}),
+        ('activities', 'timestamp', {}),
+        ('newsletter_subscribers', 'unsubscribe_token', {}),
+    ]
+    for collection, key, options in specs:
+        try:
+            database[collection].create_index(key, **options)
+        except Exception:
+            logger.exception('Could not create index %s.%s', collection, key)
+
 
 def get_db():
     global _client, _db
     if _db is None:
-        mongo_uri = os.getenv('MONGO_URI')
-        if not mongo_uri:
-            raise RuntimeError("MONGO_URI environment variable is not set.")
-        _client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
-        _db = _client['mepham']
+        with _db_lock:
+            if _db is None:
+                mongo_uri = os.getenv('MONGO_URI')
+                if not mongo_uri:
+                    raise RuntimeError("MONGO_URI environment variable is not set.")
+                # serverSelectionTimeoutMS only bounds picking a server. Without
+                # socket and connect timeouts a stalled read hangs until the
+                # platform kills the function. A small pool keeps many warm
+                # instances from exhausting the cluster's connection limit.
+                client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000,
+                                     connectTimeoutMS=5000, socketTimeoutMS=10000,
+                                     maxPoolSize=10)
+                database = client['mepham']
+                _ensure_core_indexes(database)
+                _client, _db = client, database
     return _db
 
 class _DbProxy:
@@ -300,30 +342,56 @@ def get_image_url(image_path, external=False):
         clean_path = DEFAULT_IMAGE
     return url_for('static', filename=clean_path, _external=external)
 
+class LazyList:
+    """A list that runs its loader on first use and never raises.
+
+    A failed load is logged and behaves as empty, so a database outage
+    degrades the navigation instead of turning every page into a 500.
+    """
+
+    def __init__(self, loader):
+        self._loader = loader
+        self._items = None
+
+    def _load(self):
+        if self._items is None:
+            try:
+                self._items = self._loader()
+            except Exception:
+                logger.exception('LazyList: loader failed')
+                self._items = []
+        return self._items
+
+    def __iter__(self):
+        return iter(self._load())
+
+    def __len__(self):
+        return len(self._load())
+
+    def __bool__(self):
+        return bool(self._load())
+
+
+def load_sponsors():
+    sponsors = []
+    for sponsor in db['sponsors'].find():
+        sponsor['_id'] = str(sponsor['_id'])
+        sponsor['logo_path'] = sponsor.get('logo')
+        sponsors.append(sponsor)
+    return sponsors
+
+
 @app.context_processor
 def inject_global_data():
-    try:
-        nav_teams = list(db['teams'].find({}, {'team_number': 1}).sort('team_number', 1))
-        awards_list = list(db['awards'].find({'team_number': {'$exists': False}}).sort('_id', 1))
-        sponsors_list = list(db['sponsors'].find())
-    except Exception:
-        logger.exception("inject_global_data: failed to load nav/footer data")
-        nav_teams, awards_list, sponsors_list = [], [], []
-    for s in sponsors_list:
-        s['_id'] = str(s['_id'])
-        # Ensure sponsors have logo_path field for backward compatibility with templates
-        if 'logo' in s:
-            s['logo_path'] = s['logo']
-        else:
-            s['logo_path'] = None
+    # This runs for every render_template call, including error pages. The
+    # nav query only happens if the template iterates nav_teams; awards and
+    # sponsors are loaded by the views that show them.
     return dict(
-        nav_teams=nav_teams,
-        global_awards=awards_list,
-        sponsors=sponsors_list,
+        nav_teams=LazyList(lambda: list(
+            db['teams'].find({}, {'team_number': 1}).sort('team_number', 1))),
         get_activity_icon=get_activity_icon,
         get_activity_title=get_activity_title,
         get_image_url=get_image_url,
-        abs=abs
     )
 
 USER_ROLES = ('member', 'editor', 'admin')
@@ -697,13 +765,32 @@ def healthz():
         return jsonify({'status': 'degraded', 'database': 'down'}), 503
 
 
+UPCOMING_EVENTS_LIMIT = 12
+CLUB_TIMEZONE = os.getenv('CLUB_TIMEZONE', 'America/New_York')
+
+
+def club_now():
+    """Naive wall-clock time where the club is.
+
+    Admins enter event times as local wall-clock time in a datetime-local
+    input, and they are stored without a zone. Comparing them against the
+    server clock (UTC on Vercel) made events leave the homepage four or five
+    hours before they started.
+    """
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.datetime.now(ZoneInfo(CLUB_TIMEZONE)).replace(tzinfo=None)
+    except Exception:
+        return datetime.datetime.now()
+
+
 @app.route('/')
 def index():
     stats = db['site_metadata'].find_one({'_id': 'global_stats'}) or {
         'teams_count': 0, 'members_count': 0, 'awards_count': 0, 'hours_built': 0
     }
-    now = datetime.datetime.now()
-    upcoming_events = list(db['competitions'].find({'date': {'$gte': now}}).sort('date', 1))
+    upcoming_events = list(db['competitions'].find(
+        {'date': {'$gte': club_now()}}).sort('date', 1).limit(UPCOMING_EVENTS_LIMIT))
     for event in upcoming_events:
         event['month'] = event['date'].strftime('%b').upper()
         event['day'] = event['date'].strftime('%d')
@@ -718,7 +805,9 @@ def about():
 
 @app.route('/achievements')
 def achievements():
-    return render_template('achievements.html', active_page='achievements')
+    global_awards = list(db['awards'].find({'team_number': {'$exists': False}}).sort('_id', 1))
+    return render_template('achievements.html', active_page='achievements',
+                           global_awards=global_awards)
 
 @app.route('/contact')
 def contact():
@@ -733,7 +822,7 @@ def donate():
     # template shows an email fallback instead of a broken Givebutter frame.
     return render_template('donate.html', active_page='donate',
                            givebutter_campaign_id=os.getenv('GIVEBUTTER_CAMPAIGN_ID', ''),
-                           contact_email=CONTACT_EMAIL)
+                           contact_email=CONTACT_EMAIL, sponsors=load_sponsors())
 
 @app.route('/team/<team_number>')
 def team_page(team_number):
@@ -864,6 +953,46 @@ def reset_password(token):
 
     return _no_referrer(render_template('reset_password.html', active_page='login', invalid=False))
 
+def monthly_stat_changes(since):
+    """Net change this month in each dashboard stat, from the activity log.
+
+    Grouped in the database: the old version loaded every activity since the
+    first of the month into memory, and the log is never pruned.
+    """
+    def total(field):
+        return {'$sum': {'$ifNull': [f'$details.{field}', 0]}}
+
+    rows = db['activities'].aggregate([
+        {'$match': {'timestamp': {'$gte': since}}},
+        {'$group': {
+            '_id': '$type',
+            'count': {'$sum': 1},
+            'teams_change': total('teams_change'),
+            'members_change': total('members_change'),
+            'awards_change': total('awards_change'),
+            'members_count': total('members_count'),
+            'count_change': {'$sum': {'$ifNull': [
+                '$details.count_change', {'$ifNull': ['$details.total_change', 0]}]}},
+        }},
+    ])
+    by_type = {row['_id']: row for row in rows}
+
+    def get(kind, field):
+        return by_type.get(kind, {}).get(field, 0)
+
+    return {
+        'teams_change': (get('stats_update', 'teams_change')
+                         + get('team_add', 'count') - get('team_delete', 'count')),
+        'members_change': (get('stats_update', 'members_change')
+                           + get('team_add', 'members_count')
+                           - get('team_delete', 'members_count')
+                           + get('team_update', 'members_change')),
+        'awards_change': (get('stats_update', 'awards_change')
+                          + get('awards_update', 'count_change')),
+        'events_change': get('competition_add', 'count') - get('competition_delete', 'count'),
+    }
+
+
 @app.route('/admin')
 @role_required('admin')
 def admin_dashboard():
@@ -898,7 +1027,7 @@ def admin_dashboard():
         if 'stl_path' in t and t['stl_path']:
             t['stl_path'] = t['stl_path'].replace('\\', '/')
         teams.append(t)
-    sponsors = [dict(s, _id=str(s['_id'])) for s in db['sponsors'].find()]
+    sponsors = load_sponsors()
 
     # Get recent activities
     activities = []
@@ -909,56 +1038,14 @@ def admin_dashboard():
         'events_change': 0
     }
 
-    if 'activities' in db.list_collection_names():
-        # Get activities for display
-        activities_raw = list(db['activities'].find().sort('timestamp', -1).limit(10))
-        for a in activities_raw:
-            a['_id'] = str(a['_id'])
-            if 'timestamp' in a:
-                a['display_time'] = get_time_ago(a['timestamp'])
-            activities.append(a)
+    for a in db['activities'].find().sort('timestamp', -1).limit(10):
+        a['_id'] = str(a['_id'])
+        if 'timestamp' in a:
+            a['display_time'] = get_time_ago(a['timestamp'])
+        activities.append(a)
 
-        # Calculate monthly changes
-        first_of_month = datetime.datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        monthly_activities = list(db['activities'].find({'timestamp': {'$gte': first_of_month}}))
-
-        for activity in monthly_activities:
-            activity_type = activity.get('type', '')
-            details = activity.get('details', {})
-
-            if activity_type == 'stats_update':
-                # Use the change details from stats updates
-                monthly_changes['teams_change'] += details.get('teams_change', 0)
-                monthly_changes['members_change'] += details.get('members_change', 0)
-                monthly_changes['awards_change'] += details.get('awards_change', 0)
-            elif activity_type == 'team_add':
-                monthly_changes['teams_change'] += 1
-                monthly_changes['members_change'] += details.get('members_count', 0)
-            elif activity_type == 'team_delete':
-                monthly_changes['teams_change'] -= 1
-                monthly_changes['members_change'] -= details.get('members_count', 0)
-            elif activity_type == 'team_update':
-                # Team updates might include member changes
-                if 'members_change' in details:
-                    monthly_changes['members_change'] += details.get('members_change', 0)
-            elif activity_type == 'awards_update':
-                if 'count_change' in details:
-                    monthly_changes['awards_change'] += details.get('count_change', 0)
-                elif 'total_change' in details:
-                    monthly_changes['awards_change'] += details.get('total_change', 0)
-            elif activity_type == 'competition_add':
-                monthly_changes['events_change'] += 1
-            elif activity_type == 'competition_delete':
-                monthly_changes['events_change'] -= 1
-            elif activity_type == 'sponsor_add':
-                # Sponsors don't affect the main stats shown
-                pass
-            elif activity_type == 'sponsor_delete':
-                # Sponsors don't affect the main stats shown
-                pass
-            elif activity_type == 'user_add':
-                # Users don't affect the main stats shown
-                pass
+    first_of_month = _utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    monthly_changes.update(monthly_stat_changes(first_of_month))
 
     reset_link = session.pop('_generated_reset_link', None)
     reset_link_user = session.pop('_generated_reset_link_user', None)
@@ -1016,15 +1103,25 @@ def admin_update_stats():
                 'hours_change': changes['hours_change']
             }
         )
-    except Exception as e:
-        flash(f'Error updating statistics: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error updating statistics')
+        flash('Error updating statistics. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard'))
+
+def parse_event_date(value):
+    try:
+        return datetime.datetime.strptime((value or '').strip(), '%Y-%m-%dT%H:%M')
+    except ValueError:
+        raise UserFacingError('Enter a valid event date and time.') from None
+
 
 @app.route('/admin/add-competition', methods=['POST'])
 @role_required('admin')
 def admin_add_competition():
     try:
-        date_obj = datetime.datetime.strptime(request.form.get('comp_date'), '%Y-%m-%dT%H:%M')
+        date_obj = parse_event_date(request.form.get('comp_date'))
         competition_data = {
             'name': request.form.get('comp_name'),
             'location': request.form.get('comp_location'),
@@ -1040,15 +1137,18 @@ def admin_add_competition():
             details={'name': competition_data['name'], 'location': competition_data['location'],
                     'date': competition_data['date'].strftime('%Y-%m-%d %H:%M')}
         )
-    except Exception as e:
-        flash(f'Error adding competition: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error adding competition')
+        flash('Error adding competition. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/update-competition/<id>', methods=['POST'])
 @role_required('admin')
 def admin_edit_competition(id):
     try:
-        date_obj = datetime.datetime.strptime(request.form.get('comp_date'), '%Y-%m-%dT%H:%M')
+        date_obj = parse_event_date(request.form.get('comp_date'))
         competition_data = {
             'name': request.form.get('comp_name'),
             'location': request.form.get('comp_location'),
@@ -1064,8 +1164,11 @@ def admin_edit_competition(id):
             details={'name': competition_data['name'], 'location': competition_data['location'],
                     'date': competition_data['date'].strftime('%Y-%m-%d %H:%M')}
         )
-    except Exception as e:
-        flash(f'Error updating event: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error updating event')
+        flash('Error updating event. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/delete-competition/<comp_id>', methods=['POST'])
@@ -1085,8 +1188,11 @@ def admin_delete_competition(comp_id):
                 details={'name': competition.get('name', 'Unknown'),
                         'location': competition.get('location', 'Unknown')}
             )
-    except Exception as e:
-        flash(f'Error deleting competition: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error deleting competition')
+        flash('Error deleting competition. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/save-team', methods=['POST'])
@@ -1171,14 +1277,14 @@ def admin_save_team():
                 if hero_image_url and 'hero_image' in prev_team and prev_team['hero_image'].startswith('http'):
                     try:
                         delete_from_vercel_blob(prev_team['hero_image'])
-                    except Exception as e:
-                        print(f"Error deleting old hero image: {e}")
+                    except Exception:
+                        logger.exception('Error deleting old hero image')
 
                 if stl_file_url and 'stl_path' in prev_team and prev_team['stl_path'].startswith('http'):
                     try:
                         delete_from_vercel_blob(prev_team['stl_path'])
-                    except Exception as e:
-                        print(f"Error deleting old STL file: {e}")
+                    except Exception:
+                        logger.exception('Error deleting old STL file')
 
             db['teams'].update_one({'_id': ObjectId(team_id)}, {'$set': team_data})
             flash(f'Team {team_number} updated!', 'success')
@@ -1213,8 +1319,11 @@ def admin_save_team():
                     'members_count': len(team_data.get('members', []))
                 }
             )
-    except Exception as e:
-        flash(f'Error saving team: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error saving team')
+        flash('Error saving team. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard'))
 
 def form_row_indexes(prefix):
@@ -1272,8 +1381,11 @@ def admin_delete_team(id):
                     'members_count': len(team.get('members', []))
                 }
             )
-    except Exception as e:
-        flash(f'Error deleting team: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error deleting team')
+        flash('Error deleting team. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/update-awards', methods=['POST'])
@@ -1325,8 +1437,11 @@ def admin_update_awards():
                     'count_change': total_change  # For monthly change calculation
                 }
             )
-    except Exception as e:
-        flash(f'Error updating awards: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error updating awards')
+        flash('Error updating awards. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/update-team-awards', methods=['POST'])
@@ -1379,8 +1494,11 @@ def admin_update_team_awards():
                     'count_change': total_change  # For monthly change calculation
                 }
             )
-    except Exception as e:
-        flash(f'Error updating team awards: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error updating team awards')
+        flash('Error updating team awards. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/create-user', methods=['POST'])
@@ -1421,8 +1539,11 @@ def admin_create_user():
                 'role': user_data['role']
             }
         )
-    except Exception as e:
-        flash(f'Error creating user: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error creating user')
+        flash('Error creating user. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard', _anchor='users'))
 
 def _other_admin_exists(user_id):
@@ -1489,8 +1610,11 @@ def admin_update_user(id):
             f'Updated user: {username}',
             details={'username': username, 'role': role, 'changes': changes}
         )
-    except Exception as e:
-        flash(f'Error updating user: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error updating user')
+        flash('Error updating user. The details were logged for the site maintainer.', 'error')
     if session.get('role') != 'admin':
         return redirect(url_for('index'))
     return redirect(url_for('admin_dashboard', _anchor='users'))
@@ -1519,8 +1643,11 @@ def admin_delete_user(id):
                 f'Deleted user: {user["username"]}',
                 details={'username': user['username'], 'role': user.get('role', 'member')}
             )
-    except Exception as e:
-        flash(f'Error deleting user: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error deleting user')
+        flash('Error deleting user. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard', _anchor='users'))
 
 @app.route('/admin/generate-reset-link/<id>', methods=['POST'])
@@ -1547,8 +1674,11 @@ def admin_generate_reset_link(id):
                 f'Generated reset link for {user["username"]}',
                 details={'username': user['username']}
             )
-    except Exception as e:
-        flash(f'Error generating reset link: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error generating reset link')
+        flash('Error generating reset link. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard', _anchor='users'))
 
 @app.route('/admin/messages/<id>/<action>', methods=['POST'])
@@ -1574,8 +1704,11 @@ def admin_message_action(id, action):
             flash(f'Message marked {status}.', 'success')
             log_activity(f'message_{action}', f'Message from {message.get("email", "unknown")} marked {status}',
                          details={'message_id': str(message['_id'])})
-    except Exception as e:
-        flash(f'Error updating message: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error updating message')
+        flash('Error updating message. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard', _anchor='messages'))
 
 @app.route('/admin/save-sponsor', methods=['POST'])
@@ -1610,8 +1743,8 @@ def admin_save_sponsor():
             if prev_sponsor and logo_url and 'logo' in prev_sponsor and prev_sponsor['logo'].startswith('http'):
                 try:
                     delete_from_vercel_blob(prev_sponsor['logo'])
-                except Exception as e:
-                    print(f"Error deleting old sponsor logo: {e}")
+                except Exception:
+                    logger.exception('Error deleting old sponsor logo')
 
             db['sponsors'].update_one({'_id': ObjectId(sponsor_id)}, {'$set': sponsor_data})
             flash(f'Sponsor "{name}" updated!', 'success')
@@ -1639,8 +1772,11 @@ def admin_save_sponsor():
                     'level': sponsor_data['level']
                 }
             )
-    except Exception as e:
-        flash(f'Error saving sponsor: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error saving sponsor')
+        flash('Error saving sponsor. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/delete-sponsor/<id>', methods=['POST'])
@@ -1650,6 +1786,12 @@ def admin_delete_sponsor(id):
         # Get sponsor info before deleting for logging
         sponsor = db['sponsors'].find_one({'_id': ObjectId(id)})
         db['sponsors'].delete_one({'_id': ObjectId(id)})
+        logo = (sponsor or {}).get('logo')
+        if isinstance(logo, str) and logo.startswith('http'):
+            try:
+                delete_from_vercel_blob(logo)
+            except Exception:
+                logger.exception('Failed to delete logo blob %s for deleted sponsor', logo)
         flash('Sponsor removed.', 'success')
 
         # Log activity
@@ -1662,8 +1804,11 @@ def admin_delete_sponsor(id):
                     'level': sponsor.get('level', 'Unknown')
                 }
             )
-    except Exception as e:
-        flash(f'Error deleting sponsor: {e}', 'error')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+    except Exception:
+        logger.exception('Error deleting sponsor')
+        flash('Error deleting sponsor. The details were logged for the site maintainer.', 'error')
     return redirect(url_for('admin_dashboard'))
 
 ROBOTEVENTS_TEAM_NUMBERS = ['77628D', '77628P']
@@ -1964,8 +2109,6 @@ def sitemap_xml():
 def page_not_found(e):
     return render_template('404.html'), 404
 
-logger = logging.getLogger(__name__)
-
 @app.errorhandler(500)
 def internal_server_error(e):
     logger.exception("Internal server error: %s", e)
@@ -1987,4 +2130,5 @@ def add_static_cache_headers(response):
     return response
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # The Werkzeug debugger executes code from the browser; only opt in.
+    app.run(debug=os.getenv('FLASK_DEBUG') == '1')
