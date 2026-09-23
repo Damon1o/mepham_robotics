@@ -1,128 +1,241 @@
-// Extracted from templates/admin.html inline <script> blocks
-function editEvent(id, name, location, dateStr) {
+// Admin dashboard behaviour.
+//
+// Every control is wired through the delegated listeners at the bottom of
+// this file (data-action, data-confirm-delete, data-preview-target, ...).
+// There are no inline on*= handlers anywhere, so /admin runs under the same
+// no-inline-script Content-Security-Policy as the rest of the site.
+
+// --- DOM helpers --------------------------------------------------------------
+
+// Build an element from a tag, a map of attributes/properties, and children.
+// Values are always assigned as properties or attributes, never parsed as
+// HTML, so stored team/member names cannot inject markup.
+function el(tag, props = {}, children = []) {
+    const node = document.createElement(tag);
+    Object.entries(props).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === false) return;
+        if (key === 'className') node.className = value;
+        else if (key === 'text') node.textContent = value;
+        else if (key === 'value') node.value = value;
+        else if (key === 'dataset') Object.assign(node.dataset, value);
+        else if (value === true) node.setAttribute(key, '');
+        else node.setAttribute(key, value);
+    });
+    [].concat(children).forEach(child => {
+        if (child) node.append(child);
+    });
+    return node;
+}
+
+function field(labelText, control) {
+    const label = el('label', { for: control.id, text: labelText });
+    return el('div', { className: 'form-group' }, [label, control]);
+}
+
+function scrollToCard(id, offset = 50) {
+    const card = document.getElementById(id);
+    if (card) window.scrollTo({ top: card.offsetTop - offset, behavior: 'smooth' });
+}
+
+// --- Unsaved-change tracking --------------------------------------------------
+
+const DIRTY_FORMS = ['event_form', 'team_form', 'sponsor_form', 'userForm'];
+
+function markClean(form) {
+    if (form) delete form.dataset.dirty;
+}
+
+function isDirty(form) {
+    return Boolean(form && form.dataset.dirty);
+}
+
+// Resolve true when it is safe to throw away the form's contents.
+function confirmDiscard(form) {
+    if (!isDirty(form)) return Promise.resolve(true);
+    return Dialog.confirm({
+        title: 'Discard unsaved changes?',
+        message: 'This form has changes that have not been saved. They will be lost.',
+        confirmLabel: 'Discard',
+    });
+}
+
+// --- Events -------------------------------------------------------------------
+
+function editEvent(button) {
+    const form = document.getElementById('event_form');
     document.getElementById('event_form_title').innerText = 'Edit Event';
-    document.getElementById('event_form').action = '/admin/update-competition/' + id;
-    document.getElementsByName('comp_name')[0].value = name;
-    document.getElementsByName('comp_location')[0].value = location;
-    document.getElementsByName('comp_date')[0].value = dateStr;
-    window.scrollTo({ top: document.getElementById('event_form').offsetTop - 100, behavior: 'smooth' });
+    form.action = button.dataset.updateUrl;
+    form.querySelector('[name="comp_name"]').value = button.dataset.name;
+    form.querySelector('[name="comp_location"]').value = button.dataset.location;
+    form.querySelector('[name="comp_date"]').value = button.dataset.date;
+    markClean(form);
+    scrollToCard('event_form', 100);
 }
 
 function resetEventForm() {
+    const form = document.getElementById('event_form');
     document.getElementById('event_form_title').innerText = 'Add New Event';
-    document.getElementById('event_form').action = document.getElementById('event_form').dataset.defaultAction;
-    document.getElementById('event_form').reset();
+    form.action = form.dataset.defaultAction;
+    form.reset();
+    markClean(form);
 }
 
-let memberCount = 0;
-function addMemberRow(data = {}) {
-    const container = document.getElementById('members_container');
-    const i = memberCount++;
-    const row = document.createElement('div');
-    row.className = 'dynamic-row';
-    row.innerHTML = `
-        <button type="button" class="remove-btn" aria-label="Remove member" onclick="this.parentElement.remove()">&times;</button>
-        <input type="hidden" name="member_photo_path_${i}" value="${data.photo || 'static/assets/profile/base.png'}">
-        <div class="form-group">
-            <label>Member Name</label>
-            <input type="text" name="member_name_${i}" value="${data.name || ''}" required>
-        </div>
-        <div class="form-group">
-            <label>Role</label>
-            <input type="text" name="member_role_${i}" value="${data.role || ''}" required>
-        </div>
-        <div class="form-group">
-            <label>Link User Account (Optional)</label>
-            <select name="member_user_${i}">
-                <option value="">-- No link --</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label>Profile Image (${data.photo ? 'Current exists' : 'Default used'})</label>
-            <input type="file" name="member_photo_${i}" accept="image/*" onchange="previewMemberImage(this, ${i})">
-            ${data.photo ? `<div class="image-preview" id="member_preview_${i}"><img src="${data.photo}" alt="Current photo" style="max-width: 100px; max-height: 100px;"></div>` : ''}
-        </div>
-    `;
+// --- Teams: member and goal rows ------------------------------------------------
 
+// Row indexes only need to be unique: the server collects every
+// member_name_<n> / goal_name_<n> present and orders them by <n>, so deleting
+// a row in the middle can no longer truncate the list.
+let memberCount = 0;
+let goalCount = 0;
+const DEFAULT_MEMBER_PHOTO = 'static/assets/other/base.png';
+
+// Stored photos are either Blob URLs or repo-relative static paths.
+function photoSrc(photo) {
+    return /^https?:\/\//.test(photo) ? photo : '/' + photo.replace(/^\/+/, '');
+}
+
+function removeButton(label) {
+    return el('button', {
+        type: 'button', className: 'remove-btn', 'aria-label': label,
+        dataset: { action: 'remove-row' }, text: '×',
+    });
+}
+
+function addMemberRow(data = {}) {
+    const i = memberCount++;
+    const photo = data.photo && !data.photo.endsWith('/base.png') ? data.photo : '';
+
+    const name = el('input', { type: 'text', id: `member_name_${i}`, name: `member_name_${i}`, value: data.name || '', required: true });
+    const role = el('input', { type: 'text', id: `member_role_${i}`, name: `member_role_${i}`, value: data.role || '', required: true });
+
+    const account = el('select', { id: `member_user_${i}`, name: `member_user_${i}` },
+        [el('option', { value: '', text: '-- No link --' })]);
     const users = JSON.parse(document.getElementById('admin_users_data').textContent);
-    const select = row.querySelector(`select[name="member_user_${i}"]`);
     users.forEach(u => {
-        const opt = document.createElement('option');
-        opt.value = u._id;
-        opt.textContent = u.username;
-        if (data.user_id === u._id) opt.selected = true;
-        select.appendChild(opt);
+        account.append(el('option', {
+            value: u._id,
+            text: `${u.username} (${u.role})`,
+            selected: data.user_id === u._id,
+        }));
     });
 
-    container.appendChild(row);
+    const file = el('input', {
+        type: 'file', id: `member_photo_${i}`, name: `member_photo_${i}`, accept: 'image/*',
+        dataset: { previewTarget: `member_preview_${i}` },
+    });
+    const preview = el('div', { className: 'image-preview', id: `member_preview_${i}` });
+    if (photo) {
+        preview.append(el('img', { src: photoSrc(photo), alt: 'Current photo', className: 'member-photo-thumb' }));
+        preview.classList.add('is-visible');
+    }
+
+    const row = el('div', { className: 'dynamic-row' }, [
+        removeButton('Remove member'),
+        el('input', { type: 'hidden', name: `member_photo_path_${i}`, value: photo || DEFAULT_MEMBER_PHOTO }),
+        field('Member Name', name),
+        field('Role', role),
+        field('Link User Account (Optional)', account),
+        el('div', { className: 'form-group' }, [
+            el('label', { for: file.id, text: `Profile Image (${photo ? 'current photo kept unless replaced' : 'default used'})` }),
+            file,
+            preview,
+        ]),
+    ]);
+    document.getElementById('members_container').append(row);
+    return row;
 }
 
-let goalCount = 0;
 function addGoalRow(data = {}) {
-    const container = document.getElementById('goals_container');
     const i = goalCount++;
-    const row = document.createElement('div');
-    row.className = 'dynamic-row';
-    row.innerHTML = `
-        <button type="button" class="remove-btn" aria-label="Remove goal" onclick="this.parentElement.remove()">&times;</button>
-        <div class="form-group">
-            <label>Goal Name</label>
-            <input type="text" name="goal_name_${i}" value="${data.name || ''}" required>
-        </div>
-        <div class="form-group">
-            <label>Progress (${data.progress || 0}%)</label>
-            <input type="range" name="goal_progress_${i}" value="${data.progress || 0}" min="0" max="100" oninput="this.previousElementSibling.innerText = 'Progress (' + this.value + '%)'">
-        </div>
-    `;
-    container.appendChild(row);
+    const progress = Number.isFinite(Number(data.progress)) ? Number(data.progress) : 0;
+
+    const name = el('input', { type: 'text', id: `goal_name_${i}`, name: `goal_name_${i}`, value: data.name || '', required: true });
+    const range = el('input', {
+        type: 'range', id: `goal_progress_${i}`, name: `goal_progress_${i}`,
+        min: '0', max: '100', value: String(progress),
+        dataset: { progressLabel: `goal_progress_label_${i}` },
+    });
+    const rangeLabel = el('label', { for: range.id, id: `goal_progress_label_${i}`, text: `Progress (${progress}%)` });
+
+    const row = el('div', { className: 'dynamic-row' }, [
+        removeButton('Remove goal'),
+        field('Goal Name', name),
+        el('div', { className: 'form-group' }, [rangeLabel, range]),
+    ]);
+    document.getElementById('goals_container').append(row);
+    return row;
 }
 
-function editTeam(teamJson) {
-    const team = JSON.parse(teamJson);
+function editTeam(button) {
+    const team = JSON.parse(button.dataset.team);
+    const specs = team.specs || {};
+    const form = document.getElementById('team_form');
+
     document.getElementById('team_form_title').innerText = 'Edit Team ' + team.team_number;
     document.getElementById('team_id').value = team._id;
-    document.getElementsByName('team_number')[0].value = team.team_number;
-    document.getElementsByName('nickname')[0].value = team.nickname || '';
-    document.getElementsByName('tagline')[0].value = team.tagline || '';
-    document.getElementsByName('drive_train')[0].value = team.specs.drive_train || '';
-    document.getElementsByName('lift_system')[0].value = team.specs.lift_system || '';
-    document.getElementsByName('intake')[0].value = team.specs.intake || '';
-    document.getElementsByName('auton_consistency')[0].value = team.specs.auton_consistency || '';
-    document.getElementsByName('notebook_link')[0].value = team.notebook_link || '#';
+    form.querySelector('[name="team_number"]').value = team.team_number || '';
+    form.querySelector('[name="nickname"]').value = team.nickname || '';
+    form.querySelector('[name="tagline"]').value = team.tagline || '';
+    form.querySelector('[name="drive_train"]').value = specs.drive_train || '';
+    form.querySelector('[name="lift_system"]').value = specs.lift_system || '';
+    form.querySelector('[name="intake"]').value = specs.intake || '';
+    form.querySelector('[name="auton_consistency"]').value = specs.auton_consistency || '';
+    form.querySelector('[name="notebook_link"]').value = team.notebook_link || '';
 
-    // Clear and rebuild dynamic rows
-    document.getElementById('members_container').innerHTML = '';
+    document.getElementById('members_container').replaceChildren();
     memberCount = 0;
-    team.members.forEach(m => addMemberRow(m));
+    (team.members || []).forEach(m => addMemberRow(m));
 
-    document.getElementById('goals_container').innerHTML = '';
+    document.getElementById('goals_container').replaceChildren();
     goalCount = 0;
-    team.goals.forEach(g => addGoalRow(g));
+    (team.goals || []).forEach(g => addGoalRow(g));
 
-    window.scrollTo({ top: document.getElementById('team_form_card').offsetTop - 50, behavior: 'smooth' });
+    markClean(form);
+    scrollToCard('team_form_card');
 }
 
-function editSponsor(id, name, website, level) {
+function resetTeamForm() {
+    const form = document.getElementById('team_form');
+    document.getElementById('team_form_title').innerText = 'Create New Team';
+    document.getElementById('team_id').value = '';
+    form.reset();
+    document.getElementById('members_container').replaceChildren();
+    document.getElementById('goals_container').replaceChildren();
+    document.getElementById('heroImagePreview')?.replaceChildren();
+    memberCount = 0;
+    goalCount = 0;
+    markClean(form);
+}
+
+// --- Sponsors -------------------------------------------------------------------
+
+function editSponsor(button) {
+    const form = document.getElementById('sponsor_form');
     document.getElementById('sponsor_form_title').innerText = 'Edit Sponsor';
-    document.getElementById('sponsor_form').action = '/admin/save-sponsor';
-    document.getElementById('sponsor_id').value = id;
-    document.getElementById('sponsor_form').querySelector('[name="name"]').value = name;
-    document.getElementsByName('website')[0].value = website;
-    document.getElementsByName('level')[0].value = level;
-    window.scrollTo({ top: document.getElementById('sponsor_form_card').offsetTop - 50, behavior: 'smooth' });
+    document.getElementById('sponsor_id').value = button.dataset.id;
+    form.querySelector('[name="name"]').value = button.dataset.name;
+    form.querySelector('[name="website"]').value = button.dataset.website;
+    form.querySelector('[name="level"]').value = button.dataset.level;
+    markClean(form);
+    scrollToCard('sponsor_form_card');
 }
 
 function resetSponsorForm() {
+    const form = document.getElementById('sponsor_form');
     document.getElementById('sponsor_form_title').innerText = 'Add New Sponsor';
-    document.getElementById('sponsor_form').action = '/admin/save-sponsor';
     document.getElementById('sponsor_id').value = '';
-    document.getElementById('sponsor_form').reset();
+    form.reset();
+    document.getElementById('sponsorLogoPreview')?.replaceChildren();
+    markClean(form);
 }
 
-function editUser(user) {
+// --- Users ----------------------------------------------------------------------
+
+function editUser(button) {
+    const user = button.dataset;
     const form = document.getElementById('userForm');
     document.getElementById('user_form_title').innerText = 'Edit User: ' + user.username;
-    form.action = '/admin/update-user/' + user.id;
+    form.action = user.updateUrl;
     form.dataset.mode = 'edit';
     form.reset();
     document.getElementById('username').value = user.username;
@@ -133,7 +246,8 @@ function editUser(user) {
     password.placeholder = 'Leave blank to keep current password';
     document.getElementById('password_hint').innerText = 'Optional - enter a new password (8+ characters) to reset it';
     document.getElementById('user_submit').innerText = 'Save Changes';
-    window.scrollTo({ top: document.getElementById('user_form_title').offsetTop - 100, behavior: 'smooth' });
+    markClean(form);
+    scrollToCard('user_form_title', 100);
     document.getElementById('username').focus({ preventScroll: true });
 }
 
@@ -148,6 +262,7 @@ function resetUserForm() {
     password.placeholder = 'Enter secure password';
     document.getElementById('password_hint').innerText = 'Minimum 8 characters';
     document.getElementById('user_submit').innerText = 'Create User';
+    markClean(form);
 }
 
 function copyResetLink() {
@@ -166,6 +281,16 @@ function copyResetLink() {
     }
 }
 
+// --- Team awards ------------------------------------------------------------------
+
+function teamAwardInputs() {
+    return Array.from(document.querySelectorAll('#team_awards_list input[type="number"]'));
+}
+
+function teamAwardsDirty() {
+    return teamAwardInputs().some(input => input.value !== input.dataset.original);
+}
+
 function showTeamAwards(teamNum) {
     const teamAwards = JSON.parse(document.getElementById('team_awards_data').textContent);
     const container = document.getElementById('team_awards_list');
@@ -173,49 +298,63 @@ function showTeamAwards(teamNum) {
     const msg = document.getElementById('no_team_msg');
 
     if (!teamNum) {
-        form.style.display = 'none';
-        msg.style.display = 'block';
+        form.hidden = true;
+        msg.hidden = false;
         return;
     }
 
-    container.innerHTML = '';
-    const filtered = teamAwards.filter(a => a.team_number === teamNum);
+    container.replaceChildren();
+    const filtered = teamAwards.filter(a => String(a.team_number) === String(teamNum));
 
     if (filtered.length === 0) {
-        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 1rem;">No awards found for this team. Please seed them first.</p>';
+        container.append(el('p', {
+            className: 'team-awards-empty',
+            text: 'No awards found for this team. Please seed them first.',
+        }));
     } else {
         filtered.forEach(award => {
-            const item = document.createElement('div');
-            item.className = 'award-item';
-            item.innerHTML = `
-                <span style="font-size: 0.9rem;">${award.title}</span>
-                <input type="number" name="team_award_${award._id}" value="${award.count}" min="0" style="width: 70px; padding: 0.4rem;">
-            `;
-            container.appendChild(item);
+            const count = String(award.count ?? 0);
+            const input = el('input', {
+                type: 'number', name: `team_award_${award._id}`, min: '0', value: count,
+                className: 'team-award-input', 'aria-label': `${award.title} count`,
+                dataset: { original: count },
+            });
+            container.append(el('div', { className: 'award-item' }, [
+                el('span', { className: 'team-award-title', text: award.title }),
+                input,
+            ]));
         });
     }
 
-    form.style.display = 'block';
-    msg.style.display = 'none';
+    form.hidden = false;
+    msg.hidden = true;
 }
 
-function resetTeamForm() {
-    document.getElementById('team_form_title').innerText = 'Create New Team';
-    document.getElementById('team_id').value = '';
-    document.getElementById('team_form').reset();
-    document.getElementById('members_container').innerHTML = '';
-    document.getElementById('goals_container').innerHTML = '';
-    memberCount = 0;
-    goalCount = 0;
+// "Reset Changes" restores the counts as loaded. It used to set every count
+// to zero, which one Save then wrote over the team's whole award history.
+function resetTeamAwards() {
+    teamAwardInputs().forEach(input => {
+        input.value = input.dataset.original;
+    });
+    Admin.notify('Team award counts restored', 'info');
 }
 
-// New enhanced functions
+// --- Loading overlay, delete confirmation, search -----------------------------------
+
 function showLoading() {
-    document.getElementById('loadingOverlay').style.display = 'flex';
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.hidden = false;
 }
 
 function hideLoading() {
-    document.getElementById('loadingOverlay').style.display = 'none';
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.hidden = true;
+}
+
+function lockSubmit(form) {
+    form.querySelectorAll('[type="submit"]').forEach(button => {
+        button.disabled = true;
+    });
 }
 
 function confirmDelete(form, type) {
@@ -224,44 +363,47 @@ function confirmDelete(form, type) {
         message: `Are you sure you want to delete this ${type}? This action cannot be undone.`,
         confirmLabel: 'Delete',
     }).then(confirmed => {
-        if (confirmed) form.submit();
+        if (!confirmed) return;
+        lockSubmit(form);
+        showLoading();
+        form.submit();
     });
-    return false;
 }
 
+// Search only the tab the admin is looking at; matches in hidden tabs used to
+// hide every card on the current tab and leave it blank.
 function searchAdminContent() {
-    const searchTerm = document.getElementById('adminSearch').value.toLowerCase();
-    const cards = document.querySelectorAll('.admin-card');
-
+    const term = document.getElementById('adminSearch').value.trim().toLowerCase();
+    const panel = document.querySelector('.admin-panel:not([hidden])');
+    if (!panel) return;
+    const cards = Array.from(panel.querySelectorAll('.admin-card'));
+    let shown = 0;
     cards.forEach(card => {
-        const cardContent = card.textContent.toLowerCase();
-        if (cardContent.includes(searchTerm)) {
-            card.style.display = 'block';
-            card.style.animation = 'slideIn 0.3s ease';
-        } else {
-            card.style.display = 'none';
-        }
+        const match = !term || card.textContent.toLowerCase().includes(term);
+        card.classList.toggle('is-hidden', !match);
+        if (match) shown++;
     });
+    let empty = panel.querySelector('.admin-search-empty');
+    if (!shown && term) {
+        if (!empty) {
+            empty = el('p', { className: 'admin-search-empty', role: 'status' });
+            panel.append(empty);
+        }
+        empty.textContent = `Nothing on this tab matches "${term}".`;
+    } else if (empty) {
+        empty.remove();
+    }
 }
 
-function resetTeamAwards() {
-    const inputs = document.querySelectorAll('#team_awards_list input[type="number"]');
-    inputs.forEach(input => {
-        input.value = 0;
-    });
-    Admin.notify('Team awards reset to zero', 'info');
-}
+// --- Notifications and list filters ---------------------------------------------------
 
 const Admin = {
     notify(message, category = 'info') {
         const stack = document.getElementById('toast-stack');
         if (!stack) return;
 
-        const toast = document.createElement('div');
-        toast.className = `status-msg ${category}`;
-        toast.style.display = 'block';
-        toast.textContent = message;
-        stack.appendChild(toast);
+        const toast = el('div', { className: `status-msg ${category}`, text: message });
+        stack.append(toast);
 
         setTimeout(() => {
             toast.classList.add('is-leaving');
@@ -269,100 +411,74 @@ const Admin = {
         }, 5000);
     },
 
-    attachListFilter(inputSelector, itemSelector, matchFn) {
+    attachListFilter(inputSelector, itemSelector) {
         const input = document.querySelector(inputSelector);
         if (!input) return;
-        const match = matchFn || ((item, term) => item.textContent.toLowerCase().includes(term));
         input.addEventListener('input', () => {
             const term = input.value.trim().toLowerCase();
             document.querySelectorAll(itemSelector).forEach(item => {
-                item.classList.toggle('is-hidden', term !== '' && !match(item, term));
+                item.classList.toggle('is-hidden', term !== '' && !item.textContent.toLowerCase().includes(term));
             });
         });
     },
 };
 
-// Image preview functionality
+// --- Image previews -----------------------------------------------------------------
+
 function previewImage(input, previewId) {
     const preview = document.getElementById(previewId);
+    if (!preview) return;
     const file = input.files[0];
-
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-            preview.style.display = 'block';
-        }
-        reader.readAsDataURL(file);
-    } else {
-        preview.style.display = 'none';
+    if (!file) {
+        preview.replaceChildren();
+        preview.classList.remove('is-visible');
+        return;
     }
+    const reader = new FileReader();
+    reader.onload = e => {
+        preview.replaceChildren(el('img', { src: e.target.result, alt: 'Preview', className: 'member-photo-thumb' }));
+        preview.classList.add('is-visible');
+    };
+    reader.readAsDataURL(file);
 }
 
-// Member image preview functionality
-function previewMemberImage(input, index) {
-    const previewId = `member_preview_${index}`;
-    let preview = document.getElementById(previewId);
+// --- User form validation -------------------------------------------------------------
 
-    if (!preview) {
-        preview = document.createElement('div');
-        preview.className = 'image-preview';
-        preview.id = previewId;
-        input.parentNode.appendChild(preview);
-    }
-
-    const file = input.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="max-width: 100px; max-height: 100px;">`;
-            preview.style.display = 'block';
-        }
-        reader.readAsDataURL(file);
-    } else {
-        preview.style.display = 'none';
-    }
-}
-
-// Form validation for user creation
 document.getElementById('userForm')?.addEventListener('submit', function (e) {
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirm_password').value;
     const editing = this.dataset.mode === 'edit';
 
-    if (editing && !password && !confirmPassword) {
-        showLoading();
-        return true;
-    }
+    if (editing && !password && !confirmPassword) return;
 
     if (password !== confirmPassword) {
         e.preventDefault();
         Admin.notify('Passwords do not match!', 'error');
-        return false;
+        return;
     }
 
     if (password.length < 8) {
         e.preventDefault();
         Admin.notify('Password must be at least 8 characters long', 'error');
-        return false;
     }
-
-    showLoading();
-    return true;
 });
 
-// Help functionality
+// --- Help -------------------------------------------------------------------------------
+
 function showHelp() {
     Dialog.alert({
         title: 'Admin Dashboard Help',
-        message: `
+        html: `
             <p><strong>Tabs:</strong> Use the tab bar to jump between sections; each tab's link is shareable.</p>
-            <p><strong>Search:</strong> Use the search box at the top, or each panel's own filter box, to narrow a list.</p>
+            <p><strong>Search:</strong> The search box filters the tab you are on. Each panel also has its own filter box.</p>
+            <p><strong>Unsaved changes:</strong> You will be asked before a form with unsaved edits is cleared.</p>
             <p><strong>Need more help?</strong> Contact the system administrator.</p>
         `,
         confirmLabel: 'Got it!',
     });
 }
+
+// --- Dialog ---------------------------------------------------------------------------------
 
 const Dialog = (function () {
     let dialogEl, titleEl, messageEl, confirmBtn, cancelBtn, lastFocused, resolvePromise;
@@ -390,7 +506,11 @@ const Dialog = (function () {
             return;
         }
         if (e.key !== 'Tab') return;
-        const focusable = dialogEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        // Skip hidden controls (the cancel button in alert mode), or the trap
+        // lands on an element that cannot take focus and lets Tab escape.
+        const focusable = Array.from(dialogEl.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+            .filter(node => !node.hidden && !node.disabled);
         if (!focusable.length) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
@@ -413,12 +533,24 @@ const Dialog = (function () {
         }
     }
 
-    function open({ title, message, confirmLabel, cancelLabel, showCancel }) {
+    // `message` is plain text. `html` is for the static help copy only; nothing
+    // user-supplied may be passed through it.
+    function open({ title, message, html, confirmLabel, cancelLabel, showCancel }) {
         els();
-        lastFocused = document.activeElement;
+        // A second request while one is open cancels the first, so its caller
+        // is never left waiting on a promise that no dialog will resolve.
+        if (resolvePromise) {
+            const previous = resolvePromise;
+            resolvePromise = null;
+            previous(false);
+        } else {
+            lastFocused = document.activeElement;
+        }
         titleEl.textContent = title || '';
-        messageEl.innerHTML = message || '';
+        if (html) messageEl.innerHTML = html;
+        else messageEl.textContent = message || '';
         confirmBtn.textContent = confirmLabel;
+        cancelBtn.textContent = cancelLabel || 'Cancel';
         cancelBtn.hidden = !showCancel;
         dialogEl.hidden = false;
         confirmBtn.focus();
@@ -431,12 +563,14 @@ const Dialog = (function () {
         return open({ title, message, confirmLabel, cancelLabel, showCancel: true });
     }
 
-    function alertDialog({ title, message, confirmLabel = 'OK' } = {}) {
-        return open({ title, message, confirmLabel, showCancel: false });
+    function alertDialog({ title, message, html, confirmLabel = 'OK' } = {}) {
+        return open({ title, message, html, confirmLabel, showCancel: false });
     }
 
     return { confirm: confirmDialog, alert: alertDialog };
 })();
+
+// --- Tabs --------------------------------------------------------------------------------------
 
 const AdminTabs = (function () {
     const DEFAULT_TAB = 'stats';
@@ -464,6 +598,8 @@ const AdminTabs = (function () {
         panels().forEach(panel => {
             panel.hidden = panel.dataset.panel !== name;
         });
+        const search = document.getElementById('adminSearch');
+        if (search && search.value) searchAdminContent();
     }
 
     function go(name) {
@@ -501,7 +637,7 @@ const AdminTabs = (function () {
                 go(tab.dataset.tab);
             });
         });
-        document.querySelector('.admin-tabs').addEventListener('keydown', onKeydown);
+        document.querySelector('.admin-tabs')?.addEventListener('keydown', onKeydown);
         window.addEventListener('hashchange', onHashChange);
         show(currentTab());
     }
@@ -509,9 +645,158 @@ const AdminTabs = (function () {
     return { init, go };
 })();
 
-document.addEventListener('DOMContentLoaded', () => AdminTabs.init());
+// --- Delegated wiring ------------------------------------------------------------------------------
+
+// Quick-action links: switch tab and start a blank form, asking first if the
+// admin has unsaved edits in it.
+const QUICK_ADD = {
+    events: ['event_form', resetEventForm],
+    teams: ['team_form', resetTeamForm],
+    sponsors: ['sponsor_form', resetSponsorForm],
+};
+
+const RESETS = {
+    'reset-event': ['event_form', resetEventForm],
+    'reset-team': ['team_form', resetTeamForm],
+    'reset-sponsor': ['sponsor_form', resetSponsorForm],
+    'reset-user': ['userForm', resetUserForm],
+};
+
+const EDITS = {
+    'edit-event': ['event_form', editEvent],
+    'edit-team': ['team_form', editTeam],
+    'edit-sponsor': ['sponsor_form', editSponsor],
+    'edit-user': ['userForm', editUser],
+};
+
+function guarded(formId, run) {
+    confirmDiscard(document.getElementById(formId)).then(ok => {
+        if (ok) run();
+    });
+}
+
+document.addEventListener('click', function (e) {
+    const trigger = e.target.closest('[data-action]');
+    if (!trigger) return;
+    const action = trigger.dataset.action;
+
+    if (action === 'quick-add') {
+        e.preventDefault();
+        const [formId, reset] = QUICK_ADD[trigger.dataset.tab];
+        guarded(formId, () => {
+            AdminTabs.go(trigger.dataset.tab);
+            reset();
+        });
+    } else if (RESETS[action]) {
+        const [formId, reset] = RESETS[action];
+        guarded(formId, reset);
+    } else if (EDITS[action]) {
+        const [formId, edit] = EDITS[action];
+        guarded(formId, () => edit(trigger));
+    } else if (action === 'remove-row') {
+        const form = trigger.closest('form');
+        trigger.closest('.dynamic-row')?.remove();
+        if (form) form.dataset.dirty = '1';
+    } else if (action === 'add-member') {
+        addMemberRow().querySelector('input[type="text"]')?.focus();
+    } else if (action === 'add-goal') {
+        addGoalRow().querySelector('input[type="text"]')?.focus();
+    } else if (action === 'reset-team-awards') {
+        resetTeamAwards();
+    } else if (action === 'copy-reset-link') {
+        copyResetLink();
+    } else if (action === 'select-all') {
+        trigger.select();
+    } else if (action === 'show-help') {
+        showHelp();
+    }
+});
+
+document.addEventListener('input', function (e) {
+    const target = e.target;
+    if (target.id === 'adminSearch') {
+        searchAdminContent();
+        return;
+    }
+    if (target.dataset.progressLabel) {
+        const label = document.getElementById(target.dataset.progressLabel);
+        if (label) label.textContent = `Progress (${target.value}%)`;
+    }
+    const form = target.form;
+    if (form && DIRTY_FORMS.includes(form.id)) form.dataset.dirty = '1';
+});
+
+// The team selector swaps the award list, so check for unsaved counts first
+// and put the selector back if the admin keeps editing.
+let currentTeamSelection = '';
+
+document.addEventListener('change', function (e) {
+    const target = e.target;
+    if (target.dataset.previewTarget) {
+        previewImage(target, target.dataset.previewTarget);
+    }
+    if (target.form && DIRTY_FORMS.includes(target.form.id)) target.form.dataset.dirty = '1';
+
+    if (target.id === 'team_selector') {
+        const wanted = target.value;
+        if (!teamAwardsDirty()) {
+            currentTeamSelection = wanted;
+            showTeamAwards(wanted);
+            return;
+        }
+        target.value = currentTeamSelection;
+        Dialog.confirm({
+            title: 'Discard unsaved award counts?',
+            message: 'The counts you changed for this team have not been saved.',
+            confirmLabel: 'Discard',
+        }).then(ok => {
+            if (!ok) return;
+            target.value = wanted;
+            currentTeamSelection = wanted;
+            showTeamAwards(wanted);
+        });
+    }
+});
+
+document.addEventListener('submit', function (e) {
+    const form = e.target;
+    if (form.dataset.confirmDelete) {
+        e.preventDefault();
+        confirmDelete(form, form.dataset.confirmDelete);
+        return;
+    }
+    if (e.defaultPrevented) {
+        hideLoading();
+        return;
+    }
+    // Block double submits: a second click on a slow multipart save used to
+    // upload every file twice.
+    lockSubmit(form);
+    markClean(form);
+    showLoading();
+});
+
+// Warn before leaving the page with unsaved edits.
+window.addEventListener('beforeunload', function (e) {
+    const dirty = DIRTY_FORMS.some(id => isDirty(document.getElementById(id))) || teamAwardsDirty();
+    if (dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+// Coming back through the back/forward cache: undo the submit lock and overlay.
+window.addEventListener('pageshow', function () {
+    hideLoading();
+    document.querySelectorAll('.admin-container [type="submit"]').forEach(button => {
+        button.disabled = false;
+    });
+});
+
+// --- Page setup ---------------------------------------------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', function () {
+    AdminTabs.init();
     initMessagesPanel();
     Admin.attachListFilter('#events_filter', '#panel-events .event-item');
     Admin.attachListFilter('#awards_filter', '#panel-awards .award-item');
@@ -531,9 +816,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     usersFilter?.addEventListener('input', filterUsers);
     usersRoleFilter?.addEventListener('change', filterUsers);
-});
 
-document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('#toast-stack .status-msg').forEach(toast => {
         setTimeout(() => {
             toast.classList.add('is-leaving');
@@ -542,17 +825,21 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// --- CONTACT MESSAGES PANEL ---
+// --- Contact messages panel ---------------------------------------------------------------------------
+
 function initMessagesPanel() {
     const panel = document.getElementById('panel-messages');
     if (!panel) return;
 
     const items = Array.from(panel.querySelectorAll('.message-item'));
+    const filters = panel.querySelectorAll('.message-filter');
 
-    panel.querySelectorAll('.message-filter').forEach(button => {
+    filters.forEach(button => {
         button.addEventListener('click', () => {
-            panel.querySelectorAll('.message-filter').forEach(b => b.classList.remove('active'));
-            button.classList.add('active');
+            filters.forEach(b => {
+                b.classList.toggle('active', b === button);
+                b.setAttribute('aria-pressed', String(b === button));
+            });
             const wanted = button.dataset.status;
             items.forEach(item => {
                 item.hidden = Boolean(wanted) && item.dataset.status !== wanted;

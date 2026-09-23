@@ -124,7 +124,7 @@ def test_missing_static_file_still_builds_a_url(client):
 # written into an innerHTML template string in the JS bundle is blocked by the
 # CSP just the same, which is how the safety quiz's buttons died unnoticed.
 JS_BUNDLES_UNDER_STRICT_CSP = ['static/js/script.js', 'static/js/login.js',
-                               'static/js/theme.js']
+                               'static/js/theme.js', 'static/js/admin.js']
 
 
 @pytest.mark.parametrize('bundle', JS_BUNDLES_UNDER_STRICT_CSP)

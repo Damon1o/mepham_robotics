@@ -69,11 +69,11 @@ def test_public_csp_forbids_inline_script(client):
     assert "object-src 'none'" in csp
 
 
-def test_admin_csp_allows_its_inline_handlers(client, make_user):
+def test_admin_csp_is_strict_too(client, make_user):
     make_user(username='root', password='root-password', role='admin')
     client.post('/login', data={'username': 'root', 'password': 'root-password'})
     csp = client.get('/admin').headers['Content-Security-Policy']
-    assert "'unsafe-inline'" in csp.split('script-src')[1]
+    assert "'unsafe-inline'" not in csp.split('script-src')[1]
 
 
 # --- Upload validation ----------------------------------------------------

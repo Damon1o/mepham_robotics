@@ -1,4 +1,5 @@
 import os
+import re
 import datetime
 import urllib.parse
 import hashlib
@@ -280,18 +281,23 @@ class _DbProxy:
 
 db = _DbProxy()
 
-def get_image_url(image_path, external=False):
-    """Helper function to get proper image URL for both local static files and Vercel Blob URLs"""
-    if not image_path:
-        return url_for('static', filename='assets/other/base.png', _external=external)
+DEFAULT_IMAGE = 'assets/other/base.png'
+DEFAULT_MEMBER_PHOTO = 'static/' + DEFAULT_IMAGE
 
-    # If it's already a full URL (http/https), use it directly
-    if image_path.startswith(('http://', 'https://')):
+
+def get_image_url(image_path, external=False):
+    """URL for a stored image: a Vercel Blob URL as-is, or a local static file.
+
+    A local path that does not exist falls back to the placeholder. Member
+    rows used to default to `static/assets/profile/base.png`, which was never
+    in the repo, so every member without an upload rendered a broken image.
+    """
+    if image_path and image_path.startswith(('http://', 'https://')):
         return image_path
 
-    # Otherwise, treat it as a local static file path
-    # Clean up the path by removing 'static/' prefix if present
-    clean_path = image_path.replace('\\', '/').replace('static/', '')
+    clean_path = (image_path or '').replace('\\', '/').removeprefix('/').removeprefix('static/')
+    if not clean_path or not os.path.isfile(os.path.join(app.static_folder, clean_path)):
+        clean_path = DEFAULT_IMAGE
     return url_for('static', filename=clean_path, _external=external)
 
 @app.context_processor
@@ -619,8 +625,8 @@ def payload_too_large(e):
 
 
 # --- Security headers ------------------------------------------------------
-# The admin dashboard still carries inline handlers, so it gets a CSP that
-# allows them. Every other page runs under a CSP with no inline script.
+# One policy for every page: no inline script anywhere, including the admin
+# dashboard, whose controls are wired through delegated listeners.
 _SCRIPT_CDNS = "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com"
 _BASE_CSP = [
     "default-src 'self'",
@@ -639,10 +645,7 @@ _BASE_CSP = [
 
 
 def _csp_for(path):
-    script_src = f"script-src 'self' {_SCRIPT_CDNS}"
-    if path.startswith('/admin'):
-        script_src += " 'unsafe-inline'"
-    return '; '.join(_BASE_CSP + [script_src])
+    return '; '.join(_BASE_CSP + [f"script-src 'self' {_SCRIPT_CDNS}"])
 
 
 @app.after_request
@@ -1130,8 +1133,7 @@ def admin_save_team():
 
         # Handle member photos
         members = []
-        i = 0
-        while f'member_name_{i}' in request.form:
+        for i in form_row_indexes('member_name'):
             member_photo_url = None
 
             # Check if a new photo was uploaded for this member
@@ -1144,7 +1146,7 @@ def admin_save_team():
                     stem=request.form.get(f'member_name_{i}') or 'member')
             else:
                 # Use existing photo path from hidden field
-                member_photo_url = request.form.get(f'member_photo_path_{i}', 'static/assets/profile/base.png')
+                member_photo_url = request.form.get(f'member_photo_path_{i}') or DEFAULT_MEMBER_PHOTO
 
             members.append({
                 'name': request.form.get(f'member_name_{i}'),
@@ -1152,17 +1154,13 @@ def admin_save_team():
                 'user_id': request.form.get(f'member_user_{i}'),
                 'photo': member_photo_url
             })
-            i += 1
 
         team_data['members'] = members
-
-        goals = []
-        j = 0
-        while f'goal_name_{j}' in request.form:
-            goals.append({'name': request.form.get(f'goal_name_{j}'),
-                          'progress': int(request.form.get(f'goal_progress_{j}', 0))})
-            j += 1
-        team_data['goals'] = goals
+        team_data['goals'] = [
+            {'name': request.form.get(f'goal_name_{j}'),
+             'progress': _clamp_percent(request.form.get(f'goal_progress_{j}', 0))}
+            for j in form_row_indexes('goal_name')
+        ]
 
         if team_id and len(team_id) == 24:
             # Update existing team - handle old file deletion
@@ -1218,6 +1216,26 @@ def admin_save_team():
     except Exception as e:
         flash(f'Error saving team: {e}', 'error')
     return redirect(url_for('admin_dashboard'))
+
+def form_row_indexes(prefix):
+    """Sorted row numbers present in the form for `<prefix>_<n>` fields.
+
+    The dashboard numbers member and goal rows as it creates them, and deleting
+    a row leaves a gap. Reading `0, 1, 2, ...` until the first missing number
+    silently dropped every row after a deleted one, so collect what is there.
+    """
+    pattern = re.compile(rf'{re.escape(prefix)}_(\d+)')
+    found = {int(m.group(1)) for key in request.form
+             if (m := pattern.fullmatch(key))}
+    return sorted(found)
+
+
+def _clamp_percent(value):
+    try:
+        return max(0, min(100, int(value)))
+    except (TypeError, ValueError):
+        return 0
+
 
 def _team_blob_urls(team):
     """Every Vercel Blob URL a team document points at."""

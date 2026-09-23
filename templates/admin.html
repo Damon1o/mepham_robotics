@@ -13,15 +13,13 @@
         {{ users|tojson|safe }}
     </script>
 
-<!-- Loading Overlay -->
-<div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-spinner"></div>
-</div>
-
-<!-- Notification CSS -->
 {% endblock %}
 
 {% block content %}
+<div id="loadingOverlay" class="loading-overlay" role="status" aria-label="Saving" hidden>
+    <div class="loading-spinner"></div>
+</div>
+
 <div class="admin-container">
     <div class="admin-header">
         <h1>Command Center
@@ -34,7 +32,7 @@
         <p>Welcome back, {{ current_user }} | Manage the legacy of Team 77628.</p>
     </div>
 
-    <div id="toast-stack" class="toast-stack">
+    <div id="toast-stack" class="toast-stack" role="status" aria-live="polite">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
@@ -50,8 +48,8 @@
             <div class="stat-value">{{ stats.get('teams_count', 0) }}</div>
             <div class="stat-label">Active Teams</div>
             {% if monthly_changes.teams_change > 0 %}
-            <div class="stat-change positive"><i data-lucide="arrow-up"></i> {{ monthly_changes.teams_change }} this month</div>
-            {% elif monthly_changes.teams_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down"></i> {{
+            <div class="stat-change positive"><i data-lucide="arrow-up" aria-hidden="true"></i> {{ monthly_changes.teams_change }} this month</div>
+            {% elif monthly_changes.teams_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down" aria-hidden="true"></i> {{
                 monthly_changes.teams_change|abs }} this month
         </div>
         {% else %}
@@ -62,8 +60,8 @@
         <div class="stat-value">{{ stats.get('members_count', 0) }}</div>
         <div class="stat-label">Team Members</div>
         {% if monthly_changes.members_change > 0 %}
-        <div class="stat-change positive"><i data-lucide="arrow-up"></i> {{ monthly_changes.members_change }} this month</div>
-        {% elif monthly_changes.members_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down"></i> {{
+        <div class="stat-change positive"><i data-lucide="arrow-up" aria-hidden="true"></i> {{ monthly_changes.members_change }} this month</div>
+        {% elif monthly_changes.members_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down" aria-hidden="true"></i> {{
             monthly_changes.members_change|abs }} this month
     </div>
     {% else %}
@@ -74,8 +72,8 @@
     <div class="stat-value">{{ stats.get('awards_count', 0) }}</div>
     <div class="stat-label">Total Awards</div>
     {% if monthly_changes.awards_change > 0 %}
-    <div class="stat-change positive"><i data-lucide="arrow-up"></i> {{ monthly_changes.awards_change }} this month</div>
-    {% elif monthly_changes.awards_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down"></i> {{
+    <div class="stat-change positive"><i data-lucide="arrow-up" aria-hidden="true"></i> {{ monthly_changes.awards_change }} this month</div>
+    {% elif monthly_changes.awards_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down" aria-hidden="true"></i> {{
         monthly_changes.awards_change|abs }} this month
 </div>
 {% else %}
@@ -86,8 +84,8 @@
     <div class="stat-value">{{ competitions|length }}</div>
     <div class="stat-label">Upcoming Events</div>
     {% if monthly_changes.events_change > 0 %}
-    <div class="stat-change positive"><i data-lucide="arrow-up"></i> {{ monthly_changes.events_change }} this month</div>
-    {% elif monthly_changes.events_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down"></i> {{
+    <div class="stat-change positive"><i data-lucide="arrow-up" aria-hidden="true"></i> {{ monthly_changes.events_change }} this month</div>
+    {% elif monthly_changes.events_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down" aria-hidden="true"></i> {{
         monthly_changes.events_change|abs }} this month
 </div>
 {% else %}
@@ -98,13 +96,13 @@
 
 <!-- Quick Actions -->
 <div class="admin-quick-actions">
-    <a href="#events" class="quick-action-btn" onclick="AdminTabs.go('events'); resetEventForm(); return false;">
+    <a href="#events" class="quick-action-btn" data-action="quick-add" data-tab="events">
         <span><i data-lucide="calendar-plus"></i> Add Event</span>
     </a>
-    <a href="#teams" class="quick-action-btn" onclick="AdminTabs.go('teams'); resetTeamForm(); return false;">
+    <a href="#teams" class="quick-action-btn" data-action="quick-add" data-tab="teams">
         <span><i data-lucide="bot"></i> Add Team</span>
     </a>
-    <a href="#sponsors" class="quick-action-btn" onclick="AdminTabs.go('sponsors'); resetSponsorForm(); return false;">
+    <a href="#sponsors" class="quick-action-btn" data-action="quick-add" data-tab="sponsors">
         <span><i data-lucide="handshake"></i> Add Sponsor</span>
     </a>
 </div>
@@ -113,7 +111,7 @@
 <div class="search-box">
     <span class="search-icon" aria-hidden="true"><i data-lucide="search"></i></span>
     <input type="text" id="adminSearch" aria-label="Search teams, events, sponsors, awards"
-        placeholder="Search teams, events, sponsors, awards..." onkeyup="searchAdminContent()">
+        placeholder="Search teams, events, sponsors, awards...">
 </div>
 
 <nav class="admin-tabs" role="tablist" aria-label="Admin sections">
@@ -140,7 +138,7 @@
 
 <div class="admin-grid">
     <!-- GLOBAL STATS CARD -->
-    <section class="admin-panel" data-panel="stats" id="panel-stats" role="tabpanel" aria-labelledby="tab-stats">
+    <section class="admin-panel" tabindex="0" data-panel="stats" id="panel-stats" role="tabpanel" aria-labelledby="tab-stats">
     <div class="admin-card">
         <div class="admin-card-header">
             <h2><i data-lucide="chart-column"></i> Site Statistics</h2>
@@ -148,20 +146,20 @@
         <form action="{{ url_for('admin_update_stats') }}" method="POST">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
-                <label>Teams Count</label>
-                <input type="number" name="teams_count" value="{{ stats.teams_count }}" required>
+                <label for="f-teams_count">Teams Count</label>
+                <input id="f-teams_count" type="number" name="teams_count" value="{{ stats.teams_count }}" required>
             </div>
             <div class="form-group">
-                <label>Members Count</label>
-                <input type="number" name="members_count" value="{{ stats.members_count }}" required>
+                <label for="f-members_count">Members Count</label>
+                <input id="f-members_count" type="number" name="members_count" value="{{ stats.members_count }}" required>
             </div>
             <div class="form-group">
-                <label>Awards Count (Total)</label>
-                <input type="number" name="awards_count" value="{{ stats.awards_count }}" required>
+                <label for="f-awards_count">Awards Count (Total)</label>
+                <input id="f-awards_count" type="number" name="awards_count" value="{{ stats.awards_count }}" required>
             </div>
             <div class="form-group">
-                <label>Hours Built</label>
-                <input type="number" name="hours_built" value="{{ stats.hours_built }}" required>
+                <label for="f-hours_built">Hours Built</label>
+                <input id="f-hours_built" type="number" name="hours_built" value="{{ stats.hours_built }}" required>
             </div>
             <button type="submit" class="admin-btn">Update Stats</button>
         </form>
@@ -169,7 +167,7 @@
     </section>
 
     <!-- UPCOMING EVENTS MANAGER -->
-    <section class="admin-panel" data-panel="events" id="panel-events" role="tabpanel" aria-labelledby="tab-events" hidden>
+    <section class="admin-panel" tabindex="0" data-panel="events" id="panel-events" role="tabpanel" aria-labelledby="tab-events" hidden>
     <div class="admin-card">
         <div class="admin-card-header">
             <h2><i data-lucide="hourglass"></i> Upcoming Events</h2>
@@ -188,10 +186,10 @@
                 <div class="data-item-actions">
                     <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-id="{{ comp._id }}"
                         data-name="{{ comp.name }}" data-location="{{ comp.location }}" data-date="{{ comp.date_str }}"
-                        aria-label="Edit event: {{ comp.name }}"
-                        onclick="editEvent(this.dataset.id, this.dataset.name, this.dataset.location, this.dataset.date)">Edit</button>
+                        data-update-url="{{ url_for('admin_edit_competition', id=comp._id) }}"
+                        aria-label="Edit event: {{ comp.name }}" data-action="edit-event">Edit</button>
                     <form action="{{ url_for('admin_delete_competition', comp_id=comp._id) }}" method="POST"
-                        style="margin: 0;" onsubmit="return confirmDelete(this, 'event')">
+                        style="margin: 0;" data-confirm-delete="event">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
                             aria-label="Delete event: {{ comp.name }}">Delete</button>
@@ -210,20 +208,20 @@
         <form id="event_form" action="{{ url_for('admin_add_competition') }}" data-default-action="{{ url_for('admin_add_competition') }}" method="POST">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
-                <label>Event Name</label>
-                <input type="text" name="comp_name" placeholder="e.g. Regional Qualifiers" required>
+                <label for="f-comp_name">Event Name</label>
+                <input id="f-comp_name" type="text" name="comp_name" placeholder="e.g. Regional Qualifiers" required>
             </div>
             <div class="form-group">
-                <label>Location</label>
-                <input type="text" name="comp_location" placeholder="e.g. Mepham High School" required>
+                <label for="f-comp_location">Location</label>
+                <input id="f-comp_location" type="text" name="comp_location" placeholder="e.g. Mepham High School" required>
             </div>
             <div class="form-group">
-                <label>Event Date & Time</label>
-                <input type="datetime-local" name="comp_date" required>
+                <label for="f-comp_date">Event Date & Time</label>
+                <input id="f-comp_date" type="datetime-local" name="comp_date" required>
             </div>
             <div class="btn-group">
                 <button type="submit" class="admin-btn admin-btn-success">Save Event</button>
-                <button type="button" class="admin-btn admin-btn-secondary" onclick="resetEventForm()">Cancel /
+                <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-event">Cancel /
                     Reset</button>
             </div>
         </form>
@@ -231,7 +229,7 @@
     </section>
 
     <!-- AWARDS MANAGER CARD -->
-    <section class="admin-panel" data-panel="awards" id="panel-awards" role="tabpanel" aria-labelledby="tab-awards" hidden>
+    <section class="admin-panel" tabindex="0" data-panel="awards" id="panel-awards" role="tabpanel" aria-labelledby="tab-awards" hidden>
     <div class="admin-card">
         <div class="admin-card-header">
             <h2><i data-lucide="trophy"></i> Awards Inventory</h2>
@@ -249,7 +247,7 @@
                     </div>
                     <div class="data-item-actions">
                         <input type="number" name="award_{{ award._id }}" value="{{ award.count|default(0) }}" min="0"
-                            style="width: 80px; padding: 0.5rem;">
+                            class="award-count-input" aria-label="{{ award.title }} count">
                     </div>
                 </div>
                 {% endfor %}
@@ -262,7 +260,7 @@
     </section>
 
     <!-- TEAM AWARDS MANAGER CARD -->
-    <section class="admin-panel" data-panel="team-awards" id="panel-team-awards" role="tabpanel" aria-labelledby="tab-team-awards" hidden>
+    <section class="admin-panel" tabindex="0" data-panel="team-awards" id="panel-team-awards" role="tabpanel" aria-labelledby="tab-team-awards" hidden>
     <div class="admin-card"
         style="grid-column: 1 / -1; background: linear-gradient(135deg, #fffdf5 0%, #fff9e6 100%); border-color: var(--maroon-dark);">
         <div class="admin-card-header">
@@ -270,8 +268,8 @@
         </div>
 
         <div class="form-group" style="max-width: 400px;">
-            <label>Select Team to Manage</label>
-            <select id="team_selector" onchange="showTeamAwards(this.value)" class="team-select-dropdown">
+            <label for="team_selector">Select Team to Manage</label>
+            <select id="team_selector" class="team-select-dropdown">
                 <option value="">-- Choose a Team --</option>
                 {% for team in teams %}
                 <option value="{{ team.team_number }}">{{ team.team_number }} - {{ team.nickname }}</option>
@@ -280,31 +278,28 @@
             <div class="form-hint">Select a team to view and edit their award counts</div>
         </div>
 
-        <form action="{{ url_for('admin_update_team_awards') }}" method="POST" id="team_awards_form"
-            style="display: none;">
+        <form action="{{ url_for('admin_update_team_awards') }}" method="POST" id="team_awards_form" hidden>
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <div id="team_awards_list" class="data-list"
-                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem; max-height: none;">
+            <div id="team_awards_list" class="data-list">
                 <!-- Dynamically populated -->
             </div>
             <div class="btn-group" style="margin-top: 2rem;">
                 <button type="submit" class="admin-btn admin-btn-success">Save Team Awards</button>
-                <button type="button" class="admin-btn admin-btn-secondary" onclick="resetTeamAwards()">Reset
+                <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-team-awards">Reset
                     Changes</button>
             </div>
         </form>
 
-        <div id="no_team_msg"
-            style="text-align: center; color: #666; padding: 3rem; background: rgba(0,0,0,0.02); border-radius: 12px; border: 2px dashed #ddd; margin-top: 1rem;">
-            <i data-lucide="trophy" style="width:3rem;height:3rem;margin-bottom:1rem;"></i>
-            <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No team selected</p>
-            <p style="color: #888;">Please select a team from the dropdown above to manage their awards</p>
+        <div id="no_team_msg" class="no-team-msg">
+            <i data-lucide="trophy" class="no-team-msg-icon" aria-hidden="true"></i>
+            <p class="no-team-msg-title">No team selected</p>
+            <p class="no-team-msg-hint">Please select a team from the dropdown above to manage their awards</p>
         </div>
     </div>
     </section>
 
     <!-- TEAMS MANAGEMENT CARD -->
-    <section class="admin-panel" data-panel="teams" id="panel-teams" role="tabpanel" aria-labelledby="tab-teams" hidden>
+    <section class="admin-panel" tabindex="0" data-panel="teams" id="panel-teams" role="tabpanel" aria-labelledby="tab-teams" hidden>
     <div class="admin-card" style="grid-column: 1 / -1;" id="team_form_card">
         <div class="admin-card-header">
             <h2><i data-lucide="bot"></i> Teams Management</h2>
@@ -332,9 +327,9 @@
                 <div class="data-item-actions">
                     <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
                         data-team='{{ team_json|e }}' aria-label="Edit team: {{ team.nickname }}"
-                        onclick="editTeam(this.dataset.team)">Edit</button>
+                        data-action="edit-team">Edit</button>
                     <form action="{{ url_for('admin_delete_team', id=team._id) }}" method="POST" style="margin: 0;"
-                        onsubmit="return confirmDelete(this, 'team')">
+                        data-confirm-delete="team">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
                             aria-label="Delete team: {{ team.nickname }}">Delete</button>
@@ -355,51 +350,51 @@
                 <fieldset class="form-fieldset">
                     <legend>Basic Info</legend>
                     <div class="form-group">
-                        <label>Team Number</label>
-                        <input type="text" name="team_number" placeholder="e.g. 77628P" required>
+                        <label for="f-team_number">Team Number</label>
+                        <input id="f-team_number" type="text" name="team_number" placeholder="e.g. 77628P" required>
                     </div>
                     <div class="form-group">
-                        <label>Nickname</label>
-                        <input type="text" name="nickname" placeholder="e.g. Prometheus">
+                        <label for="f-nickname">Nickname</label>
+                        <input id="f-nickname" type="text" name="nickname" placeholder="e.g. Prometheus">
                     </div>
                     <div class="form-group">
-                        <label>Tagline</label>
-                        <input type="text" name="tagline" placeholder="Precision. Power. Performance.">
+                        <label for="f-tagline">Tagline</label>
+                        <input id="f-tagline" type="text" name="tagline" placeholder="Precision. Power. Performance.">
                     </div>
                     <div class="form-group">
-                        <label>Engineering Notebook Link</label>
-                        <input type="text" name="notebook_link" placeholder="URL to notebook">
+                        <label for="f-notebook_link">Engineering Notebook Link</label>
+                        <input id="f-notebook_link" type="text" name="notebook_link" placeholder="URL to notebook">
                     </div>
                     <div class="form-group">
-                        <label>Hero Image</label>
-                        <input type="file" name="hero_image" accept="image/*"
-                            onchange="previewImage(this, 'heroImagePreview')">
+                        <label for="f-hero_image">Hero Image</label>
+                        <input id="f-hero_image" type="file" name="hero_image" accept="image/*"
+                            data-preview-target="heroImagePreview">
                         <div id="heroImagePreview" class="image-preview"></div>
                         <div class="form-hint">Recommended: 1200x600px, JPG or PNG</div>
                     </div>
                     <div class="form-group">
-                        <label>STL CAD File (.stl)</label>
-                        <input type="file" name="stl_file" accept=".stl">
+                        <label for="f-stl_file">STL CAD File (.stl)</label>
+                        <input id="f-stl_file" type="file" name="stl_file" accept=".stl">
                     </div>
                 </fieldset>
 
                 <fieldset class="form-fieldset">
                     <legend>Robot Specs</legend>
                     <div class="form-group">
-                        <label>Drive Train</label>
-                        <input type="text" name="drive_train" placeholder="e.g. 6-Motor Drive">
+                        <label for="f-drive_train">Drive Train</label>
+                        <input id="f-drive_train" type="text" name="drive_train" placeholder="e.g. 6-Motor Drive">
                     </div>
                     <div class="form-group">
-                        <label>Lift System</label>
-                        <input type="text" name="lift_system" placeholder="e.g. 4-Bar Lift">
+                        <label for="f-lift_system">Lift System</label>
+                        <input id="f-lift_system" type="text" name="lift_system" placeholder="e.g. 4-Bar Lift">
                     </div>
                     <div class="form-group">
-                        <label>Intake</label>
-                        <input type="text" name="intake" placeholder="e.g. Side Rollers">
+                        <label for="f-intake">Intake</label>
+                        <input id="f-intake" type="text" name="intake" placeholder="e.g. Side Rollers">
                     </div>
                     <div class="form-group">
-                        <label>Auton Consistency (%)</label>
-                        <input type="text" name="auton_consistency" placeholder="e.g. 95%">
+                        <label for="f-auton_consistency">Auton Consistency (%)</label>
+                        <input id="f-auton_consistency" type="text" name="auton_consistency" placeholder="e.g. 95%">
                     </div>
                 </fieldset>
             </div>
@@ -409,19 +404,19 @@
                     <legend>Team Members</legend>
                     <div id="members_container"></div>
                     <p class="form-fieldset-empty-hint">No members added yet.</p>
-                    <button type="button" class="add-more-btn" onclick="addMemberRow()">+ Add Member</button>
+                    <button type="button" class="add-more-btn" data-action="add-member">+ Add Member</button>
                 </fieldset>
                 <fieldset class="form-fieldset">
                     <legend>Season Goals</legend>
                     <div id="goals_container"></div>
                     <p class="form-fieldset-empty-hint">No goals added yet.</p>
-                    <button type="button" class="add-more-btn" onclick="addGoalRow()">+ Add Goal</button>
+                    <button type="button" class="add-more-btn" data-action="add-goal">+ Add Goal</button>
                 </fieldset>
             </div>
 
             <div style="margin-top: 3rem; display: flex; flex-direction: column; gap: 1rem;">
                 <button type="submit" class="admin-btn">Save Team Profile</button>
-                <button type="button" class="admin-btn admin-btn-secondary" onclick="resetTeamForm()">Reset
+                <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-team">Reset
                     Form</button>
             </div>
         </form>
@@ -429,7 +424,7 @@
     </section>
 
     <!-- SPONSORS MANAGEMENT CARD -->
-    <section class="admin-panel" data-panel="sponsors" id="panel-sponsors" role="tabpanel" aria-labelledby="tab-sponsors" hidden>
+    <section class="admin-panel" tabindex="0" data-panel="sponsors" id="panel-sponsors" role="tabpanel" aria-labelledby="tab-sponsors" hidden>
     <div class="admin-card" id="sponsor_form_card">
         <div class="admin-card-header">
             <h2><i data-lucide="handshake"></i> Sponsors Management</h2>
@@ -463,9 +458,9 @@
                         data-id="{{ sponsor._id }}" data-name="{{ sponsor.name }}"
                         data-website="{{ sponsor.website }}" data-level="{{ sponsor.level }}"
                         aria-label="Edit sponsor: {{ sponsor.name }}"
-                        onclick="editSponsor(this.dataset.id, this.dataset.name, this.dataset.website, this.dataset.level)">Edit</button>
+                        data-action="edit-sponsor">Edit</button>
                     <form action="{{ url_for('admin_delete_sponsor', id=sponsor._id) }}" method="POST" style="margin: 0;"
-                        onsubmit="return confirmDelete(this, 'sponsor')">
+                        data-confirm-delete="sponsor">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
                             aria-label="Delete sponsor: {{ sponsor.name }}">Delete</button>
@@ -490,16 +485,16 @@
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" id="sponsor_id" name="sponsor_id">
         <div class="form-group">
-            <label>Sponsor Name</label>
-            <input type="text" name="name" required placeholder="e.g. Acme Corp">
+            <label for="f-name">Sponsor Name</label>
+            <input id="f-name" type="text" name="name" required placeholder="e.g. Acme Corp">
         </div>
         <div class="form-group">
-            <label>Website URL</label>
-            <input type="url" name="website" placeholder="https://example.com">
+            <label for="f-website">Website URL</label>
+            <input id="f-website" type="url" name="website" placeholder="https://example.com">
         </div>
         <div class="form-group">
-            <label>Sponsorship Level</label>
-            <select name="level">
+            <label for="f-level">Sponsorship Level</label>
+            <select id="f-level" name="level">
                 <option value="Bronze">Bronze</option>
                 <option value="Silver">Silver</option>
                 <option value="Gold">Gold</option>
@@ -507,21 +502,21 @@
             </select>
         </div>
         <div class="form-group">
-            <label>Logo (Optional)</label>
-            <input type="file" name="logo" accept="image/*" onchange="previewImage(this, 'sponsorLogoPreview')">
+            <label for="f-logo">Logo (Optional)</label>
+            <input id="f-logo" type="file" name="logo" accept="image/*" data-preview-target="sponsorLogoPreview">
             <div id="sponsorLogoPreview" class="image-preview"></div>
             <div class="form-hint">Square logo, transparent background preferred</div>
         </div>
         <div style="display: flex; flex-direction: column; gap: 1rem;">
             <button type="submit" class="admin-btn">Save Sponsor</button>
-            <button type="button" class="admin-btn admin-btn-secondary" onclick="resetSponsorForm()">Reset</button>
+            <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-sponsor">Reset</button>
         </div>
     </form>
 </div>
 </section>
 
 <!-- USER MANAGEMENT CARD -->
-<section class="admin-panel" data-panel="users" id="panel-users" role="tabpanel" aria-labelledby="tab-users" hidden>
+<section class="admin-panel" tabindex="0" data-panel="users" id="panel-users" role="tabpanel" aria-labelledby="tab-users" hidden>
 <div class="admin-card" id="user_form_card">
     <div class="admin-card-header">
         <h2><i data-lucide="user"></i> User Management</h2>
@@ -538,9 +533,9 @@
         <p class="reset-link-label">Reset link for <strong>{{ reset_link_user }}</strong> (valid 1 hour, single use):</p>
         <div class="reset-link-row">
             <input type="text" id="reset_link_output" class="reset-link-input" value="{{ reset_link }}" readonly
-                onclick="this.select()" aria-label="Generated reset link">
+                data-action="select-all" aria-label="Generated reset link">
             <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
-                onclick="copyResetLink()">Copy</button>
+                data-action="copy-reset-link">Copy</button>
         </div>
     </div>
     {% endif %}
@@ -573,8 +568,8 @@
                 <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
                     data-id="{{ user._id }}" data-username="{{ user.username }}"
                     data-email="{{ user.email }}" data-role="{{ user.role }}"
-                    aria-label="Edit user: {{ user.username }}"
-                    onclick="editUser(this.dataset)">Edit</button>
+                    data-update-url="{{ url_for('admin_update_user', id=user._id) }}"
+                    aria-label="Edit user: {{ user.username }}" data-action="edit-user">Edit</button>
                 <form action="{{ url_for('admin_generate_reset_link', id=user._id) }}" method="POST" class="inline-form">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="admin-btn admin-btn-secondary admin-btn-small"
@@ -582,7 +577,7 @@
                 </form>
                 {% if user.username != session.user %}
                 <form action="{{ url_for('admin_delete_user', id=user._id) }}" method="POST" class="inline-form"
-                    onsubmit="return confirmDelete(this, 'user')">
+                    data-confirm-delete="user">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
                         aria-label="Delete user: {{ user.username }}">Delete</button>
@@ -632,14 +627,14 @@
         </div>
         <div class="btn-group">
             <button type="submit" id="user_submit" class="admin-btn admin-btn-success">Create User</button>
-            <button type="button" class="admin-btn admin-btn-secondary" onclick="resetUserForm()">Cancel / Reset</button>
+            <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-user">Cancel / Reset</button>
         </div>
     </form>
 </div>
 </section>
 
 <!-- Recent Activity Card -->
-<section class="admin-panel" data-panel="activity" id="panel-activity" role="tabpanel" aria-labelledby="tab-activity" hidden>
+<section class="admin-panel" tabindex="0" data-panel="activity" id="panel-activity" role="tabpanel" aria-labelledby="tab-activity" hidden>
 <div class="admin-card">
     <div class="admin-card-header">
         <h2><i data-lucide="clipboard-list"></i> Recent Activity</h2>
@@ -665,15 +660,10 @@
         {% endif %}
     </div>
 
-    <div class="empty-state" style="display: none;" id="noActivity">
-        <i data-lucide="clipboard-list" class="empty-state-icon"></i>
-        <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No recent activity</p>
-        <p style="color: #888;">Activity will appear here as you make changes</p>
-    </div>
 </div>
 </section>
 
-<section class="admin-panel" data-panel="messages" id="panel-messages" role="tabpanel" aria-labelledby="tab-messages" hidden>
+<section class="admin-panel" tabindex="0" data-panel="messages" id="panel-messages" role="tabpanel" aria-labelledby="tab-messages" hidden>
 <div class="admin-card">
     <div class="admin-card-header">
         <h2><i data-lucide="send"></i> Newsletter</h2>
@@ -698,10 +688,10 @@
     </div>
 
     <div class="message-filters" role="group" aria-label="Filter messages by status">
-        <button type="button" class="message-filter active" data-status="">All</button>
-        <button type="button" class="message-filter" data-status="new">New</button>
-        <button type="button" class="message-filter" data-status="read">Read</button>
-        <button type="button" class="message-filter" data-status="archived">Archived</button>
+        <button type="button" class="message-filter active" data-status="" aria-pressed="true">All</button>
+        <button type="button" class="message-filter" data-status="new" aria-pressed="false">New</button>
+        <button type="button" class="message-filter" data-status="read" aria-pressed="false">Read</button>
+        <button type="button" class="message-filter" data-status="archived" aria-pressed="false">Archived</button>
     </div>
 
     <div class="data-list message-list">
@@ -741,7 +731,7 @@
                     {% endif %}
                     <form action="{{ url_for('admin_message_action', id=message._id, action='delete') }}"
                         method="POST" class="inline-form"
-                        onsubmit="return confirmDelete(this, 'message')">
+                        data-confirm-delete="message">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="admin-btn admin-btn-danger admin-btn-small">Delete</button>
                     </form>
@@ -763,7 +753,7 @@
 </div>
 
 <!-- Help Button -->
-<button class="help-button" aria-label="Show help" onclick="showHelp()">?</button>
+<button type="button" class="help-button" aria-label="Show help" data-action="show-help">?</button>
 
 <!-- Shared confirm/alert dialog (Dialog.confirm / Dialog.alert) -->
 <div id="admin-confirm-dialog" class="confirmation-dialog" role="alertdialog" aria-modal="true"
