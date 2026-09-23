@@ -36,10 +36,16 @@ docs/superpowers/       # Design specs and implementation plans
 ```bash
 python -m venv .venv && .venv/Scripts/activate   # Windows
 pip install -r requirements-dev.txt
+cp .env.example .env    # then fill in MONGO_URI at minimum
 python api/index.py
 ```
 
-The app reads configuration from `.env` (see below) and serves on <http://127.0.0.1:5000>.
+The app reads configuration from `.env` and serves on <http://127.0.0.1:5000>. Set `FLASK_DEBUG=1` to get the
+Werkzeug debugger; it is off by default because it executes code from the browser.
+
+Python 3.12 is the target (`.python-version`); Vercel deploys with the Flask framework preset pinned in
+`vercel.json`. Do not add a catch-all rewrite there: the preset routes requests itself, and a rewrite to
+`/api/index` breaks every path.
 
 ## Environment Variables
 
@@ -54,6 +60,8 @@ The app reads configuration from `.env` (see below) and serves on <http://127.0.
 | `CHATBOT_API_URL`, `CHATBOT_MODEL` | optional | Override the assistant's upstream and model |
 | `GIVEBUTTER_CAMPAIGN_ID` | optional | Renders the donation embed; without it the page shows an email fallback |
 | `CONTACT_EMAIL` | optional | Address shown in fallbacks |
+| `CLUB_TIMEZONE` | optional | Zone event times are entered in (default `America/New_York`) |
+| `FLASK_DEBUG` | optional | `1` enables the debugger for the local server only |
 
 ## Tests
 
@@ -61,7 +69,8 @@ The app reads configuration from `.env` (see below) and serves on <http://127.0.
 python -m pytest
 ```
 
-The suite runs against `mongomock`, so no database is needed. It covers authentication, password reset, the contact
+The suite runs against `mongomock`, so no database is needed. GitHub Actions runs it, plus `node --check` on every
+script, on each push and pull request (`.github/workflows/tests.yml`). It covers authentication, password reset, the contact
 and newsletter endpoints, CSRF enforcement, security headers, upload validation, rate limiting, and that every page
 renders.
 
@@ -69,8 +78,12 @@ renders.
 
 - Every non-`GET` request must carry a CSRF token (`_csrf_token` field or `X-CSRF-Token` header). The check is a
   `before_request` hook, so new routes are protected by default.
-- Public pages are served under a Content-Security-Policy with no inline script. Adding an `onclick=` attribute or an
-  inline `<script>` to a public template will silently break it — `tests/test_pages.py` guards against this.
+- Every page, including the admin dashboard, is served under a Content-Security-Policy with no inline script. An
+  `onclick=` attribute, an inline `<script>`, or a handler written into an `innerHTML` string will silently stop
+  working. Wire controls with `data-*` attributes and delegated listeners; `tests/test_pages.py` scans the templates
+  and the JS bundles for inline handlers.
+- No CSS in templates: styles live in `static/css/styles.css` or `static/css/pages/<page>.css`. A DB-backed value
+  may be passed as a CSS custom property (see `--team-hero-image`). `tests/test_content.py` enforces this.
 - Uploads are restricted by extension, capped at 8 MB, and stored under keys built with `secure_filename`.
 - Sign-in attempts are rate limited per (account, IP) and per account, so rotating addresses does not reset the count.
 - `/api/contact`, `/api/newsletter`, and `/api/chat` are rate limited per IP and validate their input.
