@@ -1008,10 +1008,6 @@ function showToast(message, type = 'info') {
     }
 
     document.addEventListener('click', function (e) {
-        if (e.target.closest('.nav-search-btn')) {
-            e.preventDefault();
-            openSearch();
-        }
         if (e.target.closest('.search-close')) {
             closeSearch();
         }

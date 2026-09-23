@@ -154,3 +154,16 @@ def test_notebook_faq_is_accessible(signed_in):
     page = signed_in('member').get('/notebook').get_data(as_text=True)
     assert 'aria-controls="notebook-template-answer"' in page
     assert 'id="notebook-template-answer"' in page
+
+
+def test_side_nav_has_no_theme_or_search_controls(client):
+    page = client.get('/').get_data(as_text=True)
+    nav = page[page.index('id="mySidenav"'):page.index('class="search-overlay"')]
+    assert 'data-theme-toggle' not in nav
+    assert 'nav-search-btn' not in nav
+
+
+def test_theme_toggle_lives_in_the_footer(client):
+    page = client.get('/').get_data(as_text=True)
+    footer = page[page.index('<footer'):page.index('</footer>')]
+    assert 'data-theme-toggle' in footer

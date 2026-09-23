@@ -67,10 +67,6 @@
             <a href="{{ url_for('donate') }}" {% if active_page=='donate' %} class="active" {% endif %}>Donate</a>
             <a href="{{ url_for('contact') }}" {% if active_page=='contact' %} class="active" {% endif %}>Contact</a>
 
-            <button type="button" class="nav-search-btn">
-                <i data-lucide="search"></i> Search <kbd>Ctrl</kbd>+<kbd>K</kbd>
-            </button>
-
             {% if 'user' in session and session.get('role') == 'admin' %}
             <a href="{{ url_for('admin_dashboard') }}" {% if active_page=='admin' %} class="active" {% endif %}>Admin
                 Panel</a>
@@ -78,9 +74,6 @@
         </div>
 
         <div class="nav-footer">
-            <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch colour theme">
-                <i data-lucide="sun-moon"></i><span data-theme-label>System theme</span>
-            </button>
             {% if 'user' in session %}
             <form method="POST" action="{{ url_for('logout') }}" class="logout-form">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -152,7 +145,12 @@
                 <p class="footer-newsletter-status" role="status" aria-live="polite"></p>
             </div>
         </div>
-        <p class="footer-copyright">&copy; 2026 Mepham Robotics Club | Build. Code. Compete.</p>
+        <div class="footer-bottom">
+            <p class="footer-copyright">&copy; 2026 Mepham Robotics Club | Build. Code. Compete.</p>
+            <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch colour theme">
+                <i data-lucide="sun-moon" aria-hidden="true"></i><span data-theme-label>System theme</span>
+            </button>
+        </div>
     </footer>
 
     <div id="custom-chatbot-container">
