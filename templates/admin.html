@@ -597,12 +597,12 @@
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label for="username">Username</label>
-            <input type="text" id="username" name="username" placeholder="Enter username" required>
+            <input type="text" id="username" name="username" placeholder="Enter username" autocomplete="off" required>
             <div class="form-hint">Used to sign in; must be unique</div>
         </div>
         <div class="form-group">
             <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" placeholder="user@example.com">
+            <input type="email" id="email" name="email" placeholder="user@example.com" autocomplete="off">
             <div class="form-hint">Optional - can also be used to sign in</div>
         </div>
         <div class="form-group">
