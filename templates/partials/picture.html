@@ -1,0 +1,18 @@
+{#- Responsive image from static/assets/image-manifest.json (scripts/optimize_images.py).
+
+    picture(key, alt, sizes, class_='', lazy=True, priority=False, decorative=False)
+
+    Emits WebP sources with real width descriptors, a JPEG fallback, and the
+    intrinsic width/height so the browser reserves space before it loads.
+-#}
+{% macro picture(key, alt, sizes, class_='', lazy=True, priority=False, decorative=False) -%}
+{%- set img = image_manifest[key] -%}
+<picture class="responsive-picture">
+    <source type="image/webp" sizes="{{ sizes }}"
+        srcset="{% for v in img.webp %}{{ url_for('static', filename=v.src) }} {{ v.width }}w{{ ', ' if not loop.last }}{% endfor %}">
+    <img src="{{ url_for('static', filename=img.src) }}" width="{{ img.width }}" height="{{ img.height }}"
+        {%- if class_ %} class="{{ class_ }}"{% endif %}
+        alt="{{ alt }}"{% if decorative %} aria-hidden="true"{% endif %}
+        decoding="async"{% if priority %} fetchpriority="high"{% elif lazy %} loading="lazy"{% endif %}>
+</picture>
+{%- endmacro %}

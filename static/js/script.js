@@ -221,11 +221,17 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.body.appendChild(scrollProgress);
 
+    // One layout read and style write per frame, not per scroll event.
+    let progressFrame = 0;
     window.addEventListener('scroll', () => {
-        const windowHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-        const scrolled = (window.pageYOffset / windowHeight) * 100;
-        scrollProgress.style.width = scrolled + '%';
-    });
+        if (progressFrame) return;
+        progressFrame = requestAnimationFrame(() => {
+            progressFrame = 0;
+            const windowHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = windowHeight > 0 ? (window.pageYOffset / windowHeight) * 100 : 0;
+            scrollProgress.style.width = scrolled + '%';
+        });
+    }, { passive: true });
 
 
 
@@ -1250,10 +1256,37 @@ function showToast(message, type = 'info') {
 
     let isTyping = false;
 
+    // marked and DOMPurify only render bot replies, so they are fetched the
+    // first time the chat opens instead of on every page. Same pinned
+    // versions and SRI hashes as before; the CSP already allows both CDNs.
+    const RENDERER_SCRIPTS = [
+        ['https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js',
+            'sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7'],
+        ['https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js',
+            'sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a'],
+    ];
+    let rendererReady = null;
+
+    function loadRenderer() {
+        if (!rendererReady) {
+            rendererReady = Promise.all(RENDERER_SCRIPTS.map(([src, integrity]) => new Promise(resolve => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.integrity = integrity;
+                script.crossOrigin = 'anonymous';
+                // A failed load resolves too: addMessage falls back to plain text.
+                script.onload = script.onerror = () => resolve();
+                document.head.appendChild(script);
+            })));
+        }
+        return rendererReady;
+    }
+
     // Toggle Window
     bubble.addEventListener('click', () => {
         windowEl.classList.toggle('active');
         if (windowEl.classList.contains('active')) {
+            loadRenderer();
             input.focus();
         }
     });
@@ -1339,9 +1372,10 @@ function showToast(message, type = 'info') {
                 body: JSON.stringify({ message: text })
             });
 
-            setTyping(false);
-
             const data = await response.json().catch(() => ({}));
+            // Make sure the renderer has had its chance before the reply shows.
+            await loadRenderer();
+            setTyping(false);
 
             if (!response.ok) {
                 addMessage(data.error || 'Sorry, I encountered an error connecting to the server.', 'bot');

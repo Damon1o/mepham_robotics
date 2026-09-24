@@ -204,11 +204,65 @@ def test_rank_trend_ignores_samples_inside_24h(db):
     assert re.rank_trend(db, '77628A', 150)['direction'] == 'new'
 
 
-def test_history_is_capped(db):
+def test_history_is_capped(db, monkeypatch):
+    start = re._now()
     for i in range(70):
+        monkeypatch.setattr(re, '_now', lambda i=i: start + datetime.timedelta(days=i))
         re.record_skills_history(db, '77628A', rank=i + 1, score=100)
     samples = db['re_history'].find_one({'_id': '77628A'})['samples']
     assert len(samples) == 60
+
+
+def test_history_keeps_one_sample_per_day(db):
+    for rank in (10, 11, 12):
+        re.record_skills_history(db, '77628A', rank=rank, score=100)
+    samples = db['re_history'].find_one({'_id': '77628A'})['samples']
+    assert len(samples) == 1
+    assert samples[0]['rank'] == 12, 'the newest reading of the day wins'
+
+
+def test_busy_day_keeps_the_trend_baseline(db, monkeypatch):
+    start = re._now()
+    monkeypatch.setattr(re, '_now', lambda: start - datetime.timedelta(days=2))
+    re.record_skills_history(db, '77628A', rank=200, score=50)
+    monkeypatch.setattr(re, '_now', lambda: start)
+    for _ in range(100):
+        re.record_skills_history(db, '77628A', rank=150, score=80)
+    assert re.rank_trend(db, '77628A', 150) == {'direction': 'up', 'delta': 50}
+
+
+def test_failed_fetch_backs_off(token, db, upstream):
+    path = '/teams/1/skills'
+    upstream.responses[path] = None
+    assert re.get_cached(db, path, {}) == (None, None, False)
+    assert re.get_cached(db, path, {}) == (None, None, False)
+    assert upstream.calls.count(path) == 1, 'second read inside the back-off must not call upstream'
+
+
+def test_backoff_serves_stale_payload(token, db, upstream):
+    path = '/teams/1/skills'
+    upstream.responses[path] = envelope([{'type': 'driver', 'score': 50}])
+    re.get_cached(db, path, {})
+    db['re_cache'].update_one({'_id': path},
+                              {'$set': {'fetched_at': re._now() - datetime.timedelta(hours=3)}})
+    upstream.responses[path] = None
+    first = re.get_cached(db, path, {})
+    second = re.get_cached(db, path, {})
+    assert first[2] is True and second[2] is True
+    assert second[0]['data'][0]['score'] == 50
+    assert upstream.calls.count(path) == 2, 'one initial fetch, one failed refresh, then back-off'
+
+
+def test_backoff_expires(token, db, upstream):
+    path = '/teams/1/skills'
+    upstream.responses[path] = None
+    re.get_cached(db, path, {})
+    db['re_cache'].update_one({'_id': path},
+                              {'$set': {'failed_at': re._now() - re.RETRY_BACKOFF - datetime.timedelta(seconds=1)}})
+    upstream.responses[path] = envelope([{'type': 'driver', 'score': 70}])
+    payload, _, stale = re.get_cached(db, path, {})
+    assert payload['data'][0]['score'] == 70 and stale is False
+    assert 'failed_at' not in db['re_cache'].find_one({'_id': path})
 
 
 # --- summary ---------------------------------------------------------------

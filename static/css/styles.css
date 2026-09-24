@@ -4241,3 +4241,16 @@ textarea:focus-visible,
 .resource-card .resource-title::after {
     display: none;
 }
+
+/* <picture> wrappers from partials/picture.html: no box of their own, so the
+   <img> inside keeps its existing layout rules. */
+.responsive-picture {
+    display: contents;
+}
+
+/* The width/height attributes are there so the browser can reserve space;
+   they must not fix the rendered height. :where() keeps this at zero
+   specificity, so any rule that sets a height (carousel, hero photos) wins. */
+:where(.responsive-picture) img {
+    height: auto;
+}

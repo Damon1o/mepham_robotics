@@ -1,0 +1,244 @@
+{
+  "icons/favicon": {
+    "apple_touch": "assets/icons/apple-touch-icon.png",
+    "favicon": "assets/icons/favicon-32.png"
+  },
+  "icons/steven": {
+    "height": 96,
+    "jpg": "assets/icons/steven-96.jpg",
+    "webp": "assets/icons/steven-96.webp",
+    "width": 96
+  },
+  "photos/carousel1": {
+    "height": 767,
+    "src": "assets/photos/carousel1.jpg",
+    "webp": [
+      {
+        "height": 360,
+        "src": "assets/photos/carousel1-480.webp",
+        "width": 480
+      },
+      {
+        "height": 720,
+        "src": "assets/photos/carousel1-960.webp",
+        "width": 960
+      },
+      {
+        "height": 767,
+        "src": "assets/photos/carousel1-1023.webp",
+        "width": 1023
+      }
+    ],
+    "width": 1023
+  },
+  "photos/carousel10": {
+    "height": 1600,
+    "src": "assets/photos/carousel10.jpg",
+    "webp": [
+      {
+        "height": 640,
+        "src": "assets/photos/carousel10-480.webp",
+        "width": 480
+      },
+      {
+        "height": 1280,
+        "src": "assets/photos/carousel10-960.webp",
+        "width": 960
+      },
+      {
+        "height": 1600,
+        "src": "assets/photos/carousel10-1200.webp",
+        "width": 1200
+      }
+    ],
+    "width": 1200
+  },
+  "photos/carousel2": {
+    "height": 1600,
+    "src": "assets/photos/carousel2.jpg",
+    "webp": [
+      {
+        "height": 640,
+        "src": "assets/photos/carousel2-480.webp",
+        "width": 480
+      },
+      {
+        "height": 1280,
+        "src": "assets/photos/carousel2-960.webp",
+        "width": 960
+      },
+      {
+        "height": 1600,
+        "src": "assets/photos/carousel2-1200.webp",
+        "width": 1200
+      }
+    ],
+    "width": 1200
+  },
+  "photos/carousel3": {
+    "height": 1600,
+    "src": "assets/photos/carousel3.jpg",
+    "webp": [
+      {
+        "height": 640,
+        "src": "assets/photos/carousel3-480.webp",
+        "width": 480
+      },
+      {
+        "height": 1280,
+        "src": "assets/photos/carousel3-960.webp",
+        "width": 960
+      },
+      {
+        "height": 1600,
+        "src": "assets/photos/carousel3-1200.webp",
+        "width": 1200
+      }
+    ],
+    "width": 1200
+  },
+  "photos/carousel4": {
+    "height": 1600,
+    "src": "assets/photos/carousel4.jpg",
+    "webp": [
+      {
+        "height": 640,
+        "src": "assets/photos/carousel4-480.webp",
+        "width": 480
+      },
+      {
+        "height": 1280,
+        "src": "assets/photos/carousel4-960.webp",
+        "width": 960
+      },
+      {
+        "height": 1600,
+        "src": "assets/photos/carousel4-1200.webp",
+        "width": 1200
+      }
+    ],
+    "width": 1200
+  },
+  "photos/carousel5": {
+    "height": 1600,
+    "src": "assets/photos/carousel5.jpg",
+    "webp": [
+      {
+        "height": 640,
+        "src": "assets/photos/carousel5-480.webp",
+        "width": 480
+      },
+      {
+        "height": 1280,
+        "src": "assets/photos/carousel5-960.webp",
+        "width": 960
+      },
+      {
+        "height": 1600,
+        "src": "assets/photos/carousel5-1200.webp",
+        "width": 1200
+      }
+    ],
+    "width": 1200
+  },
+  "photos/carousel6": {
+    "height": 1600,
+    "src": "assets/photos/carousel6.jpg",
+    "webp": [
+      {
+        "height": 640,
+        "src": "assets/photos/carousel6-480.webp",
+        "width": 480
+      },
+      {
+        "height": 1280,
+        "src": "assets/photos/carousel6-960.webp",
+        "width": 960
+      },
+      {
+        "height": 1600,
+        "src": "assets/photos/carousel6-1200.webp",
+        "width": 1200
+      }
+    ],
+    "width": 1200
+  },
+  "photos/carousel7": {
+    "height": 900,
+    "src": "assets/photos/carousel7.jpg",
+    "webp": [
+      {
+        "height": 360,
+        "src": "assets/photos/carousel7-480.webp",
+        "width": 480
+      },
+      {
+        "height": 720,
+        "src": "assets/photos/carousel7-960.webp",
+        "width": 960
+      },
+      {
+        "height": 900,
+        "src": "assets/photos/carousel7-1200.webp",
+        "width": 1200
+      }
+    ],
+    "width": 1200
+  },
+  "photos/carousel8": {
+    "height": 1600,
+    "src": "assets/photos/carousel8.jpg",
+    "webp": [
+      {
+        "height": 640,
+        "src": "assets/photos/carousel8-480.webp",
+        "width": 480
+      },
+      {
+        "height": 1280,
+        "src": "assets/photos/carousel8-960.webp",
+        "width": 960
+      },
+      {
+        "height": 1600,
+        "src": "assets/photos/carousel8-1200.webp",
+        "width": 1200
+      }
+    ],
+    "width": 1200
+  },
+  "photos/carousel9": {
+    "height": 1600,
+    "src": "assets/photos/carousel9.jpg",
+    "webp": [
+      {
+        "height": 640,
+        "src": "assets/photos/carousel9-480.webp",
+        "width": 480
+      },
+      {
+        "height": 1280,
+        "src": "assets/photos/carousel9-960.webp",
+        "width": 960
+      },
+      {
+        "height": 1600,
+        "src": "assets/photos/carousel9-1200.webp",
+        "width": 1200
+      }
+    ],
+    "width": 1200
+  },
+  "photos/hero": {
+    "height": 957,
+    "src": "assets/photos/hero.jpg",
+    "webp": [
+      {
+        "height": 957,
+        "src": "assets/photos/hero.webp",
+        "width": 1276
+      }
+    ],
+    "width": 1276
+  }
+}

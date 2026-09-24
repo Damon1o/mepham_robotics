@@ -1,8 +1,10 @@
 /* Page styles: achievements */
 
 .hero-image {
+    /* Fallback for browsers without image-set(type()); the rule below wins elsewhere. */
+    background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%), url('../../assets/photos/carousel7.jpg') center/cover;
     background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
-    url('../../assets/photos/carousel7.jpg') center/cover;
+    image-set(url('../../assets/photos/carousel7-1200.webp') type('image/webp'), url('../../assets/photos/carousel7.jpg') type('image/jpeg')) center/cover;
     min-height: 60vh;
 }
 

@@ -2,8 +2,10 @@
 
 .hero-image {
     min-height: 100vh;
+    /* Fallback for browsers without image-set(type()); the rule below wins elsewhere. */
+    background: linear-gradient(135deg, rgba(128, 0, 0, 0.7) 0%, rgba(90, 0, 0, 0.6) 100%), url('../../assets/photos/hero.jpg') center/cover no-repeat;
     background: linear-gradient(135deg, rgba(128, 0, 0, 0.7) 0%, rgba(90, 0, 0, 0.6) 100%),
-    url('../../assets/photos/hero.png') center/cover no-repeat;
+    image-set(url('../../assets/photos/hero.webp') type('image/webp'), url('../../assets/photos/hero.jpg') type('image/jpeg')) center/cover no-repeat;
 }
 
 /* --- DONATION CTA SECTION --- */
