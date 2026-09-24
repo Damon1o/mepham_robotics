@@ -13,6 +13,9 @@
     --accent-gold: #ffd700;
     --accent-light: #f1f1f1;
     --text-dark: #1a1a1a;
+    /* Text on gold buttons and pills. Unlike --text-dark it does not flip in
+       dark mode, where #e0e0e0 on gold measured 1.06:1. */
+    --ink-on-gold: #1a1a1a;
     --text-light: #666;
     --bg-light: #fafafa;
 
@@ -104,7 +107,7 @@ body::before {
     left: 24px;
     z-index: 2000;
     background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
-    color: var(--text-dark);
+    color: var(--ink-on-gold);
     border: 3px solid var(--text-dark);
     border-radius: 12px;
     padding: 12px 20px;
@@ -556,7 +559,7 @@ h2::after {
 
 .cta-primary {
     background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
-    color: var(--text-dark);
+    color: var(--ink-on-gold);
     border: 3px solid var(--text-dark);
     box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.3);
 }
@@ -688,7 +691,7 @@ footer {
     padding-top: 1.5rem;
     border-top: 1px solid rgba(255, 255, 255, 0.15);
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.75);
     position: relative;
     z-index: 1;
 }
@@ -2824,12 +2827,12 @@ footer::before {
 }
 
 .breadcrumb .separator {
-    color: #999;
+    color: #6f6f6f;
     margin: 0 0.25rem;
 }
 
 .breadcrumb .current {
-    color: #999;
+    color: #6f6f6f;
     font-weight: 700;
 }
 
@@ -3181,7 +3184,7 @@ footer::before {
     left: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #999;
+    color: #6f6f6f;
     font-size: 1.2rem;
     pointer-events: none;
 }
@@ -3493,7 +3496,7 @@ footer::before {
 .color-info .color-hex {
     font-family: 'Space Mono', monospace;
     font-size: 0.85rem;
-    color: #999;
+    color: #6f6f6f;
 }
 
 /* Font specimen */
@@ -3527,7 +3530,7 @@ footer::before {
 
 .font-specimen .specimen-meta {
     font-size: 0.8rem;
-    color: #999;
+    color: #6f6f6f;
     font-family: 'Space Mono', monospace;
 }
 
@@ -3850,7 +3853,7 @@ footer::before {
 /* Noupe footer info explicitly for bot */
 .chatbot-bot-footer {
     font-size: 0.75rem;
-    color: #888;
+    color: #6b6b6b;
     margin-top: 4px;
     display: flex;
     align-items: center;
@@ -3928,7 +3931,7 @@ footer::before {
 
 .chatbot-typing {
     font-size: 0.85rem;
-    color: #888;
+    color: #6b6b6b;
     align-self: flex-start;
     font-style: italic;
 }
@@ -4138,7 +4141,7 @@ textarea:focus-visible,
 /* Shared content-page helpers (replaces inline style attributes). */
 .page-updated {
     margin: -1rem 0 2rem;
-    color: #999;
+    color: #6f6f6f;
     font-size: 0.9rem;
     text-align: center;
 }
@@ -4231,7 +4234,7 @@ textarea:focus-visible,
 /* Scoped: .content-page p would otherwise override the colour. */
 .content-page .page-subtitle {
     text-align:center;
-    color:#999;
+    color:#6f6f6f;
     margin-top:-1rem;
     margin-bottom:2rem;
 }
@@ -4253,4 +4256,94 @@ textarea:focus-visible,
    specificity, so any rule that sets a height (carousel, hero photos) wins. */
 :where(.responsive-picture) img {
     height: auto;
+}
+
+
+/* ================================================================
+   CONTRAST FIXES (measured with a WCAG checker, both themes)
+   ================================================================ */
+
+/* Gold question counter on a white card measured 1.4:1. */
+.quiz-question-card .quiz-question-num {
+    color: var(--maroon-dark);
+}
+
+[data-theme="dark"] .quiz-question-card .quiz-question-num {
+    color: var(--accent-gold);
+}
+
+/* Maroon on dark surfaces: #800000 measured 1.5-1.7:1 and #944547 2.5-2.9:1. */
+[data-theme="dark"] .faq-icon,
+[data-theme="dark"] .about-text strong,
+[data-theme="dark"] .about-section strong,
+[data-theme="dark"] .tier-name,
+[data-theme="dark"] .sponsor-name,
+[data-theme="dark"] .font-specimen h3,
+[data-theme="dark"] .goal-percent {
+    color: #e6b8b9;
+}
+
+/* Grey and near-black text on dark cards. */
+[data-theme="dark"] .resource-links a {
+    color: #cfcfcf;
+}
+
+[data-theme="dark"] .resource-links a:hover {
+    color: var(--accent-gold);
+}
+
+[data-theme="dark"] .tier-amount,
+[data-theme="dark"] .goal-name {
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .tier-benefits li {
+    color: #bbb;
+}
+
+/* Unstyled links fell back to the browser's #0000ee (1.8-2.0:1 on dark). */
+[data-theme="dark"] main a:not([class]) {
+    color: #f0c0c1;
+}
+
+/* Surfaces that stayed light under dark text. */
+[data-theme="dark"] .results-table tr:nth-child(even) {
+    background: #181818;
+}
+
+[data-theme="dark"] .chatbot-input-wrapper {
+    background: #2a2a2a;
+}
+
+[data-theme="dark"] .quiz-progress,
+[data-theme="dark"] .progress-bar {
+    background: #333;
+}
+
+/* Result table alliance colours on #1e1e1e measured 3.2-3.5:1. */
+[data-theme="dark"] .alliance-red {
+    color: #f87171;
+}
+
+[data-theme="dark"] .alliance-blue {
+    color: #7aa7ff;
+}
+
+/* Light-theme placeholders at 40% white measured 2.6-3.7:1. */
+.search-input-wrapper input::placeholder,
+.footer-newsletter-form input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* The light-theme greys darkened for contrast on white (#6f6f6f) are too dark
+   on the dark theme's surfaces; lift them back up there. */
+[data-theme="dark"] .donate-note-text,
+[data-theme="dark"] .color-info .color-hex,
+[data-theme="dark"] .font-specimen .specimen-meta,
+[data-theme="dark"] .notebook-log-cell,
+[data-theme="dark"] .page-subtitle,
+[data-theme="dark"] .page-updated,
+[data-theme="dark"] .breadcrumb .current,
+[data-theme="dark"] .breadcrumb .separator {
+    color: #aaa;
 }

@@ -239,7 +239,7 @@
 
     .form-hint {
         font-size: 0.8rem;
-        color: #888;
+        color: #6b6b6b;
         margin-top: 0.25rem;
         display: block;
     }
@@ -260,7 +260,7 @@
         cursor: pointer;
         pointer-events: auto;
         background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
-        color: var(--text-dark);
+        color: var(--ink-on-gold);
         border: 3px solid var(--text-dark);
         box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.3);
         text-align: center;
@@ -305,7 +305,7 @@
 
     .admin-btn-success {
         background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
-        color: var(--text-dark);
+        color: var(--ink-on-gold);
         border: 3px solid var(--text-dark);
         box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.3);
     }
@@ -332,7 +332,7 @@
         overflow: hidden;
         cursor: pointer;
         background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
-        color: var(--text-dark);
+        color: var(--ink-on-gold);
         border: 2px solid var(--text-dark);
         box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.3);
     }
@@ -663,7 +663,7 @@
 
     .form-fieldset-empty-hint {
         display: none;
-        color: #888;
+        color: #6b6b6b;
         font-style: italic;
         margin: 0 0 1rem;
     }
@@ -777,7 +777,7 @@
         left: 1rem;
         top: 50%;
         transform: translateY(-50%);
-        color: #999;
+        color: #6f6f6f;
     }
 
     .loading-overlay {
@@ -1228,7 +1228,7 @@
 
     .user-you {
         margin-left: 0.25rem;
-        color: #888;
+        color: #6b6b6b;
         font-weight: 400;
         font-size: 0.85rem;
     }
@@ -1273,7 +1273,7 @@
 
     .user-empty {
         text-align: center;
-        color: #999;
+        color: #6f6f6f;
         padding: 1rem;
     }
 
@@ -1421,7 +1421,7 @@
     }
 
     .message-excerpt {
-        color: #777;
+        color: #6b6b6b;
         font-size: 0.85rem;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1436,7 +1436,7 @@
     }
 
     .message-date {
-        color: #888;
+        color: #6b6b6b;
         font-size: 0.8rem;
     }
 
@@ -1469,7 +1469,7 @@
     }
 
     .empty-state-hint {
-        color: #888;
+        color: #6b6b6b;
     }
 
     @media (max-width: 768px) {
@@ -1523,7 +1523,7 @@
 .team-awards-empty {
     grid-column: 1 / -1;
     padding: 1rem;
-    color: #999;
+    color: #6f6f6f;
     text-align: center;
 }
 
@@ -1561,12 +1561,12 @@
 }
 
 .no-team-msg-hint {
-    color: #888;
+    color: #6b6b6b;
 }
 
 .admin-search-empty {
     padding: 2rem;
-    color: #888;
+    color: #6b6b6b;
     text-align: center;
 }
 
@@ -1609,7 +1609,7 @@
 }
 
 .empty-hint {
-    color: #888;
+    color: #6b6b6b;
 }
 
 .empty-icon {
@@ -1686,7 +1686,7 @@
 
 .item-note {
     display: block;
-    color: #888;
+    color: #6b6b6b;
     font-style: italic;
 }
 
@@ -1715,7 +1715,7 @@
 
 .list-empty {
     text-align: center;
-    color: #999;
+    color: #6f6f6f;
     padding: 1rem;
 }
 
@@ -1753,4 +1753,146 @@
     .form-two-col-spaced {
         grid-template-columns: 1fr;
     }
+}
+
+
+/* ================================================================
+   DARK THEME
+   admin.css had no dark rules: white cards carried #e0e0e0 body text at
+   1.25-1.32:1. Surfaces, text and controls are redefined here.
+   ================================================================ */
+[data-theme="dark"] {
+    --admin-bg: #121212;
+    --admin-card-bg: #1e1e1e;
+    --admin-text: #e0e0e0;
+}
+
+[data-theme="dark"] .admin-card,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .confirmation-content,
+[data-theme="dark"] .quick-action-btn,
+[data-theme="dark"] .admin-card.awards-help-card,
+[data-theme="dark"] .admin-tabs a[aria-selected="true"] {
+    background: #1e1e1e;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .data-item,
+[data-theme="dark"] .activity-item,
+[data-theme="dark"] .dynamic-row,
+[data-theme="dark"] .sponsor-logo,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .sponsors-empty,
+[data-theme="dark"] .no-team-msg,
+[data-theme="dark"] .reset-link-box {
+    background: #252525;
+    border-color: #3a3a3a;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .data-item:hover {
+    background: #2c2c2c;
+}
+
+[data-theme="dark"] .admin-container .form-group input,
+[data-theme="dark"] .admin-container .form-group select,
+[data-theme="dark"] .admin-container .form-group textarea,
+[data-theme="dark"] .admin-container .form-group input[type="file"],
+[data-theme="dark"] .team-select-dropdown,
+[data-theme="dark"] .role-select,
+[data-theme="dark"] .user-role-filter,
+[data-theme="dark"] .panel-filter,
+[data-theme="dark"] .message-filter,
+[data-theme="dark"] .reset-link-input,
+[data-theme="dark"] #adminSearch {
+    background: #121212;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .admin-container .form-group input:focus,
+[data-theme="dark"] .admin-container .form-group select:focus,
+[data-theme="dark"] .admin-container .form-group textarea:focus {
+    background: #181818;
+}
+
+[data-theme="dark"] .admin-container .form-group label,
+[data-theme="dark"] .admin-tabs a,
+[data-theme="dark"] .item-title-maroon,
+[data-theme="dark"] .item-link,
+[data-theme="dark"] .quick-action-btn {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .form-section-title,
+[data-theme="dark"] .form-section-title-lg,
+[data-theme="dark"] .form-section-title-md,
+[data-theme="dark"] .user-form-title,
+[data-theme="dark"] .item-title,
+[data-theme="dark"] .award-name,
+[data-theme="dark"] .user-name,
+[data-theme="dark"] .message-from,
+[data-theme="dark"] .stat-change,
+[data-theme="dark"] .stat-value,
+[data-theme="dark"] .confirmation-title,
+[data-theme="dark"] .confirmation-message,
+[data-theme="dark"] .empty-title,
+[data-theme="dark"] .activity-item {
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .form-hint,
+[data-theme="dark"] .empty-hint,
+[data-theme="dark"] .item-note,
+[data-theme="dark"] .item-meta,
+[data-theme="dark"] .item-sub,
+[data-theme="dark"] .message-date,
+[data-theme="dark"] .message-excerpt,
+[data-theme="dark"] .user-you,
+[data-theme="dark"] .stat-label,
+[data-theme="dark"] .no-team-msg-hint,
+[data-theme="dark"] .form-fieldset-empty-hint,
+[data-theme="dark"] .list-empty,
+[data-theme="dark"] .activity-empty,
+[data-theme="dark"] .admin-search-empty {
+    color: #b0b0b0;
+}
+
+[data-theme="dark"] .role-badge,
+[data-theme="dark"] .status-badge {
+    background: #333;
+    color: #e0e0e0;
+}
+
+/* Transparent maroon-outlined buttons (the small variant keeps its gold fill). */
+[data-theme="dark"] .admin-btn-secondary:not(.admin-btn-small) {
+    color: #e6b8b9;
+    border-color: #e6b8b9;
+}
+
+[data-theme="dark"] .loading-overlay {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .confirmation-dialog {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+/* Maroon headings and controls, and #666 meta text, on dark cards. */
+[data-theme="dark"] .admin-card-header h2,
+[data-theme="dark"] .form-fieldset legend,
+[data-theme="dark"] .add-more-btn {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .user-email,
+[data-theme="dark"] .message-email,
+[data-theme="dark"] .user-summary span,
+[data-theme="dark"] .topic-badge.topic-general {
+    color: #b0b0b0;
+}
+
+[data-theme="dark"] .topic-badge.topic-join {
+    color: #6fcf8f;
 }

@@ -160,7 +160,7 @@
     top: -14px;
     right: var(--spacing-md);
     background: var(--accent-gold);
-    color: var(--text-dark);
+    color: var(--ink-on-gold);
     font-weight: 700;
     font-size: 0.9rem;
     padding: 0.4rem 1rem;
@@ -325,4 +325,13 @@
     text-align: center;
     color: var(--accent-light);
     opacity: 0.7;
+}
+
+/* Contrast in dark mode: #944547 heading 2.7:1, #666 body 3.1:1. */
+[data-theme="dark"] .donate-container h2 {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .donate-container p {
+    color: #bbb;
 }

@@ -69,7 +69,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // --- THEME TOGGLE ---
-const THEME_LABELS = { system: 'System theme', light: 'Light theme', dark: 'Dark theme' };
+const THEME_LABELS = { light: 'Light theme', dark: 'Dark theme', system: 'Device theme' };
 
 function paintThemeLabel() {
     if (!window.MephamTheme) return;

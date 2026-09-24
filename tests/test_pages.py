@@ -169,3 +169,17 @@ def test_theme_toggle_lives_in_the_footer(client):
     page = client.get('/').get_data(as_text=True)
     footer = page[page.index('<footer'):page.index('</footer>')]
     assert 'data-theme-toggle' in footer
+
+
+def test_light_is_the_default_theme():
+    """Visitors get light mode unless they pick otherwise; the OS setting
+    is only followed when the visitor chooses the 'Device theme' option."""
+    import pathlib
+    js = (pathlib.Path(__file__).resolve().parent.parent / 'static/js/theme.js').read_text(encoding='utf-8')
+    assert "var DEFAULT_MODE = 'light';" in js
+    assert "MODES = ['light', 'dark', 'system']" in js
+
+
+def test_footer_toggle_starts_on_light(client):
+    page = client.get('/').get_data(as_text=True)
+    assert '<span data-theme-label>Light theme</span>' in page

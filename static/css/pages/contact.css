@@ -846,143 +846,6 @@
     border-color: rgba(255, 255, 255, 0.14);
 }
 
-[data-theme="dark"] /* ================================================================
-   6. CLOSING BAND
-   ================================================================ */
-
-.closing-band {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    padding: 3rem 4rem;
-    background: var(--ink, #14100f);
-    color: #fff;
-}
-
-/* The band is meant to sit flush against the footer, so drop the global gap. */
-.closing-band+footer {
-    margin-top: 0;
-}
-
-.closing-band p {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: clamp(1.25rem, 2.5vw, 1.75rem);
-}
-
-.closing-band-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2rem;
-}
-
-.closing-band-actions a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--accent-gold);
-    text-decoration: none;
-    padding-bottom: 0.3rem;
-    border-bottom: 1px solid rgba(255, 215, 0, 0.35);
-}
-
-.closing-band-actions a:hover {
-    border-bottom-color: var(--accent-gold);
-}
-
-.closing-band-actions [data-lucide] {
-    width: 15px;
-    height: 15px;
-    transition: transform var(--transition-fast);
-}
-
-.closing-band-actions a:hover [data-lucide] {
-    transform: translateX(4px);
-}
-
-/* ================================================================
-   7. DARK MODE
-   ================================================================ */
-
-[data-theme="dark"] .deck {
-    --paper: #151313;
-    --rule: rgba(255, 255, 255, 0.14);
-}
-
-[data-theme="dark"] .deck-form,
-[data-theme="dark"] .faq-section {
-    background: #151313;
-}
-
-[data-theme="dark"] .find-us {
-    background: #1b1919;
-    border-top-color: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] .find-us h2,
-[data-theme="dark"] .faq-head h2,
-[data-theme="dark"] .form-title,
-[data-theme="dark"] .strip-item dd,
-[data-theme="dark"] .channel-option strong,
-[data-theme="dark"] .contact-map-caption,
-[data-theme="dark"] .faq-section .faq-question {
-    color: #f0ebe8;
-}
-
-[data-theme="dark"] .channel-option span {
-    background: #201d1d;
-    border-color: rgba(255, 255, 255, 0.14);
-}
-
-[data-theme="dark"] .channel-option input:checked+span {
-    background: var(--maroon-dark);
-    border-color: var(--maroon-dark);
-}
-
-[data-theme="dark"] .field input,
-[data-theme="dark"] .field textarea {
-    color: #f0ebe8;
-    border-bottom-color: rgba(255, 255, 255, 0.18);
-}
-
-[data-theme="dark"] .send-btn,
-[data-theme="dark"] .contact-map-load {
-    background: var(--maroon-dark);
-}
-
-[data-theme="dark"] .send-btn:hover,
-[data-theme="dark"] .contact-map-load:hover {
-    background: var(--maroon-light);
-}
-
-[data-theme="dark"] .find-us-map {
-    background: #201d1d;
-}
-
-[data-theme="dark"] .contact-map-facade {
-    background-image:
-        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 10px, transparent 10px 20px);
-}
-
-[data-theme="dark"] .find-us-link,
-[data-theme="dark"] .faq-section .faq-answer a,
-[data-theme="dark"] .strip-item a,
-[data-theme="dark"] .strip-socials a {
-    color: #e6b8b9;
-}
-
-[data-theme="dark"] .contact-strip,
-[data-theme="dark"] .station-status,
-[data-theme="dark"] .strip-socials a {
-    border-color: rgba(255, 255, 255, 0.14);
-}
-
 [data-theme="dark"] .closing-band {
     background: #0e0c0c;
 }
@@ -1083,4 +946,16 @@
     .closing-band-actions a:hover [data-lucide] {
         transform: none;
     }
+}
+
+/* Contrast: #944547 on the dark deck measured 2.5-2.8:1. */
+[data-theme="dark"] .section-kicker,
+[data-theme="dark"] .faq-section .faq-icon,
+[data-theme="dark"] .channel-option [data-lucide] {
+    color: #e6b8b9;
+}
+
+/* Checked channel caption at 60% white on maroon measured 4.48:1. */
+.channel-option input:checked+span small {
+    color: rgba(255, 255, 255, 0.8);
 }
