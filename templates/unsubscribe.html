@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Unsubscribed | Mepham Robotics{% endblock %}
+{% block meta_description %}Manage your Mepham Robotics newsletter subscription.{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="error-content">
+        <i data-lucide="{{ 'mail-check' if removed else 'mail-question' }}" class="error-emoji"></i>
+        <h1 class="error-message">{{ "You're unsubscribed" if removed else "Nothing to unsubscribe" }}</h1>
+        <p class="error-submessage">
+            {% if removed %}
+            That address has been removed from the Mepham Robotics newsletter. You can resubscribe any time from the
+            footer of any page.
+            {% else %}
+            This unsubscribe link is no longer valid — it may have already been used, or the address was removed
+            earlier.
+            {% endif %}
+        </p>
+        <div class="error-actions">
+            <a href="{{ url_for('index') }}" class="cta-button cta-primary">Go Home</a>
+            <a href="{{ url_for('contact') }}" class="cta-button cta-secondary">Contact Us</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

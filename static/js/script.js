@@ -12,29 +12,84 @@ function refreshLucideIcons() {
 document.addEventListener('DOMContentLoaded', refreshLucideIcons);
 
 // --- NAVIGATION TOGGLE ---
-function toggleNav() {
+// --- CSRF ---
+// Every state-changing request has to echo the token the server put in the
+// page, so keep one accessor rather than re-reading the meta tag everywhere.
+function csrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
+
+function jsonHeaders() {
+    return { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() };
+}
+
+function toggleNav(force) {
     const nav = document.getElementById("mySidenav");
     const overlay = document.getElementById("overlay");
-    const { body } = document;
+    if (!nav || !overlay) return;
 
-    nav.classList.toggle("active");
-    overlay.classList.toggle("active");
-
-    // Prevent body scroll when nav is open
-    if (nav.classList.contains("active")) {
-        body.style.overflow = 'hidden';
-    } else {
-        body.style.overflow = '';
-    }
+    const open = typeof force === 'boolean' ? force : !nav.classList.contains("active");
+    nav.classList.toggle("active", open);
+    overlay.classList.toggle("active", open);
+    document.body.style.overflow = open ? 'hidden' : '';
+    document.querySelectorAll('.menu-toggle[aria-expanded]')
+        .forEach(btn => btn.setAttribute('aria-expanded', String(open)));
 }
 
 // --- DROPDOWN TOGGLE ---
 function toggleDropdown() {
     const dropdown = document.getElementById("teamDropdown");
     const btn = document.querySelector(".dropdown-btn");
-    dropdown.classList.toggle("active");
-    btn.classList.toggle("active");
+    if (!dropdown) return;
+    const open = !dropdown.classList.contains("active");
+    dropdown.classList.toggle("active", open);
+    if (btn) {
+        btn.classList.toggle("active", open);
+        btn.setAttribute('aria-expanded', String(open));
+    }
 }
+
+document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-nav-toggle]')) {
+        toggleNav();
+    } else if (e.target.closest('[data-dropdown-toggle]')) {
+        toggleDropdown();
+    } else if (e.target.closest('[data-theme-toggle]')) {
+        cycleTheme();
+    }
+});
+
+// Escape closes the navigation drawer.
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const nav = document.getElementById("mySidenav");
+        if (nav && nav.classList.contains('active')) toggleNav(false);
+    }
+});
+
+// --- THEME TOGGLE ---
+const THEME_LABELS = { system: 'System theme', light: 'Light theme', dark: 'Dark theme' };
+
+function paintThemeLabel() {
+    if (!window.MephamTheme) return;
+    const mode = window.MephamTheme.get();
+    document.querySelectorAll('[data-theme-label]').forEach(el => {
+        el.textContent = THEME_LABELS[mode] || THEME_LABELS.system;
+    });
+    document.querySelectorAll('[data-theme-toggle]').forEach(el => {
+        el.setAttribute('title', `${THEME_LABELS[mode]} — click to change`);
+    });
+}
+
+function cycleTheme() {
+    if (!window.MephamTheme) return;
+    const mode = window.MephamTheme.set(window.MephamTheme.next());
+    paintThemeLabel();
+    showToast(THEME_LABELS[mode], 'info');
+}
+
+document.addEventListener('DOMContentLoaded', paintThemeLabel);
 
 // --- SMOOTH SCROLL FOR ANCHOR LINKS ---
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -188,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- TIMELINE ANIMATION ---
-    const timelineContainers = document.querySelectorAll('.timeline-container');
+    const timelineContainers = document.querySelectorAll('.timeline-card');
 
     if (timelineContainers.length > 0) {
         const timelineObserver = new IntersectionObserver((entries) => {
@@ -367,89 +422,117 @@ function showToast(message, type = 'info') {
 
 // --- ENHANCED FORM HANDLING ---
 (function initFormHandling() {
-    const forms = document.querySelectorAll('form');
-    const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLScTBQhmC_rGPbEAuEk63TNeFdMIRftG9CkULQqP3t2SBU6S8A/formResponse';
+    // Forms that post to the server themselves, or that own their submit
+    // handler elsewhere in this file.
+    const isSelfHandled = (form) =>
+        form.hasAttribute('data-native-submit') ||
+        form.id === 'contact-form' ||
+        form.id === 'chatbot-form' ||
+        (form.getAttribute('action') || '').startsWith('/admin');
 
-    // Google Form entry IDs provided by user
-    const ENTRY_IDS = {
-        name: 'entry.354100800',
-        email: 'entry.640342432',
-        message: 'entry.1090696951'
+    const shake = (input) => {
+        input.style.animation = 'shake 0.5s ease';
+        setTimeout(() => input.style.animation = '', 500);
     };
 
-    forms.forEach(form => {
-        form.addEventListener('submit', function (e) {
-            // Forms marked data-native-submit (auth pages), the contact form, admin forms, and the chatbot post normally
-            if (this.hasAttribute('data-native-submit') || this.id === 'contact-form' || this.id === 'chatbot-form' || this.getAttribute('action')?.startsWith('/admin')) {
+    const firstEmpty = (form) => {
+        const required = form.querySelectorAll('[required]');
+        let missing = null;
+        required.forEach(input => {
+            if (!input.value.trim()) {
+                shake(input);
+                missing = missing || input;
+            }
+        });
+        return missing;
+    };
+
+    async function postJson(url, body) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: jsonHeaders(),
+            body: JSON.stringify(body)
+        });
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (err) {
+            /* non-JSON error page */
+        }
+        if (!response.ok) {
+            throw new Error(data.error || 'Something went wrong. Please try again.');
+        }
+        return data;
+    }
+
+    // Maps a form to the endpoint and payload it should send.
+    function describe(form) {
+        if (form.id === 'sponsorForm') {
+            return {
+                url: '/api/contact',
+                success: "Thanks! We'll be in touch about sponsorship.",
+                payload: {
+                    name: form.querySelector('[name="company"]')?.value || '',
+                    email: form.querySelector('[name="email"]')?.value || '',
+                    topic: 'sponsor',
+                    website: form.querySelector('[name="website"]')?.value || '',
+                    message: `Sponsorship level: ${form.querySelector('select')?.value || 'unspecified'}\n\n` +
+                        (form.querySelector('textarea')?.value || '')
+                }
+            };
+        }
+        if (form.classList.contains('footer-newsletter-form')) {
+            return {
+                url: '/api/newsletter',
+                success: "You're on the list!",
+                payload: {
+                    email: form.querySelector('input[type="email"]')?.value || '',
+                    website: form.querySelector('[name="website"]')?.value || ''
+                }
+            };
+        }
+        return null;
+    }
+
+    document.querySelectorAll('form').forEach(form => {
+        if (isSelfHandled(form)) return;
+        const target = describe(form);
+        if (!target) return;
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const missing = firstEmpty(this);
+            if (missing) {
+                showToast('Please fill in all required fields', 'error');
+                missing.focus();
                 return;
             }
 
-            e.preventDefault();
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalBtnText = submitBtn ? submitBtn.textContent : 'Submit';
-
-            // Basic validation
-            const inputs = this.querySelectorAll('input, textarea, select');
-            let isValid = true;
-
-            inputs.forEach(input => {
-                if (input.hasAttribute('required') && !input.value.trim()) {
-                    isValid = false;
-                    input.style.animation = 'shake 0.5s ease';
-                    setTimeout(() => input.style.animation = '', 500);
-                }
-            });
-
-            if (!isValid) {
-                showToast('Please fill in all required fields', 'error');
-                return;
-            }
-
-            // Prepare data for Google Form
-            const formData = new FormData();
-
-            // Handle different form types
-            if (this.id === 'sponsorForm') {
-                const company = this.querySelector('[name="company"]')?.value || '';
-                const email = this.querySelector('[name="email"]')?.value || '';
-                const level = this.querySelector('select')?.value || '';
-                const message = this.querySelector('textarea')?.value || '';
-
-                formData.append(ENTRY_IDS.name, company);
-                formData.append(ENTRY_IDS.email, email);
-                formData.append(ENTRY_IDS.message, `Sponsorship Level: ${level}\n\nMessage: ${message}`);
-            } else if (this.classList.contains('footer-newsletter-form')) {
-                const email = this.querySelector('input[type="email"]')?.value || '';
-                formData.append(ENTRY_IDS.name, 'Newsletter Subscriber');
-                formData.append(ENTRY_IDS.email, email);
-                formData.append(ENTRY_IDS.message, 'Newsletter Subscription Request from Footer');
-            }
-
-            // Submission logic
+            const status = this.parentElement?.querySelector('[role="status"]');
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.textContent = 'Transmitting...';
+                submitBtn.textContent = 'Sending…';
             }
 
-            fetch(GOOGLE_FORM_URL, {
-                method: 'POST',
-                body: new URLSearchParams(formData),
-                mode: 'no-cors',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            }).then(() => {
-                showToast('Success! Data transmitted.', 'success');
+            const spec = describe(this);
+            try {
+                const data = await postJson(spec.url, spec.payload);
+                const message = data.message || spec.success;
+                showToast(message, 'success');
+                if (status) status.textContent = message;
                 this.reset();
-            }).catch((err) => {
-                console.error('Submission error:', err);
-                showToast('Transmission failed. Please try again.', 'error');
-            }).finally(() => {
+            } catch (err) {
+                showToast(err.message, 'error');
+                if (status) status.textContent = err.message;
+            } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.textContent = originalBtnText;
                 }
-            });
+            }
         });
     });
 
@@ -616,7 +699,7 @@ function showToast(message, type = 'info') {
         try {
             const response = await fetch('/api/contact', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: jsonHeaders(),
                 body: JSON.stringify(payload)
             });
             const data = await response.json().catch(() => ({}));
@@ -707,29 +790,6 @@ function showToast(message, type = 'info') {
     });
 })();
 
-// --- IMAGE LAZY LOADING WITH FADE ---
-(function initLazyLoad() {
-    const images = document.querySelectorAll('img[data-src]');
-
-    if (images.length === 0) return;
-
-    const imageObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.style.opacity = '0';
-                img.onload = () => {
-                    img.style.transition = 'opacity 0.5s ease';
-                    img.style.opacity = '1';
-                };
-                imageObserver.unobserve(img);
-            }
-        });
-    });
-
-    images.forEach(img => imageObserver.observe(img));
-})();
 
 // --- ACTIVE NAV HIGHLIGHTING ---
 (function initActiveNav() {
@@ -768,33 +828,6 @@ function showToast(message, type = 'info') {
     });
 })();
 
-// --- FILTER TABS ---
-(function initFilterTabs() {
-    const tabs = document.querySelectorAll('.filter-tab');
-    const filterItems = document.querySelectorAll('[data-season]');
-
-    if (tabs.length === 0) return;
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Update active tab
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            const filter = tab.dataset.filter;
-
-            // Filter items
-            filterItems.forEach(item => {
-                if (filter === 'all' || item.dataset.season === filter) {
-                    item.style.display = '';
-                    item.style.animation = 'fadeIn 0.5s ease';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-    });
-})();
 
 // --- PROGRESS BAR ANIMATION ---
 (function initProgressBars() {
@@ -827,8 +860,15 @@ function showToast(message, type = 'info') {
 
     if (!daysEl) return;
 
-    // Set the date we're counting down to (Use window.COUNTDOWN_DATE if provided by template)
-    const dateStr = window.COUNTDOWN_DATE || "Feb 22, 2026 07:30:00";
+    const dateEl = document.querySelector('[data-countdown-date]');
+    if (!dateEl) {
+        document.querySelector('.countdown-section')?.setAttribute('hidden', '');
+        return;
+    }
+
+    // The next competition's date comes from the template as a data attribute
+    // (an inline script would be blocked by the public page CSP).
+    const dateStr = dateEl.dataset.countdownDate;
     const countDownDate = new Date(dateStr).getTime();
 
     const updateTimer = setInterval(function () {
@@ -842,15 +882,18 @@ function showToast(message, type = 'info') {
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         // Display results with leading zeros
-        daysEl.innerHTML = days < 10 ? '0' + days : days;
-        hoursEl.innerHTML = hours < 10 ? '0' + hours : hours;
-        minutesEl.innerHTML = minutes < 10 ? '0' + minutes : minutes;
-        secondsEl.innerHTML = seconds < 10 ? '0' + seconds : seconds;
+        daysEl.textContent = days < 10 ? '0' + days : days;
+        hoursEl.textContent = hours < 10 ? '0' + hours : hours;
+        minutesEl.textContent = minutes < 10 ? '0' + minutes : minutes;
+        secondsEl.textContent = seconds < 10 ? '0' + seconds : seconds;
 
         // If the count down is finished, write some text
         if (distance < 0) {
             clearInterval(updateTimer);
-            document.querySelector(".countdown-container").innerHTML = "<h3 style='color:var(--accent-gold)'>COMPETITION DAY!</h3>";
+            const day = document.createElement('h3');
+            day.className = 'countdown-today';
+            day.textContent = 'COMPETITION DAY!';
+            document.querySelector('.countdown-container').replaceChildren(day);
         }
     }, 1000);
 })();
@@ -900,42 +943,46 @@ function showToast(message, type = 'info') {
         { title: 'Contact', url: '/contact', desc: 'Get in touch — contact form, meeting schedule, and FAQ', keywords: 'contact email form meeting schedule faq questions' },
         { title: '77628D Team', url: '/team/77628D', desc: 'Team 77628D robot details and competition info', keywords: '77628D robot team' },
         { title: '77628P Team', url: '/team/77628P', desc: 'Team 77628P robot details and competition info', keywords: '77628P robot team' },
-        { title: 'Glossary', url: '/glossary', desc: 'Robotics terms and definitions from A to Z', keywords: 'glossary terms definitions dictionary pid autonomous drivetrain' },
-        { title: 'Branding Guide', url: '/branding', desc: 'Official team colors, fonts, and logo usage', keywords: 'branding colors fonts logo maroon gold style guide' },
-        { title: 'Design Standards', url: '/standards', desc: 'Build standards, code style, and naming conventions', keywords: 'standards design build code style naming conventions' },
+        { title: 'Glossary', url: '/glossary', desc: 'Robotics terms and definitions from A to Z', keywords: 'glossary terms definitions dictionary pid autonomous drivetrain', members: true },
+        { title: 'Branding Guide', url: '/branding', desc: 'Official team colors, fonts, and logo usage', keywords: 'branding colors fonts logo maroon gold style guide', members: true },
+        { title: 'Design Standards', url: '/standards', desc: 'Build standards, code style, and naming conventions', keywords: 'standards design build code style naming conventions', members: true },
+        { title: 'Member Resources', url: '/resources', desc: 'Guides, links, and tooling for team members', keywords: 'resources guides links tools members downloads', members: true },
         { title: 'Safety Quiz', url: '/safety-quiz', desc: 'Interactive safety quiz — test your workshop knowledge', keywords: 'safety quiz test workshop lab rules ppe' },
-        { title: 'Engineering Notebook', url: '/notebook', desc: 'Public engineering notebook — design process and logs', keywords: 'notebook engineering design process testing iteration' },
+        { title: 'Engineering Notebook', url: '/notebook', desc: 'Public engineering notebook — design process and logs', keywords: 'notebook engineering design process testing iteration', members: true },
         { title: 'Privacy Policy', url: '/privacy', desc: 'How we handle your data and privacy', keywords: 'privacy policy data cookies' },
         { title: 'Site Credits', url: '/credits', desc: 'Website credits and acknowledgments', keywords: 'credits site acknowledgments technologies' },
     ];
 
+    const signedIn = () => document.body.hasAttribute('data-current-user');
+
     function doSearch(query) {
         if (!query || query.length < 2) return [];
         const q = query.toLowerCase();
-        return pages.filter(p =>
+        return pages.filter(p => (!p.members || signedIn()) && (
             p.title.toLowerCase().includes(q) ||
             p.desc.toLowerCase().includes(q) ||
             p.keywords.toLowerCase().includes(q)
-        );
+        ));
     }
 
     document.addEventListener('click', function (e) {
-        if (e.target.closest('.nav-search-btn')) {
-            e.preventDefault();
-            openSearch();
-        }
         if (e.target.closest('.search-close')) {
             closeSearch();
         }
     });
 
     document.addEventListener('keydown', function (e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             e.preventDefault();
             openSearch();
         }
         if (e.key === 'Escape') {
             closeSearch();
+        }
+        // Enter on the search box opens the first result.
+        if (e.key === 'Enter' && e.target.closest('.search-input-wrapper input')) {
+            e.preventDefault();
+            document.querySelector('.search-result-item')?.click();
         }
     });
 
@@ -946,12 +993,9 @@ function showToast(message, type = 'info') {
         const input = overlay.querySelector('input');
         if (input) { input.value = ''; input.focus(); }
         const results = overlay.querySelector('.search-results');
-        if (results) results.innerHTML = '';
-        // close sidenav if open
-        const nav = document.querySelector('.sidenav');
-        const ov = document.querySelector('.nav-overlay');
-        if (nav) nav.classList.remove('active');
-        if (ov) ov.classList.remove('active');
+        if (results) results.textContent = '';
+        // Close the side nav if it is open, then lock page scroll for the overlay.
+        toggleNav(false);
         document.body.style.overflow = 'hidden';
     }
 
@@ -973,15 +1017,30 @@ function showToast(message, type = 'info') {
             return;
         }
         if (hits.length === 0) {
-            resultsEl.innerHTML = '<div class="search-no-results">No results found.</div>';
+            resultsEl.textContent = '';
+            const empty = document.createElement('div');
+            empty.className = 'search-no-results';
+            empty.textContent = 'No results found.';
+            resultsEl.appendChild(empty);
             return;
         }
-        resultsEl.innerHTML = hits.map(h =>
-            `<a href="${h.url}" class="search-result-item">
-                <div class="result-title">${h.title}</div>
-                <div class="result-desc">${h.desc}</div>
-            </a>`
-        ).join('');
+        resultsEl.textContent = '';
+        hits.forEach(h => {
+            const item = document.createElement('a');
+            item.className = 'search-result-item';
+            item.href = h.url;
+
+            const title = document.createElement('div');
+            title.className = 'result-title';
+            title.textContent = h.title;
+
+            const desc = document.createElement('div');
+            desc.className = 'result-desc';
+            desc.textContent = h.desc;
+
+            item.append(title, desc);
+            resultsEl.appendChild(item);
+        });
     });
 
     // Click outside to close
@@ -991,26 +1050,6 @@ function showToast(message, type = 'info') {
     });
 })();
 
-
-/* ============================================
-   NEWSLETTER FORM HANDLER
-   ============================================ */
-(function initNewsletter() {
-    document.addEventListener('submit', function (e) {
-        const form = e.target.closest('.footer-newsletter-form');
-        if (!form) return;
-        e.preventDefault();
-        const email = form.querySelector('input[type="email"]');
-        if (email && email.value) {
-            if (typeof showToast === 'function') {
-                showToast('Thanks for subscribing!', 'success');
-            } else {
-                alert('Thanks for subscribing!');
-            }
-            email.value = '';
-        }
-    });
-})();
 
 /* ============================================
    GLOSSARY SEARCH / FILTER
@@ -1069,40 +1108,53 @@ function showToast(message, type = 'info') {
         const cq = questions[current];
         const progress = ((current) / questions.length) * 100;
         container.innerHTML = `
-            <div class="quiz-progress"><div class="quiz-progress-fill" style="width:${progress}%"></div></div>
+            <div class="quiz-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress)}"><div class="quiz-progress-fill"></div></div>
             <div class="quiz-question-card">
                 <div class="quiz-question-num">Question ${current + 1} of ${questions.length}</div>
                 <div class="quiz-question-text">${cq.q}</div>
                 <div class="quiz-options">
-                    ${cq.opts.map((o, i) => `<button class="quiz-option ${answers[current] === i ? 'selected' : ''}" data-idx="${i}">${o}</button>`).join('')}
+                    ${cq.opts.map((o, i) => `<button type="button" class="quiz-option ${answers[current] === i ? 'selected' : ''}" data-idx="${i}" aria-pressed="${answers[current] === i}">${o}</button>`).join('')}
                 </div>
             </div>
             <div class="quiz-nav">
-                <button class="quiz-btn" onclick="quizPrev()" ${current === 0 ? 'disabled' : ''}><i data-lucide="arrow-left"></i> Back</button>
-                <button class="quiz-btn quiz-btn-primary" onclick="quizNext()" ${answers[current] === -1 ? 'disabled' : ''}>
+                <button type="button" class="quiz-btn" data-quiz-nav="prev" ${current === 0 ? 'disabled' : ''}><i data-lucide="arrow-left"></i> Back</button>
+                <button type="button" class="quiz-btn quiz-btn-primary" data-quiz-nav="next" ${answers[current] === -1 ? 'disabled' : ''}>
                     ${current === questions.length - 1 ? 'Finish' : 'Next <i data-lucide="arrow-right"></i>'}
                 </button>
             </div>
         `;
+        // Set through the DOM rather than an inline style attribute.
+        container.querySelector('.quiz-progress-fill').style.width = `${progress}%`;
         refreshLucideIcons();
     }
 
+    // One delegated listener for answers and navigation. The public page runs
+    // under a CSP with no inline script, so injected onclick= attributes are
+    // blocked; data attributes plus this handler are not.
     container.addEventListener('click', function (e) {
         const opt = e.target.closest('.quiz-option');
-        if (!opt) return;
-        answers[current] = parseInt(opt.dataset.idx);
+        if (opt) {
+            answers[current] = parseInt(opt.dataset.idx, 10);
+            render();
+            return;
+        }
+
+        const nav = e.target.closest('[data-quiz-nav]');
+        if (!nav || nav.disabled) return;
+        const action = nav.dataset.quizNav;
+        if (action === 'next' && answers[current] !== -1) {
+            current++;
+        } else if (action === 'prev' && current > 0) {
+            current--;
+        } else if (action === 'restart') {
+            current = 0;
+            answers = new Array(questions.length).fill(-1);
+        } else {
+            return;
+        }
         render();
+        container.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
-
-    window.quizNext = function () {
-        if (answers[current] === -1) return;
-        current++;
-        render();
-    };
-
-    window.quizPrev = function () {
-        if (current > 0) { current--; render(); }
-    };
 
     function showResults() {
         let score = 0;
@@ -1112,10 +1164,10 @@ function showToast(message, type = 'info') {
         container.innerHTML = `
             <div class="quiz-results">
                 <div class="quiz-score-circle ${pass ? 'pass' : 'fail'}">${pct}%</div>
-                <h2 style="margin-bottom:1rem">${pass ? '<i data-lucide="party-popper"></i> You Passed!' : '<i data-lucide="circle-x"></i> Not Quite'}</h2>
-                <p style="color:#666;margin-bottom:2rem">You got ${score} out of ${questions.length} correct.
+                <h2 class="quiz-results-title">${pass ? '<i data-lucide="party-popper"></i> You Passed!' : '<i data-lucide="circle-x"></i> Not Quite'}</h2>
+                <p class="quiz-results-text">You got ${score} out of ${questions.length} correct.
                 ${pass ? 'Great job — you know your workshop safety!' : 'Review the safety guidelines and try again.'}</p>
-                <button class="quiz-btn quiz-btn-primary" onclick="location.reload()">Try Again</button>
+                <button type="button" class="quiz-btn quiz-btn-primary" data-quiz-nav="restart">Try Again</button>
             </div>
         `;
         refreshLucideIcons();
@@ -1136,6 +1188,10 @@ function showToast(message, type = 'info') {
     const resultsBody = document.getElementById('live-results-body');
     if (!resultsBody) return;
 
+    function showStatus(message) {
+        resultsBody.innerHTML = `<tr><td colspan="4" class="results-status">${escapeHtml(message)}</td></tr>`;
+    }
+
     function escapeHtml(str) {
         const div = document.createElement('div');
         div.textContent = str;
@@ -1150,12 +1206,13 @@ function showToast(message, type = 'info') {
             data = await response.json();
         } catch (error) {
             console.error('Match fetch error:', error);
+            showStatus('Match results are unavailable right now.');
             return;
         }
 
         const matches = data.matches || [];
         if (matches.length === 0) {
-            resultsBody.innerHTML = '<tr><td colspan="4" style="text-align:center">No recent matches found.</td></tr>';
+            showStatus('No recent matches found.');
             return;
         }
 
@@ -1166,8 +1223,8 @@ function showToast(message, type = 'info') {
             return `
                 <tr>
                     <td>${escapeHtml(match.name)}</td>
-                    <td class="alliance-red" style="text-align: center;">${escapeHtml(match.red_teams)}</td>
-                    <td class="alliance-blue" style="text-align: center;">${escapeHtml(match.blue_teams)}</td>
+                    <td class="alliance-red">${escapeHtml(match.red_teams)}</td>
+                    <td class="alliance-blue">${escapeHtml(match.blue_teams)}</td>
                     <td class="${statusClass}">${escapeHtml(scoreDisplay)}</td>
                 </tr>
             `;
@@ -1214,9 +1271,11 @@ function showToast(message, type = 'info') {
         msgDiv.className = `chatbot-msg ${sender}`;
 
         // Parse markdown for the bot, sanitized against XSS before insertion
-        if (sender === 'bot' && window.marked) {
-            const rawHtml = marked.parse(text);
-            msgDiv.innerHTML = window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
+        // Model output is steerable by whoever types the prompt, so it is only
+        // rendered as HTML when the sanitizer is actually present. If the
+        // DOMPurify CDN failed to load, show plain text instead of raw HTML.
+        if (sender === 'bot' && window.marked && window.DOMPurify) {
+            msgDiv.innerHTML = DOMPurify.sanitize(marked.parse(text));
         } else {
             msgDiv.textContent = text;
         }
@@ -1276,18 +1335,19 @@ function showToast(message, type = 'info') {
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: jsonHeaders(),
                 body: JSON.stringify({ message: text })
             });
 
             setTyping(false);
 
+            const data = await response.json().catch(() => ({}));
+
             if (!response.ok) {
-                addMessage('Sorry, I encountered an error connecting to the server.', 'bot');
+                addMessage(data.error || 'Sorry, I encountered an error connecting to the server.', 'bot');
                 return;
             }
 
-            const data = await response.json();
             if (data.reply) {
                 addMessage(data.reply, 'bot');
             } else {

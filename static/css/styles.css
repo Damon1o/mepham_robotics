@@ -2971,31 +2971,6 @@ footer::before {
     font-style: italic;
 }
 
-/* --- SEARCH BUTTON IN NAV --- */
-.nav-search-btn {
-    padding: 18px 30px;
-    text-decoration: none;
-    font-size: 1.2rem;
-    color: var(--accent-light);
-    display: block;
-    transition: all var(--transition-base);
-    border-left: 3px solid transparent;
-    font-family: var(--font-body);
-    cursor: pointer;
-    background: none;
-    border-top: none;
-    border-right: none;
-    border-bottom: none;
-    width: 100%;
-    text-align: left;
-}
-
-.nav-search-btn:hover {
-    color: var(--accent-gold);
-    border-left-color: var(--accent-gold);
-    padding-left: 35px;
-}
-
 /* ============================================
    FOOTER NEWSLETTER
    ============================================ */
@@ -3251,7 +3226,10 @@ footer::before {
     margin-bottom: 2rem;
 }
 
-.glossary-section h3 {
+.content-page .glossary-section h2 {
+    /* glossary h2 reset */
+    margin-top: 0;
+    text-align: start;
     font-family: 'Space Mono', monospace;
     font-size: 1.8rem;
     color: var(--maroon-dark);
@@ -3260,7 +3238,7 @@ footer::before {
     margin-bottom: 1rem;
 }
 
-[data-theme="dark"] .glossary-section h3 {
+[data-theme="dark"] .content-page .glossary-section h2 {
     color: #d4a0a1;
     border-bottom-color: rgba(255, 215, 0, 0.4);
 }
@@ -3533,7 +3511,7 @@ footer::before {
     border-color: #444;
 }
 
-.font-specimen h4 {
+.font-specimen h3 {
     font-size: 0.85rem;
     font-family: 'Space Mono', monospace;
     color: var(--maroon-dark);
@@ -3978,4 +3956,288 @@ footer::before {
     fill: white;
     width: 28px;
     height: 28px;
+}
+/* ============================================
+   ACCESSIBILITY + THEME CONTROLS
+   ============================================ */
+
+/* Visible only to screen readers (honeypot inputs, form labels). */
+.visually-hidden {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Lets keyboard users jump past the nav; only visible while focused. */
+.skip-link {
+    position: absolute;
+    top: -100px;
+    left: var(--spacing-sm);
+    z-index: 10000;
+    padding: 12px 20px;
+    background: var(--maroon-dark);
+    color: #fff;
+    font-family: var(--font-body);
+    text-decoration: none;
+    border: 3px solid var(--accent-gold);
+    border-radius: 0 0 8px 8px;
+    transition: top var(--transition-fast);
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
+/* A visible focus ring everywhere — several resets had removed the default. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 2px;
+}
+
+/* The sidenav logout is a POST form now, so its button has to look like a link. */
+.nav-footer .logout-form {
+    margin: 0;
+}
+
+.nav-footer .login-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 18px 30px;
+    font-size: 1.2rem;
+    font-family: var(--font-body);
+    color: var(--accent-light);
+    background: none;
+    border: none;
+    border-left: 3px solid transparent;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.nav-footer .login-btn:hover {
+    color: var(--accent-gold);
+    border-left-color: var(--accent-gold);
+    padding-left: 35px;
+}
+
+
+.footer-newsletter-status {
+    margin-top: 0.6rem;
+    min-height: 1.2rem;
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .skip-link,
+    .nav-footer .login-btn,
+    .theme-toggle {
+        transition: none;
+    }
+}
+
+/* --- DARK THEME: sections and cards the original pass missed ------------- */
+/* The theme toggle makes these reachable, so every light surface needs a
+   dark counterpart or it glares against the #121212 page. */
+[data-theme="dark"] .goals-section,
+[data-theme="dark"] .live-results-section,
+[data-theme="dark"] .award-container,
+[data-theme="dark"] .sponsor-inquiry-section,
+[data-theme="dark"] .stats-section {
+    background: #181818;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .countdown-item,
+[data-theme="dark"] .stat-item,
+[data-theme="dark"] .timeline-card,
+[data-theme="dark"] .award-box,
+[data-theme="dark"] .goal-item,
+[data-theme="dark"] .spec-item,
+[data-theme="dark"] .sponsor-form,
+[data-theme="dark"] .match-row {
+    background: #1e1e1e;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .countdown-number,
+[data-theme="dark"] .stat-number,
+[data-theme="dark"] .award-box h3,
+[data-theme="dark"] .goal-item h4,
+[data-theme="dark"] .spec-item h4 {
+    color: var(--accent-gold);
+}
+
+[data-theme="dark"] .countdown-label,
+[data-theme="dark"] .stat-label,
+[data-theme="dark"] .award-count,
+[data-theme="dark"] .spec-item p {
+    color: #bbb;
+}
+
+[data-theme="dark"] .team-img {
+    background: #1e1e1e;
+}
+
+[data-theme="dark"] .sponsor-form input,
+[data-theme="dark"] .sponsor-form select,
+[data-theme="dark"] .sponsor-form textarea {
+    background: #121212;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .sponsor-form label,
+[data-theme="dark"] .sponsor-form h3 {
+    color: #e0e0e0;
+}
+
+/* Chatbot panel — the only remaining light surface once the theme is dark. */
+[data-theme="dark"] #chatbot-window,
+[data-theme="dark"] #chatbot-input-area,
+[data-theme="dark"] #chatbot-messages {
+    background: #1e1e1e;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .chatbot-msg.bot {
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .chatbot-bot-footer {
+    color: #999;
+}
+
+[data-theme="dark"] #chatbot-input {
+    background: #121212;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] #chatbot-input::placeholder {
+    color: #888;
+}
+
+/* Shared content-page helpers (replaces inline style attributes). */
+.page-updated {
+    margin: -1rem 0 2rem;
+    color: #999;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.inline-link {
+    color: var(--maroon-dark);
+    font-weight: 700;
+}
+
+[data-theme="dark"] .inline-link {
+    color: var(--accent-gold);
+}
+
+[data-theme="dark"] .page-updated {
+    color: #888;
+}
+
+/* Safety quiz results (moved out of JS-injected inline styles). */
+.quiz-results-title {
+    margin-bottom: 1rem;
+}
+
+.quiz-results-text {
+    margin-bottom: 2rem;
+    color: #666;
+}
+
+[data-theme="dark"] .quiz-results-text {
+    color: #bbb;
+}
+
+/* Footer bottom bar: copyright plus the colour theme toggle. */
+.footer-bottom {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.footer-bottom .footer-copyright {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.9rem;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.85);
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.theme-toggle:hover {
+    color: var(--accent-gold);
+    border-color: var(--accent-gold);
+}
+
+.theme-toggle i,
+.theme-toggle svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* Moved out of inline style attributes in the templates. */
+
+.chatbot-send-icon {
+    width: 20px;
+    height: 20px;
+    fill: white;
+}
+
+.page-back-cta {
+    text-align:center;
+    margin-top:3rem;
+}
+
+/* Scoped: .content-page p would otherwise override the colour. */
+.content-page .page-subtitle {
+    text-align:center;
+    color:#999;
+    margin-top:-1rem;
+    margin-bottom:2rem;
+}
+
+/* Resource card titles are h2s for the outline; they don't take the
+   global h2 underline. */
+.resource-card .resource-title::after {
+    display: none;
 }

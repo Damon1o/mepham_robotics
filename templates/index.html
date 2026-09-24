@@ -41,7 +41,7 @@ Robotics. Join the legacy.{% endblock %}
 <!-- COUNTDOWN SECTION -->
 <section class="countdown-section fade-in-section">
     <div class="text-center">
-        <h2 class="ripple" style="color:white; margin-bottom: 2rem;">Next Competition In:</h2>
+        <h2 class="ripple countdown-heading">Next Competition In:</h2>
     </div>
     <div class="countdown-container">
         <div class="countdown-item">
@@ -63,9 +63,7 @@ Robotics. Join the legacy.{% endblock %}
     </div>
     <p class="countdown-event">{{ competition.name if competition else "TBD" }}</p>
     {% if competition %}
-    <script>
-        window.COUNTDOWN_DATE = "{{ competition.date.isoformat() }}";
-    </script>
+    <span class="visually-hidden" data-countdown-date="{{ competition.date.isoformat() }}"></span>
     {% endif %}
 </section>
 
@@ -101,8 +99,7 @@ Robotics. Join the legacy.{% endblock %}
         </div>
         {% endfor %}
         {% if not upcoming_events %}
-        <p style="text-align: center; color: var(--accent-light); opacity: 0.7; padding: 2rem;">No upcoming events
-            scheduled at this time. Check back soon!</p>
+        <p class="timeline-empty">No upcoming events scheduled at this time. Check back soon!</p>
         {% endif %}
     </div>
 </section>
@@ -130,53 +127,7 @@ Robotics. Join the legacy.{% endblock %}
 </section>
 
 <!-- PHOTO CAROUSEL -->
-<section class="photo-carousel-section fade-in-section">
-    <h2 class="ripple">Team Gallery</h2>
-    <div class="carousel-container">
-        <div class="carousel-track">
-            <div class="carousel-item">
-                <img src="{{ url_for('static', filename='assets/photos/carousel1.jpg') }}" alt="Team photo 1"
-                    loading="lazy">
-            </div>
-            <div class="carousel-item">
-                <img src="{{ url_for('static', filename='assets/photos/carousel2.jpg') }}" alt="Team photo 2"
-                    loading="lazy">
-            </div>
-            <div class="carousel-item">
-                <img src="{{ url_for('static', filename='assets/photos/carousel3.jpg') }}" alt="Team photo 3"
-                    loading="lazy">
-            </div>
-            <div class="carousel-item">
-                <img src="{{ url_for('static', filename='assets/photos/carousel4.jpg') }}" alt="Team photo 4"
-                    loading="lazy">
-            </div>
-            <div class="carousel-item">
-                <img src="{{ url_for('static', filename='assets/photos/carousel5.jpg') }}" alt="Team photo 5"
-                    loading="lazy">
-            </div>
-            <div class="carousel-item">
-                <img src="{{ url_for('static', filename='assets/photos/carousel6.jpg') }}" alt="Team photo 6"
-                    loading="lazy">
-            </div>
-            <div class="carousel-item">
-                <img src="{{ url_for('static', filename='assets/photos/carousel7.jpg') }}" alt="Team photo 7"
-                    loading="lazy">
-            </div>
-            <div class="carousel-item">
-                <img src="{{ url_for('static', filename='assets/photos/carousel8.jpg') }}" alt="Team photo 8"
-                    loading="lazy">
-            </div>
-            <div class="carousel-item">
-                <img src="{{ url_for('static', filename='assets/photos/carousel9.jpg') }}" alt="Team photo 9"
-                    loading="lazy">
-            </div>
-            <div class="carousel-item">
-                <img src="{{ url_for('static', filename='assets/photos/carousel10.jpg') }}" alt="Team photo 10"
-                    loading="lazy">
-            </div>
-        </div>
-    </div>
-</section>
+{% with carousel_title="Team Gallery" %}{% include "partials/photo_carousel.html" %}{% endwith %}
 
 <!-- DONATION CTA -->
 <section class="donation-cta fade-in-section">

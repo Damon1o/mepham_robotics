@@ -585,28 +585,6 @@
         border: 1px solid #ffeaa7;
     }
 
-    .admin-card .edit-btn {
-        background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
-        color: var(--text-dark);
-        padding: 0.5rem 0.8rem;
-        font-size: 0.8rem;
-        font-family: var(--font-display);
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        border: 2px solid var(--text-dark);
-        border-radius: 6px;
-        cursor: pointer;
-        box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.3);
-        transition: all var(--transition-base);
-    }
-
-    .admin-card .edit-btn:hover {
-        transform: translate(1px, 1px);
-        box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.4);
-        background: linear-gradient(135deg, #ffed4e 0%, var(--accent-gold) 100%);
-    }
-
     .dynamic-row {
         background: #fdfdfd;
         border: 1px solid #eee;
@@ -813,7 +791,10 @@
         align-items: center;
         justify-content: center;
         z-index: 9999;
-        display: none !important;
+    }
+
+    .loading-overlay[hidden] {
+        display: none;
     }
 
     .loading-spinner {
@@ -1506,3 +1487,270 @@
             white-space: normal;
         }
     }
+
+
+/* --- Round 2 audit fixes ---------------------------------------------------- */
+
+/* .message-item sets display:block, which beat the [hidden] the status
+   filters toggle, so filtering never hid anything. */
+.message-item[hidden] {
+    display: none;
+}
+
+.image-preview.is-visible {
+    display: block;
+}
+
+.member-photo-thumb {
+    max-width: 100px;
+    max-height: 100px;
+}
+
+.award-count-input {
+    width: 80px;
+    padding: 0.5rem;
+}
+
+.team-award-title {
+    font-size: 0.9rem;
+}
+
+.team-award-input {
+    width: 70px;
+    padding: 0.4rem;
+}
+
+.team-awards-empty {
+    grid-column: 1 / -1;
+    padding: 1rem;
+    color: #999;
+    text-align: center;
+}
+
+#team_awards_list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+    max-height: none;
+}
+
+.no-team-msg {
+    margin-top: 1rem;
+    padding: 3rem;
+    color: #666;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.02);
+    border: 2px dashed #ddd;
+    border-radius: 12px;
+}
+
+.no-team-msg[hidden] {
+    display: none;
+}
+
+.no-team-msg-icon {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 1rem;
+}
+
+.no-team-msg-title {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.no-team-msg-hint {
+    color: #888;
+}
+
+.admin-search-empty {
+    padding: 2rem;
+    color: #888;
+    text-align: center;
+}
+
+.admin-panel:focus-visible {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 4px;
+}
+
+/* Moved out of inline style attributes in the templates. */
+
+.activity-empty {
+    text-align: center;
+    color: #666;
+    padding: 3rem;
+}
+
+.award-name {
+    font-weight: 500;
+}
+
+.admin-card.awards-help-card {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, #fffdf5 0%, #fff9e6 100%);
+    border-color: var(--maroon-dark);
+}
+
+.btn-group.btn-group-spaced {
+    margin-top: 2rem;
+}
+
+.admin-card.card-full {
+    grid-column: 1 / -1;
+}
+
+.dynamic-sections {
+    margin-top: 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.empty-hint {
+    color: #888;
+}
+
+.empty-icon {
+    width:3rem;
+    height:3rem;
+    margin-bottom:1rem;
+}
+
+.empty-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-flush {
+    margin: 0;
+}
+
+.form-section-title {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    border-top: 1px solid #eee;
+    padding-top: 1rem;
+}
+
+.form-section-title-lg {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+    border-top: 2px solid #eee;
+    padding-top: 1.5rem;
+}
+
+.form-section-title-md {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    border-top: 2px solid #eee;
+    padding-top: 1.5rem;
+}
+
+.form-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.form-two-col-spaced {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.item-link {
+    color: var(--maroon-dark);
+    text-decoration: none;
+}
+
+.item-meta {
+    color: #666;
+    display: block;
+    margin-top: 0.25rem;
+}
+
+.item-meta-part {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.item-note {
+    display: block;
+    color: #888;
+    font-style: italic;
+}
+
+.item-sep {
+    margin: 0 0.5rem;
+}
+
+.item-sep-left {
+    margin-left: 0.5rem;
+}
+
+.item-sub {
+    display: block;
+    color: #666;
+}
+
+.item-title {
+    display: block;
+    font-size: 1.1rem;
+}
+
+.item-title-maroon {
+    display: block;
+    color: var(--maroon-dark);
+}
+
+.list-empty {
+    text-align: center;
+    color: #999;
+    padding: 1rem;
+}
+
+.data-list.list-events {
+    margin-bottom: 1.5rem;
+    max-height: 250px;
+}
+
+.data-list.list-sponsors {
+    margin-bottom: 2rem;
+    max-height: 300px;
+}
+
+.data-list.list-teams {
+    margin-bottom: 2rem;
+    max-height: 400px;
+}
+
+.sponsors-empty {
+    text-align: center;
+    color: #666;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+}
+
+.form-group.team-select-group {
+    max-width: 400px;
+}
+
+/* form-two-col collapses to one column on narrow screens. */
+@media (max-width: 768px) {
+    .form-two-col,
+    .form-two-col-spaced {
+        grid-template-columns: 1fr;
+    }
+}

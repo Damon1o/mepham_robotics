@@ -1,0 +1,7 @@
+# Not needed at runtime; keeps the function bundle small.
+tests/
+docs/
+.github/
+.pytest_cache/
+.playwright-mcp/
+requirements-dev.txt

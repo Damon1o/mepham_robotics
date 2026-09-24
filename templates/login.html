@@ -33,6 +33,7 @@
             {% endif %}
 
             <form id="loginForm" class="auth-form" method="POST" action="{{ url_for('login') }}" data-native-submit>
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next" value="{{ next }}">
                 <div class="form-group">
                     <label for="username">Username or email</label>

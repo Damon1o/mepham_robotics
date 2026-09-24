@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>500 — Something Went Wrong | Mepham Robotics</title>
+    <title>400 — Bad Request | Mepham Robotics</title>
     <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -15,11 +15,11 @@
 <body>
     <div class="error-page">
         <div class="error-content">
-            <i data-lucide="settings" class="error-emoji"></i>
-            <div class="error-code">500</div>
-            <h1 class="error-message">Something Slipped a Gear</h1>
-            <p class="error-submessage">We hit a snag on our end — our team's already been notified. Please try
-                again in a few minutes.</p>
+            <i data-lucide="bot" class="error-emoji" aria-hidden="true"></i>
+            <div class="error-code">400</div>
+            <h1 class="error-message">Request Rejected</h1>
+            <p class="error-submessage">That form was submitted with an expired or missing security token, usually because the page sat open for a long time. Reload the page and try again —
+                nothing was changed.</p>
             <div class="error-actions">
                 <a href="{{ url_for('index') }}" class="cta-button cta-primary">Go Home</a>
                 <a href="{{ url_for('contact') }}" class="cta-button cta-secondary">Contact Us</a>
