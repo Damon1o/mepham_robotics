@@ -188,6 +188,15 @@ def test_csp_allows_the_contact_map_embed(client):
     assert 'https://givebutter.com' in frame_src
 
 
+def test_csp_lets_the_stl_viewer_fetch_from_blob(client):
+    csp = client.get('/contact').headers['Content-Security-Policy']
+    connect_src = csp.split('connect-src')[1].split(';')[0]
+    assert "'self'" in connect_src
+    assert 'https://*.public.blob.vercel-storage.com' in connect_src
+    # Nothing broader than the Blob store.
+    assert connect_src.split() == ["'self'", 'https://*.public.blob.vercel-storage.com']
+
+
 @pytest.mark.parametrize('path', ['/notebook', '/resources', '/glossary'])
 def test_member_pages_run_the_strict_csp(client, make_user, path):
     make_user(username='mem', password='mem-password', role='member')

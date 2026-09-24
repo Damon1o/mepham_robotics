@@ -60,7 +60,8 @@ def test_no_inline_script_blocks_on_public_pages(client, db):
         page = client.get(path).get_data(as_text=True)
         for block in re.findall(r'<script\b([^>]*)>(.*?)</script>', page, re.S):
             attributes, body = block
-            assert 'src=' in attributes or not body.strip(), \
+            # JSON data islands never execute, so the CSP does not block them.
+            assert 'src=' in attributes or 'application/json' in attributes or not body.strip(), \
                 f'inline script on {path}: {body.strip()[:60]}'
 
 
@@ -124,7 +125,8 @@ def test_missing_static_file_still_builds_a_url(client):
 # written into an innerHTML template string in the JS bundle is blocked by the
 # CSP just the same, which is how the safety quiz's buttons died unnoticed.
 JS_BUNDLES_UNDER_STRICT_CSP = ['static/js/script.js', 'static/js/login.js',
-                               'static/js/theme.js', 'static/js/admin.js']
+                               'static/js/theme.js', 'static/js/admin.js',
+                               'static/js/team.js']
 
 
 @pytest.mark.parametrize('bundle', JS_BUNDLES_UNDER_STRICT_CSP)

@@ -343,10 +343,22 @@ def _ensure_core_indexes(database):
     over data that already has duplicates) is logged without taking the site
     down or skipping the rest.
     """
+    # A unique index on team_number alone predates seasons, and would reject
+    # the second season's document for a team. Drop it if an earlier deploy
+    # built it; this removes only the index, never data.
+    try:
+        existing = database['teams'].index_information().get('team_number_1')
+        if existing and existing.get('unique'):
+            database['teams'].drop_index('team_number_1')
+            logger.warning('Dropped the pre-season unique index teams.team_number_1')
+    except Exception:
+        logger.exception('Could not inspect or drop teams.team_number_1')
+
     specs = [
         ('users', 'username', {'unique': True}),
         ('users', 'email', {}),
-        ('teams', 'team_number', {'unique': True}),
+        # One profile per team per season.
+        ('teams', [('team_number', 1), ('season', 1)], {'unique': True}),
         ('awards', 'team_number', {}),
         ('competitions', 'date', {}),
         ('activities', 'timestamp', {}),
@@ -769,7 +781,8 @@ _BASE_CSP = [
     "img-src 'self' data: blob: https:",
     "font-src 'self' https://fonts.gstatic.com data:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "connect-src 'self'",
+    # The team page's 3D viewer fetches the uploaded .stl from Vercel Blob.
+    "connect-src 'self' https://*.public.blob.vercel-storage.com",
     # The donation page embeds a Givebutter widget; the contact page loads a
     # Google Maps embed on request.
     "frame-src https://givebutter.com https://www.google.com",
@@ -906,19 +919,22 @@ def team_page(team_number):
     team['_id'] = str(team['_id'])
     # Older or hand-made team documents can lack these; the template reads
     # straight into them, and a missing one turned the page into a 500.
-    team.setdefault('specs', {})
-    team.setdefault('members', [])
-    team.setdefault('goals', [])
-    team.setdefault('journey', [])
-    team.setdefault('events', [])
+    # setdefault leaves an explicit null in place, so normalise with `or`.
+    team['specs'] = team.get('specs') or {}
+    for key in ('members', 'goals', 'journey', 'events'):
+        team[key] = team.get(key) or []
 
     # Photo strips are keyed by event name so team.js can attach them to the
     # matching RobotEvents row without a second lookup.
-    event_photos = {e.get('name'): e.get('photos') or []
-                    for e in team['events'] if e.get('name') and e.get('photos')}
+    raw_photos = {e.get('name'): e.get('photos') or []
+                  for e in team['events'] if e.get('name') and e.get('photos')}
+    # team.js sets these as img src directly, so resolve them here: a raw
+    # `static/...` path would resolve against /team/<n>/ and break.
+    event_photos = {name: [get_image_url(p) for p in photos] for name, photos in raw_photos.items()}
 
     # Fallback for the robot showcase when no CAD model has been uploaded.
-    robot_photos = [p for photos in event_photos.values() for p in photos][:6]
+    # Kept as stored paths: the template resolves each with get_image_url.
+    robot_photos = [p for photos in raw_photos.values() for p in photos][:6]
 
     team_awards = list(db['awards'].find({'team_number': team_number}).sort('_id', 1))
     return render_template('team.html', team=team, team_awards=team_awards,
