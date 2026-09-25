@@ -39,7 +39,7 @@
 
 .identity-worlds {
     background: var(--accent-gold);
-    color: var(--text-dark);
+    color: var(--ink-on-gold);
     border-color: var(--text-dark);
     font-weight: 700;
 }
@@ -621,7 +621,7 @@
     border: 2px solid var(--text-dark);
     border-radius: 999px;
     padding: 0.15rem 0.6rem;
-    color: var(--text-dark);
+    color: var(--ink-on-gold);
 }
 
 .results-gallery {

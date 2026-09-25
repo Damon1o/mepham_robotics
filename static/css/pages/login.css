@@ -201,7 +201,7 @@
     font-size: 1.1rem;
     font-weight: 700;
     text-transform: uppercase;
-    color: var(--text-dark);
+    color: var(--ink-on-gold);
     background: var(--accent-gold);
     border: 3px solid var(--text-dark);
     border-radius: 10px;

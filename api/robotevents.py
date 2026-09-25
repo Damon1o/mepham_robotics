@@ -46,6 +46,11 @@ FRESHNESS = {
 }
 DEFAULT_FRESHNESS = datetime.timedelta(hours=6)
 
+# After an upstream failure, serve what we have (or nothing) for this long
+# before trying again. Without it, an outage costs every page view up to four
+# timed-out calls.
+RETRY_BACKOFF = datetime.timedelta(minutes=5)
+
 # Event levels RobotEvents reports, mapped to the three buckets the scoreboard shows.
 LEVEL_BUCKETS = {
     'World': 'championship',
@@ -107,6 +112,13 @@ def _fetch(path, params):
         return None
 
 
+def _aware(value):
+    """A stored datetime as timezone-aware UTC, or None."""
+    if not isinstance(value, datetime.datetime):
+        return None
+    return value if value.tzinfo else value.replace(tzinfo=datetime.timezone.utc)
+
+
 def get_cached(db, path, params=None):
     """Cached GET. Returns (payload, fetched_at, stale) or (None, None, False).
 
@@ -120,24 +132,29 @@ def get_cached(db, path, params=None):
     window = FRESHNESS.get(_kind(path), DEFAULT_FRESHNESS)
     cached = db['re_cache'].find_one({'_id': key})
 
+    def fallback():
+        # A back-off marker can exist without a payload; that means "nothing".
+        if cached and cached.get('payload') is not None:
+            return cached.get('payload'), cached.get('fetched_at'), True
+        return None, None, False
+
     if cached:
-        fetched_at = cached.get('fetched_at')
-        if isinstance(fetched_at, datetime.datetime):
-            if fetched_at.tzinfo is None:
-                fetched_at = fetched_at.replace(tzinfo=datetime.timezone.utc)
-            if _now() - fetched_at < window:
-                return cached.get('payload'), fetched_at, False
+        fetched_at = _aware(cached.get('fetched_at'))
+        if fetched_at and cached.get('payload') is not None and _now() - fetched_at < window:
+            return cached.get('payload'), fetched_at, False
+        failed_at = _aware(cached.get('failed_at'))
+        if failed_at and _now() - failed_at < RETRY_BACKOFF:
+            return fallback()
 
     payload = _fetch(path, params)
     if payload is None:
-        if cached:
-            return cached.get('payload'), cached.get('fetched_at'), True
-        return None, None, False
+        db['re_cache'].update_one({'_id': key}, {'$set': {'failed_at': _now()}}, upsert=True)
+        return fallback()
 
     now = _now()
     db['re_cache'].update_one(
         {'_id': key},
-        {'$set': {'payload': payload, 'fetched_at': now}},
+        {'$set': {'payload': payload, 'fetched_at': now}, '$unset': {'failed_at': ''}},
         upsert=True,
     )
     return payload, now, False
@@ -260,10 +277,25 @@ def build_scoreboard(events, awards):
 
 
 def record_skills_history(db, team_number, rank, score):
-    """Append today's standing, keeping the last 60 samples for trend maths."""
+    """Record today's standing, one sample per UTC day, keeping the last 60.
+
+    This runs on every live-panel request. Pushing a sample each time meant a
+    busy day pushed every older sample out of the 60-slot window, so the 24h
+    trend never found a baseline and always read "new".
+    """
     if rank is None:
         return
-    entry = {'date': _now(), 'rank': rank, 'score': score}
+    now = _now()
+    entry = {'date': now, 'rank': rank, 'score': score}
+    samples = (db['re_history'].find_one({'_id': team_number}, {'samples': 1}) or {}).get('samples') or []
+    last_date = _aware(samples[-1].get('date')) if samples else None
+    if last_date and last_date.date() == now.date():
+        # Same day: keep the newest reading without adding a sample.
+        db['re_history'].update_one(
+            {'_id': team_number},
+            {'$set': {f'samples.{len(samples) - 1}': entry}},
+        )
+        return
     db['re_history'].update_one(
         {'_id': team_number},
         {'$push': {'samples': {'$each': [entry], '$slice': -60}}},

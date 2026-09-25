@@ -7,12 +7,12 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/login.css') }}">
 {% endblock %}
 
+{% from "partials/picture.html" import picture %}
 {% block content %}
 <section class="auth-section">
     <div class="auth-card auth-card--split">
         <div class="auth-visual">
-            <img src="{{ url_for('static', filename='assets/photos/carousel6.jpg') }}"
-                alt="Mepham Robotics team members with their robot" class="auth-visual-img">
+            {{ picture('photos/carousel6', 'Mepham Robotics team members with their robot', '(max-width: 768px) 100vw, 50vw', class_='auth-visual-img', priority=True) }}
             <div class="auth-visual-copy">
                 <h1>Welcome back, Team 77628</h1>
                 <p>Sign in to reach member resources and the admin dashboard.</p>

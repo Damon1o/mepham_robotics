@@ -60,7 +60,8 @@ def test_no_inline_script_blocks_on_public_pages(client, db):
         page = client.get(path).get_data(as_text=True)
         for block in re.findall(r'<script\b([^>]*)>(.*?)</script>', page, re.S):
             attributes, body = block
-            assert 'src=' in attributes or not body.strip(), \
+            # JSON data islands never execute, so the CSP does not block them.
+            assert 'src=' in attributes or 'application/json' in attributes or not body.strip(), \
                 f'inline script on {path}: {body.strip()[:60]}'
 
 
@@ -125,7 +126,7 @@ def test_missing_static_file_still_builds_a_url(client):
 # CSP just the same, which is how the safety quiz's buttons died unnoticed.
 JS_BUNDLES_UNDER_STRICT_CSP = ['static/js/script.js', 'static/js/login.js',
                                'static/js/theme.js', 'static/js/admin.js',
-                               'static/js/team-editor.js']
+                               'static/js/team.js', 'static/js/team-editor.js']
 
 
 @pytest.mark.parametrize('bundle', JS_BUNDLES_UNDER_STRICT_CSP)
@@ -168,3 +169,17 @@ def test_theme_toggle_lives_in_the_footer(client):
     page = client.get('/').get_data(as_text=True)
     footer = page[page.index('<footer'):page.index('</footer>')]
     assert 'data-theme-toggle' in footer
+
+
+def test_light_is_the_default_theme():
+    """Visitors get light mode unless they pick otherwise; the OS setting
+    is only followed when the visitor chooses the 'Device theme' option."""
+    import pathlib
+    js = (pathlib.Path(__file__).resolve().parent.parent / 'static/js/theme.js').read_text(encoding='utf-8')
+    assert "var DEFAULT_MODE = 'light';" in js
+    assert "MODES = ['light', 'dark', 'system']" in js
+
+
+def test_footer_toggle_starts_on_light(client):
+    page = client.get('/').get_data(as_text=True)
+    assert '<span data-theme-label>Light theme</span>' in page

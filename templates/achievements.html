@@ -39,7 +39,7 @@ results.{% endblock %}
             <div class="award-count">×{{ award.count }}</div>
             <div class="award-icon-container">
                 <img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}" alt="{{ award.title }}"
-                    class="award-icon" loading="lazy">
+                    class="award-icon" width="128" height="128" loading="lazy" decoding="async">
             </div>
             <div class="award-title">{{ award.title }}</div>
         </div>

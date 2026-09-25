@@ -19,13 +19,15 @@ School competing in the VEX V5 Robotics Competition.
 ## Project Structure
 
 ```text
-api/index.py            # The entire Flask application: routes, auth, admin, JSON APIs
+api/index.py            # The Flask application: routes, auth, admin, JSON APIs
+api/robotevents.py      # Cached RobotEvents v2 client for the team pages
 templates/              # Jinja2 templates (base.html holds the site chrome)
   partials/             # Shared fragments
 static/css/styles.css   # Global design system + dark theme
 static/css/pages/       # One stylesheet per page — no styles live in templates
 static/js/script.js     # Site-wide behaviour (nav, search, forms, chatbot, animations)
 static/js/theme.js      # Theme bootstrap, loaded before first paint
+static/js/team.js       # Team page: live skills panel, event results, STL viewer
 static/js/admin.js      # Admin dashboard behaviour
 tests/                  # pytest suite, backed by mongomock
 docs/superpowers/       # Design specs and implementation plans
@@ -56,6 +58,7 @@ Python 3.12 is the target (`.python-version`); Vercel deploys with the Flask fra
 | `BLOB_READ_WRITE_TOKEN` | for uploads | Vercel Blob token |
 | `PUBLIC_BASE_URL` | optional | Base URL used when building password-reset links |
 | `ROBOTEVENTS_API_KEY` | optional | Enables `/api/matches`; results are cached for 5 minutes |
+| `ROBOTEVENTS_TOKEN` | optional | Enables the live panels on team pages; check it with `python -m api.robotevents probe 77628A` |
 | `CHATBOT_API_KEY` | optional | Enables the on-site assistant; without it the widget reports it is offline |
 | `CHATBOT_API_URL`, `CHATBOT_MODEL` | optional | Override the assistant's upstream and model |
 | `GIVEBUTTER_CAMPAIGN_ID` | optional | Renders the donation embed; without it the page shows an email fallback |

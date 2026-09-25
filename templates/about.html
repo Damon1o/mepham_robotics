@@ -8,6 +8,7 @@ in VEX Robotics.{% endblock %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/about.css') }}">
 {% endblock %}
 
+{% from "partials/picture.html" import picture %}
 {% block content %}
 <div class="hero-image">
     <div class="hero-content">
@@ -40,8 +41,7 @@ in VEX Robotics.{% endblock %}
                 season's challenges with precision and creativity.</p>
         </div>
         <figure class="about-photo">
-            <img src="{{ url_for('static', filename='assets/photos/carousel1.jpg') }}"
-                alt="Mepham Robotics members working on a robot" loading="lazy">
+            {{ picture('photos/carousel1', 'Mepham Robotics members working on a robot', '(max-width: 900px) 100vw, 600px') }}
         </figure>
     </div>
 </section>
@@ -90,8 +90,7 @@ in VEX Robotics.{% endblock %}
     <h2 class="ripple">Our Sub-Teams</h2>
     <div class="about-subteams-layout">
         <figure class="about-photo">
-            <img src="{{ url_for('static', filename='assets/photos/carousel7.jpg') }}"
-                alt="Mepham Robotics sub-teams at work" loading="lazy">
+            {{ picture('photos/carousel7', 'Mepham Robotics sub-teams at work', '(max-width: 900px) 100vw, 600px') }}
         </figure>
         <div class="about-subteam-grid">
             <div class="about-subteam-card">

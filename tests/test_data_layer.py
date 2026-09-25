@@ -92,7 +92,10 @@ def test_core_indexes(db):
     users = db['users'].index_information()
     assert any(v['key'] == [('username', 1)] and v.get('unique') for v in users.values())
     teams = db['teams'].index_information()
-    assert any(v['key'] == [('team_number', 1)] and v.get('unique') for v in teams.values())
+    assert any(v['key'] == [('team_number', 1), ('season', 1)] and v.get('unique')
+               for v in teams.values())
+    # The single-field version would reject a second season's document.
+    assert not any(v['key'] == [('team_number', 1)] and v.get('unique') for v in teams.values())
     tokens = db['newsletter_subscribers'].index_information()
     assert any(v['key'] == [('unsubscribe_token', 1)] for v in tokens.values())
 
@@ -100,7 +103,8 @@ def test_core_indexes(db):
 def test_one_bad_index_does_not_stop_the_rest(db, monkeypatch):
     db['users'].insert_many([{'username': 'dup'}, {'username': 'dup'}])
     app_module._ensure_core_indexes(db)  # the unique users index fails
-    assert any(v['key'] == [('team_number', 1)] for v in db['teams'].index_information().values())
+    assert any(v['key'] == [('team_number', 1), ('season', 1)]
+               for v in db['teams'].index_information().values())
 
 
 def test_mongo_client_has_timeouts(monkeypatch):
@@ -240,3 +244,54 @@ def test_monthly_changes_match_the_activity_log(admin, db):
     with app_module.app.test_request_context('/'):
         changes = app_module.monthly_stat_changes(first)
     assert changes == {'teams_change': 1, 'members_change': 8, 'awards_change': 8, 'events_change': 1}
+
+
+# --- Seasons -------------------------------------------------------------------
+
+def test_a_second_season_can_be_stored(db):
+    app_module._ensure_core_indexes(db)
+    db['teams'].insert_one({'team_number': '77628D', 'season': '2024-25'})
+    db['teams'].insert_one({'team_number': '77628D', 'season': '2025-26'})
+    assert db['teams'].count_documents({'team_number': '77628D'}) == 2
+
+
+def test_the_same_season_twice_is_rejected(db):
+    import pymongo.errors
+    app_module._ensure_core_indexes(db)
+    db['teams'].insert_one({'team_number': '77628D', 'season': '2025-26'})
+    with pytest.raises(pymongo.errors.DuplicateKeyError):
+        db['teams'].insert_one({'team_number': '77628D', 'season': '2025-26'})
+
+
+def test_the_pre_season_unique_index_is_dropped(db):
+    db['teams'].create_index('team_number', unique=True)
+    app_module._ensure_core_indexes(db)
+    db['teams'].insert_one({'team_number': '77628D', 'season': '2024-25'})
+    db['teams'].insert_one({'team_number': '77628D', 'season': '2025-26'})
+    assert db['teams'].count_documents({}) == 2
+
+
+@pytest.mark.parametrize('field', ['specs', 'members', 'goals', 'journey', 'events'])
+def test_team_page_survives_null_fields(client, db, field):
+    db['teams'].insert_one({'team_number': '77628N', field: None})
+    assert client.get('/team/77628N').status_code == 200
+
+
+def test_event_photos_are_resolved_to_urls(client, db, monkeypatch):
+    monkeypatch.setenv('ROBOTEVENTS_TOKEN', 'test-token')
+    db['teams'].insert_one({'team_number': '77628E', 'events': [
+        {'name': 'Qualifier', 'photos': ['static/assets/photos/carousel1.jpg',
+                                         'https://blob.example/p.jpg']}]})
+    page = client.get('/team/77628E').get_data(as_text=True)
+    assert '/static/assets/photos/carousel1.jpg' in page
+    assert '"static/assets/photos/carousel1.jpg"' not in page
+    assert 'https://blob.example/p.jpg' in page
+
+
+def test_robot_photo_fallback_resolves_once(client, db):
+    db['teams'].insert_one({'team_number': '77628R', 'events': [
+        {'name': 'Qualifier', 'photos': ['static/assets/photos/carousel1.jpg']}]})
+    page = client.get('/team/77628R').get_data(as_text=True)
+    # Resolving twice would turn the real photo into the placeholder.
+    assert 'viewer-gallery-photo' in page
+    assert '/static/assets/photos/carousel1.jpg' in page

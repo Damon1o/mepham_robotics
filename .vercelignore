@@ -5,3 +5,4 @@ docs/
 .pytest_cache/
 .playwright-mcp/
 requirements-dev.txt
+scripts/
