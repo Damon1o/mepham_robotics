@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account | Mepham Robotics{% endblock %}
+{% block meta_description %}Request a Mepham Robotics member account.{% endblock %}
+
+{% block page_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/login.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="auth-section">
+    <div class="auth-card auth-card--split">
+        <div class="auth-visual">
+            <img src="{{ url_for('static', filename='assets/photos/carousel6.jpg') }}"
+                alt="Mepham Robotics team members with their robot" class="auth-visual-img">
+            <div class="auth-visual-copy">
+                <h1>Join Team 77628</h1>
+                <p>Make an account, and an admin will add you to your team's roster.</p>
+            </div>
+        </div>
+
+        <div class="auth-panel">
+            {% if submitted %}
+            <h2 class="auth-title">Request sent</h2>
+            <p class="auth-flash auth-flash--success" role="status">
+                Your account is waiting for approval. An admin will review it soon, and then you can sign in.
+            </p>
+            <a class="auth-submit auth-submit--link" href="{{ url_for('login') }}">Back to sign in</a>
+            {% else %}
+            <h2 class="auth-title">Create account</h2>
+
+            {% if error %}
+            <p class="auth-error" role="alert">{{ error }}</p>
+            {% endif %}
+
+            <form class="auth-form" method="POST" action="{{ url_for('signup') }}" data-native-submit>
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" value="{{ form.get('username', '') }}" required
+                        minlength="3" maxlength="32" pattern="[A-Za-z0-9_.\-]{3,32}" autocomplete="username"
+                        autocapitalize="none" spellcheck="false" autofocus aria-describedby="username_hint">
+                    <small class="auth-field-hint" id="username_hint">Letters, numbers, dots, dashes or underscores.</small>
+                </div>
+                <div class="form-group">
+                    <label for="email">School or personal email</label>
+                    <input type="email" id="email" name="email" value="{{ form.get('email', '') }}" required
+                        autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="password-field">
+                        <input type="password" id="password" name="password" required minlength="8"
+                            autocomplete="new-password" aria-describedby="password_hint">
+                        <button type="button" class="password-toggle" aria-controls="password"
+                            aria-label="Show password" aria-pressed="false">
+                            <i data-lucide="eye" class="icon-show"></i>
+                            <i data-lucide="eye-off" class="icon-hide"></i>
+                        </button>
+                    </div>
+                    <small class="auth-field-hint" id="password_hint">At least 8 characters.</small>
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">Confirm password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required minlength="8"
+                        autocomplete="new-password">
+                </div>
+                {% if teams %}
+                <div class="form-group">
+                    <label for="requested_team">Your team (optional)</label>
+                    <select id="requested_team" name="requested_team">
+                        <option value="">Not sure yet</option>
+                        {% for id, label in teams %}
+                        <option value="{{ id }}" {% if form.get('requested_team') == id %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <button type="submit" class="auth-submit">Request account</button>
+            </form>
+            <p class="auth-switch">Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/login.js') }}" defer></script>
+{% endblock %}

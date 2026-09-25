@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}My Team | Mepham Robotics{% endblock %}
+
+{% block page_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team_editor.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="my-team-empty">
+    <i data-lucide="{{ 'lock' if forbidden else 'users' }}" class="my-team-empty-icon" aria-hidden="true"></i>
+    {% if forbidden %}
+    <h1>That isn't your team</h1>
+    <p>You can edit the team whose roster you're on. If you've switched teams, ask an admin to move you.</p>
+    {% else %}
+    <h1>You're not on a team roster yet</h1>
+    <p>Once an admin adds you to a team, this page becomes your team's editor, where you can update the
+        robot specs, goals, photos and your own profile card.</p>
+    {% endif %}
+    <a class="cta-button cta-primary" href="{{ url_for('contact') }}">Message the admins</a>
+</section>
+{% endblock %}

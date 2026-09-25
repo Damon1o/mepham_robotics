@@ -67,6 +67,13 @@
             <a href="{{ url_for('donate') }}" {% if active_page=='donate' %} class="active" {% endif %}>Donate</a>
             <a href="{{ url_for('contact') }}" {% if active_page=='contact' %} class="active" {% endif %}>Contact</a>
 
+            {% if 'user' in session %}
+            {% set team_link = my_team_url() %}
+            {% if team_link %}
+            <a href="{{ team_link }}" {% if active_page=='my_team' %} class="active" {% endif %}>My Team</a>
+            {% endif %}
+            {% endif %}
+
             {% if 'user' in session and session.get('role') == 'admin' %}
             <a href="{{ url_for('admin_dashboard') }}" {% if active_page=='admin' %} class="active" {% endif %}>Admin
                 Panel</a>
