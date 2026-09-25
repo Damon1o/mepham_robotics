@@ -64,3 +64,12 @@ def test_braces_are_balanced(path):
         depth += line.count('{') - line.count('}')
         assert depth >= 0, f'{path.name}:{number} closes a block that was never opened'
     assert depth == 0, f'{path.name} leaves {depth} block(s) open'
+
+
+@pytest.mark.parametrize('name', ['admin.css', 'pages/team_editor.css'])
+def test_no_gold_text_on_admin_surfaces(name):
+    """Admin cards are white in the light theme; gold text on them measured 1.4:1."""
+    for selector, body in rules(CSS / name):
+        if 'data-theme="dark"' in selector:
+            continue
+        assert not re.search(r'(?<![-\w])color:\s*(var\(--accent-gold\)|#ffd700)', body, re.I), f'{name}: {selector}'

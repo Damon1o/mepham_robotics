@@ -565,3 +565,12 @@
     background: #e6b8b9;
     color: #1a1a1a;
 }
+
+[data-theme="dark"] .my-team-empty h1,
+[data-theme="dark"] .my-team-empty-icon {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .my-team-empty p {
+    color: #b0b0b0;
+}

@@ -38,8 +38,10 @@ results.{% endblock %}
             class="award-box {{ award.layout }} {{ 'border-' + award.border if award.border else '' }} {{ 'bg-shimmer' if award.shimmer else '' }}">
             <div class="award-count">×{{ award.count }}</div>
             <div class="award-icon-container">
+                {% if award.icon %}
                 <img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}" alt="{{ award.title }}"
                     class="award-icon" width="128" height="128" loading="lazy" decoding="async">
+                {% endif %}
             </div>
             <div class="award-title">{{ award.title }}</div>
         </div>
