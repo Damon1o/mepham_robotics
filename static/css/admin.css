@@ -1755,6 +1755,560 @@
     }
 }
 
+/* --- Admin overhaul: autosave controls, people board, team tiles --------------------------- */
+
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.icon-btn:hover {
+    background: rgba(128, 0, 0, 0.08);
+    color: var(--maroon-dark);
+}
+
+.icon-btn--danger:hover,
+.icon-btn.is-confirming {
+    background: #fdecea;
+    border-color: #c62828;
+    color: #c62828;
+}
+
+.icon-btn svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+/* Save state shared by steppers, inline rows and editor fields */
+.field-status {
+    display: inline-block;
+    width: 1.1rem;
+    height: 1.1rem;
+    flex: none;
+    border-radius: 50%;
+}
+
+.is-saving .field-status,
+.is-saving > .field-status {
+    border: 2px solid #ccc;
+    border-top-color: var(--maroon-dark);
+    animation: spin 0.8s linear infinite;
+}
+
+.is-saved .field-status {
+    background: #2e7d32 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/70% no-repeat;
+    animation: pop 0.25s ease;
+}
+
+.is-error .field-status {
+    background: #c62828 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E") center/60% no-repeat;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pop { from { transform: scale(0.4); } to { transform: scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .is-saving .field-status,
+    .is-saved .field-status { animation: none; }
+}
+
+/* Steppers */
+.stepper-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.stepper-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    background: #f8f9fa;
+    text-align: left;
+}
+
+.stepper-card label {
+    font-weight: 700;
+    color: var(--maroon-dark);
+}
+
+.stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.stepper input {
+    width: 5.5rem;
+    padding: 0.5rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+    -moz-appearance: textfield;
+}
+
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.stepper input:focus {
+    border-color: var(--maroon-dark);
+    outline: none;
+}
+
+.stepper-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 2px solid var(--maroon-dark);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--maroon-dark);
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.stepper-btn:hover {
+    background: var(--maroon-dark);
+    color: #fff;
+}
+
+.stepper-btn:active {
+    transform: scale(0.94);
+}
+
+.data-item.award-item {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    text-align: left;
+}
+
+/* Team award chips */
+.team-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.team-chip {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--maroon-dark);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--maroon-dark);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.team-chip[aria-pressed="true"] {
+    background: var(--maroon-dark);
+    color: #fff;
+    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.6);
+}
+
+/* Inline-editable events */
+.data-item.event-inline {
+    grid-template-columns: minmax(10rem, 2fr) minmax(8rem, 1.5fr) minmax(12rem, 1fr) auto auto;
+    align-items: center;
+}
+
+.inline-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.45rem 0.6rem;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    font: inherit;
+    color: var(--text-dark);
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.inline-input:hover {
+    border-color: #ddd;
+    background: #fff;
+}
+
+.inline-input:focus {
+    border-color: var(--maroon-dark);
+    background: #fff;
+    outline: none;
+}
+
+.inline-input--title {
+    font-weight: 700;
+    color: var(--maroon-dark);
+}
+
+.inline-create {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.inline-create input {
+    flex: 1 1 12rem;
+    padding: 0.6rem 0.8rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font: inherit;
+}
+
+.inline-create input:focus {
+    border-color: var(--maroon-dark);
+    outline: none;
+}
+
+.inline-create .admin-btn {
+    width: auto;
+}
+
+/* Team tiles */
+.team-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.data-item.team-tile {
+    grid-template-columns: 1fr;
+    margin: 0;
+    text-align: left;
+}
+
+.team-tile-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.team-tile-main:hover .item-title {
+    text-decoration: underline;
+}
+
+.team-tile-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.team-tile .data-item-actions,
+.user-item .data-item-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    align-self: center;
+}
+
+.data-item.user-item {
+    grid-template-columns: 48px 1fr auto;
+    align-items: center;
+    text-align: left;
+}
+
+.team-tile .admin-btn-small {
+    text-decoration: none;
+}
+
+/* Quick action highlight for waiting sign-ups */
+.quick-action-btn--alert {
+    background: var(--accent-gold);
+    border-color: var(--text-dark);
+}
+
+/* Approvals */
+.approvals-card {
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.35);
+}
+
+.approval-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.approval-item {
+    display: grid;
+    grid-template-columns: 48px minmax(10rem, 1fr) auto auto auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    background: #fffdf2;
+    text-align: left;
+}
+
+.approval-who {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.approval-who small {
+    color: var(--text-light);
+    overflow-wrap: anywhere;
+}
+
+.approval-item select,
+.role-inline {
+    padding: 0.4rem 0.6rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font: inherit;
+    background: #fff;
+}
+
+.approval-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.is-busy {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.role-inline.role-badge {
+    font-size: 0.8rem;
+    text-transform: none;
+    cursor: pointer;
+}
+
+/* Roster board */
+.roster-board {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(250px, 1fr);
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    text-align: left;
+    scroll-snap-type: x proximity;
+}
+
+.roster-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 16rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 14px;
+    background: #f8f9fa;
+    scroll-snap-align: start;
+    transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.roster-col--unassigned {
+    border-style: dashed;
+}
+
+.roster-board.is-dragging .roster-col {
+    border-color: #cfcfcf;
+}
+
+.roster-col.is-over {
+    border-color: var(--maroon-dark);
+    background: #fff8f8;
+    box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.45);
+}
+
+.roster-col-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0 0.5rem;
+    padding: 0.85rem 1rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.roster-col-head strong {
+    color: var(--maroon-dark);
+}
+
+.roster-col-head small {
+    grid-column: 1;
+    color: var(--text-light);
+}
+
+.roster-count {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    align-self: center;
+    min-width: 1.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: var(--maroon-dark);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.roster-drop {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.75rem;
+    list-style: none;
+}
+
+.roster-card {
+    display: grid;
+    grid-template-columns: 2.25rem 1fr;
+    grid-template-areas: "avatar text" "move move";
+    gap: 0.35rem 0.6rem;
+    align-items: center;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid #e3e3e3;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    cursor: grab;
+    user-select: none;
+}
+
+.roster-card:hover {
+    border-color: var(--maroon-dark);
+}
+
+.roster-card.is-dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+.roster-avatar {
+    grid-area: avatar;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: var(--maroon-dark);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.roster-col--unassigned .roster-avatar {
+    background: #777;
+}
+
+.roster-text {
+    grid-area: text;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.roster-text strong,
+.roster-text small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.roster-text small {
+    color: var(--text-light);
+}
+
+.roster-move {
+    grid-area: move;
+    width: 100%;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fafafa;
+    font: inherit;
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
+.roster-col-link {
+    padding: 0.6rem 1rem 0.85rem;
+    color: var(--maroon-dark);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+/* Accounts */
+.manual-add {
+    margin-top: 1.5rem;
+    text-align: left;
+}
+
+.manual-add summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--maroon-dark);
+    padding: 0.5rem 0;
+}
+
+.toast-action {
+    margin-left: 1rem;
+    padding: 0.25rem 0.75rem;
+    border: 2px solid currentColor;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+@media (max-width: 760px) {
+    .data-item.event-inline {
+        grid-template-columns: 1fr auto;
+    }
+
+    .data-item.event-inline .inline-input {
+        grid-column: 1;
+    }
+
+    .approval-item {
+        grid-template-columns: 48px 1fr;
+    }
+
+    .approval-item select,
+    .approval-actions {
+        grid-column: 1 / -1;
+    }
+
+    .roster-board {
+        grid-auto-columns: 85%;
+    }
+}
+
 
 /* ================================================================
    DARK THEME
@@ -1895,4 +2449,484 @@
 
 [data-theme="dark"] .topic-badge.topic-join {
     color: #6fcf8f;
+}
+
+
+/* ================================================================
+   SHARED CONTROLS
+   ================================================================ */
+/* --- Segmented control (2-5 fixed choices) -------------------------------------- */
+.segmented {
+    display: inline-flex;
+    flex-wrap: wrap;
+    padding: 3px;
+    border: 1px solid var(--seg-border, #cfcfcf);
+    border-radius: 10px;
+    background: var(--admin-card-bg);
+}
+
+.segmented label {
+    position: relative;
+    cursor: pointer;
+}
+
+.segmented input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.segmented span {
+    display: block;
+    padding: 0.3rem 0.85rem;
+    border-radius: 7px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--seg-muted, #595959);
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.segmented label:hover span {
+    color: var(--admin-text);
+}
+
+.segmented input:checked + span {
+    background: var(--maroon-dark);
+    color: #fff;
+}
+
+.segmented input:focus-visible + span {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 1px;
+}
+
+.segmented.is-saved {
+    border-color: #2e7d32;
+}
+
+.segmented.is-error {
+    border-color: #c62828;
+}
+
+[data-theme="dark"] .segmented {
+    --seg-border: #555;
+    --seg-muted: #b0b0b0;
+}
+
+[data-theme="dark"] .segmented input:checked + span {
+    background: #e6b8b9;
+    color: #1a1a1a;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 700;
+    color: var(--maroon-dark);
+}
+
+[data-theme="dark"] .field-label {
+    color: #e6b8b9;
+}
+
+
+/* ================================================================
+   COMPACT LAYOUT
+   One slim top bar (title, quick actions, stat chips), left-aligned
+   section headings, and tighter cards, rows and form spacing.
+   ================================================================ */
+.admin-container {
+    margin-top: 5.5rem; /* clears the fixed MENU button */
+}
+
+.admin-topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title actions" "stats stats";
+    gap: 0.75rem 1.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.admin-topbar .admin-header {
+    grid-area: title;
+    margin: 0;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+    overflow: visible;
+}
+
+.admin-topbar .admin-header::before,
+.admin-topbar .admin-header::after {
+    display: none;
+}
+
+.admin-topbar .admin-header h1 {
+    margin: 0;
+    color: var(--maroon-dark);
+    font-size: 1.6rem;
+}
+
+.admin-topbar .admin-header p {
+    margin: 0.1rem 0 0;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    opacity: 1;
+}
+
+.admin-topbar .admin-quick-actions {
+    grid-area: actions;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.admin-topbar .quick-action-btn {
+    flex-direction: row;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    border-width: 2px;
+    border-radius: 8px;
+    box-shadow: none;
+    font-size: 0.85rem;
+}
+
+.admin-topbar .quick-action-btn:hover {
+    transform: none;
+}
+
+.admin-topbar .quick-action-btn span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.admin-topbar .quick-action-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.admin-topbar .dashboard-stats {
+    grid-area: stats;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.admin-topbar .stat-card {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    box-shadow: none;
+    text-align: left;
+}
+
+.admin-topbar .stat-card:hover {
+    transform: none;
+}
+
+.admin-topbar .stat-value {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.admin-topbar .stat-label {
+    font-size: 0.85rem;
+}
+
+.admin-topbar .stat-change {
+    font-size: 0.75rem;
+}
+
+.admin-topbar .stat-change:not(.positive):not(.negative) {
+    display: none;
+}
+
+.admin-topbar .stat-change svg {
+    width: 0.8rem;
+    height: 0.8rem;
+}
+
+.admin-container .search-box {
+    margin-bottom: 0.75rem;
+}
+
+.admin-container #adminSearch {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.admin-container .admin-tabs {
+    margin-bottom: 1rem;
+    border-bottom-width: 2px;
+}
+
+.admin-container .admin-tabs a {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+}
+
+.admin-container .admin-grid {
+    gap: 1rem;
+}
+
+.admin-container .admin-panel {
+    max-width: none;
+    width: 100%;
+}
+
+.admin-container .admin-panel > * + * {
+    margin-top: 1rem;
+}
+
+.admin-container .admin-card {
+    padding: 1rem 1.25rem;
+    border-width: 1px;
+    border-radius: 12px;
+    text-align: left;
+}
+
+.admin-container .admin-card:hover {
+    transform: none;
+}
+
+.admin-container .admin-card-header {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom-width: 1px;
+    text-align: left;
+}
+
+.admin-container .admin-card-header h2,
+.admin-container .admin-card > h2 {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 1.15rem;
+    text-align: left;
+}
+
+.admin-container .admin-card-header h2 svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.admin-container h2::after {
+    display: none;
+}
+
+.admin-container .form-group {
+    margin-bottom: 0.85rem;
+}
+
+.admin-container .form-hint {
+    margin: 0.25rem 0 0.5rem;
+    font-size: 0.8rem;
+}
+
+.admin-container .data-item {
+    margin-bottom: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    align-items: center;
+}
+
+.admin-container .panel-filter {
+    margin-bottom: 0.5rem;
+    padding: 0.45rem 0.7rem;
+}
+
+.admin-container .stepper-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+
+.admin-container .stepper-card {
+    padding: 0.6rem 0.75rem;
+}
+
+.admin-container .form-section-title,
+.admin-container .form-section-title-md {
+    margin: 1rem 0 0.5rem;
+    font-size: 1rem;
+    text-align: left;
+}
+
+.admin-container .roster-col {
+    min-height: 10rem;
+    padding: 0;
+}
+
+.admin-container .roster-col-head {
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+}
+
+.admin-container .roster-col-head::before,
+.admin-container .roster-col-head::after {
+    display: none;
+}
+
+@media (max-width: 760px) {
+    .admin-topbar {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "title" "actions" "stats";
+    }
+
+    .admin-topbar .admin-quick-actions {
+        justify-content: flex-start;
+    }
+
+    .admin-container {
+        margin-top: 4.5rem;
+    }
+}
+
+
+/* ================================================================
+   DARK THEME: overhaul components
+   People board, approvals, steppers, inline rows and team tiles.
+   ================================================================ */
+[data-theme="dark"] .admin-topbar .admin-header h1 {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .admin-topbar .admin-header p {
+    color: #b0b0b0;
+}
+
+[data-theme="dark"] .approval-item {
+    background: #2a2618;
+    border-color: #5c5020;
+}
+
+[data-theme="dark"] .roster-col {
+    background: #181818;
+    border-color: #3a3a3a;
+}
+
+[data-theme="dark"] .roster-col.is-over {
+    background: #262222;
+    border-color: #e6b8b9;
+}
+
+[data-theme="dark"] .roster-col-head {
+    border-color: #3a3a3a;
+}
+
+[data-theme="dark"] .roster-card,
+[data-theme="dark"] .stepper-card,
+[data-theme="dark"] .inline-input,
+[data-theme="dark"] .inline-create input,
+[data-theme="dark"] .roster-move,
+[data-theme="dark"] .role-inline,
+[data-theme="dark"] .approval-item select,
+[data-theme="dark"] .stepper input {
+    background: #121212;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .roster-col-head strong,
+[data-theme="dark"] .roster-col-link,
+[data-theme="dark"] .stepper-card label,
+[data-theme="dark"] .manual-add summary,
+[data-theme="dark"] .approval-who strong {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .roster-text strong,
+[data-theme="dark"] .approval-who {
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .roster-col-head small,
+[data-theme="dark"] .roster-text small,
+[data-theme="dark"] .approval-who small {
+    color: #b0b0b0;
+}
+
+
+/* ================================================================
+   COMPACT FORMS
+   ================================================================ */
+.admin-container .form-group label {
+    margin-bottom: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.admin-container .form-group input:not([type="radio"]):not([type="checkbox"]),
+.admin-container .form-group select,
+.admin-container .form-group textarea {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.95rem;
+}
+
+.admin-container .segmented label.segment {
+    margin: 0;
+    font-size: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+}
+
+#sponsor_form,
+#userForm {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 0 1rem;
+    align-items: start;
+}
+
+#sponsor_form > .form-stack,
+#userForm > .btn-group,
+#sponsor_form > input[type="hidden"],
+#userForm > input[type="hidden"] {
+    grid-column: 1 / -1;
+}
+
+.admin-container .form-stack,
+#userForm > .btn-group {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.admin-container .form-stack .admin-btn,
+#userForm > .btn-group .admin-btn {
+    width: auto;
+    margin: 0;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+}
+
+.admin-container .sponsors-empty,
+.admin-container .empty-state,
+.admin-container .no-team-msg {
+    padding: 1rem;
+}
+
+.admin-container .sponsors-empty .empty-icon,
+.admin-container .no-team-msg-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+}
+
+.admin-container .inline-create input {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.95rem;
+}
+
+.admin-container .inline-create .admin-btn {
+    padding: 0.5rem 1.1rem;
+    font-size: 0.9rem;
 }

@@ -41,6 +41,20 @@ function scrollToCard(id, offset = 50) {
 
 const DIRTY_FORMS = ['event_form', 'team_form', 'sponsor_form', 'userForm'];
 
+function resetEventForm() {
+    const form = document.getElementById('event_form');
+    form.reset();
+    markClean(form);
+    form.querySelector('input[type="text"]')?.focus();
+}
+
+function resetTeamForm() {
+    const form = document.getElementById('team_form');
+    form.reset();
+    markClean(form);
+    form.querySelector('input[type="text"]')?.focus();
+}
+
 function markClean(form) {
     if (form) delete form.dataset.dirty;
 }
@@ -59,154 +73,6 @@ function confirmDiscard(form) {
     });
 }
 
-// --- Events -------------------------------------------------------------------
-
-function editEvent(button) {
-    const form = document.getElementById('event_form');
-    document.getElementById('event_form_title').innerText = 'Edit Event';
-    form.action = button.dataset.updateUrl;
-    form.querySelector('[name="comp_name"]').value = button.dataset.name;
-    form.querySelector('[name="comp_location"]').value = button.dataset.location;
-    form.querySelector('[name="comp_date"]').value = button.dataset.date;
-    markClean(form);
-    scrollToCard('event_form', 100);
-}
-
-function resetEventForm() {
-    const form = document.getElementById('event_form');
-    document.getElementById('event_form_title').innerText = 'Add New Event';
-    form.action = form.dataset.defaultAction;
-    form.reset();
-    markClean(form);
-}
-
-// --- Teams: member and goal rows ------------------------------------------------
-
-// Row indexes only need to be unique: the server collects every
-// member_name_<n> / goal_name_<n> present and orders them by <n>, so deleting
-// a row in the middle can no longer truncate the list.
-let memberCount = 0;
-let goalCount = 0;
-const DEFAULT_MEMBER_PHOTO = 'static/assets/other/base.png';
-
-// Stored photos are either Blob URLs or repo-relative static paths.
-function photoSrc(photo) {
-    return /^https?:\/\//.test(photo) ? photo : '/' + photo.replace(/^\/+/, '');
-}
-
-function removeButton(label) {
-    return el('button', {
-        type: 'button', className: 'remove-btn', 'aria-label': label,
-        dataset: { action: 'remove-row' }, text: '×',
-    });
-}
-
-function addMemberRow(data = {}) {
-    const i = memberCount++;
-    const photo = data.photo && !data.photo.endsWith('/base.png') ? data.photo : '';
-
-    const name = el('input', { type: 'text', id: `member_name_${i}`, name: `member_name_${i}`, value: data.name || '', required: true });
-    const role = el('input', { type: 'text', id: `member_role_${i}`, name: `member_role_${i}`, value: data.role || '', required: true });
-
-    const account = el('select', { id: `member_user_${i}`, name: `member_user_${i}` },
-        [el('option', { value: '', text: '-- No link --' })]);
-    const users = JSON.parse(document.getElementById('admin_users_data').textContent);
-    users.forEach(u => {
-        account.append(el('option', {
-            value: u._id,
-            text: `${u.username} (${u.role})`,
-            selected: data.user_id === u._id,
-        }));
-    });
-
-    const file = el('input', {
-        type: 'file', id: `member_photo_${i}`, name: `member_photo_${i}`, accept: 'image/*',
-        dataset: { previewTarget: `member_preview_${i}` },
-    });
-    const preview = el('div', { className: 'image-preview', id: `member_preview_${i}` });
-    if (photo) {
-        preview.append(el('img', { src: photoSrc(photo), alt: 'Current photo', className: 'member-photo-thumb' }));
-        preview.classList.add('is-visible');
-    }
-
-    const row = el('div', { className: 'dynamic-row' }, [
-        removeButton('Remove member'),
-        el('input', { type: 'hidden', name: `member_photo_path_${i}`, value: photo || DEFAULT_MEMBER_PHOTO }),
-        field('Member Name', name),
-        field('Role', role),
-        field('Link User Account (Optional)', account),
-        el('div', { className: 'form-group' }, [
-            el('label', { for: file.id, text: `Profile Image (${photo ? 'current photo kept unless replaced' : 'default used'})` }),
-            file,
-            preview,
-        ]),
-    ]);
-    document.getElementById('members_container').append(row);
-    return row;
-}
-
-function addGoalRow(data = {}) {
-    const i = goalCount++;
-    const progress = Number.isFinite(Number(data.progress)) ? Number(data.progress) : 0;
-
-    const name = el('input', { type: 'text', id: `goal_name_${i}`, name: `goal_name_${i}`, value: data.name || '', required: true });
-    const range = el('input', {
-        type: 'range', id: `goal_progress_${i}`, name: `goal_progress_${i}`,
-        min: '0', max: '100', value: String(progress),
-        dataset: { progressLabel: `goal_progress_label_${i}` },
-    });
-    const rangeLabel = el('label', { for: range.id, id: `goal_progress_label_${i}`, text: `Progress (${progress}%)` });
-
-    const row = el('div', { className: 'dynamic-row' }, [
-        removeButton('Remove goal'),
-        field('Goal Name', name),
-        el('div', { className: 'form-group' }, [rangeLabel, range]),
-    ]);
-    document.getElementById('goals_container').append(row);
-    return row;
-}
-
-function editTeam(button) {
-    const team = JSON.parse(button.dataset.team);
-    const specs = team.specs || {};
-    const form = document.getElementById('team_form');
-
-    document.getElementById('team_form_title').innerText = 'Edit Team ' + team.team_number;
-    document.getElementById('team_id').value = team._id;
-    form.querySelector('[name="team_number"]').value = team.team_number || '';
-    form.querySelector('[name="nickname"]').value = team.nickname || '';
-    form.querySelector('[name="tagline"]').value = team.tagline || '';
-    form.querySelector('[name="drive_train"]').value = specs.drive_train || '';
-    form.querySelector('[name="lift_system"]').value = specs.lift_system || '';
-    form.querySelector('[name="intake"]').value = specs.intake || '';
-    form.querySelector('[name="auton_consistency"]').value = specs.auton_consistency || '';
-    form.querySelector('[name="notebook_link"]').value = team.notebook_link || '';
-
-    document.getElementById('members_container').replaceChildren();
-    memberCount = 0;
-    (team.members || []).forEach(m => addMemberRow(m));
-
-    document.getElementById('goals_container').replaceChildren();
-    goalCount = 0;
-    (team.goals || []).forEach(g => addGoalRow(g));
-
-    markClean(form);
-    scrollToCard('team_form_card');
-}
-
-function resetTeamForm() {
-    const form = document.getElementById('team_form');
-    document.getElementById('team_form_title').innerText = 'Create New Team';
-    document.getElementById('team_id').value = '';
-    form.reset();
-    document.getElementById('members_container').replaceChildren();
-    document.getElementById('goals_container').replaceChildren();
-    document.getElementById('heroImagePreview')?.replaceChildren();
-    memberCount = 0;
-    goalCount = 0;
-    markClean(form);
-}
-
 // --- Sponsors -------------------------------------------------------------------
 
 function editSponsor(button) {
@@ -215,7 +81,9 @@ function editSponsor(button) {
     document.getElementById('sponsor_id').value = button.dataset.id;
     form.querySelector('[name="name"]').value = button.dataset.name;
     form.querySelector('[name="website"]').value = button.dataset.website;
-    form.querySelector('[name="level"]').value = button.dataset.level;
+    // Level is a segmented control (radios); fall back to the first tier for unknown values.
+    const levels = Array.from(form.querySelectorAll('[name="level"]'));
+    (levels.find(radio => radio.value === button.dataset.level) || levels[0]).checked = true;
     markClean(form);
     scrollToCard('sponsor_form_card');
 }
@@ -234,7 +102,8 @@ function resetSponsorForm() {
 function editUser(button) {
     const user = button.dataset;
     const form = document.getElementById('userForm');
-    document.getElementById('user_form_title').innerText = 'Edit User: ' + user.username;
+    document.getElementById('user_form_title').innerText = 'Edit account: ' + user.username;
+    document.getElementById('userFormDetails').open = true;
     form.action = user.updateUrl;
     form.dataset.mode = 'edit';
     form.reset();
@@ -253,7 +122,7 @@ function editUser(button) {
 
 function resetUserForm() {
     const form = document.getElementById('userForm');
-    document.getElementById('user_form_title').innerText = 'Create New User';
+    document.getElementById('user_form_title').innerText = 'Add someone manually';
     form.action = form.dataset.defaultAction;
     delete form.dataset.mode;
     form.reset();
@@ -279,64 +148,6 @@ function copyResetLink() {
             finish(false);
         }
     }
-}
-
-// --- Team awards ------------------------------------------------------------------
-
-function teamAwardInputs() {
-    return Array.from(document.querySelectorAll('#team_awards_list input[type="number"]'));
-}
-
-function teamAwardsDirty() {
-    return teamAwardInputs().some(input => input.value !== input.dataset.original);
-}
-
-function showTeamAwards(teamNum) {
-    const teamAwards = JSON.parse(document.getElementById('team_awards_data').textContent);
-    const container = document.getElementById('team_awards_list');
-    const form = document.getElementById('team_awards_form');
-    const msg = document.getElementById('no_team_msg');
-
-    if (!teamNum) {
-        form.hidden = true;
-        msg.hidden = false;
-        return;
-    }
-
-    container.replaceChildren();
-    const filtered = teamAwards.filter(a => String(a.team_number) === String(teamNum));
-
-    if (filtered.length === 0) {
-        container.append(el('p', {
-            className: 'team-awards-empty',
-            text: 'No awards found for this team. Please seed them first.',
-        }));
-    } else {
-        filtered.forEach(award => {
-            const count = String(award.count ?? 0);
-            const input = el('input', {
-                type: 'number', name: `team_award_${award._id}`, min: '0', value: count,
-                className: 'team-award-input', 'aria-label': `${award.title} count`,
-                dataset: { original: count },
-            });
-            container.append(el('div', { className: 'award-item' }, [
-                el('span', { className: 'team-award-title', text: award.title }),
-                input,
-            ]));
-        });
-    }
-
-    form.hidden = false;
-    msg.hidden = true;
-}
-
-// "Reset Changes" restores the counts as loaded. It used to set every count
-// to zero, which one Save then wrote over the team's whole award history.
-function resetTeamAwards() {
-    teamAwardInputs().forEach(input => {
-        input.value = input.dataset.original;
-    });
-    Admin.notify('Team award counts restored', 'info');
 }
 
 // --- Loading overlay, delete confirmation, search -----------------------------------
@@ -398,17 +209,26 @@ function searchAdminContent() {
 // --- Notifications and list filters ---------------------------------------------------
 
 const Admin = {
-    notify(message, category = 'info') {
+    // `action` ({label, run}) adds a button to the toast, e.g. Undo after a roster move.
+    notify(message, category = 'info', action = null) {
         const stack = document.getElementById('toast-stack');
         if (!stack) return;
 
-        const toast = el('div', { className: `status-msg ${category}`, text: message });
-        stack.append(toast);
-
-        setTimeout(() => {
+        const toast = el('div', { className: `status-msg ${category}` }, [el('span', { text: message })]);
+        const dismiss = () => {
             toast.classList.add('is-leaving');
             toast.addEventListener('animationend', () => toast.remove(), { once: true });
-        }, 5000);
+        };
+        if (action) {
+            const button = el('button', { type: 'button', className: 'toast-action', text: action.label });
+            button.addEventListener('click', () => {
+                dismiss();
+                action.run();
+            }, { once: true });
+            toast.append(button);
+        }
+        stack.append(toast);
+        setTimeout(dismiss, action ? 9000 : 5000);
     },
 
     attachListFilter(inputSelector, itemSelector) {
@@ -469,9 +289,10 @@ function showHelp() {
     Dialog.alert({
         title: 'Admin Dashboard Help',
         html: `
-            <p><strong>Tabs:</strong> Use the tab bar to jump between sections; each tab's link is shareable.</p>
-            <p><strong>Search:</strong> The search box filters the tab you are on. Each panel also has its own filter box.</p>
-            <p><strong>Unsaved changes:</strong> You will be asked before a form with unsaved edits is cleared.</p>
+            <p><strong>Saving:</strong> Numbers, event fields, roles and team pages save the moment you change them. A green tick means it worked; a red mark means it did not, and the old value comes back.</p>
+            <p><strong>People:</strong> Approve sign-ups at the top of the People tab. Drag cards between team columns, or use each card's <em>Move to</em> menu. Every move has an Undo.</p>
+            <p><strong>Teams:</strong> Click a team to open its editor. Anyone on a team's roster can edit that team's page, too.</p>
+            <p><strong>Tabs:</strong> Each tab's link is shareable. The search box filters the tab you are on.</p>
             <p><strong>Need more help?</strong> Contact the system administrator.</p>
         `,
         confirmLabel: 'Got it!',
@@ -656,15 +477,11 @@ const QUICK_ADD = {
 };
 
 const RESETS = {
-    'reset-event': ['event_form', resetEventForm],
-    'reset-team': ['team_form', resetTeamForm],
     'reset-sponsor': ['sponsor_form', resetSponsorForm],
     'reset-user': ['userForm', resetUserForm],
 };
 
 const EDITS = {
-    'edit-event': ['event_form', editEvent],
-    'edit-team': ['team_form', editTeam],
     'edit-sponsor': ['sponsor_form', editSponsor],
     'edit-user': ['userForm', editUser],
 };
@@ -693,16 +510,13 @@ document.addEventListener('click', function (e) {
     } else if (EDITS[action]) {
         const [formId, edit] = EDITS[action];
         guarded(formId, () => edit(trigger));
-    } else if (action === 'remove-row') {
-        const form = trigger.closest('form');
-        trigger.closest('.dynamic-row')?.remove();
-        if (form) form.dataset.dirty = '1';
-    } else if (action === 'add-member') {
-        addMemberRow().querySelector('input[type="text"]')?.focus();
-    } else if (action === 'add-goal') {
-        addGoalRow().querySelector('input[type="text"]')?.focus();
-    } else if (action === 'reset-team-awards') {
-        resetTeamAwards();
+    } else if (action === 'go-tab') {
+        e.preventDefault();
+        AdminTabs.go(trigger.dataset.tab);
+    } else if (action === 'approve-user') {
+        Approvals.approve(trigger.closest('[data-user-id]'));
+    } else if (action === 'reject-user') {
+        Approvals.reject(trigger.closest('[data-user-id]'), trigger.dataset.username);
     } else if (action === 'copy-reset-link') {
         copyResetLink();
     } else if (action === 'select-all') {
@@ -718,17 +532,9 @@ document.addEventListener('input', function (e) {
         searchAdminContent();
         return;
     }
-    if (target.dataset.progressLabel) {
-        const label = document.getElementById(target.dataset.progressLabel);
-        if (label) label.textContent = `Progress (${target.value}%)`;
-    }
     const form = target.form;
     if (form && DIRTY_FORMS.includes(form.id)) form.dataset.dirty = '1';
 });
-
-// The team selector swaps the award list, so check for unsaved counts first
-// and put the selector back if the admin keeps editing.
-let currentTeamSelection = '';
 
 document.addEventListener('change', function (e) {
     const target = e.target;
@@ -737,25 +543,8 @@ document.addEventListener('change', function (e) {
     }
     if (target.form && DIRTY_FORMS.includes(target.form.id)) target.form.dataset.dirty = '1';
 
-    if (target.id === 'team_selector') {
-        const wanted = target.value;
-        if (!teamAwardsDirty()) {
-            currentTeamSelection = wanted;
-            showTeamAwards(wanted);
-            return;
-        }
-        target.value = currentTeamSelection;
-        Dialog.confirm({
-            title: 'Discard unsaved award counts?',
-            message: 'The counts you changed for this team have not been saved.',
-            confirmLabel: 'Discard',
-        }).then(ok => {
-            if (!ok) return;
-            target.value = wanted;
-            currentTeamSelection = wanted;
-            showTeamAwards(wanted);
-        });
-    }
+    if (target.matches('[data-role-user-id]')) Roles.change(target);
+    if (target.matches('.roster-move')) Roster.moveFromSelect(target);
 });
 
 document.addEventListener('submit', function (e) {
@@ -778,7 +567,7 @@ document.addEventListener('submit', function (e) {
 
 // Warn before leaving the page with unsaved edits.
 window.addEventListener('beforeunload', function (e) {
-    const dirty = DIRTY_FORMS.some(id => isDirty(document.getElementById(id))) || teamAwardsDirty();
+    const dirty = DIRTY_FORMS.some(id => isDirty(document.getElementById(id))) || Autosave.pending();
     if (dirty) {
         e.preventDefault();
         e.returnValue = '';
@@ -798,6 +587,9 @@ window.addEventListener('pageshow', function () {
 document.addEventListener('DOMContentLoaded', function () {
     AdminTabs.init();
     initMessagesPanel();
+    Autosave.init();
+    TeamAwards.init();
+    Roster.init();
     Admin.attachListFilter('#events_filter', '#panel-events .event-item');
     Admin.attachListFilter('#awards_filter', '#panel-awards .award-item');
     Admin.attachListFilter('#teams_filter', '#panel-teams .data-list > .data-item');
@@ -857,3 +649,350 @@ function initMessagesPanel() {
         });
     });
 }
+
+// --- JSON calls ----------------------------------------------------------------------------------------
+
+// POST JSON to the admin API. Resolves with the parsed body, rejects with an
+// Error whose message is the server's user-facing text.
+async function api(url, body = {}) {
+    let response;
+    try {
+        response = await fetch(url, {
+            method: 'POST',
+            headers: jsonHeaders(),
+            credentials: 'same-origin',
+            body: JSON.stringify(body),
+        });
+    } catch (err) {
+        throw new Error('Could not reach the server. Check your connection.');
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Save failed (${response.status}).`);
+    return data;
+}
+
+// --- Autosave: stat steppers, award steppers, inline event fields --------------------------------------
+
+const AUTOSAVE_FIELDS = '[data-stat-field], [data-award-id], [data-event-field]';
+
+const Autosave = (function () {
+    const timers = new Map();
+    let inFlight = 0;
+
+    function mark(input, state) {
+        const holder = input.closest('.stepper, .event-inline');
+        if (!holder) return;
+        holder.classList.remove('is-saving', 'is-saved', 'is-error');
+        if (state) holder.classList.add(`is-${state}`);
+    }
+
+    function request(input) {
+        if (input.dataset.statField) {
+            return api('/admin/api/stats', { field: input.dataset.statField, value: Number(input.value) });
+        }
+        if (input.dataset.awardId) {
+            return api(`/admin/api/awards/${input.dataset.awardId}`, { count: Number(input.value) })
+                .then(data => {
+                    TeamAwards.remember(input.dataset.awardId, data.count);
+                    return data;
+                });
+        }
+        const row = input.closest('[data-event-id]');
+        return api(`/admin/api/events/${row.dataset.eventId}`, { field: input.dataset.eventField, value: input.value });
+    }
+
+    function save(input) {
+        if (input.value === input.dataset.saved) return;
+        mark(input, 'saving');
+        inFlight++;
+        request(input)
+            .then(() => {
+                input.dataset.saved = input.value;
+                mark(input, 'saved');
+            })
+            .catch(err => {
+                input.value = input.dataset.saved;
+                mark(input, 'error');
+                Admin.notify(err.message, 'error');
+            })
+            .finally(() => { inFlight--; });
+    }
+
+    // Steppers get clicked in bursts (+ + + +), so wait for a pause before saving.
+    function schedule(input, delay = 600) {
+        clearTimeout(timers.get(input));
+        timers.set(input, setTimeout(() => {
+            timers.delete(input);
+            save(input);
+        }, delay));
+    }
+
+    function remember(input) {
+        input.dataset.saved = input.value;
+    }
+
+    function init() {
+        document.querySelectorAll(AUTOSAVE_FIELDS).forEach(remember);
+
+        document.addEventListener('click', e => {
+            const button = e.target.closest('.stepper-btn');
+            if (!button) return;
+            const input = button.parentElement.querySelector('input');
+            input.value = String(Math.max(0, (parseInt(input.value, 10) || 0) + Number(button.dataset.step)));
+            schedule(input);
+        });
+
+        document.addEventListener('input', e => {
+            if (e.target.matches('[data-stat-field], [data-award-id]')) schedule(e.target, 900);
+        });
+
+        document.addEventListener('change', e => {
+            if (!e.target.matches(AUTOSAVE_FIELDS)) return;
+            clearTimeout(timers.get(e.target));
+            timers.delete(e.target);
+            save(e.target);
+        });
+
+        // Enter commits an inline event field; Escape puts the saved value back.
+        document.addEventListener('keydown', e => {
+            if (!e.target.matches('[data-event-field]')) return;
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.target.blur();
+            } else if (e.key === 'Escape') {
+                e.target.value = e.target.dataset.saved;
+                e.target.blur();
+            }
+        });
+    }
+
+    return { init, remember, pending: () => inFlight > 0 || timers.size > 0 };
+})();
+
+// --- Team awards: pick a team chip, edit its counts with steppers --------------------------------------
+
+const TeamAwards = (function () {
+    let awards = [];
+
+    function stepperFor(award) {
+        const input = el('input', {
+            id: `team-award-${award._id}`, type: 'number', min: '0', inputmode: 'numeric',
+            value: String(award.count ?? 0), 'aria-label': `${award.title} count`,
+            dataset: { awardId: award._id },
+        });
+        Autosave.remember(input);
+        return el('div', { className: 'stepper' }, [
+            el('button', { type: 'button', className: 'stepper-btn', 'aria-label': `Decrease ${award.title}`, dataset: { step: '-1' }, text: '−' }),
+            input,
+            el('button', { type: 'button', className: 'stepper-btn', 'aria-label': `Increase ${award.title}`, dataset: { step: '1' }, text: '+' }),
+            el('span', { className: 'field-status', 'aria-hidden': 'true' }),
+        ]);
+    }
+
+    function show(teamNumber) {
+        document.querySelectorAll('[data-team-awards]').forEach(chip => {
+            chip.setAttribute('aria-pressed', String(chip.dataset.teamAwards === teamNumber));
+        });
+        const rows = awards.filter(a => String(a.team_number) === teamNumber);
+        document.getElementById('team_awards_list').replaceChildren(...(rows.length
+            ? rows.map(a => el('div', { className: 'data-item award-item' }, [
+                el('span', { className: 'award-name', text: a.title }),
+                stepperFor(a),
+            ]))
+            : [el('p', { className: 'list-empty', text: 'This team has no award categories yet.' })]));
+        document.getElementById('no_team_msg').hidden = true;
+    }
+
+    function init() {
+        const data = document.getElementById('team_awards_data');
+        if (!data) return;
+        awards = JSON.parse(data.textContent);
+        document.querySelectorAll('[data-team-awards]').forEach(chip => {
+            chip.addEventListener('click', () => show(chip.dataset.teamAwards));
+        });
+    }
+
+    // Keep the local copy current so switching teams and back shows the saved counts.
+    function remember(id, count) {
+        const award = awards.find(a => a._id === id);
+        if (award) award.count = count;
+    }
+
+    return { init, remember };
+})();
+
+// --- Sign-up approvals and inline roles ------------------------------------------------------------------
+
+const Approvals = {
+    approve(item) {
+        const role = item.querySelector('[data-approve-role]').value;
+        const teamId = item.querySelector('[data-approve-team]').value;
+        const name = item.querySelector('strong').textContent;
+        item.classList.add('is-busy');
+        api(`/admin/api/users/${item.dataset.userId}/approve`, { role, team_id: teamId || null })
+            .then(() => {
+                Admin.notify(`${name} approved${teamId ? ' and added to the roster' : ''}. Refreshing…`, 'success');
+                // The board and the account list are both server-rendered; reload rather than patch both.
+                setTimeout(() => location.reload(), 1200);
+            })
+            .catch(err => {
+                item.classList.remove('is-busy');
+                Admin.notify(err.message, 'error');
+            });
+    },
+
+    reject(item, username) {
+        Dialog.confirm({
+            title: 'Reject this request?',
+            message: `${username}'s request will be deleted. They can sign up again later.`,
+            confirmLabel: 'Reject',
+        }).then(ok => {
+            if (!ok) return;
+            api(`/admin/api/users/${item.dataset.userId}/reject`)
+                .then(() => {
+                    item.remove();
+                    Admin.notify(`Request from ${username} rejected.`, 'info');
+                    if (!document.querySelector('.approval-item')) document.getElementById('approvals')?.remove();
+                })
+                .catch(err => Admin.notify(err.message, 'error'));
+        });
+    },
+};
+
+const Roles = {
+    change(select) {
+        const previous = select.dataset.current;
+        const role = select.value;
+        api(`/admin/api/users/${select.dataset.roleUserId}/role`, { role })
+            .then(data => {
+                select.dataset.current = role;
+                select.classList.replace(previous, role);
+                select.closest('.user-item').dataset.role = role;
+                Admin.notify(`Role changed to ${role}.`, 'success');
+                if (data.self_demoted) location.assign('/');
+            })
+            .catch(err => {
+                select.value = previous;
+                Admin.notify(err.message, 'error');
+            });
+    },
+};
+
+// --- Roster board: drag and drop, Move-to menu, Undo -------------------------------------------------------
+//
+// Team columns hold roster cards (data-member-id, plus data-user-id when the
+// person has a login). The Unassigned column holds accounts (data-user-id
+// only). Only people with a login can go to Unassigned; removing someone
+// without one is a team-editor job, where it gets a confirmation.
+
+const Roster = (function () {
+    let dragged = null;
+
+    const columns = () => Array.from(document.querySelectorAll('.roster-col'));
+    const columnFor = teamId => columns().find(col => (col.dataset.teamId || null) === (teamId || null));
+    const teamOf = card => card.closest('.roster-col').dataset.teamId || null;
+    const labelOf = col => col.querySelector('.roster-col-head strong').textContent;
+    const canGo = (card, teamId) => Boolean(teamId) || Boolean(card.dataset.userId);
+
+    function recount() {
+        columns().forEach(col => {
+            col.querySelector('.roster-count').textContent = col.querySelectorAll('.roster-card').length;
+        });
+    }
+
+    // Rebuild a card's Move-to menu for the column it now sits in.
+    function refreshMenu(card) {
+        const here = teamOf(card);
+        const options = [el('option', { value: '', text: 'Move to…', selected: true, disabled: true })];
+        columns().forEach(col => {
+            const id = col.dataset.teamId || null;
+            if (id === here || !canGo(card, id)) return;
+            options.push(el('option', { value: id || 'none', text: labelOf(col) }));
+        });
+        card.querySelector('.roster-move').replaceChildren(...options);
+    }
+
+    function place(card, teamId) {
+        columnFor(teamId).querySelector('.roster-drop').append(card);
+        refreshMenu(card);
+        recount();
+    }
+
+    function move(card, toTeamId, undoable = true) {
+        const from = teamOf(card);
+        const to = toTeamId || null;
+        if (to === from || !canGo(card, to) || !columnFor(to)) return;
+
+        const body = { to_team_id: to };
+        if (card.dataset.memberId) body.member_id = card.dataset.memberId;
+        else body.user_id = card.dataset.userId;
+
+        place(card, to);
+        card.classList.add('is-busy');
+        api('/admin/api/roster/move', body)
+            .then(data => {
+                card.classList.remove('is-busy');
+                if (to) card.dataset.memberId = data.member.member_id;
+                else delete card.dataset.memberId;
+                Admin.notify(`${card.dataset.name} moved to ${labelOf(columnFor(to))}.`, 'success',
+                    undoable ? { label: 'Undo', run: () => move(card, from, false) } : null);
+            })
+            .catch(err => {
+                card.classList.remove('is-busy');
+                place(card, from);
+                Admin.notify(err.message, 'error');
+            });
+    }
+
+    function moveFromSelect(select) {
+        const value = select.value;
+        select.value = '';
+        move(select.closest('.roster-card'), value === 'none' ? null : value);
+    }
+
+    function clearHover() {
+        document.querySelectorAll('.roster-col.is-over').forEach(col => col.classList.remove('is-over'));
+    }
+
+    function init() {
+        const board = document.getElementById('rosterBoard');
+        if (!board) return;
+
+        board.addEventListener('dragstart', e => {
+            dragged = e.target.closest('.roster-card');
+            if (!dragged) return;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', dragged.dataset.name || '');
+            dragged.classList.add('is-dragging');
+            board.classList.add('is-dragging');
+        });
+        board.addEventListener('dragend', () => {
+            dragged?.classList.remove('is-dragging');
+            board.classList.remove('is-dragging');
+            clearHover();
+            dragged = null;
+        });
+        board.addEventListener('dragover', e => {
+            const col = e.target.closest('.roster-col');
+            if (!col || !dragged || !canGo(dragged, col.dataset.teamId || null)) return;
+            e.preventDefault();
+            if (!col.classList.contains('is-over')) {
+                clearHover();
+                col.classList.add('is-over');
+            }
+        });
+        board.addEventListener('dragleave', e => {
+            const col = e.target.closest('.roster-col');
+            if (col && !col.contains(e.relatedTarget)) col.classList.remove('is-over');
+        });
+        board.addEventListener('drop', e => {
+            const col = e.target.closest('.roster-col');
+            if (!col || !dragged) return;
+            e.preventDefault();
+            clearHover();
+            move(dragged, col.dataset.teamId || null);
+        });
+    }
+
+    return { init, moveFromSelect };
+})();

@@ -53,3 +53,14 @@ def test_contact_stylesheet_has_no_duplicated_block():
     contact = (CSS / 'pages' / 'contact.css').read_text(encoding='utf-8')
     assert contact.count('6. CLOSING BAND') == 1
     assert '[data-theme="dark"] /*' not in contact
+
+
+@pytest.mark.parametrize('path', FILES, ids=lambda p: p.name)
+def test_braces_are_balanced(path):
+    """A dropped '}' silently scopes every later rule to the @media block above it."""
+    text = re.sub(r'/\*.*?\*/', '', path.read_text(encoding='utf-8'), flags=re.S)
+    depth = 0
+    for number, line in enumerate(text.split('\n'), 1):
+        depth += line.count('{') - line.count('}')
+        assert depth >= 0, f'{path.name}:{number} closes a block that was never opened'
+    assert depth == 0, f'{path.name} leaves {depth} block(s) open'

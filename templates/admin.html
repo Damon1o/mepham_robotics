@@ -9,11 +9,18 @@
 <script id="team_awards_data" type="application/json">
         {{ team_awards|tojson|safe }}
     </script>
-<script id="admin_users_data" type="application/json">
-        {{ users|tojson|safe }}
-    </script>
 
 {% endblock %}
+
+{% macro stepper(id, label, value, attr, attr_value) -%}
+<div class="stepper" data-autosave-wrap>
+    <button type="button" class="stepper-btn" data-step="-1" aria-label="Decrease {{ label }}">&minus;</button>
+    <input id="{{ id }}" type="number" min="0" inputmode="numeric" value="{{ value|default(0, true) }}"
+        {{ attr }}="{{ attr_value }}" aria-label="{{ label }}">
+    <button type="button" class="stepper-btn" data-step="1" aria-label="Increase {{ label }}">+</button>
+    <span class="field-status" aria-hidden="true"></span>
+</div>
+{%- endmacro %}
 
 {% block content %}
 <div id="loadingOverlay" class="loading-overlay" role="status" aria-label="Saving" hidden>
@@ -21,152 +28,111 @@
 </div>
 
 <div class="admin-container">
-    <div class="admin-header">
-        <h1>Command Center
-            <span class="tooltip" tabindex="0" role="img"
-                aria-label="Admin dashboard for managing all aspects of Mepham Robotics. Use the quick actions below for common tasks."><i data-lucide="info" aria-hidden="true"></i>
-                <span class="tooltip-text" aria-hidden="true">Admin dashboard for managing all aspects of Mepham Robotics. Use the quick
-                    actions below for common tasks.</span>
-            </span>
-        </h1>
-        <p>Welcome back, {{ current_user }} | Manage the legacy of Team 77628.</p>
-    </div>
+    <div class="admin-topbar">
+        <div class="admin-header">
+            <h1>Command Center</h1>
+            <p>Welcome back, {{ current_user }}. Most things here save the moment you change them.</p>
+        </div>
 
     <div id="toast-stack" class="toast-stack" role="status" aria-live="polite">
         {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
         {% for category, message in messages %}
         <div class="status-msg {{ category }}">{{ message }}</div>
         {% endfor %}
-        {% endif %}
         {% endwith %}
     </div>
 
     <!-- Dashboard Overview -->
     <div class="dashboard-stats">
+        {% for value, label, change in [
+            (stats.get('teams_count', 0), 'Active Teams', monthly_changes.teams_change),
+            (stats.get('members_count', 0), 'Team Members', monthly_changes.members_change),
+            (stats.get('awards_count', 0), 'Total Awards', monthly_changes.awards_change),
+            (competitions|length, 'Upcoming Events', monthly_changes.events_change)] %}
         <div class="stat-card">
-            <div class="stat-value">{{ stats.get('teams_count', 0) }}</div>
-            <div class="stat-label">Active Teams</div>
-            {% if monthly_changes.teams_change > 0 %}
-            <div class="stat-change positive"><i data-lucide="arrow-up" aria-hidden="true"></i> {{ monthly_changes.teams_change }} this month</div>
-            {% elif monthly_changes.teams_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down" aria-hidden="true"></i> {{
-                monthly_changes.teams_change|abs }} this month
+            <div class="stat-value">{{ value }}</div>
+            <div class="stat-label">{{ label }}</div>
+            {% if change > 0 %}
+            <div class="stat-change positive"><i data-lucide="arrow-up" aria-hidden="true"></i> {{ change }} this month</div>
+            {% elif change < 0 %}
+            <div class="stat-change negative"><i data-lucide="arrow-down" aria-hidden="true"></i> {{ change|abs }} this month</div>
+            {% else %}
+            <div class="stat-change">No change</div>
+            {% endif %}
         </div>
-        {% else %}
-        <div class="stat-change">No change</div>
+        {% endfor %}
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="admin-quick-actions">
+        {% if pending_users %}
+        <a href="#users" class="quick-action-btn quick-action-btn--alert" data-action="go-tab" data-tab="users">
+            <span><i data-lucide="user-check"></i> Review {{ pending_users|length }} sign-up{{ 's' if pending_users|length != 1 }}</span>
+        </a>
         {% endif %}
+        <a href="#events" class="quick-action-btn" data-action="quick-add" data-tab="events">
+            <span><i data-lucide="calendar-plus"></i> Add Event</span>
+        </a>
+        <a href="#teams" class="quick-action-btn" data-action="quick-add" data-tab="teams">
+            <span><i data-lucide="bot"></i> Add Team</span>
+        </a>
+        <a href="#sponsors" class="quick-action-btn" data-action="quick-add" data-tab="sponsors">
+            <span><i data-lucide="handshake"></i> Add Sponsor</span>
+        </a>
     </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ stats.get('members_count', 0) }}</div>
-        <div class="stat-label">Team Members</div>
-        {% if monthly_changes.members_change > 0 %}
-        <div class="stat-change positive"><i data-lucide="arrow-up" aria-hidden="true"></i> {{ monthly_changes.members_change }} this month</div>
-        {% elif monthly_changes.members_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down" aria-hidden="true"></i> {{
-            monthly_changes.members_change|abs }} this month
     </div>
-    {% else %}
-    <div class="stat-change">No change</div>
-    {% endif %}
-</div>
-<div class="stat-card">
-    <div class="stat-value">{{ stats.get('awards_count', 0) }}</div>
-    <div class="stat-label">Total Awards</div>
-    {% if monthly_changes.awards_change > 0 %}
-    <div class="stat-change positive"><i data-lucide="arrow-up" aria-hidden="true"></i> {{ monthly_changes.awards_change }} this month</div>
-    {% elif monthly_changes.awards_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down" aria-hidden="true"></i> {{
-        monthly_changes.awards_change|abs }} this month
-</div>
-{% else %}
-<div class="stat-change">No change</div>
-{% endif %}
-</div>
-<div class="stat-card">
-    <div class="stat-value">{{ competitions|length }}</div>
-    <div class="stat-label">Upcoming Events</div>
-    {% if monthly_changes.events_change > 0 %}
-    <div class="stat-change positive"><i data-lucide="arrow-up" aria-hidden="true"></i> {{ monthly_changes.events_change }} this month</div>
-    {% elif monthly_changes.events_change < 0 %} <div class="stat-change negative"><i data-lucide="arrow-down" aria-hidden="true"></i> {{
-        monthly_changes.events_change|abs }} this month
-</div>
-{% else %}
-<div class="stat-change">No change</div>
-{% endif %}
-</div>
-</div>
 
-<!-- Quick Actions -->
-<div class="admin-quick-actions">
-    <a href="#events" class="quick-action-btn" data-action="quick-add" data-tab="events">
-        <span><i data-lucide="calendar-plus"></i> Add Event</span>
-    </a>
-    <a href="#teams" class="quick-action-btn" data-action="quick-add" data-tab="teams">
-        <span><i data-lucide="bot"></i> Add Team</span>
-    </a>
-    <a href="#sponsors" class="quick-action-btn" data-action="quick-add" data-tab="sponsors">
-        <span><i data-lucide="handshake"></i> Add Sponsor</span>
-    </a>
-</div>
+    <!-- Search Box -->
+    <div class="search-box">
+        <span class="search-icon" aria-hidden="true"><i data-lucide="search"></i></span>
+        <input type="text" id="adminSearch" aria-label="Search this tab"
+            placeholder="Search this tab…">
+    </div>
 
-<!-- Search Box -->
-<div class="search-box">
-    <span class="search-icon" aria-hidden="true"><i data-lucide="search"></i></span>
-    <input type="text" id="adminSearch" aria-label="Search teams, events, sponsors, awards"
-        placeholder="Search teams, events, sponsors, awards...">
-</div>
-
-<nav class="admin-tabs" role="tablist" aria-label="Admin sections">
-    <a href="#stats" role="tab" id="tab-stats" aria-controls="panel-stats" aria-selected="true"
-        data-tab="stats" tabindex="0"><i data-lucide="chart-column"></i> Statistics</a>
-    <a href="#events" role="tab" id="tab-events" aria-controls="panel-events" aria-selected="false"
-        data-tab="events" tabindex="-1"><i data-lucide="hourglass"></i> Events</a>
-    <a href="#awards" role="tab" id="tab-awards" aria-controls="panel-awards" aria-selected="false"
-        data-tab="awards" tabindex="-1"><i data-lucide="trophy"></i> Awards</a>
-    <a href="#team-awards" role="tab" id="tab-team-awards" aria-controls="panel-team-awards"
-        aria-selected="false" data-tab="team-awards" tabindex="-1"><i data-lucide="medal"></i> Team Awards</a>
-    <a href="#teams" role="tab" id="tab-teams" aria-controls="panel-teams" aria-selected="false"
-        data-tab="teams" tabindex="-1"><i data-lucide="bot"></i> Teams</a>
-    <a href="#sponsors" role="tab" id="tab-sponsors" aria-controls="panel-sponsors" aria-selected="false"
-        data-tab="sponsors" tabindex="-1"><i data-lucide="handshake"></i> Sponsors</a>
-    <a href="#users" role="tab" id="tab-users" aria-controls="panel-users" aria-selected="false"
-        data-tab="users" tabindex="-1"><i data-lucide="user"></i> Users</a>
-    <a href="#activity" role="tab" id="tab-activity" aria-controls="panel-activity" aria-selected="false"
-        data-tab="activity" tabindex="-1"><i data-lucide="clipboard-list"></i> Activity</a>
-    <a href="#messages" role="tab" id="tab-messages" aria-controls="panel-messages" aria-selected="false"
-        data-tab="messages" tabindex="-1"><i data-lucide="mail"></i> Messages{% if unread_messages %}
-        <span class="message-badge">{{ unread_messages }}</span>{% endif %}</a>
-</nav>
+    <nav class="admin-tabs" role="tablist" aria-label="Admin sections">
+        <a href="#stats" role="tab" id="tab-stats" aria-controls="panel-stats" aria-selected="true"
+            data-tab="stats" tabindex="0"><i data-lucide="chart-column"></i> Statistics</a>
+        <a href="#users" role="tab" id="tab-users" aria-controls="panel-users" aria-selected="false"
+            data-tab="users" tabindex="-1"><i data-lucide="users"></i> People{% if pending_users %}
+            <span class="message-badge" aria-label="{{ pending_users|length }} waiting">{{ pending_users|length }}</span>{% endif %}</a>
+        <a href="#teams" role="tab" id="tab-teams" aria-controls="panel-teams" aria-selected="false"
+            data-tab="teams" tabindex="-1"><i data-lucide="bot"></i> Teams</a>
+        <a href="#events" role="tab" id="tab-events" aria-controls="panel-events" aria-selected="false"
+            data-tab="events" tabindex="-1"><i data-lucide="hourglass"></i> Events</a>
+        <a href="#awards" role="tab" id="tab-awards" aria-controls="panel-awards" aria-selected="false"
+            data-tab="awards" tabindex="-1"><i data-lucide="trophy"></i> Awards</a>
+        <a href="#team-awards" role="tab" id="tab-team-awards" aria-controls="panel-team-awards"
+            aria-selected="false" data-tab="team-awards" tabindex="-1"><i data-lucide="medal"></i> Team Awards</a>
+        <a href="#sponsors" role="tab" id="tab-sponsors" aria-controls="panel-sponsors" aria-selected="false"
+            data-tab="sponsors" tabindex="-1"><i data-lucide="handshake"></i> Sponsors</a>
+        <a href="#activity" role="tab" id="tab-activity" aria-controls="panel-activity" aria-selected="false"
+            data-tab="activity" tabindex="-1"><i data-lucide="clipboard-list"></i> Activity</a>
+        <a href="#messages" role="tab" id="tab-messages" aria-controls="panel-messages" aria-selected="false"
+            data-tab="messages" tabindex="-1"><i data-lucide="mail"></i> Messages{% if unread_messages %}
+            <span class="message-badge">{{ unread_messages }}</span>{% endif %}</a>
+    </nav>
 
 <div class="admin-grid">
-    <!-- GLOBAL STATS CARD -->
+    <!-- STATISTICS -->
     <section class="admin-panel" tabindex="0" data-panel="stats" id="panel-stats" role="tabpanel" aria-labelledby="tab-stats">
     <div class="admin-card">
         <div class="admin-card-header">
-            <h2><i data-lucide="chart-column"></i> Site Statistics</h2>
+            <h2><i data-lucide="chart-column"></i> Homepage numbers</h2>
         </div>
-        <form action="{{ url_for('admin_update_stats') }}" method="POST">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <div class="form-group">
-                <label for="f-teams_count">Teams Count</label>
-                <input id="f-teams_count" type="number" name="teams_count" value="{{ stats.teams_count }}" required>
+        <p class="form-hint">Use + and &minus; or type a number. Each change saves on its own.</p>
+        <div class="stepper-grid">
+            {% for field, label in [('teams_count', 'Teams'), ('members_count', 'Members'),
+                                    ('awards_count', 'Awards (total)'), ('hours_built', 'Hours built')] %}
+            <div class="stepper-card">
+                <label for="s-{{ field }}">{{ label }}</label>
+                {{ stepper('s-' ~ field, label, stats.get(field), 'data-stat-field', field) }}
             </div>
-            <div class="form-group">
-                <label for="f-members_count">Members Count</label>
-                <input id="f-members_count" type="number" name="members_count" value="{{ stats.members_count }}" required>
-            </div>
-            <div class="form-group">
-                <label for="f-awards_count">Awards Count (Total)</label>
-                <input id="f-awards_count" type="number" name="awards_count" value="{{ stats.awards_count }}" required>
-            </div>
-            <div class="form-group">
-                <label for="f-hours_built">Hours Built</label>
-                <input id="f-hours_built" type="number" name="hours_built" value="{{ stats.hours_built }}" required>
-            </div>
-            <button type="submit" class="admin-btn">Update Stats</button>
-        </form>
+            {% endfor %}
+        </div>
     </div>
     </section>
 
-    <!-- UPCOMING EVENTS MANAGER -->
+    <!-- EVENTS -->
     <section class="admin-panel" tabindex="0" data-panel="events" id="panel-events" role="tabpanel" aria-labelledby="tab-events" hidden>
     <div class="admin-card">
         <div class="admin-card-header">
@@ -174,27 +140,24 @@
         </div>
         <input type="search" id="events_filter" class="panel-filter" aria-label="Filter events"
             placeholder="Filter events by name, date, or location...">
+        <p class="form-hint">Click any field to change it. It saves when you leave the field.</p>
         <div class="data-list list-events">
             {% for comp in competitions %}
-            <div class="data-item event-item">
-                <div class="event-info">
-                    <strong class="item-title-maroon">{{ comp.name }}</strong>
-                    <small class="item-sub">{{ comp.display_date }}</small>
-                    <small class="item-note"><i data-lucide="map-pin"></i> {{ comp.location or 'No location
-                        set' }}</small>
-                </div>
-                <div class="data-item-actions">
-                    <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-id="{{ comp._id }}"
-                        data-name="{{ comp.name }}" data-location="{{ comp.location }}" data-date="{{ comp.date_str }}"
-                        data-update-url="{{ url_for('admin_edit_competition', id=comp._id) }}"
-                        aria-label="Edit event: {{ comp.name }}" data-action="edit-event">Edit</button>
-                    <form class="form-flush" action="{{ url_for('admin_delete_competition', comp_id=comp._id) }}" method="POST"
-                        data-confirm-delete="event">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
-                            aria-label="Delete event: {{ comp.name }}">Delete</button>
-                    </form>
-                </div>
+            <div class="data-item event-item event-inline" data-event-id="{{ comp._id }}">
+                <input type="text" class="inline-input inline-input--title" value="{{ comp.name }}" maxlength="200"
+                    data-event-field="name" aria-label="Event name" required>
+                <input type="text" class="inline-input" value="{{ comp.location or '' }}" maxlength="200"
+                    data-event-field="location" aria-label="Location for {{ comp.name }}" placeholder="Location"
+                    list="dl-event-locations" autocomplete="off">
+                <input type="datetime-local" class="inline-input" value="{{ comp.date_str }}"
+                    data-event-field="date" aria-label="Date and time for {{ comp.name }}">
+                <span class="field-status" aria-hidden="true"></span>
+                <form class="form-flush" action="{{ url_for('admin_delete_competition', comp_id=comp._id) }}" method="POST"
+                    data-confirm-delete="event">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="icon-btn icon-btn--danger"
+                        aria-label="Delete event: {{ comp.name }}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+                </form>
             </div>
             {% endfor %}
             {% if not competitions %}
@@ -202,33 +165,25 @@
             {% endif %}
         </div>
 
-        <h3 class="form-section-title" id="event_form_title"
-           >Add New Event
-        </h3>
-        <form id="event_form" action="{{ url_for('admin_add_competition') }}" data-default-action="{{ url_for('admin_add_competition') }}" method="POST">
+        <h3 class="form-section-title" id="event_form_title">Add an event</h3>
+        <form id="event_form" class="inline-create" action="{{ url_for('admin_add_competition') }}" method="POST">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <div class="form-group">
-                <label for="f-comp_name">Event Name</label>
-                <input id="f-comp_name" type="text" name="comp_name" placeholder="e.g. Regional Qualifiers" required>
-            </div>
-            <div class="form-group">
-                <label for="f-comp_location">Location</label>
-                <input id="f-comp_location" type="text" name="comp_location" placeholder="e.g. Mepham High School" required>
-            </div>
-            <div class="form-group">
-                <label for="f-comp_date">Event Date & Time</label>
-                <input id="f-comp_date" type="datetime-local" name="comp_date" required>
-            </div>
-            <div class="btn-group">
-                <button type="submit" class="admin-btn admin-btn-success">Save Event</button>
-                <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-event">Cancel /
-                    Reset</button>
-            </div>
+            <label class="visually-hidden" for="f-comp_name">Event name</label>
+            <input id="f-comp_name" type="text" name="comp_name" placeholder="Event name" required>
+            <label class="visually-hidden" for="f-comp_location">Location</label>
+            <input id="f-comp_location" type="text" name="comp_location" placeholder="Location" required
+                list="dl-event-locations" autocomplete="off">
+            <datalist id="dl-event-locations">
+                {% for loc in event_locations %}<option value="{{ loc }}"></option>{% endfor %}
+            </datalist>
+            <label class="visually-hidden" for="f-comp_date">Date and time</label>
+            <input id="f-comp_date" type="datetime-local" name="comp_date" required>
+            <button type="submit" class="admin-btn admin-btn-success">Add</button>
         </form>
     </div>
     </section>
 
-    <!-- AWARDS MANAGER CARD -->
+    <!-- AWARDS -->
     <section class="admin-panel" tabindex="0" data-panel="awards" id="panel-awards" role="tabpanel" aria-labelledby="tab-awards" hidden>
     <div class="admin-card">
         <div class="admin-card-header">
@@ -236,190 +191,89 @@
         </div>
         <input type="search" id="awards_filter" class="panel-filter" aria-label="Filter awards"
             placeholder="Filter awards by name...">
-        <form action="{{ url_for('admin_update_awards') }}" method="POST">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <div class="data-list">
-                {% for award in awards %}
-                <div class="data-item award-item">
-                    <div class="award-info">
-                        <span class="award-name">{{ award.title }}</span>
-                        <div class="form-hint">Current: {{ award.count|default(0) }} awards</div>
-                    </div>
-                    <div class="data-item-actions">
-                        <input type="number" name="award_{{ award._id }}" value="{{ award.count|default(0) }}" min="0"
-                            class="award-count-input" aria-label="{{ award.title }} count">
-                    </div>
-                </div>
-                {% endfor %}
+        <div class="data-list">
+            {% for award in awards %}
+            <div class="data-item award-item">
+                <span class="award-name">{{ award.title }}</span>
+                {{ stepper('award-' ~ award._id, award.title ~ ' count', award.count, 'data-award-id', award._id) }}
             </div>
-            <div class="btn-group">
-                <button type="submit" class="admin-btn admin-btn-success">Update All Awards</button>
-            </div>
-        </form>
+            {% else %}
+            <p class="list-empty">No award categories yet.</p>
+            {% endfor %}
+        </div>
     </div>
     </section>
 
-    <!-- TEAM AWARDS MANAGER CARD -->
+    <!-- TEAM AWARDS -->
     <section class="admin-panel" tabindex="0" data-panel="team-awards" id="panel-team-awards" role="tabpanel" aria-labelledby="tab-team-awards" hidden>
-    <div class="admin-card awards-help-card"
-       >
+    <div class="admin-card awards-help-card">
         <div class="admin-card-header">
-            <h2><i data-lucide="medal"></i> Team Awards Management</h2>
+            <h2><i data-lucide="medal"></i> Team Awards</h2>
         </div>
-
-        <div class="form-group team-select-group">
-            <label for="team_selector">Select Team to Manage</label>
-            <select id="team_selector" class="team-select-dropdown">
-                <option value="">-- Choose a Team --</option>
-                {% for team in teams %}
-                <option value="{{ team.team_number }}">{{ team.team_number }} - {{ team.nickname }}</option>
-                {% endfor %}
-            </select>
-            <div class="form-hint">Select a team to view and edit their award counts</div>
+        <div class="team-chip-row" role="group" aria-label="Choose a team">
+            {% for team in teams %}
+            <button type="button" class="team-chip" data-team-awards="{{ team.team_number }}"
+                aria-pressed="false">{{ team.team_number }}{% if team.nickname %} · {{ team.nickname }}{% endif %}</button>
+            {% endfor %}
         </div>
-
-        <form action="{{ url_for('admin_update_team_awards') }}" method="POST" id="team_awards_form" hidden>
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <div id="team_awards_list" class="data-list">
-                <!-- Dynamically populated -->
-            </div>
-            <div class="btn-group btn-group-spaced">
-                <button type="submit" class="admin-btn admin-btn-success">Save Team Awards</button>
-                <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-team-awards">Reset
-                    Changes</button>
-            </div>
-        </form>
-
+        <div id="team_awards_list" class="data-list"></div>
         <div id="no_team_msg" class="no-team-msg">
             <i data-lucide="trophy" class="no-team-msg-icon" aria-hidden="true"></i>
-            <p class="no-team-msg-title">No team selected</p>
-            <p class="no-team-msg-hint">Please select a team from the dropdown above to manage their awards</p>
+            <p class="no-team-msg-title">Pick a team above</p>
+            <p class="no-team-msg-hint">Its award counts appear here and save as you change them.</p>
         </div>
     </div>
     </section>
 
-    <!-- TEAMS MANAGEMENT CARD -->
+    <!-- TEAMS -->
     <section class="admin-panel" tabindex="0" data-panel="teams" id="panel-teams" role="tabpanel" aria-labelledby="tab-teams" hidden>
     <div class="admin-card card-full" id="team_form_card">
         <div class="admin-card-header">
-            <h2><i data-lucide="bot"></i> Teams Management</h2>
+            <h2><i data-lucide="bot"></i> Teams</h2>
         </div>
         <input type="search" id="teams_filter" class="panel-filter" aria-label="Filter teams"
             placeholder="Filter teams by name or number...">
-
-        <div class="data-list list-teams">
+        <div class="team-card-grid list-teams">
             {% for team in teams %}
-            <div class="data-item">
-                <div class="team-number-box">
-                    {{ team.team_number }}
-                </div>
-                <div>
-                    <strong class="item-title">{{ team.nickname }}</strong>
-                    <small class="item-meta">
-                        <span class="item-meta-part"><i data-lucide="users"></i> {{ team.members|length
-                            }} members</span>
-                        <span class="item-sep">•</span>
-                        <span>{{ team.tagline }}</span>
-                    </small>
-                </div>
-                <!-- Pass team data as JSON to JS function using data-attribute -->
-                {% set team_json = team|tojson %}
+            <article class="data-item team-tile">
+                <a class="team-tile-main" href="{{ url_for('manage_team', team_id=team._id) }}">
+                    <span class="team-number-box">{{ team.team_number }}</span>
+                    <span class="team-tile-text">
+                        <strong class="item-title">{{ team.nickname or 'No nickname yet' }}</strong>
+                        <small class="item-meta"><i data-lucide="users" aria-hidden="true"></i>
+                            {{ team.members|length }} member{{ 's' if team.members|length != 1 }}{% if team.season %} · {{ team.season }}{% endif %}</small>
+                    </span>
+                </a>
                 <div class="data-item-actions">
-                    <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
-                        data-team='{{ team_json|e }}' aria-label="Edit team: {{ team.nickname }}"
-                        data-action="edit-team">Edit</button>
+                    <a class="admin-btn admin-btn-small" href="{{ url_for('manage_team', team_id=team._id) }}">
+                        <i data-lucide="pencil" aria-hidden="true"></i> Edit</a>
+                    <a class="admin-btn admin-btn-secondary admin-btn-small" target="_blank" rel="noopener"
+                        href="{{ url_for('team_page', team_number=team.team_number) }}">View</a>
                     <form class="form-flush" action="{{ url_for('admin_delete_team', id=team._id) }}" method="POST"
                         data-confirm-delete="team">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
-                            aria-label="Delete team: {{ team.nickname }}">Delete</button>
+                        <button type="submit" class="icon-btn icon-btn--danger"
+                            aria-label="Delete team: {{ team.team_number }}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
                     </form>
                 </div>
-            </div>
+            </article>
+            {% else %}
+            <p class="list-empty">No teams yet. Create the first one below.</p>
             {% endfor %}
         </div>
 
-        <h3 class="form-section-title-lg" id="team_form_title"
-           >Create
-            New Team</h3>
-        <form id="team_form" action="{{ url_for('admin_save_team') }}" method="POST" enctype="multipart/form-data">
+        <h3 class="form-section-title" id="team_form_title">New team</h3>
+        <form id="team_form" class="inline-create" action="{{ url_for('admin_quick_team') }}" method="POST">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" id="team_id" name="team_id">
-
-            <div class="form-two-col">
-                <fieldset class="form-fieldset">
-                    <legend>Basic Info</legend>
-                    <div class="form-group">
-                        <label for="f-team_number">Team Number</label>
-                        <input id="f-team_number" type="text" name="team_number" placeholder="e.g. 77628P" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="f-nickname">Nickname</label>
-                        <input id="f-nickname" type="text" name="nickname" placeholder="e.g. Prometheus">
-                    </div>
-                    <div class="form-group">
-                        <label for="f-tagline">Tagline</label>
-                        <input id="f-tagline" type="text" name="tagline" placeholder="Precision. Power. Performance.">
-                    </div>
-                    <div class="form-group">
-                        <label for="f-notebook_link">Engineering Notebook Link</label>
-                        <input id="f-notebook_link" type="text" name="notebook_link" placeholder="URL to notebook">
-                    </div>
-                    <div class="form-group">
-                        <label for="f-hero_image">Hero Image</label>
-                        <input id="f-hero_image" type="file" name="hero_image" accept="image/*"
-                            data-preview-target="heroImagePreview">
-                        <div id="heroImagePreview" class="image-preview"></div>
-                        <div class="form-hint">Recommended: 1200x600px, JPG or PNG</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="f-stl_file">STL CAD File (.stl)</label>
-                        <input id="f-stl_file" type="file" name="stl_file" accept=".stl">
-                    </div>
-                </fieldset>
-
-                <fieldset class="form-fieldset">
-                    <legend>Robot Specs</legend>
-                    <div class="form-group">
-                        <label for="f-drive_train">Drive Train</label>
-                        <input id="f-drive_train" type="text" name="drive_train" placeholder="e.g. 6-Motor Drive">
-                    </div>
-                    <div class="form-group">
-                        <label for="f-lift_system">Lift System</label>
-                        <input id="f-lift_system" type="text" name="lift_system" placeholder="e.g. 4-Bar Lift">
-                    </div>
-                    <div class="form-group">
-                        <label for="f-intake">Intake</label>
-                        <input id="f-intake" type="text" name="intake" placeholder="e.g. Side Rollers">
-                    </div>
-                    <div class="form-group">
-                        <label for="f-auton_consistency">Auton Consistency (%)</label>
-                        <input id="f-auton_consistency" type="text" name="auton_consistency" placeholder="e.g. 95%">
-                    </div>
-                </fieldset>
-            </div>
-
-            <div class="form-two-col-spaced">
-                <fieldset class="form-fieldset">
-                    <legend>Team Members</legend>
-                    <div id="members_container"></div>
-                    <p class="form-fieldset-empty-hint">No members added yet.</p>
-                    <button type="button" class="add-more-btn" data-action="add-member">+ Add Member</button>
-                </fieldset>
-                <fieldset class="form-fieldset">
-                    <legend>Season Goals</legend>
-                    <div id="goals_container"></div>
-                    <p class="form-fieldset-empty-hint">No goals added yet.</p>
-                    <button type="button" class="add-more-btn" data-action="add-goal">+ Add Goal</button>
-                </fieldset>
-            </div>
-
-            <div class="dynamic-sections">
-                <button type="submit" class="admin-btn">Save Team Profile</button>
-                <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-team">Reset
-                    Form</button>
-            </div>
+            <label class="visually-hidden" for="f-team_number">Team number</label>
+            <input id="f-team_number" type="text" name="team_number" placeholder="Team number, e.g. {{ team_number_suggestions[0] if team_number_suggestions else '77628X' }}"
+                maxlength="20" required list="dl-team-numbers" autocomplete="off" autocapitalize="characters">
+            <datalist id="dl-team-numbers">
+                {% for n in team_number_suggestions %}<option value="{{ n }}"></option>{% endfor %}
+            </datalist>
+            <button type="submit" class="admin-btn admin-btn-success">Create &amp; open editor</button>
         </form>
+        <p class="form-hint">Team members can edit their own team once they're on its roster (People tab).</p>
     </div>
     </section>
 
@@ -493,13 +347,12 @@
             <input id="f-website" type="url" name="website" placeholder="https://example.com">
         </div>
         <div class="form-group">
-            <label for="f-level">Sponsorship Level</label>
-            <select id="f-level" name="level">
-                <option value="Bronze">Bronze</option>
-                <option value="Silver">Silver</option>
-                <option value="Gold">Gold</option>
-                <option value="Platinum">Platinum</option>
-            </select>
+            <span class="field-label" id="l-level">Sponsorship level</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="l-level">
+                {% for tier in ['Bronze', 'Silver', 'Gold', 'Platinum'] %}
+                <label class="segment"><input type="radio" name="level" value="{{ tier }}" {% if loop.first %}checked{% endif %}><span>{{ tier }}</span></label>
+                {% endfor %}
+            </div>
         </div>
         <div class="form-group">
             <label for="f-logo">Logo (Optional)</label>
@@ -515,14 +368,111 @@
 </div>
 </section>
 
-<!-- USER MANAGEMENT CARD -->
+<!-- PEOPLE: approvals, roster board, accounts -->
 <section class="admin-panel" tabindex="0" data-panel="users" id="panel-users" role="tabpanel" aria-labelledby="tab-users" hidden>
+
+{% if pending_users %}
+<div class="admin-card approvals-card" id="approvals">
+    <div class="admin-card-header">
+        <h2><i data-lucide="user-check"></i> Pending approval <span class="message-badge">{{ pending_users|length }}</span></h2>
+    </div>
+    <div class="approval-list">
+        {% for u in pending_users %}
+        <article class="approval-item" data-user-id="{{ u._id }}">
+            <div class="user-avatar" aria-hidden="true">{{ u.username[:1]|upper }}</div>
+            <div class="approval-who">
+                <strong>{{ u.username }}</strong>
+                <small>{{ u.email }}{% if u.requested_ago %} · asked {{ u.requested_ago }}{% endif %}</small>
+            </div>
+            <label class="visually-hidden" for="ap-role-{{ u._id }}">Role for {{ u.username }}</label>
+            <select id="ap-role-{{ u._id }}" data-approve-role>
+                <option value="member" selected>Member</option>
+                <option value="editor">Editor</option>
+                <option value="admin">Admin</option>
+            </select>
+            <label class="visually-hidden" for="ap-team-{{ u._id }}">Team for {{ u.username }}</label>
+            <select id="ap-team-{{ u._id }}" data-approve-team>
+                <option value="">No team yet</option>
+                {% for id, label in team_choices %}
+                <option value="{{ id }}" {% if u.requested_team == id %}selected{% endif %}>{{ label }}{% if u.requested_team == id %} (requested){% endif %}</option>
+                {% endfor %}
+            </select>
+            <div class="approval-actions">
+                <button type="button" class="admin-btn admin-btn-success admin-btn-small" data-action="approve-user">
+                    <i data-lucide="check" aria-hidden="true"></i> Approve</button>
+                <button type="button" class="admin-btn admin-btn-danger admin-btn-small" data-action="reject-user"
+                    data-username="{{ u.username }}">Reject</button>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2><i data-lucide="columns-3"></i> Team rosters</h2>
+    </div>
+    <p class="form-hint">Drag people between teams. On a phone or keyboard, use the <em>Move to</em> menu on each card.
+        Every move can be undone from the message that pops up. People without a login are removed from a team in its editor.</p>
+    <div class="roster-board" id="rosterBoard">
+        {% for col in board %}
+        <section class="roster-col" data-team-id="{{ col._id }}" aria-label="{{ col.label }} roster">
+            <header class="roster-col-head">
+                <strong>{{ col.label }}</strong>
+                {% if col.nickname %}<small>{{ col.nickname }}</small>{% endif %}
+                <span class="roster-count">{{ col.cards|length }}</span>
+            </header>
+            <ul class="roster-drop" role="list">
+                {% for c in col.cards %}
+                <li class="roster-card" draggable="true" data-member-id="{{ c.member_id }}"{% if c.user_id %} data-user-id="{{ c.user_id }}"{% endif %} data-name="{{ c.name }}">
+                    <span class="roster-avatar" aria-hidden="true">{{ c.name|initials }}</span>
+                    <span class="roster-text">
+                        <strong>{{ c.name }}</strong>
+                        <small>{{ c.role or 'Member' }}{% if c.username %} · @{{ c.username }}{% elif not c.user_id %} · no login{% endif %}</small>
+                    </span>
+                    <select class="roster-move" aria-label="Move {{ c.name }} to">
+                        <option value="" selected disabled>Move to…</option>
+                        {% for id, label in team_choices if id != col._id %}<option value="{{ id }}">{{ label }}</option>{% endfor %}
+                        {% if c.user_id %}<option value="none">Unassigned</option>{% endif %}
+                    </select>
+                </li>
+                {% endfor %}
+            </ul>
+            <a class="roster-col-link" href="{{ url_for('manage_team', team_id=col._id) }}">Edit team page</a>
+        </section>
+        {% endfor %}
+        <section class="roster-col roster-col--unassigned" data-team-id="" aria-label="Unassigned accounts">
+            <header class="roster-col-head">
+                <strong>Unassigned</strong>
+                <small>Accounts not on any roster</small>
+                <span class="roster-count">{{ unassigned|length }}</span>
+            </header>
+            <ul class="roster-drop" role="list">
+                {% for u in unassigned %}
+                <li class="roster-card" draggable="true" data-user-id="{{ u._id }}" data-name="{{ u.username }}">
+                    <span class="roster-avatar" aria-hidden="true">{{ u.username|initials }}</span>
+                    <span class="roster-text">
+                        <strong>{{ u.username }}</strong>
+                        <small>{{ u.role }} account</small>
+                    </span>
+                    <select class="roster-move" aria-label="Move {{ u.username }} to">
+                        <option value="" selected disabled>Move to…</option>
+                        {% for id, label in team_choices %}<option value="{{ id }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+    </div>
+</div>
+
 <div class="admin-card" id="user_form_card">
     <div class="admin-card-header">
-        <h2><i data-lucide="user"></i> User Management</h2>
+        <h2><i data-lucide="key-round"></i> Accounts</h2>
     </div>
     <div class="user-summary">
-        <span>{{ users|length }} user{{ 's' if users|length != 1 }}</span>
+        <span>{{ users|length }} account{{ 's' if users|length != 1 }}</span>
         <span class="role-badge admin">{{ users|selectattr('role', 'equalto', 'admin')|list|length }} admin</span>
         <span class="role-badge editor">{{ users|selectattr('role', 'equalto', 'editor')|list|length }} editor</span>
         <span class="role-badge member">{{ users|selectattr('role', 'equalto', 'member')|list|length }} member</span>
@@ -541,7 +491,7 @@
     {% endif %}
     <div class="user-filters">
         <input type="search" id="users_filter" class="panel-filter" aria-label="Filter users"
-            placeholder="Filter users by username or email...">
+            placeholder="Filter by username or email...">
         <select id="users_role_filter" class="user-role-filter" aria-label="Filter users by role">
             <option value="">All roles</option>
             <option value="admin">Admins</option>
@@ -559,12 +509,16 @@
                     {{ user.username }}
                     {% if user.username == session.user %}<span class="user-you">(you)</span>{% endif %}
                 </strong>
-                <small class="user-meta">
-                    <span class="role-badge {{ user.role }}">{{ user.role }}</span>
-                    <span class="user-email">{{ user.email or 'No email' }}</span>
-                </small>
+                <small class="user-meta"><span class="user-email">{{ user.email or 'No email' }}</span></small>
             </div>
             <div class="data-item-actions">
+                <label class="visually-hidden" for="role-{{ user._id }}">Role for {{ user.username }}</label>
+                <select id="role-{{ user._id }}" class="role-inline role-badge {{ user.role }}"
+                    data-role-user-id="{{ user._id }}" data-current="{{ user.role }}">
+                    {% for r in ['member', 'editor', 'admin'] %}
+                    <option value="{{ r }}" {% if user.role == r %}selected{% endif %}>{{ r|capitalize }}</option>
+                    {% endfor %}
+                </select>
                 <button type="button" class="admin-btn admin-btn-secondary admin-btn-small"
                     data-id="{{ user._id }}" data-username="{{ user.username }}"
                     data-email="{{ user.email }}" data-role="{{ user.role }}"
@@ -579,57 +533,54 @@
                 <form action="{{ url_for('admin_delete_user', id=user._id) }}" method="POST" class="inline-form"
                     data-confirm-delete="user">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="admin-btn admin-btn-danger admin-btn-small"
-                        aria-label="Delete user: {{ user.username }}">Delete</button>
+                    <button type="submit" class="icon-btn icon-btn--danger"
+                        aria-label="Delete user: {{ user.username }}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
                 </form>
                 {% endif %}
             </div>
         </div>
         {% endfor %}
-        {% if not users %}
-        <p class="user-empty">No users yet. Create one below.</p>
-        {% endif %}
     </div>
 
-    <h3 id="user_form_title" class="user-form-title">Create New User</h3>
-    <form action="{{ url_for('admin_create_user') }}" data-default-action="{{ url_for('admin_create_user') }}"
-        method="POST" id="userForm">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" placeholder="Enter username" autocomplete="off" required>
-            <div class="form-hint">Used to sign in; must be unique</div>
-        </div>
-        <div class="form-group">
-            <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" placeholder="user@example.com" autocomplete="off">
-            <div class="form-hint">Optional - can also be used to sign in</div>
-        </div>
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Enter secure password"
-                autocomplete="new-password" required>
-            <div class="form-hint" id="password_hint">Minimum 8 characters</div>
-        </div>
-        <div class="form-group">
-            <label for="confirm_password">Confirm Password</label>
-            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password"
-                autocomplete="new-password">
-        </div>
-        <div class="form-group">
-            <label for="role">User Role</label>
-            <select id="role" name="role" class="role-select">
-                <option value="member">Member (View only)</option>
-                <option value="editor">Editor (Can edit content)</option>
-                <option value="admin">Admin (Full access)</option>
-            </select>
-            <div class="form-hint">Admins have full access to all management features</div>
-        </div>
-        <div class="btn-group">
-            <button type="submit" id="user_submit" class="admin-btn admin-btn-success">Create User</button>
-            <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-user">Cancel / Reset</button>
-        </div>
-    </form>
+    <details class="manual-add" id="userFormDetails">
+        <summary id="user_form_title">Add someone manually</summary>
+        <p class="form-hint">Usually easier: send people to <strong>{{ url_for('signup', _external=True) }}</strong> and approve them above.</p>
+        <form action="{{ url_for('admin_create_user') }}" data-default-action="{{ url_for('admin_create_user') }}"
+            method="POST" id="userForm" autocomplete="off">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Enter username" autocomplete="off" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="user@example.com" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter secure password"
+                    autocomplete="new-password" required>
+                <div class="form-hint" id="password_hint">Minimum 8 characters</div>
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password"
+                    autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label for="role">Role</label>
+                <select id="role" name="role" class="role-select">
+                    <option value="member">Member (edits own team)</option>
+                    <option value="editor">Editor (edits every team)</option>
+                    <option value="admin">Admin (full access)</option>
+                </select>
+            </div>
+            <div class="btn-group">
+                <button type="submit" id="user_submit" class="admin-btn admin-btn-success">Create User</button>
+                <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-user">Cancel</button>
+            </div>
+        </form>
+    </details>
 </div>
 </section>
 

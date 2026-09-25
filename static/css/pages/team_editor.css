@@ -1,0 +1,567 @@
+/* Page styles: team editor (/manage/team/<id>) and /my-team.
+   Builds on admin.css (buttons, icon buttons, field status ticks).
+   Layout follows the usual settings-page pattern: a sticky section nav on the
+   left, and rows with the label and hint on the left and the control on the right. */
+
+.team-editor {
+    --ed-line: #e3e3e3;
+    --ed-field-bg: #fff;
+    --ed-field-border: #cfcfcf;
+    --ed-muted: #595959;
+    --ed-row-hover: #faf7f7;
+    --ed-head: var(--maroon-dark);
+    max-width: 1180px;
+    /* Clears the fixed MENU button. */
+    margin-top: 5.5rem;
+    color: var(--admin-text);
+}
+
+/* --- Top bar ------------------------------------------------------------------ */
+.editor-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    padding-bottom: 1rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 2px solid var(--ed-line);
+}
+
+.editor-bar h1 {
+    margin: 0;
+    color: var(--ed-head);
+    font-size: 1.6rem;
+    line-height: 1.2;
+}
+
+.editor-bar h1 span {
+    color: var(--admin-text);
+    font-weight: 400;
+}
+
+.editor-bar p {
+    margin: 0.15rem 0 0;
+    color: var(--ed-muted);
+    font-size: 0.9rem;
+}
+
+.editor-bar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.editor-bar-actions .admin-btn {
+    width: auto;
+    text-decoration: none;
+}
+
+.save-status {
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    background: #e8f5e9;
+    color: #1b5e20;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.save-status[data-state="saving"] {
+    background: #fff8d6;
+    color: #5c4a00;
+}
+
+.save-status[data-state="error"] {
+    background: #fdecea;
+    color: #b71c1c;
+}
+
+/* --- Layout ------------------------------------------------------------------- */
+.settings-layout {
+    display: grid;
+    grid-template-columns: 11rem minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+    margin-bottom: 3rem;
+}
+
+.settings-nav {
+    position: sticky;
+    top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.settings-nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 8px;
+    color: var(--admin-text);
+    font-size: 0.95rem;
+    text-decoration: none;
+}
+
+.settings-nav a svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.settings-nav a:hover {
+    background: var(--ed-row-hover);
+}
+
+.settings-nav a.is-current {
+    background: var(--maroon-dark);
+    color: #fff;
+    font-weight: 700;
+}
+
+.settings-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.settings-section {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--ed-line);
+    border-radius: 12px;
+    background: var(--admin-card-bg);
+    scroll-margin-top: 1.5rem;
+}
+
+.settings-section h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
+    color: var(--ed-head);
+    font-size: 1.15rem;
+}
+
+/* The site-wide gold underline under every h2 doesn't belong in a settings list. */
+.settings-section h2::after,
+.editor-bar h1::after {
+    display: none;
+}
+
+.section-count {
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    background: var(--ed-line);
+    color: var(--admin-text);
+    font-size: 0.8rem;
+}
+
+/* --- Label / control rows ----------------------------------------------------- */
+.setting-row {
+    display: grid;
+    grid-template-columns: 13rem minmax(0, 1fr);
+    gap: 0.35rem 1.5rem;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--ed-line);
+}
+
+.setting-row:first-of-type {
+    border-top: 0;
+}
+
+.setting-label label,
+.setting-label span {
+    display: block;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.setting-label small {
+    display: block;
+    margin-top: 0.1rem;
+    color: var(--ed-muted);
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.setting-control {
+    max-width: 28rem;
+}
+
+/* One compact control style for every input in the editor. */
+.team-editor input[type="text"],
+.team-editor input[type="url"],
+.team-editor select,
+.team-editor textarea {
+    width: 100%;
+    min-height: 2.25rem;
+    box-sizing: border-box;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--ed-field-border);
+    border-radius: 8px;
+    background: var(--ed-field-bg);
+    color: var(--admin-text);
+    font: inherit;
+    font-size: 0.95rem;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.team-editor textarea {
+    resize: vertical;
+    field-sizing: content;
+    max-height: 8rem;
+}
+
+.team-editor input:focus,
+.team-editor select:focus,
+.team-editor textarea:focus {
+    border-color: var(--maroon-dark);
+    box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.12);
+    outline: none;
+}
+
+.team-editor ::placeholder {
+    color: #6b6b6b;
+}
+
+/* Save state on the field itself */
+.team-editor .is-saving {
+    border-color: #b0b0b0 !important;
+}
+
+.team-editor .is-saved {
+    border-color: #2e7d32 !important;
+}
+
+.team-editor .is-error {
+    border-color: #c62828 !important;
+    box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.15);
+}
+
+/* --- Drop zones: a label wrapping a hidden file input ------------------------------ */
+.drop-zone {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    overflow: hidden;
+    border: 2px dashed var(--ed-field-border);
+    border-radius: 10px;
+    color: var(--ed-muted);
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.drop-zone--inline {
+    justify-content: flex-start;
+    min-height: 2.75rem;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-within,
+.drop-zone.is-over {
+    border-color: var(--maroon-dark);
+    background: var(--ed-row-hover);
+}
+
+.drop-zone:focus-within {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 2px;
+}
+
+.drop-zone-preview {
+    height: 3.5rem;
+    max-width: 9rem;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.drop-zone-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.drop-zone-text svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+/* --- Goals and journey rows ------------------------------------------------------- */
+.row-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0 0 0.6rem;
+    padding: 0;
+    list-style: none;
+}
+
+.row-item {
+    display: grid;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.goal-row {
+    grid-template-columns: minmax(0, 1fr) 10rem 3rem auto;
+}
+
+.journey-row {
+    grid-template-columns: 8rem minmax(0, 1fr) minmax(0, 1.4fr) auto;
+    align-items: start;
+}
+
+.row-item input[type="range"] {
+    width: 100%;
+    accent-color: var(--maroon-dark);
+}
+
+.range-value {
+    font-weight: 700;
+    color: var(--ed-head);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.team-editor .add-more-btn {
+    width: auto;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
+}
+
+/* --- Roster: one compact row per person ------------------------------------------- */
+.member-list {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.75rem;
+}
+
+.member-head,
+.member-card {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(8rem, 1.2fr) minmax(7rem, 1fr) minmax(8rem, 1.2fr) 9.5rem 6rem 2.25rem;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.member-head {
+    padding: 0 0.4rem 0.3rem;
+    color: var(--ed-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.member-list:not(:has(.member-card)) .member-head {
+    display: none;
+}
+
+.member-card {
+    position: relative;
+    padding: 0.35rem 0.4rem;
+    border-top: 1px solid var(--ed-line);
+    border-radius: 8px;
+}
+
+.member-card:hover {
+    background: var(--ed-row-hover);
+}
+
+.member-card.is-you {
+    box-shadow: inset 3px 0 0 var(--accent-gold);
+}
+
+.member-photo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--maroon-dark);
+}
+
+.member-photo.drop-zone {
+    border: 2px solid transparent;
+}
+
+.member-photo.drop-zone:hover,
+.member-photo.drop-zone.is-over {
+    border-color: var(--accent-gold);
+    background: var(--maroon-dark);
+}
+
+.member-photo .drop-zone-preview {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    border-radius: 0;
+}
+
+.member-initials {
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.member-card .member-name {
+    font-weight: 700;
+}
+
+.member-role {
+    color: var(--ed-muted);
+    font-size: 0.9rem;
+}
+
+.you-badge {
+    position: absolute;
+    top: -0.2rem;
+    left: 2rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+.inline-add {
+    display: flex;
+    gap: 0.5rem;
+    max-width: 26rem;
+}
+
+.inline-add .admin-btn {
+    width: auto;
+}
+
+/* --- /my-team with no team, or someone else's team ---------------------------------- */
+.my-team-empty {
+    max-width: 38rem;
+    margin: 4rem auto;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+}
+
+.my-team-empty-icon {
+    width: 3rem;
+    height: 3rem;
+    color: var(--maroon-dark);
+}
+
+.my-team-empty h1 {
+    margin: 1rem 0;
+    color: var(--maroon-dark);
+}
+
+.my-team-empty p {
+    margin-bottom: 2rem;
+    color: var(--text-light);
+}
+
+/* --- Smaller screens ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .settings-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+    }
+
+    .settings-nav {
+        top: 0;
+        z-index: 5;
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 0.4rem 0;
+        background: var(--admin-bg);
+    }
+
+    .settings-nav a {
+        flex: none;
+    }
+
+    .member-head {
+        display: none;
+    }
+
+    .member-card {
+        grid-template-columns: 2.5rem minmax(0, 1fr) minmax(0, 1fr) 2.25rem;
+        padding: 0.6rem 0.4rem;
+    }
+
+    /* Name + role, then other roles, then sub-team + year; photo and delete stay on the edges. */
+    .member-card > .member-photo { grid-column: 1; grid-row: 1 / 4; align-self: start; }
+    .member-card > .member-remove { grid-column: 4; grid-row: 1; }
+    .member-card > [data-member-field="roles"] { grid-column: 2 / 4; grid-row: 2; }
+    .member-card > [data-member-field="subteam"] { grid-column: 2; grid-row: 3; }
+    .member-card > [data-member-field="since"] { grid-column: 3; grid-row: 3; }
+}
+
+@media (max-width: 640px) {
+    .team-editor {
+        margin-top: 4.5rem;
+        padding: 0 1rem;
+    }
+
+    .setting-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .goal-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .goal-row input[type="range"] { grid-column: 1; }
+    .goal-row .range-value { grid-column: 2; }
+
+    .journey-row {
+        grid-template-columns: 7rem minmax(0, 1fr) auto;
+    }
+
+    .journey-row textarea {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+}
+
+/* --- Dark theme ----------------------------------------------------------------- */
+[data-theme="dark"] .team-editor {
+    --ed-line: #3a3a3a;
+    --ed-field-bg: #121212;
+    --ed-field-border: #555;
+    --ed-muted: #b0b0b0;
+    --ed-row-hover: #262222;
+    --ed-head: #e6b8b9;
+}
+
+[data-theme="dark"] .team-editor ::placeholder {
+    color: #8c8c8c;
+}
+
+[data-theme="dark"] .save-status {
+    background: #1f3a22;
+    color: #a5d6a7;
+}
+
+[data-theme="dark"] .save-status[data-state="saving"] {
+    background: #3a3310;
+    color: #ffe082;
+}
+
+[data-theme="dark"] .save-status[data-state="error"] {
+    background: #4a1c1c;
+    color: #ffb4ab;
+}
+
+[data-theme="dark"] .settings-nav a.is-current {
+    background: #e6b8b9;
+    color: #1a1a1a;
+}

@@ -122,7 +122,8 @@ def test_dashboard_edit_buttons_carry_their_update_urls(admin, db):
     comp = db['competitions'].insert_one({'name': 'Q', 'location': 'L',
                                           'date': app_module._utcnow()}).inserted_id
     page = admin.get('/admin').get_data(as_text=True)
-    assert f'data-update-url="/admin/update-competition/{comp}"' in page
+    # Events are edited in place now; each row carries the id its autosave posts to.
+    assert f'data-event-id="{comp}"' in page
     assert 'data-update-url="/admin/update-user/' in page
 
 
