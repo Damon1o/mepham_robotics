@@ -81,7 +81,9 @@ function editSponsor(button) {
     document.getElementById('sponsor_id').value = button.dataset.id;
     form.querySelector('[name="name"]').value = button.dataset.name;
     form.querySelector('[name="website"]').value = button.dataset.website;
-    form.querySelector('[name="level"]').value = button.dataset.level;
+    // Level is a segmented control (radios); fall back to the first tier for unknown values.
+    const levels = Array.from(form.querySelectorAll('[name="level"]'));
+    (levels.find(radio => radio.value === button.dataset.level) || levels[0]).checked = true;
     markClean(form);
     scrollToCard('sponsor_form_card');
 }

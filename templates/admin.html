@@ -28,10 +28,11 @@
 </div>
 
 <div class="admin-container">
-    <div class="admin-header">
-        <h1>Command Center</h1>
-        <p>Welcome back, {{ current_user }}. Most things here save the moment you change them.</p>
-    </div>
+    <div class="admin-topbar">
+        <div class="admin-header">
+            <h1>Command Center</h1>
+            <p>Welcome back, {{ current_user }}. Most things here save the moment you change them.</p>
+        </div>
 
     <div id="toast-stack" class="toast-stack" role="status" aria-live="polite">
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -78,6 +79,7 @@
         <a href="#sponsors" class="quick-action-btn" data-action="quick-add" data-tab="sponsors">
             <span><i data-lucide="handshake"></i> Add Sponsor</span>
         </a>
+    </div>
     </div>
 
     <!-- Search Box -->
@@ -145,7 +147,8 @@
                 <input type="text" class="inline-input inline-input--title" value="{{ comp.name }}" maxlength="200"
                     data-event-field="name" aria-label="Event name" required>
                 <input type="text" class="inline-input" value="{{ comp.location or '' }}" maxlength="200"
-                    data-event-field="location" aria-label="Location for {{ comp.name }}" placeholder="Location">
+                    data-event-field="location" aria-label="Location for {{ comp.name }}" placeholder="Location"
+                    list="dl-event-locations" autocomplete="off">
                 <input type="datetime-local" class="inline-input" value="{{ comp.date_str }}"
                     data-event-field="date" aria-label="Date and time for {{ comp.name }}">
                 <span class="field-status" aria-hidden="true"></span>
@@ -168,7 +171,11 @@
             <label class="visually-hidden" for="f-comp_name">Event name</label>
             <input id="f-comp_name" type="text" name="comp_name" placeholder="Event name" required>
             <label class="visually-hidden" for="f-comp_location">Location</label>
-            <input id="f-comp_location" type="text" name="comp_location" placeholder="Location" required>
+            <input id="f-comp_location" type="text" name="comp_location" placeholder="Location" required
+                list="dl-event-locations" autocomplete="off">
+            <datalist id="dl-event-locations">
+                {% for loc in event_locations %}<option value="{{ loc }}"></option>{% endfor %}
+            </datalist>
             <label class="visually-hidden" for="f-comp_date">Date and time</label>
             <input id="f-comp_date" type="datetime-local" name="comp_date" required>
             <button type="submit" class="admin-btn admin-btn-success">Add</button>
@@ -259,8 +266,11 @@
         <form id="team_form" class="inline-create" action="{{ url_for('admin_quick_team') }}" method="POST">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <label class="visually-hidden" for="f-team_number">Team number</label>
-            <input id="f-team_number" type="text" name="team_number" placeholder="Team number, e.g. 77628X"
-                maxlength="20" required>
+            <input id="f-team_number" type="text" name="team_number" placeholder="Team number, e.g. {{ team_number_suggestions[0] if team_number_suggestions else '77628X' }}"
+                maxlength="20" required list="dl-team-numbers" autocomplete="off" autocapitalize="characters">
+            <datalist id="dl-team-numbers">
+                {% for n in team_number_suggestions %}<option value="{{ n }}"></option>{% endfor %}
+            </datalist>
             <button type="submit" class="admin-btn admin-btn-success">Create &amp; open editor</button>
         </form>
         <p class="form-hint">Team members can edit their own team once they're on its roster (People tab).</p>
@@ -337,13 +347,12 @@
             <input id="f-website" type="url" name="website" placeholder="https://example.com">
         </div>
         <div class="form-group">
-            <label for="f-level">Sponsorship Level</label>
-            <select id="f-level" name="level">
-                <option value="Bronze">Bronze</option>
-                <option value="Silver">Silver</option>
-                <option value="Gold">Gold</option>
-                <option value="Platinum">Platinum</option>
-            </select>
+            <span class="field-label" id="l-level">Sponsorship level</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="l-level">
+                {% for tier in ['Bronze', 'Silver', 'Gold', 'Platinum'] %}
+                <label class="segment"><input type="radio" name="level" value="{{ tier }}" {% if loop.first %}checked{% endif %}><span>{{ tier }}</span></label>
+                {% endfor %}
+            </div>
         </div>
         <div class="form-group">
             <label for="f-logo">Logo (Optional)</label>

@@ -75,23 +75,43 @@
 
     // --- Single fields -------------------------------------------------------------
 
+    // A radio group (segmented control) saves as one field; its saved value lives on the group.
+    function savedValue(input) {
+        return input.type === 'radio' ? input.closest('[role="radiogroup"]').dataset.saved : input.dataset.saved;
+    }
+
+    function setSaved(input) {
+        if (input.type === 'radio') input.closest('[role="radiogroup"]').dataset.saved = input.value;
+        else input.dataset.saved = input.value;
+    }
+
+    function revert(input) {
+        if (input.type !== 'radio') {
+            input.value = input.dataset.saved;
+            return;
+        }
+        const group = input.closest('[role="radiogroup"]');
+        group.querySelectorAll('input').forEach(radio => { radio.checked = radio.value === group.dataset.saved; });
+    }
+
     function saveField(input) {
-        if (input.value === input.dataset.saved) return;
+        if (input.value === savedValue(input)) return;
         const memberCard = input.closest('[data-member-id]');
         const request = memberCard
             ? post(`/member/${memberCard.dataset.memberId}`, { field: input.dataset.memberField, value: input.value })
             : post('/field', { field: input.dataset.autosave, value: input.value });
-        track(input, request)
+        const target = input.type === 'radio' ? input.closest('[role="radiogroup"]') : input;
+        track(target, request)
             .then(data => {
                 // The server may tidy the value (upper-cases team numbers, trims spaces).
-                if (typeof data.value === 'string') input.value = data.value;
-                input.dataset.saved = input.value;
+                if (typeof data.value === 'string' && input.type !== 'radio') input.value = data.value;
+                setSaved(input);
                 if (input.dataset.memberField === 'name') {
                     const initials = memberCard.querySelector('.member-initials');
                     if (initials) initials.textContent = toInitials(input.value);
                 }
             })
-            .catch(() => { input.value = input.dataset.saved; });
+            .catch(() => revert(input));
     }
 
     function toInitials(name) {
@@ -102,14 +122,17 @@
 
     const FIELD = '[data-autosave], [data-member-field]';
 
-    root.querySelectorAll(FIELD).forEach(input => { input.dataset.saved = input.value; });
+    root.querySelectorAll(FIELD).forEach(input => {
+        if (input.type !== 'radio') input.dataset.saved = input.value;
+        else if (input.checked) setSaved(input);
+    });
 
     root.addEventListener('change', e => {
         if (e.target.matches(FIELD)) saveField(e.target);
     });
 
     root.addEventListener('keydown', e => {
-        if (!e.target.matches(FIELD) || e.target.tagName === 'SELECT') return;
+        if (!e.target.matches(FIELD) || e.target.tagName === 'SELECT' || e.target.type === 'radio') return;
         if (e.key === 'Enter') {
             e.preventDefault();
             e.target.blur();
@@ -266,6 +289,54 @@
             .then(() => card.remove())
             .catch(() => {});
     });
+
+    // --- "Other roles" suggestions -------------------------------------------------------
+    // A datalist only matches the whole value, so for a comma list we rebuild it with what
+    // is already typed as the prefix: "Driver, " suggests "Driver, Captain", "Driver, Scout"...
+
+    const extraRoles = document.getElementById('dl-extra-roles');
+    const ROLE_CHOICES = extraRoles ? extraRoles.dataset.roles.split('|') : [];
+
+    function suggestRoles(input) {
+        const typed = input.value.split(',').map(s => s.trim());
+        const done = typed.slice(0, -1).filter(Boolean);
+        const prefix = done.length ? `${done.join(', ')}, ` : '';
+        const taken = new Set(done.map(s => s.toLowerCase()));
+        taken.add((input.closest('[data-member-id]')?.querySelector('[data-member-field="role"]')?.value || '').toLowerCase());
+        extraRoles.replaceChildren(...ROLE_CHOICES
+            .filter(role => !taken.has(role.toLowerCase()))
+            .map(role => Object.assign(document.createElement('option'), { value: prefix + role })));
+    }
+
+    root.addEventListener('focusin', e => {
+        if (extraRoles && e.target.matches('[data-suggest-roles]')) suggestRoles(e.target);
+    });
+    root.addEventListener('input', e => {
+        if (extraRoles && e.target.matches('[data-suggest-roles]') && /,\s*$|^$/.test(e.target.value)) suggestRoles(e.target);
+    });
+
+    // --- Roster count and section nav -------------------------------------------------------
+
+    function updateRosterCount() {
+        const count = root.querySelector('#h-roster .section-count');
+        if (count) count.textContent = root.querySelectorAll('#memberGrid .member-card').length;
+    }
+    new MutationObserver(updateRosterCount).observe(document.getElementById('memberGrid'), { childList: true });
+
+    const navLinks = Array.from(root.querySelectorAll('.settings-nav a'));
+    if ('IntersectionObserver' in window && navLinks.length) {
+        const observer = new IntersectionObserver(entries => {
+            entries.filter(entry => entry.isIntersecting).forEach(entry => {
+                navLinks.forEach(link => {
+                    const current = link.getAttribute('href') === `#${entry.target.id}`;
+                    link.classList.toggle('is-current', current);
+                    if (current) link.setAttribute('aria-current', 'true');
+                    else link.removeAttribute('aria-current');
+                });
+            });
+        }, { rootMargin: '-20% 0px -70% 0px' });
+        root.querySelectorAll('.settings-section').forEach(section => observer.observe(section));
+    }
 
     // --- Leaving with saves in flight -------------------------------------------------------
 

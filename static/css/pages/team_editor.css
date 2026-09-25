@@ -1,48 +1,75 @@
 /* Page styles: team editor (/manage/team/<id>) and /my-team.
-   Builds on admin.css (cards, buttons, field status ticks). */
+   Builds on admin.css (buttons, icon buttons, field status ticks).
+   Layout follows the usual settings-page pattern: a sticky section nav on the
+   left, and rows with the label and hint on the left and the control on the right. */
 
-.editor-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1rem;
+.team-editor {
+    --ed-line: #e3e3e3;
+    --ed-field-bg: #fff;
+    --ed-field-border: #cfcfcf;
+    --ed-muted: #595959;
+    --ed-row-hover: #faf7f7;
+    --ed-head: var(--maroon-dark);
+    max-width: 1180px;
+    /* Clears the fixed MENU button. */
+    margin-top: 5.5rem;
+    color: var(--admin-text);
 }
 
-.editor-header-actions {
-    position: relative;
-    z-index: 1;
+/* --- Top bar ------------------------------------------------------------------ */
+.editor-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    padding-bottom: 1rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 2px solid var(--ed-line);
+}
+
+.editor-bar h1 {
+    margin: 0;
+    color: var(--ed-head);
+    font-size: 1.6rem;
+    line-height: 1.2;
+}
+
+.editor-bar h1 span {
+    color: var(--admin-text);
+    font-weight: 400;
+}
+
+.editor-bar p {
+    margin: 0.15rem 0 0;
+    color: var(--ed-muted);
+    font-size: 0.9rem;
+}
+
+.editor-bar-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
 }
 
-.editor-header-actions .admin-btn {
+.editor-bar-actions .admin-btn {
     width: auto;
-    border-color: #fff;
-    background: transparent;
-    color: #fff;
-    box-shadow: none;
     text-decoration: none;
 }
 
-.editor-header-actions .admin-btn:hover {
-    background: #fff;
-    color: var(--maroon-dark);
-}
-
 .save-status {
-    padding: 0.35rem 0.8rem;
+    padding: 0.3rem 0.75rem;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
-    font-size: 0.85rem;
+    background: #e8f5e9;
+    color: #1b5e20;
+    font-size: 0.8rem;
     font-weight: 700;
 }
 
 .save-status[data-state="saving"] {
-    background: rgba(255, 215, 0, 0.3);
+    background: #fff8d6;
+    color: #5c4a00;
 }
 
 .save-status[data-state="error"] {
@@ -50,38 +77,158 @@
     color: #b71c1c;
 }
 
-.editor-grid {
+/* --- Layout ------------------------------------------------------------------- */
+.settings-layout {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: 11rem minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
     margin-bottom: 3rem;
 }
 
-.editor-card {
-    text-align: left;
+.settings-nav {
+    position: sticky;
+    top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
 }
 
-.editor-card--wide {
-    grid-column: 1 / -1;
-}
-
-.editor-card h2 {
+.settings-nav a {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 1.25rem;
-    color: var(--maroon-dark);
-    font-size: 1.3rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 8px;
+    color: var(--admin-text);
+    font-size: 0.95rem;
+    text-decoration: none;
 }
 
-/* Autosaving inputs show their own tick at the right edge. */
-.team-editor [data-autosave],
-.team-editor [data-member-field] {
+.settings-nav a svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.settings-nav a:hover {
+    background: var(--ed-row-hover);
+}
+
+.settings-nav a.is-current {
+    background: var(--maroon-dark);
+    color: #fff;
+    font-weight: 700;
+}
+
+.settings-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.settings-section {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--ed-line);
+    border-radius: 12px;
+    background: var(--admin-card-bg);
+    scroll-margin-top: 1.5rem;
+}
+
+.settings-section h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
+    color: var(--ed-head);
+    font-size: 1.15rem;
+}
+
+/* The site-wide gold underline under every h2 doesn't belong in a settings list. */
+.settings-section h2::after,
+.editor-bar h1::after {
+    display: none;
+}
+
+.section-count {
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    background: var(--ed-line);
+    color: var(--admin-text);
+    font-size: 0.8rem;
+}
+
+/* --- Label / control rows ----------------------------------------------------- */
+.setting-row {
+    display: grid;
+    grid-template-columns: 13rem minmax(0, 1fr);
+    gap: 0.35rem 1.5rem;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--ed-line);
+}
+
+.setting-row:first-of-type {
+    border-top: 0;
+}
+
+.setting-label label,
+.setting-label span {
+    display: block;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.setting-label small {
+    display: block;
+    margin-top: 0.1rem;
+    color: var(--ed-muted);
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.setting-control {
+    max-width: 28rem;
+}
+
+/* One compact control style for every input in the editor. */
+.team-editor input[type="text"],
+.team-editor input[type="url"],
+.team-editor select,
+.team-editor textarea {
+    width: 100%;
+    min-height: 2.25rem;
+    box-sizing: border-box;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--ed-field-border);
+    border-radius: 8px;
+    background: var(--ed-field-bg);
+    color: var(--admin-text);
+    font: inherit;
+    font-size: 0.95rem;
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
+.team-editor textarea {
+    resize: vertical;
+    field-sizing: content;
+    max-height: 8rem;
+}
+
+.team-editor input:focus,
+.team-editor select:focus,
+.team-editor textarea:focus {
+    border-color: var(--maroon-dark);
+    box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.12);
+    outline: none;
+}
+
+.team-editor ::placeholder {
+    color: #6b6b6b;
+}
+
+/* Save state on the field itself */
 .team-editor .is-saving {
-    border-color: #bbb !important;
+    border-color: #b0b0b0 !important;
 }
 
 .team-editor .is-saved {
@@ -93,37 +240,32 @@
     box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.15);
 }
 
-.field-label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 700;
-    color: var(--maroon-dark);
-}
-
-/* Drop zones: a label wrapping a hidden file input, so a click browses and a drop uploads. */
+/* --- Drop zones: a label wrapping a hidden file input ------------------------------ */
 .drop-zone {
     position: relative;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    min-height: 8rem;
-    padding: 1rem;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
     overflow: hidden;
-    border: 2px dashed #ccc;
-    border-radius: 12px;
-    background: #fafafa;
-    color: var(--text-light);
+    border: 2px dashed var(--ed-field-border);
+    border-radius: 10px;
+    color: var(--ed-muted);
     cursor: pointer;
     transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.drop-zone--inline {
+    justify-content: flex-start;
+    min-height: 2.75rem;
 }
 
 .drop-zone:hover,
 .drop-zone:focus-within,
 .drop-zone.is-over {
     border-color: var(--maroon-dark);
-    background: #fff8f8;
+    background: var(--ed-row-hover);
 }
 
 .drop-zone:focus-within {
@@ -132,9 +274,9 @@
 }
 
 .drop-zone-preview {
-    max-width: 100%;
-    max-height: 10rem;
-    border-radius: 8px;
+    height: 3.5rem;
+    max-width: 9rem;
+    border-radius: 6px;
     object-fit: cover;
 }
 
@@ -143,175 +285,166 @@
     align-items: center;
     gap: 0.4rem;
     font-size: 0.9rem;
-    text-align: center;
 }
 
-.drop-zone--file {
-    min-height: 4rem;
+.drop-zone-text svg {
+    width: 1.1rem;
+    height: 1.1rem;
 }
 
-/* Goals and journey rows */
+/* --- Goals and journey rows ------------------------------------------------------- */
 .row-list {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    margin: 0 0 1rem;
+    gap: 0.4rem;
+    margin: 0 0 0.6rem;
     padding: 0;
     list-style: none;
 }
 
 .row-item {
     display: grid;
-    grid-template-columns: 1fr 3rem auto;
-    grid-template-areas: "name name remove" "range value value";
-    gap: 0.35rem 0.5rem;
+    gap: 0.5rem;
     align-items: center;
-    padding: 0.5rem;
-    border: 1px solid #e9ecef;
-    border-radius: 10px;
 }
 
-.row-item [data-key="name"] { grid-area: name; }
-.row-item [type="range"] { grid-area: range; }
-.row-item .range-value { grid-area: value; }
-.row-item > .icon-btn { grid-area: remove; }
-
-.row-list--stacked .row-item {
-    grid-template-columns: 7rem 1fr auto;
-    grid-template-areas: "date title remove" "desc desc desc";
+.goal-row {
+    grid-template-columns: minmax(0, 1fr) 10rem 3rem auto;
 }
 
-.row-list--stacked [data-key="date"] { grid-area: date; }
-.row-list--stacked [data-key="title"] { grid-area: title; }
-.row-list--stacked textarea { grid-area: desc; }
-
-.row-item input[type="text"],
-.row-item textarea,
-.member-card input,
-.member-card select,
-.inline-add input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.5rem 0.65rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font: inherit;
-    background: #fff;
-}
-
-.row-item input:focus,
-.row-item textarea:focus,
-.member-card input:focus,
-.member-card select:focus,
-.inline-add input:focus {
-    border-color: var(--maroon-dark);
-    outline: none;
+.journey-row {
+    grid-template-columns: 8rem minmax(0, 1fr) minmax(0, 1.4fr) auto;
+    align-items: start;
 }
 
 .row-item input[type="range"] {
+    width: 100%;
     accent-color: var(--maroon-dark);
 }
 
 .range-value {
     font-weight: 700;
-    color: var(--maroon-dark);
+    color: var(--ed-head);
     text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 
-/* Roster cards */
-.member-grid {
+.team-editor .add-more-btn {
+    width: auto;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
+}
+
+/* --- Roster: one compact row per person ------------------------------------------- */
+.member-list {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.75rem;
+}
+
+.member-head,
+.member-card {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
+    grid-template-columns: 2.5rem minmax(8rem, 1.2fr) minmax(7rem, 1fr) minmax(8rem, 1.2fr) 9.5rem 6rem 2.25rem;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.member-head {
+    padding: 0 0.4rem 0.3rem;
+    color: var(--ed-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.member-list:not(:has(.member-card)) .member-head {
+    display: none;
 }
 
 .member-card {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 1rem;
-    border: 2px solid #e9ecef;
-    border-radius: 14px;
-    background: #f8f9fa;
-    text-align: center;
+    padding: 0.35rem 0.4rem;
+    border-top: 1px solid var(--ed-line);
+    border-radius: 8px;
+}
+
+.member-card:hover {
+    background: var(--ed-row-hover);
 }
 
 .member-card.is-you {
-    border-color: var(--accent-gold);
-    background: #fffdf2;
+    box-shadow: inset 3px 0 0 var(--accent-gold);
 }
 
 .member-photo {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 5.5rem;
-    height: 5.5rem;
-    min-height: 0;
+    width: 2.25rem;
+    height: 2.25rem;
     padding: 0;
+    overflow: hidden;
     border-radius: 50%;
     background: var(--maroon-dark);
-    overflow: hidden;
+}
+
+.member-photo.drop-zone {
+    border: 2px solid transparent;
+}
+
+.member-photo.drop-zone:hover,
+.member-photo.drop-zone.is-over {
+    border-color: var(--accent-gold);
+    background: var(--maroon-dark);
 }
 
 .member-photo .drop-zone-preview {
     width: 100%;
     height: 100%;
-    max-height: none;
+    max-width: none;
     border-radius: 0;
 }
 
 .member-initials {
     color: #fff;
-    font-size: 1.5rem;
+    font-size: 0.8rem;
     font-weight: 700;
 }
 
-.drop-zone--round.drop-zone {
-    border-width: 3px;
-}
-
-.member-name {
+.member-card .member-name {
     font-weight: 700;
-    text-align: center;
 }
 
 .member-role {
-    color: var(--text-light);
+    color: var(--ed-muted);
     font-size: 0.9rem;
-}
-
-.member-remove {
-    position: absolute;
-    top: 0.4rem;
-    right: 0.4rem;
 }
 
 .you-badge {
     position: absolute;
-    top: 0.6rem;
-    left: 0.6rem;
-    padding: 0.1rem 0.5rem;
+    top: -0.2rem;
+    left: 2rem;
+    padding: 0 0.35rem;
     border-radius: 999px;
     background: var(--accent-gold);
-    font-size: 0.75rem;
+    color: var(--ink-on-gold);
+    font-size: 0.65rem;
     font-weight: 700;
 }
 
 .inline-add {
     display: flex;
     gap: 0.5rem;
-    max-width: 30rem;
+    max-width: 26rem;
 }
 
 .inline-add .admin-btn {
     width: auto;
 }
 
-/* /my-team with no team, or someone else's team */
+/* --- /my-team with no team, or someone else's team ---------------------------------- */
 .my-team-empty {
     max-width: 38rem;
     margin: 4rem auto;
@@ -335,9 +468,100 @@
     color: var(--text-light);
 }
 
-@media (max-width: 600px) {
-    .row-list--stacked .row-item {
-        grid-template-columns: 1fr auto;
-        grid-template-areas: "date remove" "title title" "desc desc";
+/* --- Smaller screens ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .settings-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
     }
+
+    .settings-nav {
+        top: 0;
+        z-index: 5;
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 0.4rem 0;
+        background: var(--admin-bg);
+    }
+
+    .settings-nav a {
+        flex: none;
+    }
+
+    .member-head {
+        display: none;
+    }
+
+    .member-card {
+        grid-template-columns: 2.5rem minmax(0, 1fr) minmax(0, 1fr) 2.25rem;
+        padding: 0.6rem 0.4rem;
+    }
+
+    /* Name + role, then other roles, then sub-team + year; photo and delete stay on the edges. */
+    .member-card > .member-photo { grid-column: 1; grid-row: 1 / 4; align-self: start; }
+    .member-card > .member-remove { grid-column: 4; grid-row: 1; }
+    .member-card > [data-member-field="roles"] { grid-column: 2 / 4; grid-row: 2; }
+    .member-card > [data-member-field="subteam"] { grid-column: 2; grid-row: 3; }
+    .member-card > [data-member-field="since"] { grid-column: 3; grid-row: 3; }
+}
+
+@media (max-width: 640px) {
+    .team-editor {
+        margin-top: 4.5rem;
+        padding: 0 1rem;
+    }
+
+    .setting-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .goal-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .goal-row input[type="range"] { grid-column: 1; }
+    .goal-row .range-value { grid-column: 2; }
+
+    .journey-row {
+        grid-template-columns: 7rem minmax(0, 1fr) auto;
+    }
+
+    .journey-row textarea {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+}
+
+/* --- Dark theme ----------------------------------------------------------------- */
+[data-theme="dark"] .team-editor {
+    --ed-line: #3a3a3a;
+    --ed-field-bg: #121212;
+    --ed-field-border: #555;
+    --ed-muted: #b0b0b0;
+    --ed-row-hover: #262222;
+    --ed-head: #e6b8b9;
+}
+
+[data-theme="dark"] .team-editor ::placeholder {
+    color: #8c8c8c;
+}
+
+[data-theme="dark"] .save-status {
+    background: #1f3a22;
+    color: #a5d6a7;
+}
+
+[data-theme="dark"] .save-status[data-state="saving"] {
+    background: #3a3310;
+    color: #ffe082;
+}
+
+[data-theme="dark"] .save-status[data-state="error"] {
+    background: #4a1c1c;
+    color: #ffb4ab;
+}
+
+[data-theme="dark"] .settings-nav a.is-current {
+    background: #e6b8b9;
+    color: #1a1a1a;
 }

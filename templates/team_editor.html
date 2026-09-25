@@ -7,26 +7,57 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team_editor.css') }}">
 {% endblock %}
 
+{% macro row(label, for_id='', hint='') %}
+<div class="setting-row">
+    <div class="setting-label">
+        {% if for_id %}<label for="{{ for_id }}">{{ label }}</label>{% else %}<span id="lbl-{{ label|lower|replace(' ', '-') }}">{{ label }}</span>{% endif %}
+        {% if hint %}<small>{{ hint }}</small>{% endif %}
+    </div>
+    <div class="setting-control">{{ caller() }}</div>
+</div>
+{% endmacro %}
+
+{% macro member_fields(m) %}
+<input type="text" class="member-name" data-member-field="name" value="{{ m.name }}" maxlength="100"
+    aria-label="Name" placeholder="Name">
+<input type="text" data-member-field="role" value="{{ m.role }}" maxlength="100" list="dl-roles"
+    aria-label="Main role" placeholder="Main role">
+<input type="text" data-member-field="roles" value="{{ m.roles }}" maxlength="200" list="dl-extra-roles"
+    data-suggest-roles aria-label="Other roles, comma separated" placeholder="Other roles">
+<select data-member-field="subteam" aria-label="Sub-team">
+    <option value="">No sub-team</option>
+    {% for s in subteams %}
+    <option value="{{ s }}" {% if m.subteam == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+</select>
+<select data-member-field="since" aria-label="Joined">
+    <option value="">Joined?</option>
+    {% for y in years %}
+    <option value="{{ y }}" {% if m.since|string == y|string %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+</select>
+{% endmacro %}
+
 {% block content %}
 {% set api = '/api/team/' ~ team._id %}
 <div class="admin-container team-editor" id="teamEditor" data-api="{{ api }}"
     data-can-admin="{{ 'true' if can_admin else 'false' }}" data-own-member="{{ own_member_id or '' }}">
 
-    <div class="admin-header editor-header">
-        <div>
-            <h1>{{ team.team_number }}{% if team.nickname %} · {{ team.nickname }}{% endif %}</h1>
-            <p>Changes save on their own. A green outline means a field saved; red means it didn't.</p>
+    <header class="editor-bar">
+        <div class="editor-bar-title">
+            <h1>{{ team.team_number }}{% if team.nickname %} <span>· {{ team.nickname }}</span>{% endif %}</h1>
+            <p>Every change saves on its own.</p>
         </div>
-        <div class="editor-header-actions">
+        <div class="editor-bar-actions">
             <span class="save-status" id="saveStatus" role="status" aria-live="polite">All changes saved</span>
-            <a class="admin-btn admin-btn-secondary" href="{{ url_for('team_page', team_number=team.team_number) }}"
+            <a class="admin-btn admin-btn-secondary admin-btn-small" href="{{ url_for('team_page', team_number=team.team_number) }}"
                 target="_blank" rel="noopener"><i data-lucide="external-link" aria-hidden="true"></i> View page</a>
             {% if session.get('role') == 'admin' %}
-            <a class="admin-btn admin-btn-secondary" href="{{ url_for('admin_dashboard', _anchor='teams') }}">
+            <a class="admin-btn admin-btn-secondary admin-btn-small" href="{{ url_for('admin_dashboard', _anchor='teams') }}">
                 <i data-lucide="arrow-left" aria-hidden="true"></i> Dashboard</a>
             {% endif %}
         </div>
-    </div>
+    </header>
 
     <div id="toast-stack" class="toast-stack" role="status" aria-live="polite">
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -36,236 +67,249 @@
         {% endwith %}
     </div>
 
-    <div class="editor-grid">
-        <!-- IDENTITY -->
-        <section class="admin-card editor-card" aria-labelledby="h-identity">
-            <h2 id="h-identity"><i data-lucide="flag" aria-hidden="true"></i> Team identity</h2>
-            <div class="form-group">
-                <label for="f-nickname">Nickname</label>
+    <div class="settings-layout">
+        <nav class="settings-nav" aria-label="Editor sections">
+            <a href="#s-identity"><i data-lucide="flag" aria-hidden="true"></i> Identity</a>
+            <a href="#s-specs"><i data-lucide="cog" aria-hidden="true"></i> Robot</a>
+            <a href="#s-goals"><i data-lucide="target" aria-hidden="true"></i> Goals</a>
+            <a href="#s-roster"><i data-lucide="users" aria-hidden="true"></i> Roster</a>
+            {% if can_admin %}
+            <a href="#s-details"><i data-lucide="shield" aria-hidden="true"></i> Details</a>
+            <a href="#s-journey"><i data-lucide="route" aria-hidden="true"></i> Journey</a>
+            {% endif %}
+        </nav>
+
+        <div class="settings-main">
+            <!-- IDENTITY -->
+            <section class="settings-section" id="s-identity" aria-labelledby="h-identity">
+                <h2 id="h-identity">Team identity</h2>
+                {% call row('Nickname', 'f-nickname') %}
                 <input id="f-nickname" type="text" maxlength="80" value="{{ team.nickname or '' }}"
                     data-autosave="nickname" placeholder="e.g. Prometheus">
-            </div>
-            <div class="form-group">
-                <label for="f-tagline">Tagline</label>
+                {% endcall %}
+                {% call row('Tagline', 'f-tagline', 'One short line under the name') %}
                 <input id="f-tagline" type="text" maxlength="200" value="{{ team.tagline or '' }}"
                     data-autosave="tagline" placeholder="Precision. Power. Performance.">
-            </div>
-            <div class="form-group">
-                <label for="f-notebook">Engineering notebook link</label>
+                {% endcall %}
+                {% call row('Notebook link', 'f-notebook', 'Google Drive or Docs share link') %}
                 <input id="f-notebook" type="url" maxlength="500"
                     value="{{ team.notebook_link if team.notebook_link and team.notebook_link != '#' else '' }}"
-                    data-autosave="notebook_link" placeholder="https://…">
-            </div>
-            <div class="form-group">
-                <span class="field-label">Banner photo</span>
-                <label class="drop-zone" data-upload="hero_image">
+                    data-autosave="notebook_link" placeholder="https://docs.google.com/…">
+                {% endcall %}
+                {% call row('Banner photo', hint='Wide photos look best') %}
+                <label class="drop-zone drop-zone--inline" data-upload="hero_image">
                     <img class="drop-zone-preview" alt="" {% if team.hero_image %}src="{{ get_image_url(team.hero_image) }}"{% else %}hidden{% endif %}>
                     <span class="drop-zone-text"><i data-lucide="image-up" aria-hidden="true"></i>
-                        Drop an image here or <u>browse</u></span>
+                        Drop an image or <u>browse</u></span>
                     <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="visually-hidden">
                 </label>
-            </div>
-        </section>
+                {% endcall %}
+            </section>
 
-        <!-- SPECS -->
-        <section class="admin-card editor-card" aria-labelledby="h-specs">
-            <h2 id="h-specs"><i data-lucide="cog" aria-hidden="true"></i> Robot specs</h2>
-            {% for key, label, hint in [('drive_train', 'Drive train', 'e.g. 6-motor 450 RPM'),
-                                         ('lift_system', 'Lift system', 'e.g. 4-bar lift'),
-                                         ('intake', 'Intake', 'e.g. side rollers'),
-                                         ('auton_consistency', 'Auton consistency', 'e.g. 95%')] %}
-            <div class="form-group">
-                <label for="f-{{ key }}">{{ label }}</label>
-                <input id="f-{{ key }}" type="text" maxlength="120" value="{{ team.specs.get(key) or '' }}"
-                    data-autosave="specs.{{ key }}" placeholder="{{ hint }}">
-            </div>
-            {% endfor %}
-        </section>
-
-        <!-- GOALS -->
-        <section class="admin-card editor-card" aria-labelledby="h-goals">
-            <h2 id="h-goals"><i data-lucide="target" aria-hidden="true"></i> Season goals</h2>
-            <ul class="row-list" data-list="goals">
-                {% for goal in team.goals or [] %}
-                <li class="row-item">
-                    <input type="text" data-key="name" value="{{ goal.name }}" aria-label="Goal" maxlength="120">
-                    <input type="range" data-key="progress" min="0" max="100" value="{{ goal.progress|default(0) }}"
-                        aria-label="Progress for {{ goal.name }}">
-                    <output class="range-value">{{ goal.progress|default(0) }}%</output>
-                    <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove goal">
-                        <i data-lucide="x" aria-hidden="true"></i></button>
-                </li>
+            <!-- SPECS -->
+            <section class="settings-section" id="s-specs" aria-labelledby="h-specs">
+                <h2 id="h-specs">Robot specs</h2>
+                {% for key, label in [('drive_train', 'Drive train'), ('lift_system', 'Lift system'),
+                                      ('intake', 'Intake'), ('auton_consistency', 'Auton consistency')] %}
+                {% call row(label, 'f-' ~ key, 'Pick a suggestion or type your own' if loop.first else '') %}
+                <input id="f-{{ key }}" type="text" maxlength="{{ 40 if key == 'auton_consistency' else 120 }}"
+                    value="{{ team.specs.get(key) or '' }}" data-autosave="specs.{{ key }}"
+                    list="dl-{{ key }}" placeholder="{{ spec_suggestions[key][0] }}">
+                <datalist id="dl-{{ key }}">
+                    {% for s in spec_suggestions[key] %}<option value="{{ s }}"></option>{% endfor %}
+                </datalist>
+                {% endcall %}
                 {% endfor %}
-            </ul>
-            <button type="button" class="add-more-btn" data-action="add-row" data-list-target="goals">+ Add goal</button>
-            <template id="tpl-goals">
-                <li class="row-item">
-                    <input type="text" data-key="name" aria-label="Goal" maxlength="120" placeholder="New goal">
-                    <input type="range" data-key="progress" min="0" max="100" value="0" aria-label="Progress">
-                    <output class="range-value">0%</output>
-                    <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove goal">
-                        <i data-lucide="x" aria-hidden="true"></i></button>
-                </li>
-            </template>
-        </section>
+            </section>
 
-        <!-- ROSTER -->
-        <section class="admin-card editor-card editor-card--wide" aria-labelledby="h-roster">
-            <h2 id="h-roster"><i data-lucide="users" aria-hidden="true"></i> Roster</h2>
-            {% if not can_admin %}
-            <p class="form-hint">You can edit your own card. Ask an admin to add or move teammates.</p>
-            {% endif %}
-            <div class="member-grid" id="memberGrid">
-                {% for m in cards %}
-                {% set editable = can_admin or m.member_id == own_member_id %}
-                <article class="member-card{% if m.member_id == own_member_id %} is-you{% endif %}"
-                    data-member-id="{{ m.member_id }}">
-                    <label class="member-photo{% if editable %} drop-zone drop-zone--round{% endif %}"
-                        {% if editable %}data-upload="member_photo"{% endif %}>
-                        {% if m.photo %}
-                        <img class="drop-zone-preview" src="{{ get_image_url(m.photo) }}" alt="">
-                        {% else %}
-                        <img class="drop-zone-preview" alt="" hidden>
-                        <span class="member-initials">{{ m.name|initials }}</span>
-                        {% endif %}
+            <!-- GOALS -->
+            <section class="settings-section" id="s-goals" aria-labelledby="h-goals">
+                <h2 id="h-goals">Season goals</h2>
+                <ul class="row-list" data-list="goals">
+                    {% for goal in team.goals or [] %}
+                    <li class="row-item goal-row">
+                        <input type="text" data-key="name" value="{{ goal.name }}" aria-label="Goal" maxlength="120" list="dl-goals">
+                        <input type="range" data-key="progress" min="0" max="100" step="5" value="{{ goal.progress|default(0) }}"
+                            aria-label="Progress for {{ goal.name }}">
+                        <output class="range-value">{{ goal.progress|default(0) }}%</output>
+                        <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove goal">
+                            <i data-lucide="x" aria-hidden="true"></i></button>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <button type="button" class="add-more-btn" data-action="add-row" data-list-target="goals">+ Add goal</button>
+                <datalist id="dl-goals">
+                    {% for g in goal_suggestions %}<option value="{{ g }}"></option>{% endfor %}
+                </datalist>
+                <template id="tpl-goals">
+                    <li class="row-item goal-row">
+                        <input type="text" data-key="name" aria-label="Goal" maxlength="120" placeholder="Pick or type a goal" list="dl-goals">
+                        <input type="range" data-key="progress" min="0" max="100" step="5" value="0" aria-label="Progress">
+                        <output class="range-value">0%</output>
+                        <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove goal">
+                            <i data-lucide="x" aria-hidden="true"></i></button>
+                    </li>
+                </template>
+            </section>
+
+            <!-- ROSTER -->
+            <section class="settings-section" id="s-roster" aria-labelledby="h-roster">
+                <h2 id="h-roster">Roster <span class="section-count">{{ cards|length }}</span></h2>
+                {% if not can_admin %}
+                <p class="form-hint">You can edit your own row. Ask an admin to add or move teammates.</p>
+                {% endif %}
+                <datalist id="dl-roles">
+                    {% for r in role_suggestions %}<option value="{{ r }}"></option>{% endfor %}
+                </datalist>
+                <datalist id="dl-extra-roles" data-roles="{{ role_suggestions|join('|') }}"></datalist>
+                <div class="member-list" id="memberGrid" role="list">
+                    <div class="member-head" aria-hidden="true">
+                        <span></span><span>Name</span><span>Main role</span><span>Other roles</span>
+                        <span>Sub-team</span><span>Joined</span><span></span>
+                    </div>
+                    {% for m in cards %}
+                    {% set editable = can_admin or m.member_id == own_member_id %}
+                    <div class="member-card{% if m.member_id == own_member_id %} is-you{% endif %}{% if not editable %} is-readonly{% endif %}"
+                        data-member-id="{{ m.member_id }}" role="listitem">
+                        <label class="member-photo{% if editable %} drop-zone drop-zone--round{% endif %}"
+                            {% if editable %}data-upload="member_photo" title="Change photo"{% endif %}>
+                            {% if m.photo %}
+                            <img class="drop-zone-preview" src="{{ get_image_url(m.photo) }}" alt="">
+                            {% else %}
+                            <img class="drop-zone-preview" alt="" hidden>
+                            <span class="member-initials">{{ m.name|initials }}</span>
+                            {% endif %}
+                            {% if editable %}
+                            <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="visually-hidden"
+                                aria-label="Change photo for {{ m.name }}">
+                            {% endif %}
+                        </label>
                         {% if editable %}
-                        <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="visually-hidden"
-                            aria-label="Change photo for {{ m.name }}">
+                        {{ member_fields(m) }}
+                        {% if can_admin %}
+                        <button type="button" class="icon-btn icon-btn--danger member-remove" data-action="remove-member"
+                            aria-label="Remove {{ m.name }} from the roster"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+                        {% else %}<span></span>{% endif %}
+                        {% else %}
+                        <strong class="member-name">{{ m.name }}</strong>
+                        <span class="member-role">{{ m.role }}</span>
+                        <span class="member-role">{{ m.roles }}</span>
+                        <span class="member-role">{{ m.subteam }}</span>
+                        <span class="member-role">{{ m.since }}</span>
+                        <span></span>
                         {% endif %}
-                    </label>
-                    {% if editable %}
-                    <input type="text" class="member-name" data-member-field="name" value="{{ m.name }}"
-                        maxlength="100" aria-label="Name">
-                    <input type="text" data-member-field="role" value="{{ m.role }}" maxlength="100"
-                        aria-label="Role" placeholder="Role">
-                    <input type="text" data-member-field="roles" value="{{ m.roles }}" maxlength="200"
-                        aria-label="Extra roles, comma separated" placeholder="Extra roles, comma separated">
-                    <select data-member-field="subteam" aria-label="Sub-team">
-                        <option value="">No sub-team</option>
-                        {% for s in subteams %}
-                        <option value="{{ s }}" {% if m.subteam == s %}selected{% endif %}>{{ s }}</option>
-                        {% endfor %}
-                    </select>
-                    <input type="number" data-member-field="since" value="{{ m.since }}" min="1990" max="2100"
-                        aria-label="Member since (year)" placeholder="Member since (year)">
-                    {% if can_admin %}
-                    <button type="button" class="icon-btn member-remove" data-action="remove-member"
-                        aria-label="Remove {{ m.name }} from the roster"><i data-lucide="trash-2" aria-hidden="true"></i></button>
-                    {% endif %}
+                        {% if m.member_id == own_member_id %}<span class="you-badge">You</span>{% endif %}
+                    </div>
                     {% else %}
-                    <strong class="member-name">{{ m.name }}</strong>
-                    <span class="member-role">{{ m.role }}{% if m.subteam %} · {{ m.subteam }}{% endif %}</span>
-                    {% endif %}
-                    {% if m.member_id == own_member_id %}<span class="you-badge">You</span>{% endif %}
-                </article>
-                {% else %}
-                <p class="form-hint" id="rosterEmpty">No one on the roster yet.</p>
-                {% endfor %}
-            </div>
-            {% if can_admin %}
-            <form class="inline-add" id="addMemberForm">
-                <label for="f-new-member" class="visually-hidden">New member name</label>
-                <input id="f-new-member" type="text" maxlength="100" placeholder="Add someone by name…" required>
-                <button type="submit" class="admin-btn admin-btn-small">Add</button>
-            </form>
-            <p class="form-hint">To link a member to their login, drag them on the admin People board.</p>
-            {% endif %}
-        </section>
+                    <p class="form-hint" id="rosterEmpty">No one on the roster yet.</p>
+                    {% endfor %}
+                </div>
+                {% if can_admin %}
+                <form class="inline-add" id="addMemberForm">
+                    <label for="f-new-member" class="visually-hidden">New member name</label>
+                    <input id="f-new-member" type="text" maxlength="100" placeholder="Add someone by name…" required>
+                    <button type="submit" class="admin-btn admin-btn-small">Add</button>
+                </form>
+                <p class="form-hint">To link someone to their login, drag them on the admin People board.</p>
+                {% endif %}
+            </section>
 
-        {% if can_admin %}
-        <!-- ADMIN-ONLY DETAILS -->
-        <section class="admin-card editor-card" aria-labelledby="h-details">
-            <h2 id="h-details"><i data-lucide="shield" aria-hidden="true"></i> Team details <span class="role-badge editor">editors</span></h2>
-            <div class="form-group">
-                <label for="f-team_number">Team number</label>
+            {% if can_admin %}
+            <!-- EDITOR-ONLY DETAILS -->
+            <section class="settings-section" id="s-details" aria-labelledby="h-details">
+                <h2 id="h-details">Team details <span class="role-badge editor">editors</span></h2>
+                {% call row('Team number', 'f-team_number') %}
                 <input id="f-team_number" type="text" name="team_number" maxlength="20" required
-                    value="{{ team.team_number }}" data-autosave="team_number">
-            </div>
-            <div class="form-group">
-                <label for="f-season">Season</label>
-                <input id="f-season" type="text" maxlength="20" value="{{ team.season or '' }}" data-autosave="season"
-                    placeholder="e.g. 2025-26">
-            </div>
-            <div class="form-group">
-                <label for="f-division">Division</label>
-                <select id="f-division" data-autosave="division">
+                    value="{{ team.team_number }}" data-autosave="team_number" autocapitalize="characters">
+                {% endcall %}
+                {% call row('Season', 'f-season') %}
+                <select id="f-season" data-autosave="season">
                     <option value="">Not set</option>
-                    {% for d in divisions %}
-                    <option value="{{ d }}" {% if team.division == d %}selected{% endif %}>{{ d }}</option>
+                    {% for s in seasons %}
+                    <option value="{{ s }}" {% if team.season == s %}selected{% endif %}>{{ s }}</option>
                     {% endfor %}
                 </select>
-            </div>
-            <div class="form-group">
-                <label for="f-since">Competing since</label>
-                <input id="f-since" type="number" min="1990" max="2100" value="{{ team.since or '' }}"
-                    data-autosave="since">
-            </div>
-            <div class="form-group">
-                <label for="f-worlds">Worlds appearances</label>
-                <input id="f-worlds" type="number" min="0" max="99" value="{{ team.worlds_appearances or '' }}"
-                    data-autosave="worlds_appearances">
-            </div>
-            <div class="form-group">
-                <label for="f-re">RobotEvents number</label>
+                {% endcall %}
+                {% call row('Division') %}
+                <div class="segmented" role="radiogroup" aria-labelledby="lbl-division">
+                    {% for d in [''] + divisions|list %}
+                    <label class="segment"><input type="radio" name="division" value="{{ d }}" data-autosave="division"
+                        {% if (team.division or '') == d %}checked{% endif %}><span>{{ d or 'Not set' }}</span></label>
+                    {% endfor %}
+                </div>
+                {% endcall %}
+                {% call row('Competing since', 'f-since') %}
+                <select id="f-since" data-autosave="since">
+                    <option value="">Not set</option>
+                    {% for y in years %}
+                    <option value="{{ y }}" {% if team.since|string == y|string %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+                {% endcall %}
+                {% call row('Worlds appearances', 'f-worlds') %}
+                <select id="f-worlds" data-autosave="worlds_appearances">
+                    <option value="">Not set</option>
+                    {% for n in range(0, 21) %}
+                    <option value="{{ n }}" {% if team.worlds_appearances is not none and team.worlds_appearances|string == n|string %}selected{% endif %}>{{ n }}</option>
+                    {% endfor %}
+                </select>
+                {% endcall %}
+                {% call row('RobotEvents number', 'f-re', 'Only if different from the team number') %}
                 <input id="f-re" type="text" maxlength="20" value="{{ team.robotevents_number or '' }}"
-                    data-autosave="robotevents_number" placeholder="Only if different from the team number">
-            </div>
-            <div class="form-group">
-                <span class="field-label">CAD model (.stl)</span>
-                <label class="drop-zone drop-zone--file" data-upload="stl_file">
+                    data-autosave="robotevents_number" placeholder="{{ team.team_number }}">
+                {% endcall %}
+                {% call row('CAD model', hint='.stl file for the 3D viewer') %}
+                <label class="drop-zone drop-zone--inline" data-upload="stl_file">
                     <span class="drop-zone-text"><i data-lucide="box" aria-hidden="true"></i>
-                        <span class="drop-zone-filename">{{ team.stl_path.split('/')[-1] if team.stl_path else 'Drop an .stl file or browse' }}</span></span>
+                        <span class="drop-zone-filename">{{ team.stl_path.split('/')[-1] if team.stl_path else 'Drop an .stl or browse' }}</span></span>
                     <input type="file" accept=".stl" class="visually-hidden">
                 </label>
-            </div>
-        </section>
+                {% endcall %}
+            </section>
 
-        <section class="admin-card editor-card" aria-labelledby="h-journey">
-            <h2 id="h-journey"><i data-lucide="route" aria-hidden="true"></i> Team journey <span class="role-badge editor">editors</span></h2>
-            <ul class="row-list row-list--stacked" data-list="journey">
-                {% for j in team.journey or [] %}
-                <li class="row-item">
-                    <input type="text" data-key="date" value="{{ j.date }}" aria-label="Date" maxlength="40" placeholder="Nov 2025">
-                    <input type="text" data-key="title" value="{{ j.title }}" aria-label="Milestone" maxlength="120">
-                    <textarea data-key="description" rows="2" aria-label="Description" maxlength="1000">{{ j.description }}</textarea>
-                    <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove milestone">
-                        <i data-lucide="x" aria-hidden="true"></i></button>
-                </li>
-                {% endfor %}
-            </ul>
-            <button type="button" class="add-more-btn" data-action="add-row" data-list-target="journey">+ Add milestone</button>
-            <template id="tpl-journey">
-                <li class="row-item">
-                    <input type="text" data-key="date" aria-label="Date" maxlength="40" placeholder="Nov 2025">
-                    <input type="text" data-key="title" aria-label="Milestone" maxlength="120" placeholder="What happened">
-                    <textarea data-key="description" rows="2" aria-label="Description" maxlength="1000"></textarea>
-                    <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove milestone">
-                        <i data-lucide="x" aria-hidden="true"></i></button>
-                </li>
-            </template>
-        </section>
-        {% endif %}
+            <section class="settings-section" id="s-journey" aria-labelledby="h-journey">
+                <h2 id="h-journey">Team journey <span class="role-badge editor">editors</span></h2>
+                <datalist id="dl-months">
+                    {% for mo in months %}<option value="{{ mo }}"></option>{% endfor %}
+                </datalist>
+                <ul class="row-list" data-list="journey">
+                    {% for j in team.journey or [] %}
+                    <li class="row-item journey-row">
+                        <input type="text" data-key="date" value="{{ j.date }}" aria-label="Date" maxlength="40" placeholder="Nov 2025" list="dl-months">
+                        <input type="text" data-key="title" value="{{ j.title }}" aria-label="Milestone" maxlength="120" placeholder="What happened">
+                        <textarea data-key="description" rows="1" aria-label="Description" maxlength="1000" placeholder="Details (optional)">{{ j.description }}</textarea>
+                        <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove milestone">
+                            <i data-lucide="x" aria-hidden="true"></i></button>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <button type="button" class="add-more-btn" data-action="add-row" data-list-target="journey">+ Add milestone</button>
+                <template id="tpl-journey">
+                    <li class="row-item journey-row">
+                        <input type="text" data-key="date" aria-label="Date" maxlength="40" placeholder="{{ months[12] }}" list="dl-months">
+                        <input type="text" data-key="title" aria-label="Milestone" maxlength="120" placeholder="What happened">
+                        <textarea data-key="description" rows="1" aria-label="Description" maxlength="1000" placeholder="Details (optional)"></textarea>
+                        <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove milestone">
+                            <i data-lucide="x" aria-hidden="true"></i></button>
+                    </li>
+                </template>
+            </section>
+            {% endif %}
+        </div>
     </div>
 </div>
 
 <template id="tpl-member">
-    <article class="member-card" data-member-id="">
-        <label class="member-photo drop-zone drop-zone--round" data-upload="member_photo">
+    <div class="member-card" data-member-id="" role="listitem">
+        <label class="member-photo drop-zone drop-zone--round" data-upload="member_photo" title="Change photo">
             <img class="drop-zone-preview" alt="" hidden>
             <span class="member-initials"></span>
             <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="visually-hidden" aria-label="Change photo">
         </label>
-        <input type="text" class="member-name" data-member-field="name" maxlength="100" aria-label="Name">
-        <input type="text" data-member-field="role" maxlength="100" aria-label="Role" placeholder="Role">
-        <input type="text" data-member-field="roles" maxlength="200" aria-label="Extra roles, comma separated" placeholder="Extra roles, comma separated">
-        <select data-member-field="subteam" aria-label="Sub-team">
-            <option value="">No sub-team</option>
-            {% for s in subteams %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
-        </select>
-        <input type="number" data-member-field="since" min="1990" max="2100" aria-label="Member since (year)" placeholder="Member since (year)">
-        <button type="button" class="icon-btn member-remove" data-action="remove-member" aria-label="Remove from the roster">
+        {{ member_fields({'name': '', 'role': '', 'roles': '', 'subteam': '', 'since': ''}) }}
+        <button type="button" class="icon-btn icon-btn--danger member-remove" data-action="remove-member" aria-label="Remove from the roster">
             <i data-lucide="trash-2" aria-hidden="true"></i></button>
-    </article>
+    </div>
 </template>
 {% endblock %}
 

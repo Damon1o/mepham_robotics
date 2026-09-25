@@ -2307,6 +2307,7 @@
     .roster-board {
         grid-auto-columns: 85%;
     }
+}
 
 
 /* ================================================================
@@ -2448,4 +2449,484 @@
 
 [data-theme="dark"] .topic-badge.topic-join {
     color: #6fcf8f;
+}
+
+
+/* ================================================================
+   SHARED CONTROLS
+   ================================================================ */
+/* --- Segmented control (2-5 fixed choices) -------------------------------------- */
+.segmented {
+    display: inline-flex;
+    flex-wrap: wrap;
+    padding: 3px;
+    border: 1px solid var(--seg-border, #cfcfcf);
+    border-radius: 10px;
+    background: var(--admin-card-bg);
+}
+
+.segmented label {
+    position: relative;
+    cursor: pointer;
+}
+
+.segmented input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.segmented span {
+    display: block;
+    padding: 0.3rem 0.85rem;
+    border-radius: 7px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--seg-muted, #595959);
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.segmented label:hover span {
+    color: var(--admin-text);
+}
+
+.segmented input:checked + span {
+    background: var(--maroon-dark);
+    color: #fff;
+}
+
+.segmented input:focus-visible + span {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 1px;
+}
+
+.segmented.is-saved {
+    border-color: #2e7d32;
+}
+
+.segmented.is-error {
+    border-color: #c62828;
+}
+
+[data-theme="dark"] .segmented {
+    --seg-border: #555;
+    --seg-muted: #b0b0b0;
+}
+
+[data-theme="dark"] .segmented input:checked + span {
+    background: #e6b8b9;
+    color: #1a1a1a;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 700;
+    color: var(--maroon-dark);
+}
+
+[data-theme="dark"] .field-label {
+    color: #e6b8b9;
+}
+
+
+/* ================================================================
+   COMPACT LAYOUT
+   One slim top bar (title, quick actions, stat chips), left-aligned
+   section headings, and tighter cards, rows and form spacing.
+   ================================================================ */
+.admin-container {
+    margin-top: 5.5rem; /* clears the fixed MENU button */
+}
+
+.admin-topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title actions" "stats stats";
+    gap: 0.75rem 1.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.admin-topbar .admin-header {
+    grid-area: title;
+    margin: 0;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+    overflow: visible;
+}
+
+.admin-topbar .admin-header::before,
+.admin-topbar .admin-header::after {
+    display: none;
+}
+
+.admin-topbar .admin-header h1 {
+    margin: 0;
+    color: var(--maroon-dark);
+    font-size: 1.6rem;
+}
+
+.admin-topbar .admin-header p {
+    margin: 0.1rem 0 0;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    opacity: 1;
+}
+
+.admin-topbar .admin-quick-actions {
+    grid-area: actions;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.admin-topbar .quick-action-btn {
+    flex-direction: row;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    border-width: 2px;
+    border-radius: 8px;
+    box-shadow: none;
+    font-size: 0.85rem;
+}
+
+.admin-topbar .quick-action-btn:hover {
+    transform: none;
+}
+
+.admin-topbar .quick-action-btn span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.admin-topbar .quick-action-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.admin-topbar .dashboard-stats {
+    grid-area: stats;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.admin-topbar .stat-card {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    box-shadow: none;
+    text-align: left;
+}
+
+.admin-topbar .stat-card:hover {
+    transform: none;
+}
+
+.admin-topbar .stat-value {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.admin-topbar .stat-label {
+    font-size: 0.85rem;
+}
+
+.admin-topbar .stat-change {
+    font-size: 0.75rem;
+}
+
+.admin-topbar .stat-change:not(.positive):not(.negative) {
+    display: none;
+}
+
+.admin-topbar .stat-change svg {
+    width: 0.8rem;
+    height: 0.8rem;
+}
+
+.admin-container .search-box {
+    margin-bottom: 0.75rem;
+}
+
+.admin-container #adminSearch {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.admin-container .admin-tabs {
+    margin-bottom: 1rem;
+    border-bottom-width: 2px;
+}
+
+.admin-container .admin-tabs a {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+}
+
+.admin-container .admin-grid {
+    gap: 1rem;
+}
+
+.admin-container .admin-panel {
+    max-width: none;
+    width: 100%;
+}
+
+.admin-container .admin-panel > * + * {
+    margin-top: 1rem;
+}
+
+.admin-container .admin-card {
+    padding: 1rem 1.25rem;
+    border-width: 1px;
+    border-radius: 12px;
+    text-align: left;
+}
+
+.admin-container .admin-card:hover {
+    transform: none;
+}
+
+.admin-container .admin-card-header {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom-width: 1px;
+    text-align: left;
+}
+
+.admin-container .admin-card-header h2,
+.admin-container .admin-card > h2 {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 1.15rem;
+    text-align: left;
+}
+
+.admin-container .admin-card-header h2 svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.admin-container h2::after {
+    display: none;
+}
+
+.admin-container .form-group {
+    margin-bottom: 0.85rem;
+}
+
+.admin-container .form-hint {
+    margin: 0.25rem 0 0.5rem;
+    font-size: 0.8rem;
+}
+
+.admin-container .data-item {
+    margin-bottom: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    align-items: center;
+}
+
+.admin-container .panel-filter {
+    margin-bottom: 0.5rem;
+    padding: 0.45rem 0.7rem;
+}
+
+.admin-container .stepper-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+
+.admin-container .stepper-card {
+    padding: 0.6rem 0.75rem;
+}
+
+.admin-container .form-section-title,
+.admin-container .form-section-title-md {
+    margin: 1rem 0 0.5rem;
+    font-size: 1rem;
+    text-align: left;
+}
+
+.admin-container .roster-col {
+    min-height: 10rem;
+    padding: 0;
+}
+
+.admin-container .roster-col-head {
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+}
+
+.admin-container .roster-col-head::before,
+.admin-container .roster-col-head::after {
+    display: none;
+}
+
+@media (max-width: 760px) {
+    .admin-topbar {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "title" "actions" "stats";
+    }
+
+    .admin-topbar .admin-quick-actions {
+        justify-content: flex-start;
+    }
+
+    .admin-container {
+        margin-top: 4.5rem;
+    }
+}
+
+
+/* ================================================================
+   DARK THEME: overhaul components
+   People board, approvals, steppers, inline rows and team tiles.
+   ================================================================ */
+[data-theme="dark"] .admin-topbar .admin-header h1 {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .admin-topbar .admin-header p {
+    color: #b0b0b0;
+}
+
+[data-theme="dark"] .approval-item {
+    background: #2a2618;
+    border-color: #5c5020;
+}
+
+[data-theme="dark"] .roster-col {
+    background: #181818;
+    border-color: #3a3a3a;
+}
+
+[data-theme="dark"] .roster-col.is-over {
+    background: #262222;
+    border-color: #e6b8b9;
+}
+
+[data-theme="dark"] .roster-col-head {
+    border-color: #3a3a3a;
+}
+
+[data-theme="dark"] .roster-card,
+[data-theme="dark"] .stepper-card,
+[data-theme="dark"] .inline-input,
+[data-theme="dark"] .inline-create input,
+[data-theme="dark"] .roster-move,
+[data-theme="dark"] .role-inline,
+[data-theme="dark"] .approval-item select,
+[data-theme="dark"] .stepper input {
+    background: #121212;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .roster-col-head strong,
+[data-theme="dark"] .roster-col-link,
+[data-theme="dark"] .stepper-card label,
+[data-theme="dark"] .manual-add summary,
+[data-theme="dark"] .approval-who strong {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .roster-text strong,
+[data-theme="dark"] .approval-who {
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .roster-col-head small,
+[data-theme="dark"] .roster-text small,
+[data-theme="dark"] .approval-who small {
+    color: #b0b0b0;
+}
+
+
+/* ================================================================
+   COMPACT FORMS
+   ================================================================ */
+.admin-container .form-group label {
+    margin-bottom: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.admin-container .form-group input:not([type="radio"]):not([type="checkbox"]),
+.admin-container .form-group select,
+.admin-container .form-group textarea {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.95rem;
+}
+
+.admin-container .segmented label.segment {
+    margin: 0;
+    font-size: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+}
+
+#sponsor_form,
+#userForm {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 0 1rem;
+    align-items: start;
+}
+
+#sponsor_form > .form-stack,
+#userForm > .btn-group,
+#sponsor_form > input[type="hidden"],
+#userForm > input[type="hidden"] {
+    grid-column: 1 / -1;
+}
+
+.admin-container .form-stack,
+#userForm > .btn-group {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.admin-container .form-stack .admin-btn,
+#userForm > .btn-group .admin-btn {
+    width: auto;
+    margin: 0;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+}
+
+.admin-container .sponsors-empty,
+.admin-container .empty-state,
+.admin-container .no-team-msg {
+    padding: 1rem;
+}
+
+.admin-container .sponsors-empty .empty-icon,
+.admin-container .no-team-msg-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+}
+
+.admin-container .inline-create input {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.95rem;
+}
+
+.admin-container .inline-create .admin-btn {
+    padding: 0.5rem 1.1rem;
+    font-size: 0.9rem;
 }

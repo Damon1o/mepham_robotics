@@ -11,6 +11,7 @@ import csv
 from io import StringIO
 import math
 import secrets
+import string
 import logging
 from functools import wraps
 from bson import ObjectId
@@ -1349,7 +1350,21 @@ def admin_dashboard():
                            messages=messages, unread_messages=unread_messages,
                            subscriber_count=subscriber_count,
                            pending_users=pending_users, board=board, unassigned=unassigned,
-                           team_choices=team_choices)
+                           team_choices=team_choices,
+                           event_locations=sorted({c['location'] for c in db['competitions'].find(
+                               {'location': {'$nin': [None, '']}}, {'location': 1})}),
+                           team_number_suggestions=next_team_numbers(t.get('team_number') for t in teams))
+
+
+def next_team_numbers(numbers):
+    """The next free letter for each club number in use: 77628A and 77628B suggest 77628C."""
+    taken = {str(n).upper() for n in numbers if n}
+    suggestions = []
+    for prefix in sorted({re.sub(r'[A-Z]+$', '', n) for n in taken} - {''}):
+        free = next((prefix + c for c in string.ascii_uppercase if prefix + c not in taken), None)
+        if free:
+            suggestions.append(free)
+    return suggestions
 
 @app.route('/admin/update-stats', methods=['POST'])
 @role_required('admin')
@@ -2139,6 +2154,48 @@ STAT_FIELDS = ('teams_count', 'members_count', 'awards_count', 'hours_built')
 EVENT_TEXT_MAX = 200
 SUBTEAMS = ('Mechanical', 'Electrical', 'Programming', 'Notebook & Outreach')
 DIVISIONS = ('High School', 'Middle School')
+# Offered as <datalist> suggestions; people can still type anything.
+ROLE_SUGGESTIONS = ('Captain', 'Co-Captain', 'Driver', 'Builder', 'Programmer', 'Designer (CAD)',
+                    'Notebooker', 'Scout', 'Strategist', 'Outreach', 'Mentor')
+GOAL_SUGGESTIONS = ('Qualify for States', 'Qualify for Worlds', 'Win a tournament', 'Win the Excellence Award',
+                    'Win the Design Award', 'Top 10 in skills', 'Finish the notebook every week',
+                    'Reliable autonomous')
+SPEC_SUGGESTIONS = {
+    'drive_train': ('6-motor 450 RPM', '6-motor 600 RPM', '8-motor 450 RPM', '4-motor 200 RPM',
+                    'X-drive', 'Mecanum'),
+    'lift_system': ('4-bar lift', '6-bar lift', 'Double reverse 4-bar', 'Cascade lift', 'Arm', 'None'),
+    'intake': ('Side rollers', 'Front rollers', 'Claw', 'Conveyor', 'Flex-wheel intake'),
+    'auton_consistency': ('50%', '60%', '70%', '80%', '90%', '95%', '100%'),
+}
+FIRST_CLUB_YEAR = 2005
+
+
+def current_season(today=None):
+    """VEX seasons run spring to spring; the new game is revealed at Worlds in late April."""
+    today = today or _utcnow()
+    start = today.year if today.month >= 5 else today.year - 1
+    return f'{start}-{(start + 1) % 100:02d}'
+
+
+def season_options(existing=()):
+    """Next season, this one and the eight before it, plus any odd value already stored."""
+    start = int(current_season()[:4]) + 1
+    seasons = [f'{y}-{(y + 1) % 100:02d}' for y in range(start, start - 10, -1)]
+    return seasons + sorted({s for s in existing if s and s not in seasons}, reverse=True)
+
+
+def year_options():
+    return list(range(_utcnow().year + 1, FIRST_CLUB_YEAR - 1, -1))
+
+
+def month_suggestions():
+    """'Mon YYYY' for the last two years and the next one, newest first, for journey dates."""
+    now = _utcnow()
+    months = []
+    for offset in range(12, -25, -1):
+        index = now.year * 12 + now.month - 1 + offset
+        months.append(datetime.date(index // 12, index % 12 + 1, 1).strftime('%b %Y'))
+    return months
 # Anyone can reach these, so no SVG (it can carry script).
 MEMBER_UPLOAD_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 LIST_MAX_ITEMS = 30
@@ -2549,7 +2606,11 @@ def manage_team(team_id):
                            cards=[_card(m) | {'roles': ', '.join(m.get('roles') or []),
                                               'since': m.get('since') or ''}
                                   for m in team.get('members', [])],
-                           subteams=SUBTEAMS, divisions=DIVISIONS)
+                           subteams=SUBTEAMS, divisions=DIVISIONS,
+                           seasons=season_options(d.get('season') for d in db['teams'].find({}, {'season': 1})),
+                           years=year_options(), months=month_suggestions(),
+                           role_suggestions=ROLE_SUGGESTIONS, goal_suggestions=GOAL_SUGGESTIONS,
+                           spec_suggestions=SPEC_SUGGESTIONS)
 
 
 @app.route('/api/team/<team_id>/field', methods=['POST'])

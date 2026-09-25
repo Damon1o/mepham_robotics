@@ -1,4 +1,5 @@
 """Shared team editor: team members edit their own team, editors/admins edit any."""
+import datetime
 import io
 
 import pytest
@@ -243,3 +244,29 @@ def test_member_cannot_upload_cad(client, db, setup, uploads):
                        data={'stl_file': (io.BytesIO(b'solid x'), 'robot.stl')}, content_type='multipart/form-data')
     assert resp.status_code == 403
     assert uploads == []
+
+
+# --- Pickers and suggestions ------------------------------------------------------
+
+def test_next_team_numbers_suggests_the_next_free_letter():
+    assert app_module.next_team_numbers(['77628A', '77628B', '1234X', None]) == ['1234A', '77628C']
+
+
+def test_current_season_turns_over_in_may():
+    assert app_module.current_season(datetime.datetime(2026, 4, 30)) == '2025-26'
+    assert app_module.current_season(datetime.datetime(2026, 5, 1)) == '2026-27'
+
+
+def test_season_options_keep_an_unlisted_stored_value():
+    options = app_module.season_options(['1999-00', None])
+    assert options[-1] == '1999-00'
+    assert app_module.current_season() in options
+
+
+def test_editor_offers_pickers_and_suggestions(client, db, setup, make_user):
+    make_user(username='ed', password='editor-password', email='ed@example.com', role='editor')
+    login(client, 'ed', 'editor-password')
+    page = client.get(f"/manage/team/{setup['team']}").get_data(as_text=True)
+    assert '<select id="f-season" data-autosave="season">' in page
+    assert 'name="division" value="High School" data-autosave="division"' in page
+    assert 'list="dl-roles"' in page and 'list="dl-months"' in page and 'list="dl-drive_train"' in page
