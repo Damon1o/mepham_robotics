@@ -8,25 +8,18 @@ Robotics. Join the legacy.{% endblock %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/index.css') }}">
 {% endblock %}
 
+{% from "partials/picture.html" import picture %}
 {% block content %}
 <!-- HERO SECTION -->
 <div class="hero-image">
-    <img class="hero-side-photo hero-side-photo--portrait hero-side-photo--l1"
-        src="{{ url_for('static', filename='assets/photos/carousel2.jpg') }}" alt="" aria-hidden="true" loading="lazy">
-    <img class="hero-side-photo hero-side-photo--landscape hero-side-photo--l2"
-        src="{{ url_for('static', filename='assets/photos/carousel1.jpg') }}" alt="" aria-hidden="true" loading="lazy">
-    <img class="hero-side-photo hero-side-photo--portrait hero-side-photo--l3"
-        src="{{ url_for('static', filename='assets/photos/carousel3.jpg') }}" alt="" aria-hidden="true" loading="lazy">
-    <img class="hero-side-photo hero-side-photo--landscape hero-side-photo--l4"
-        src="{{ url_for('static', filename='assets/photos/carousel7.jpg') }}" alt="" aria-hidden="true" loading="lazy">
-    <img class="hero-side-photo hero-side-photo--landscape hero-side-photo--r1"
-        src="{{ url_for('static', filename='assets/photos/carousel9.jpg') }}" alt="" aria-hidden="true" loading="lazy">
-    <img class="hero-side-photo hero-side-photo--portrait hero-side-photo--r2"
-        src="{{ url_for('static', filename='assets/photos/carousel4.jpg') }}" alt="" aria-hidden="true" loading="lazy">
-    <img class="hero-side-photo hero-side-photo--landscape hero-side-photo--r3"
-        src="{{ url_for('static', filename='assets/photos/carousel10.jpg') }}" alt="" aria-hidden="true" loading="lazy">
-    <img class="hero-side-photo hero-side-photo--portrait hero-side-photo--r4"
-        src="{{ url_for('static', filename='assets/photos/carousel5.jpg') }}" alt="" aria-hidden="true" loading="lazy">
+    {{ picture('photos/carousel2', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--l1', decorative=True) }}
+    {{ picture('photos/carousel1', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--l2', decorative=True) }}
+    {{ picture('photos/carousel3', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--l3', decorative=True) }}
+    {{ picture('photos/carousel7', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--l4', decorative=True) }}
+    {{ picture('photos/carousel9', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--r1', decorative=True) }}
+    {{ picture('photos/carousel4', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--r2', decorative=True) }}
+    {{ picture('photos/carousel10', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--r3', decorative=True) }}
+    {{ picture('photos/carousel5', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--r4', decorative=True) }}
     <div class="hero-content">
         <h1>Mepham Robotics</h1>
         <p>Build. Code. Compete.</p>

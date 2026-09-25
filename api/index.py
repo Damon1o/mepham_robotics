@@ -1,4 +1,5 @@
 import os
+import json
 import re
 import datetime
 import urllib.parse
@@ -398,6 +399,19 @@ class _DbProxy:
         return getattr(get_db(), name)
 
 db = _DbProxy()
+
+def _load_image_manifest():
+    """Pixel sizes and WebP variants written by scripts/optimize_images.py."""
+    path = os.path.join(app.static_folder, 'assets', 'image-manifest.json')
+    try:
+        with open(path, encoding='utf-8') as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        logger.exception('Could not read %s', path)
+        return {}
+
+
+app.jinja_env.globals['image_manifest'] = _load_image_manifest()
 
 DEFAULT_IMAGE = 'assets/other/base.png'
 DEFAULT_MEMBER_PHOTO = 'static/' + DEFAULT_IMAGE

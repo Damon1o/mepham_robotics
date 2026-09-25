@@ -9,15 +9,18 @@
     'use strict';
 
     var STORAGE_KEY = 'mepham-theme';
-    var MODES = ['system', 'light', 'dark'];
+    // Light is the default for every visitor; dark and 'follow my device'
+    // are opt-in from the footer toggle, which cycles in this order.
+    var MODES = ['light', 'dark', 'system'];
+    var DEFAULT_MODE = 'light';
 
     function stored() {
         try {
             var value = localStorage.getItem(STORAGE_KEY);
-            return MODES.indexOf(value) === -1 ? 'system' : value;
+            return MODES.indexOf(value) === -1 ? DEFAULT_MODE : value;
         } catch (err) {
-            // Private mode or blocked storage: fall back to the system theme.
-            return 'system';
+            // Private mode or blocked storage: fall back to the default.
+            return DEFAULT_MODE;
         }
     }
 
@@ -41,7 +44,7 @@
         apply: apply,
         set: function (mode) {
             if (MODES.indexOf(mode) === -1) {
-                mode = 'system';
+                mode = DEFAULT_MODE;
             }
             try {
                 localStorage.setItem(STORAGE_KEY, mode);

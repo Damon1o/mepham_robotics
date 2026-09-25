@@ -171,7 +171,7 @@ build the future.{% endblock %}
             <a href="{{ sponsor.website if sponsor.website else '#' }}" target="_blank" class="sponsor-card-link">
                 <div class="sponsor-logo">
                     {% if sponsor.logo_path %}
-                    <img src="{{ get_image_url(sponsor.logo_path) }}" alt="{{ sponsor.name }}" class="sponsor-logo-img">
+                    <img src="{{ get_image_url(sponsor.logo_path) }}" alt="{{ sponsor.name }}" class="sponsor-logo-img" loading="lazy" decoding="async">
                     {% else %}
                     <div class="sponsor-logo-fallback">{{ sponsor.name }}</div>
                     {% endif %}

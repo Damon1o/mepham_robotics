@@ -2,8 +2,10 @@
 
 .hero-image {
     min-height: 100vh;
+    /* Fallback for browsers without image-set(type()); the rule below wins elsewhere. */
+    background: linear-gradient(135deg, rgba(128, 0, 0, 0.7) 0%, rgba(90, 0, 0, 0.6) 100%), url('../../assets/photos/hero.jpg') center/cover no-repeat;
     background: linear-gradient(135deg, rgba(128, 0, 0, 0.7) 0%, rgba(90, 0, 0, 0.6) 100%),
-    url('../../assets/photos/hero.png') center/cover no-repeat;
+    image-set(url('../../assets/photos/hero.webp') type('image/webp'), url('../../assets/photos/hero.jpg') type('image/jpeg')) center/cover no-repeat;
 }
 
 /* --- DONATION CTA SECTION --- */
@@ -158,7 +160,7 @@
     top: -14px;
     right: var(--spacing-md);
     background: var(--accent-gold);
-    color: var(--text-dark);
+    color: var(--ink-on-gold);
     font-weight: 700;
     font-size: 0.9rem;
     padding: 0.4rem 1rem;
@@ -323,4 +325,13 @@
     text-align: center;
     color: var(--accent-light);
     opacity: 0.7;
+}
+
+/* Contrast in dark mode: #944547 heading 2.7:1, #666 body 3.1:1. */
+[data-theme="dark"] .donate-container h2 {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .donate-container p {
+    color: #bbb;
 }
