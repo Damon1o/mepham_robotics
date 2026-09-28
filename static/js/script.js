@@ -911,40 +911,6 @@ function showToast(message, type = 'info') {
         }
     }, 1000);
 })();
-// --- PORTAL & AUTH LOGIC ---
-(function initAuth() {
-    function updateNav() {
-        const sidenav = document.getElementById('mySidenav');
-        if (!sidenav) return;
-
-        // Check if the server injected a logged-in user via data attribute
-        const currentUser = document.body.dataset.currentUser;
-        const isLoggedIn = !!currentUser;
-
-        // Managing dynamic logout link removed - now handled purely by server-side templates
-
-        // Update username display on resources page
-        const nameDisplay = document.getElementById('userNameDisplay');
-        if (nameDisplay && isLoggedIn) {
-            nameDisplay.textContent = currentUser.toUpperCase();
-        }
-    }
-
-    // Run when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', updateNav);
-    } else {
-        updateNav();
-    }
-
-    // Export global logout
-    window.logout = function () {
-        fetch('/logout', { method: 'POST' }).then(() => {
-            window.location.href = '/login';
-        });
-    };
-})();
-
 /* ============================================
    SITE SEARCH
    ============================================ */

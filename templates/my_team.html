@@ -14,11 +14,13 @@
     {% if team_choices %}
     <ul class="team-picker-list">
         {% for t in team_choices %}
-        <li><a href="{{ t.url }}">
-            <span class="team-picker-number">{{ t.label }}</span>
-            <span class="team-picker-text"><strong>{{ t.nickname or 'No nickname yet' }}</strong>
-                <small>{{ t.members }} member{{ 's' if t.members != 1 }}</small></span>
-            {% if t.own %}<span class="team-picker-own">Your team</span>{% endif %}
+        <li><a class="team-picker-card{% if t.own %} is-own{% endif %}" href="{{ t.url }}">
+            <span class="team-picker-number">{{ t.number }}</span>
+            <span class="team-picker-text">
+                <span class="team-picker-name"><strong>{{ t.nickname or 'No nickname yet' }}</strong>
+                    {%- if t.own %}<span class="team-picker-own">Your team</span>{% endif %}</span>
+                <small>{% if t.season %}{{ t.season }} · {% endif %}{{ t.members }} member{{ 's' if t.members != 1 }}</small>
+            </span>
         </a></li>
         {% endfor %}
     </ul>

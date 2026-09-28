@@ -250,19 +250,37 @@
     transform: translateY(-2px);
 }
 
+.team-picker-list a.is-own {
+    border-color: var(--accent-gold);
+}
+
+/* Number only: the season lives in the line under the name, so the box never wraps. */
 .team-picker-number {
+    flex: none;
+    min-width: 5.2rem;
     padding: 0.5rem 0.6rem;
     border-radius: 9px;
     background: var(--maroon-dark);
     color: #ffffff;
     font-family: 'Space Mono', monospace;
     font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
 }
 
 .team-picker-text {
     display: flex;
+    flex: 1;
     flex-direction: column;
     min-width: 0;
+}
+
+.team-picker-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.15rem 0.4rem;
+    line-height: 1.3;
 }
 
 .team-picker-text small {
@@ -270,13 +288,14 @@
 }
 
 .team-picker-own {
-    margin-left: auto;
-    padding: 0 0.45rem;
+    flex: none;
+    padding: 0.05rem 0.45rem;
     border-radius: 999px;
     background: var(--accent-gold);
     color: var(--ink-on-gold);
     font-size: 0.7rem;
     font-weight: 700;
+    white-space: nowrap;
 }
 
 /* --- Smaller screens ------------------------------------------------------------ */
@@ -333,4 +352,8 @@
     border-color: #3a3a3a;
     background: #1e1e1e;
     color: #e0e0e0;
+}
+
+[data-theme="dark"] .team-picker-list a.is-own {
+    border-color: var(--accent-gold);
 }
