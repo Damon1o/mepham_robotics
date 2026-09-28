@@ -1,0 +1,82 @@
+{% from "admin/_macros.html" import card_head, empty %}
+<section class="admin-panel" data-panel="teams" id="panel-teams" role="tabpanel" aria-labelledby="tab-teams"
+    tabindex="0" hidden>
+    <div class="admin-card" id="team_form_card">
+        {% call card_head('bot', 'Teams', current_teams|length) %}
+        <label class="visually-hidden" for="teams_filter">Filter teams</label>
+        <input type="search" id="teams_filter" class="panel-filter panel-filter--compact" placeholder="Filter teams…">
+        {% endcall %}
+        <p class="form-hint">Each team has one profile per season. Open a team to edit its page; anyone on its roster
+            can edit it too. Start a team's next season with <em>New season</em>: the roster and identity carry over,
+            and last season stays on the team page under its season picker.</p>
+
+        {% if teams %}
+        <div class="team-tiles list-teams">
+            {% for number, docs in teams|groupby('team_number') %}
+            {% set team = (docs|selectattr('is_current')|first) or docs[0] %}
+            {% set older = docs|rejectattr('_id', 'equalto', team._id)|list %}
+            <article class="data-item team-tile{% if team.hidden %} is-hidden-team{% endif %}">
+                <a class="team-tile-main" href="{{ url_for('manage_team', team_id=team._id) }}">
+                    <span class="team-number-box">{{ team.team_number }}</span>
+                    <span class="team-tile-text">
+                        <strong class="item-title">{{ team.nickname or 'No nickname yet' }}</strong>
+                        <small class="item-meta">{{ team.season or 'No season' }} ·
+                            {{ team.members|length }} member{{ 's' if team.members|length != 1 }}
+                            {%- if team.hidden %} · hidden from menu{% endif %}</small>
+                    </span>
+                </a>
+                <div class="team-tile-actions">
+                    <a class="admin-btn admin-btn-small" href="{{ url_for('manage_team', team_id=team._id) }}">
+                        <i data-lucide="pencil" aria-hidden="true"></i> Edit</a>
+                    <a class="icon-btn" title="View public page" aria-label="View {{ team.team_number }}'s public page"
+                        target="_blank" rel="noopener" href="{{ url_for('team_page', team_number=team.team_number) }}">
+                        <i data-lucide="external-link" aria-hidden="true"></i></a>
+                    <button type="button" class="icon-btn" title="Start a new season" data-action="new-season"
+                        data-team-id="{{ team._id }}" data-team-number="{{ team.team_number }}"
+                        data-current-season="{{ team.season or '' }}" data-next-season="{{ next_season }}"
+                        aria-label="Start a new season for {{ team.team_number }}"><i data-lucide="calendar-plus" aria-hidden="true"></i></button>
+                    <form class="form-flush" action="{{ url_for('admin_delete_team', id=team._id) }}" method="POST"
+                        data-confirm-delete="team" data-confirm-name="{{ team.team_number }}{% if team.season %} ({{ team.season }}){% endif %}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="icon-btn icon-btn--danger" title="Delete this season's profile"
+                            aria-label="Delete team: {{ team.team_number }}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+                    </form>
+                </div>
+                {% if older %}
+                <div class="team-seasons">
+                    <span>Past seasons:</span>
+                    {% for doc in older %}
+                    <span class="season-chip">
+                        <a href="{{ url_for('manage_team', team_id=doc._id) }}">{{ doc.season or 'No season' }}</a>
+                        <form class="form-flush" action="{{ url_for('admin_delete_team', id=doc._id) }}" method="POST"
+                            data-confirm-delete="season" data-confirm-name="{{ doc.team_number }} {{ doc.season or '' }}">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="chip-remove" aria-label="Delete {{ doc.team_number }} {{ doc.season or '' }}"
+                                title="Delete this season"><i data-lucide="x" aria-hidden="true"></i></button>
+                        </form>
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        {{ empty('bot', 'No teams yet', 'Create the first one below.') }}
+        {% endif %}
+
+        <h3 class="form-section-title" id="team_form_title">New team</h3>
+        <form id="team_form" class="inline-create" action="{{ url_for('admin_quick_team') }}" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <label class="visually-hidden" for="f-team_number">Team number</label>
+            <input id="f-team_number" type="text" name="team_number"
+                placeholder="Team number, e.g. {{ team_number_suggestions[0] if team_number_suggestions else '77628X' }}"
+                maxlength="20" required list="dl-team-numbers" autocomplete="off" autocapitalize="characters"
+                pattern="[A-Za-z0-9\-]{1,20}">
+            <datalist id="dl-team-numbers">
+                {% for n in team_number_suggestions %}<option value="{{ n }}"></option>{% endfor %}
+            </datalist>
+            <button type="submit" class="admin-btn admin-btn-success">Create &amp; open editor</button>
+        </form>
+    </div>
+</section>

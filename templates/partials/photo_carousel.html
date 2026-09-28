@@ -1,38 +1,24 @@
-{% from "partials/picture.html" import picture %}
+{#- Shared gallery (homepage and About). The photos are set under Site settings → Photo gallery.
+    The list is drawn twice so the scroll loops without a jump; the copy is hidden from
+    assistive tech. -#}
+{% from "partials/site_macros.html" import site_photo %}
+{% set photos = site.gallery.photos %}
+{% if photos %}
 <section class="photo-carousel-section fade-in-section">
     <h2 class="ripple">{{ carousel_title }}</h2>
     <div class="carousel-container">
         <div class="carousel-track">
+            {% for photo in photos %}
             <div class="carousel-item">
-                {{ picture('photos/carousel1', 'Team photo 1', '(max-width: 768px) 280px, 380px') }}
+                {{ site_photo(photo, '(max-width: 768px) 280px, 380px') }}
             </div>
-            <div class="carousel-item">
-                {{ picture('photos/carousel2', 'Team photo 2', '(max-width: 768px) 280px, 380px') }}
+            {% endfor %}
+            {% for photo in photos %}
+            <div class="carousel-item" aria-hidden="true">
+                {{ site_photo(photo, '(max-width: 768px) 280px, 380px', decorative=True) }}
             </div>
-            <div class="carousel-item">
-                {{ picture('photos/carousel3', 'Team photo 3', '(max-width: 768px) 280px, 380px') }}
-            </div>
-            <div class="carousel-item">
-                {{ picture('photos/carousel4', 'Team photo 4', '(max-width: 768px) 280px, 380px') }}
-            </div>
-            <div class="carousel-item">
-                {{ picture('photos/carousel5', 'Team photo 5', '(max-width: 768px) 280px, 380px') }}
-            </div>
-            <div class="carousel-item">
-                {{ picture('photos/carousel6', 'Team photo 6', '(max-width: 768px) 280px, 380px') }}
-            </div>
-            <div class="carousel-item">
-                {{ picture('photos/carousel7', 'Team photo 7', '(max-width: 768px) 280px, 380px') }}
-            </div>
-            <div class="carousel-item">
-                {{ picture('photos/carousel8', 'Team photo 8', '(max-width: 768px) 280px, 380px') }}
-            </div>
-            <div class="carousel-item">
-                {{ picture('photos/carousel9', 'Team photo 9', '(max-width: 768px) 280px, 380px') }}
-            </div>
-            <div class="carousel-item">
-                {{ picture('photos/carousel10', 'Team photo 10', '(max-width: 768px) 280px, 380px') }}
-            </div>
+            {% endfor %}
         </div>
     </div>
 </section>
+{% endif %}

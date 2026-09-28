@@ -1,0 +1,136 @@
+{% from "admin/_macros.html" import stepper, card_head %}
+<section class="admin-panel" data-panel="overview" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview"
+    tabindex="0">
+    <div class="overview-grid">
+        <div class="admin-card attention-card">
+            {{ card_head('bell-ring', 'Needs attention') }}
+            {% if attention %}
+            <ul class="attention-list">
+                {% for item in attention %}
+                <li class="attention-item attention-item--{{ item.tone }}">
+                    <i data-lucide="{{ item.icon }}" aria-hidden="true"></i>
+                    <span>{{ item.text }}</span>
+                    <a href="#{{ item.tab }}" class="admin-btn admin-btn-secondary admin-btn-small" data-action="go-tab"
+                        data-tab="{{ item.tab }}"{% if item.target %} data-scroll="{{ item.target }}"{% endif %}>{{ item.action }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="all-clear"><i data-lucide="circle-check-big" aria-hidden="true"></i> All caught up. Nothing needs you right now.</p>
+            {% endif %}
+        </div>
+
+        <div class="admin-card glance-card">
+            {{ card_head('gauge', 'Club at a glance') }}
+            <div class="glance-grid">
+                {% for key, label, tab in [('teams_count', 'Teams', 'teams'), ('members_count', 'On rosters', 'users'),
+                                           ('awards_count', 'Club awards', 'awards'), ('events_count', 'Upcoming events', 'events')] %}
+                {% set change = monthly_changes.get(key, 0) %}
+                <a class="glance-stat" href="#{{ tab }}" data-action="go-tab" data-tab="{{ tab }}">
+                    <span class="glance-value">{{ live.get(key, 0) }}</span>
+                    <span class="glance-label">{{ label }}</span>
+                    {% if change > 0 %}
+                    <span class="glance-change is-up"><i data-lucide="arrow-up" aria-hidden="true"></i> {{ change }} this month</span>
+                    {% elif change < 0 %}
+                    <span class="glance-change is-down"><i data-lucide="arrow-down" aria-hidden="true"></i> {{ change|abs }} this month</span>
+                    {% else %}
+                    <span class="glance-change">No change this month</span>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="admin-card numbers-card" id="homepage-numbers">
+            {{ card_head('hash', 'Homepage numbers') }}
+            <p class="form-hint">The four numbers on the homepage. <strong>Auto</strong> keeps a number in step with
+                the teams, rosters and awards here; <strong>Typed</strong> shows exactly what you enter (for example,
+                to count members who are not on a roster yet).</p>
+            <div class="number-rows">
+                {% for field in stat_fields %}
+                {% set is_auto = modes.get(field) == 'auto' %}
+                <div class="number-row" data-stat-row="{{ field }}">
+                    <div class="number-label">
+                        <label for="s-{{ field }}">{{ stat_labels[field] }}</label>
+                        {% if field in auto_stat_fields %}
+                        <small>Live count: <strong data-live-value>{{ auto.get(field, 0) }}</strong></small>
+                        {% else %}
+                        <small>Always typed in</small>
+                        {% endif %}
+                    </div>
+                    {% if field in auto_stat_fields %}
+                    <div class="segmented segmented--small" role="radiogroup" aria-label="How {{ stat_labels[field] }} is set">
+                        <label class="segment"><input type="radio" name="mode-{{ field }}" value="auto" data-stat-mode="{{ field }}"
+                                {% if is_auto %}checked{% endif %}><span>Auto</span></label>
+                        <label class="segment"><input type="radio" name="mode-{{ field }}" value="manual" data-stat-mode="{{ field }}"
+                                {% if not is_auto %}checked{% endif %}><span>Typed</span></label>
+                    </div>
+                    {% else %}
+                    <span></span>
+                    {% endif %}
+                    {{ stepper('s-' ~ field, stat_labels[field], stats[field], 'data-stat-field', field,
+                               max=stat_limits[field], disabled=is_auto) }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="admin-card">
+            {% call card_head('calendar-days', 'Coming up') %}
+            <a class="card-link" href="#events" data-action="go-tab" data-tab="events">All events</a>
+            {% endcall %}
+            {% if upcoming %}
+            <ul class="mini-list">
+                {% for comp in upcoming[:4] %}
+                <li>
+                    <span class="mini-date"><strong>{{ comp.date.strftime('%b') }}</strong>{{ comp.date.strftime('%d') }}</span>
+                    <span class="mini-text"><strong>{{ comp.name }}</strong>
+                        <small>{{ comp.location or 'Location TBA' }} ·
+                            {% if comp.days_away == 0 %}today{% elif comp.days_away == 1 %}tomorrow{% else %}in {{ comp.days_away }} days{% endif %}</small></span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="list-empty">Nothing scheduled. <a href="#events" data-action="go-tab" data-tab="events"
+                    data-scroll="event_form">Add an event</a> so the homepage countdown has something to count to.</p>
+            {% endif %}
+        </div>
+
+        <div class="admin-card">
+            {% call card_head('history', 'Recent activity') %}
+            <a class="card-link" href="#activity" data-action="go-tab" data-tab="activity">See all</a>
+            {% endcall %}
+            {% if activities %}
+            <ul class="mini-list mini-list--activity">
+                {% for a in activities[:6] %}
+                <li>
+                    <span class="mini-icon" aria-hidden="true">{{ a.icon }}</span>
+                    <span class="mini-text"><strong>{{ a.description or a.title }}</strong>
+                        <small>{{ a.user }} · <time title="{{ a.when }}">{{ a.ago }}</time></small></span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="list-empty">Changes you make show up here.</p>
+            {% endif %}
+        </div>
+
+        <div class="admin-card quick-card">
+            {{ card_head('zap', 'Quick actions') }}
+            <div class="quick-grid">
+                <a href="#events" class="quick-action" data-action="quick-add" data-tab="events">
+                    <i data-lucide="calendar-plus" aria-hidden="true"></i> Add an event</a>
+                <a href="#teams" class="quick-action" data-action="quick-add" data-tab="teams">
+                    <i data-lucide="bot" aria-hidden="true"></i> Add a team</a>
+                <a href="#sponsors" class="quick-action" data-action="quick-add" data-tab="sponsors">
+                    <i data-lucide="handshake" aria-hidden="true"></i> Add a sponsor</a>
+                <a href="{{ url_for('admin_site') }}#announcement" class="quick-action">
+                    <i data-lucide="megaphone" aria-hidden="true"></i> Post an announcement</a>
+                <a href="{{ url_for('admin_site') }}" class="quick-action">
+                    <i data-lucide="panels-top-left" aria-hidden="true"></i> Edit page text</a>
+                <a href="{{ url_for('admin_subscribers_csv') }}" class="quick-action" download>
+                    <i data-lucide="download" aria-hidden="true"></i> Export newsletter list</a>
+            </div>
+        </div>
+    </div>
+</section>

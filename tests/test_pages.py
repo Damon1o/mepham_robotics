@@ -144,7 +144,9 @@ def test_member_pages_have_no_inline_script(signed_in, path):
     for attribute in ('onclick=', 'onsubmit=', 'onchange=', 'onerror='):
         assert attribute not in page, f'{attribute} found on {path}'
     for attributes, body in re.findall(r'<script\b([^>]*)>(.*?)</script>', page, re.S):
-        assert 'src=' in attributes or not body.strip(), f'inline script on {path}'
+        # JSON data islands (the search index) are inert under CSP.
+        assert 'src=' in attributes or 'application/json' in attributes or not body.strip(), \
+            f'inline script on {path}'
 
 
 def test_safety_quiz_breadcrumb_stays_public(client):

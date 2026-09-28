@@ -83,7 +83,8 @@ def test_matches_are_empty_without_a_key(client, monkeypatch):
     assert client.get('/api/matches').get_json() == {'matches': []}
 
 
-def test_matches_are_cached(client, monkeypatch):
+def test_matches_are_cached(client, db, monkeypatch):
+    db['teams'].insert_one({'team_number': '77628A', 'members': []})
     monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'test-key')
     app_module._matches_cache.update(expires_at=0.0, payload=None)
     calls = []
@@ -100,6 +101,7 @@ def test_matches_are_cached(client, monkeypatch):
 
     client.get('/api/matches')
     upstream_calls = len(calls)
+    assert 'number[]=77628A' in calls[0], 'the feed follows the teams in the database'
     assert upstream_calls > 0
 
     client.get('/api/matches')

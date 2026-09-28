@@ -1,0 +1,283 @@
+/* Page styles: site editor (/admin/site).
+   The settings layout, controls, switches and save ticks come from admin.css
+   (sections 5, 6 and 17). This file adds the list editor, the day picker,
+   image fields and the "Changed" marker. Colours are admin tokens only. */
+
+.site-editor .setting-row--wide {
+    grid-template-columns: 13rem minmax(0, 1fr);
+}
+
+.site-editor .setting-row--wide .setting-control {
+    max-width: 46rem;
+}
+
+.custom-chip {
+    display: inline-flex;
+    margin-top: 0.3rem;
+    padding: 0 0.45rem;
+    border-radius: 999px;
+    background: var(--admin-gold-soft);
+    color: var(--admin-warn);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.custom-chip[hidden] {
+    display: none;
+}
+
+.format-hint {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem !important;
+}
+
+.reset-btn[hidden] {
+    display: none;
+}
+
+.text-with-count {
+    position: relative;
+    flex: 1 1 18rem;
+    width: 100%;
+}
+
+.char-count {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--admin-muted);
+    font-size: 0.72rem;
+    text-align: right;
+}
+
+.icon-preview {
+    width: 1.3rem;
+    height: 1.3rem;
+    color: var(--admin-accent-ink);
+}
+
+/* --- Day picker ------------------------------------------------------------------ */
+.day-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.day-chip {
+    position: relative;
+    cursor: pointer;
+}
+
+.day-chip input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.day-chip span {
+    display: inline-block;
+    min-width: 3rem;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--admin-field-border);
+    border-radius: var(--admin-radius-sm);
+    background: var(--admin-field-bg);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.day-chip input:checked + span {
+    border-color: var(--admin-accent);
+    background: var(--admin-accent);
+    color: var(--admin-on-accent);
+}
+
+.day-chip input:focus-visible + span {
+    outline: 3px solid var(--admin-gold);
+    outline-offset: 1px;
+}
+
+.day-picker.is-saved .day-chip input:checked + span {
+    border-color: var(--admin-success);
+}
+
+/* --- Image fields --------------------------------------------------------------------- */
+.site-image {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.site-image-zone {
+    flex: 1 1 14rem;
+    justify-content: flex-start;
+    min-height: 3.25rem;
+}
+
+.site-image-preview {
+    width: 5.5rem;
+    height: 3.5rem;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--admin-surface);
+}
+
+.site-image.is-saving .site-image-zone {
+    border-color: var(--admin-line-strong);
+}
+
+.site-image.is-saved .site-image-zone {
+    border-color: var(--admin-success);
+}
+
+.site-image.is-error .site-image-zone {
+    border-color: var(--admin-danger);
+}
+
+/* --- List editor: one card per entry, fields in a grid, tools on the right ---------------- */
+.list-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.list-editor.is-saving {
+    opacity: 0.85;
+}
+
+.list-editor.is-error .list-row {
+    border-color: var(--admin-danger);
+}
+
+.list-row {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.55rem 0.5rem 0.55rem 0.7rem;
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius-sm);
+    background: var(--admin-surface);
+}
+
+.list-row-fields {
+    display: grid;
+    flex: 1;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.45rem 0.6rem;
+    min-width: 0;
+}
+
+.list-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.list-cell--textarea,
+.list-cell--rich,
+.list-cell--image {
+    grid-column: 1 / -1;
+}
+
+.list-cell--icon,
+.list-cell--colour,
+.list-cell--platform,
+.list-cell--amount {
+    max-width: 14rem;
+}
+
+.list-cell--icon {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.4rem;
+}
+
+.list-cell--icon .list-cell-label {
+    flex-basis: 100%;
+}
+
+.list-cell--icon select {
+    flex: 1;
+}
+
+.list-cell-label {
+    color: var(--admin-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.list-cell input,
+.list-cell select,
+.list-cell textarea {
+    width: 100%;
+}
+
+.list-cell .site-image-preview {
+    width: 7rem;
+    height: 4.5rem;
+}
+
+.list-row-tools {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+/* The gallery reads better as a grid of photo cards. */
+.setting-row[data-key="gallery.photos"] .list-editor {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+}
+
+.setting-row[data-key="gallery.photos"] .list-row {
+    flex-direction: column;
+}
+
+.setting-row[data-key="gallery.photos"] .list-row-tools {
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.setting-row[data-key="gallery.photos"] .site-image-zone {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+    min-height: 0;
+    padding: 0.35rem;
+}
+
+.setting-row[data-key="gallery.photos"] .site-image-preview {
+    width: 100%;
+    height: 7.5rem;
+}
+
+.setting-row[data-key="gallery.photos"] .drop-zone-text {
+    justify-content: center;
+    font-size: 0.82rem;
+}
+
+@media (max-width: 720px) {
+    .site-editor .setting-row--wide {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .list-row-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .list-cell--icon,
+    .list-cell--colour,
+    .list-cell--platform,
+    .list-cell--amount {
+        max-width: none;
+    }
+}

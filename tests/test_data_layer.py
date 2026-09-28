@@ -145,11 +145,21 @@ def test_upcoming_events_use_club_time(client, db, monkeypatch):
 def test_admin_flash_hides_exception_text(admin, db, monkeypatch):
     def boom(*a, **k):
         raise RuntimeError('mongodb+srv://secret-cluster.example.net')
-    monkeypatch.setattr(app_module, 'seed_team_awards', boom)
-    page = admin.post('/admin/save-team', data={'team_number': '1'},
+    monkeypatch.setattr(app_module, 'parse_event_date', boom)
+    page = admin.post('/admin/add-competition', data={'comp_name': 'Q', 'comp_date': '2026-11-01T08:30'},
                       follow_redirects=True).get_data(as_text=True)
     assert 'secret-cluster' not in page
-    assert 'Error saving team' in page
+    assert 'Error adding competition' in page
+
+
+def test_json_api_errors_hide_exception_text(admin, db, monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError('mongodb+srv://secret-cluster.example.net')
+    monkeypatch.setattr(app_module, 'refresh_auto_stats', boom)
+    monkeypatch.setattr(app_module, 'compute_auto_stats', boom)
+    resp = admin.post('/admin/api/stats', json={'field': 'teams_count', 'mode': 'auto'})
+    assert resp.status_code == 500 and resp.is_json
+    assert 'secret-cluster' not in resp.get_data(as_text=True)
 
 
 def test_bad_event_date_gets_a_friendly_message(admin, db):
@@ -168,8 +178,7 @@ def test_competition_add_update_delete(admin, db):
     comp = db['competitions'].find_one({'name': 'Qualifier'})
     assert comp['date'] == datetime.datetime(2026, 11, 1, 8, 30)
 
-    admin.post(f"/admin/update-competition/{comp['_id']}", data={
-        'comp_name': 'Qualifier II', 'comp_location': 'Calhoun', 'comp_date': '2026-11-02T09:00'})
+    admin.post(f"/admin/api/events/{comp['_id']}", json={'field': 'location', 'value': 'Calhoun'})
     assert db['competitions'].find_one({'_id': comp['_id']})['location'] == 'Calhoun'
 
     admin.post(f"/admin/delete-competition/{comp['_id']}")
@@ -224,26 +233,19 @@ def test_deleting_a_sponsor_deletes_its_logo(admin, db, monkeypatch):
     assert db['sponsors'].count_documents({}) == 0
 
 
-def test_monthly_changes_match_the_activity_log(admin, db):
-    now = app_module._utcnow()
-    db['activities'].insert_many([
-        {'type': 'team_add', 'timestamp': now, 'details': {'members_count': 4}},
-        {'type': 'team_delete', 'timestamp': now, 'details': {'members_count': 1}},
-        {'type': 'team_update', 'timestamp': now, 'details': {'members_change': 2}},
-        {'type': 'stats_update', 'timestamp': now, 'details': {'teams_change': 1, 'members_change': 3,
-                                                                'awards_change': 2}},
-        {'type': 'awards_update', 'timestamp': now, 'details': {'count_change': 5}},
-        {'type': 'awards_update', 'timestamp': now, 'details': {'total_change': 1}},
-        {'type': 'competition_add', 'timestamp': now, 'details': {}},
-        {'type': 'competition_add', 'timestamp': now, 'details': {}},
-        {'type': 'competition_delete', 'timestamp': now, 'details': {}},
-        # last month: ignored
-        {'type': 'team_add', 'timestamp': now - datetime.timedelta(days=40), 'details': {'members_count': 9}},
-    ])
-    first = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+def test_monthly_changes_compare_against_the_months_first_snapshot(db):
+    """Deltas come from a snapshot taken at the first dashboard visit of the month,
+    so a number typed in by hand is never counted twice."""
+    import datetime as dt
+    day = dt.datetime(2026, 10, 3)
     with app_module.app.test_request_context('/'):
-        changes = app_module.monthly_stat_changes(first)
-    assert changes == {'teams_change': 1, 'members_change': 8, 'awards_change': 8, 'events_change': 1}
+        first = app_module.monthly_stat_changes({'teams_count': 2, 'members_count': 10}, today=day)
+        later = app_module.monthly_stat_changes({'teams_count': 3, 'members_count': 8}, today=day)
+        next_month = app_module.monthly_stat_changes({'teams_count': 3, 'members_count': 8},
+                                                     today=dt.datetime(2026, 11, 1))
+    assert first == {'teams_count': 0, 'members_count': 0}
+    assert later == {'teams_count': 1, 'members_count': -2}
+    assert next_month == {'teams_count': 0, 'members_count': 0}
 
 
 # --- Seasons -------------------------------------------------------------------

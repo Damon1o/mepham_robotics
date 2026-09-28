@@ -1,9 +1,14 @@
 // Admin dashboard behaviour.
 //
-// Every control is wired through the delegated listeners at the bottom of
-// this file (data-action, data-confirm-delete, data-preview-target, ...).
-// There are no inline on*= handlers anywhere, so /admin runs under the same
-// no-inline-script Content-Security-Policy as the rest of the site.
+// Every control is wired through delegated listeners (data-action,
+// data-confirm-delete, data-preview-target, ...). There are no inline on*=
+// handlers anywhere, so /admin runs under the same no-inline-script
+// Content-Security-Policy as the rest of the site.
+//
+// Sections, in order: DOM helpers, notifications, dialog, JSON calls, tabs and
+// search, forms (sponsor/account editors), autosave (numbers, awards, events),
+// homepage number modes, awards, events, teams, people (approvals, roles,
+// roster), messages and newsletter, activity, help, and the delegated wiring.
 
 // --- DOM helpers --------------------------------------------------------------
 
@@ -27,186 +32,21 @@ function el(tag, props = {}, children = []) {
     return node;
 }
 
-function field(labelText, control) {
-    const label = el('label', { for: control.id, text: labelText });
-    return el('div', { className: 'form-group' }, [label, control]);
+function plural(n, word) {
+    return `${n} ${word}${n === 1 ? '' : 's'}`;
 }
 
-function scrollToCard(id, offset = 50) {
-    const card = document.getElementById(id);
-    if (card) window.scrollTo({ top: card.offsetTop - offset, behavior: 'smooth' });
+function scrollToId(id) {
+    const target = document.getElementById(id);
+    if (!target) return;
+    if (target.tagName === 'DETAILS') target.open = true;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const focusable = target.matches('input, select, textarea, button, a[href]') ? target
+        : target.querySelector('input:not([type="hidden"]), select, textarea, summary');
+    focusable?.focus({ preventScroll: true });
 }
 
-// --- Unsaved-change tracking --------------------------------------------------
-
-const DIRTY_FORMS = ['event_form', 'team_form', 'sponsor_form', 'userForm'];
-
-function resetEventForm() {
-    const form = document.getElementById('event_form');
-    form.reset();
-    markClean(form);
-    form.querySelector('input[type="text"]')?.focus();
-}
-
-function resetTeamForm() {
-    const form = document.getElementById('team_form');
-    form.reset();
-    markClean(form);
-    form.querySelector('input[type="text"]')?.focus();
-}
-
-function markClean(form) {
-    if (form) delete form.dataset.dirty;
-}
-
-function isDirty(form) {
-    return Boolean(form && form.dataset.dirty);
-}
-
-// Resolve true when it is safe to throw away the form's contents.
-function confirmDiscard(form) {
-    if (!isDirty(form)) return Promise.resolve(true);
-    return Dialog.confirm({
-        title: 'Discard unsaved changes?',
-        message: 'This form has changes that have not been saved. They will be lost.',
-        confirmLabel: 'Discard',
-    });
-}
-
-// --- Sponsors -------------------------------------------------------------------
-
-function editSponsor(button) {
-    const form = document.getElementById('sponsor_form');
-    document.getElementById('sponsor_form_title').innerText = 'Edit Sponsor';
-    document.getElementById('sponsor_id').value = button.dataset.id;
-    form.querySelector('[name="name"]').value = button.dataset.name;
-    form.querySelector('[name="website"]').value = button.dataset.website;
-    // Level is a segmented control (radios); fall back to the first tier for unknown values.
-    const levels = Array.from(form.querySelectorAll('[name="level"]'));
-    (levels.find(radio => radio.value === button.dataset.level) || levels[0]).checked = true;
-    markClean(form);
-    scrollToCard('sponsor_form_card');
-}
-
-function resetSponsorForm() {
-    const form = document.getElementById('sponsor_form');
-    document.getElementById('sponsor_form_title').innerText = 'Add New Sponsor';
-    document.getElementById('sponsor_id').value = '';
-    form.reset();
-    document.getElementById('sponsorLogoPreview')?.replaceChildren();
-    markClean(form);
-}
-
-// --- Users ----------------------------------------------------------------------
-
-function editUser(button) {
-    const user = button.dataset;
-    const form = document.getElementById('userForm');
-    document.getElementById('user_form_title').innerText = 'Edit account: ' + user.username;
-    document.getElementById('userFormDetails').open = true;
-    form.action = user.updateUrl;
-    form.dataset.mode = 'edit';
-    form.reset();
-    document.getElementById('username').value = user.username;
-    document.getElementById('email').value = user.email || '';
-    document.getElementById('role').value = user.role || 'member';
-    const password = document.getElementById('password');
-    password.required = false;
-    password.placeholder = 'Leave blank to keep current password';
-    document.getElementById('password_hint').innerText = 'Optional - enter a new password (8+ characters) to reset it';
-    document.getElementById('user_submit').innerText = 'Save Changes';
-    markClean(form);
-    scrollToCard('user_form_title', 100);
-    document.getElementById('username').focus({ preventScroll: true });
-}
-
-function resetUserForm() {
-    const form = document.getElementById('userForm');
-    document.getElementById('user_form_title').innerText = 'Add someone manually';
-    form.action = form.dataset.defaultAction;
-    delete form.dataset.mode;
-    form.reset();
-    const password = document.getElementById('password');
-    password.required = true;
-    password.placeholder = 'Enter secure password';
-    document.getElementById('password_hint').innerText = 'Minimum 8 characters';
-    document.getElementById('user_submit').innerText = 'Create User';
-    markClean(form);
-}
-
-function copyResetLink() {
-    const input = document.getElementById('reset_link_output');
-    if (!input) return;
-    input.select();
-    const finish = (ok) => Admin.notify(ok ? 'Reset link copied' : 'Copy failed - select and copy manually', ok ? 'success' : 'error');
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(input.value).then(() => finish(true), () => finish(false));
-    } else {
-        try {
-            finish(document.execCommand('copy'));
-        } catch (err) {
-            finish(false);
-        }
-    }
-}
-
-// --- Loading overlay, delete confirmation, search -----------------------------------
-
-function showLoading() {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) overlay.hidden = false;
-}
-
-function hideLoading() {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) overlay.hidden = true;
-}
-
-function lockSubmit(form) {
-    form.querySelectorAll('[type="submit"]').forEach(button => {
-        button.disabled = true;
-    });
-}
-
-function confirmDelete(form, type) {
-    Dialog.confirm({
-        title: `Delete ${type}`,
-        message: `Are you sure you want to delete this ${type}? This action cannot be undone.`,
-        confirmLabel: 'Delete',
-    }).then(confirmed => {
-        if (!confirmed) return;
-        lockSubmit(form);
-        showLoading();
-        form.submit();
-    });
-}
-
-// Search only the tab the admin is looking at; matches in hidden tabs used to
-// hide every card on the current tab and leave it blank.
-function searchAdminContent() {
-    const term = document.getElementById('adminSearch').value.trim().toLowerCase();
-    const panel = document.querySelector('.admin-panel:not([hidden])');
-    if (!panel) return;
-    const cards = Array.from(panel.querySelectorAll('.admin-card'));
-    let shown = 0;
-    cards.forEach(card => {
-        const match = !term || card.textContent.toLowerCase().includes(term);
-        card.classList.toggle('is-hidden', !match);
-        if (match) shown++;
-    });
-    let empty = panel.querySelector('.admin-search-empty');
-    if (!shown && term) {
-        if (!empty) {
-            empty = el('p', { className: 'admin-search-empty', role: 'status' });
-            panel.append(empty);
-        }
-        empty.textContent = `Nothing on this tab matches "${term}".`;
-    } else if (empty) {
-        empty.remove();
-    }
-}
-
-// --- Notifications and list filters ---------------------------------------------------
+// --- Notifications ----------------------------------------------------------------
 
 const Admin = {
     // `action` ({label, run}) adds a button to the toast, e.g. Undo after a roster move.
@@ -227,10 +67,13 @@ const Admin = {
             }, { once: true });
             toast.append(button);
         }
+        toast.append(el('button', { type: 'button', className: 'toast-close', 'aria-label': 'Dismiss', text: '×' }));
+        toast.lastChild.addEventListener('click', dismiss, { once: true });
         stack.append(toast);
-        setTimeout(dismiss, action ? 9000 : 5000);
+        setTimeout(dismiss, action ? 9000 : category === 'error' ? 8000 : 5000);
     },
 
+    // Hide list items whose text does not contain the typed term.
     attachListFilter(inputSelector, itemSelector) {
         const input = document.querySelector(inputSelector);
         if (!input) return;
@@ -243,66 +86,14 @@ const Admin = {
     },
 };
 
-// --- Image previews -----------------------------------------------------------------
-
-function previewImage(input, previewId) {
-    const preview = document.getElementById(previewId);
-    if (!preview) return;
-    const file = input.files[0];
-    if (!file) {
-        preview.replaceChildren();
-        preview.classList.remove('is-visible');
-        return;
-    }
-    const reader = new FileReader();
-    reader.onload = e => {
-        preview.replaceChildren(el('img', { src: e.target.result, alt: 'Preview', className: 'member-photo-thumb' }));
-        preview.classList.add('is-visible');
-    };
-    reader.readAsDataURL(file);
-}
-
-// --- User form validation -------------------------------------------------------------
-
-document.getElementById('userForm')?.addEventListener('submit', function (e) {
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirm_password').value;
-    const editing = this.dataset.mode === 'edit';
-
-    if (editing && !password && !confirmPassword) return;
-
-    if (password !== confirmPassword) {
-        e.preventDefault();
-        Admin.notify('Passwords do not match!', 'error');
-        return;
-    }
-
-    if (password.length < 8) {
-        e.preventDefault();
-        Admin.notify('Password must be at least 8 characters long', 'error');
-    }
-});
-
-// --- Help -------------------------------------------------------------------------------
-
-function showHelp() {
-    Dialog.alert({
-        title: 'Admin Dashboard Help',
-        html: `
-            <p><strong>Saving:</strong> Numbers, event fields, roles and team pages save the moment you change them. A green tick means it worked; a red mark means it did not, and the old value comes back.</p>
-            <p><strong>People:</strong> Approve sign-ups at the top of the People tab. Drag cards between team columns, or use each card's <em>Move to</em> menu. Every move has an Undo.</p>
-            <p><strong>Teams:</strong> Click a team to open its editor. Anyone on a team's roster can edit that team's page, too.</p>
-            <p><strong>Tabs:</strong> Each tab's link is shareable. The search box filters the tab you are on.</p>
-            <p><strong>Need more help?</strong> Contact the system administrator.</p>
-        `,
-        confirmLabel: 'Got it!',
-    });
-}
-
-// --- Dialog ---------------------------------------------------------------------------------
+// --- Dialog ---------------------------------------------------------------------------
+//
+// One accessible dialog shell for confirmations, alerts, and small forms.
+// `message` is plain text. `html` is for the static help copy only; nothing
+// user-supplied may be passed through it. `body` is a DOM node (a form field).
 
 const Dialog = (function () {
-    let dialogEl, titleEl, messageEl, confirmBtn, cancelBtn, lastFocused, resolvePromise;
+    let dialogEl, titleEl, messageEl, confirmBtn, cancelBtn, lastFocused, resolvePromise, readValue;
 
     function els() {
         if (dialogEl) return;
@@ -326,6 +117,11 @@ const Dialog = (function () {
             close(false);
             return;
         }
+        if (e.key === 'Enter' && e.target.matches('input, select')) {
+            e.preventDefault();
+            close(true);
+            return;
+        }
         if (e.key !== 'Tab') return;
         // Skip hidden controls (the cancel button in alert mode), or the trap
         // lands on an element that cannot take focus and lets Tab escape.
@@ -346,17 +142,17 @@ const Dialog = (function () {
 
     function close(result) {
         dialogEl.hidden = true;
-        if (lastFocused) lastFocused.focus();
+        document.body.classList.remove('has-dialog');
+        const value = result && readValue ? readValue() : result;
+        if (lastFocused && document.contains(lastFocused)) lastFocused.focus();
         if (resolvePromise) {
             const resolve = resolvePromise;
             resolvePromise = null;
-            resolve(result);
+            resolve(value);
         }
     }
 
-    // `message` is plain text. `html` is for the static help copy only; nothing
-    // user-supplied may be passed through it.
-    function open({ title, message, html, confirmLabel, cancelLabel, showCancel }) {
+    function open({ title, message, html, body, confirmLabel, cancelLabel, showCancel, tone = 'danger', value }) {
         els();
         // A second request while one is open cancels the first, so its caller
         // is never left waiting on a promise that no dialog will resolve.
@@ -367,47 +163,144 @@ const Dialog = (function () {
         } else {
             lastFocused = document.activeElement;
         }
+        readValue = value || null;
         titleEl.textContent = title || '';
         if (html) messageEl.innerHTML = html;
         else messageEl.textContent = message || '';
+        if (body) messageEl.append(body);
         confirmBtn.textContent = confirmLabel;
+        confirmBtn.className = `admin-btn confirmation-confirm admin-btn-${tone}`;
         cancelBtn.textContent = cancelLabel || 'Cancel';
         cancelBtn.hidden = !showCancel;
         dialogEl.hidden = false;
-        confirmBtn.focus();
+        document.body.classList.add('has-dialog');
+        (body?.querySelector('input, select') || confirmBtn).focus();
         return new Promise(resolve => {
             resolvePromise = resolve;
         });
     }
 
-    function confirmDialog({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel' } = {}) {
-        return open({ title, message, confirmLabel, cancelLabel, showCancel: true });
-    }
-
-    function alertDialog({ title, message, html, confirmLabel = 'OK' } = {}) {
-        return open({ title, message, html, confirmLabel, showCancel: false });
-    }
-
-    return { confirm: confirmDialog, alert: alertDialog };
+    return {
+        confirm: ({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', tone = 'danger' } = {}) =>
+            open({ title, message, confirmLabel, cancelLabel, showCancel: true, tone }),
+        alert: ({ title, message, html, confirmLabel = 'OK' } = {}) =>
+            open({ title, message, html, confirmLabel, showCancel: false, tone: 'success' }),
+        // Resolves with the field's value, or false when cancelled.
+        form: ({ title, message, field, confirmLabel = 'Save' }) =>
+            open({ title, message, body: field, confirmLabel, showCancel: true, tone: 'success',
+                value: () => field.querySelector('input, select').value }),
+    };
 })();
 
-// --- Tabs --------------------------------------------------------------------------------------
+// --- JSON calls ----------------------------------------------------------------------
+
+// Call the admin API. Resolves with the parsed body, rejects with an Error
+// whose message is the server's user-facing text.
+async function api(url, body = {}, method = 'POST') {
+    let response;
+    try {
+        response = await fetch(url, {
+            method,
+            headers: jsonHeaders(),
+            credentials: 'same-origin',
+            body: method === 'GET' ? undefined : JSON.stringify(body),
+        });
+    } catch (err) {
+        throw new Error('Could not reach the server. Check your connection.');
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Save failed (${response.status}).`);
+    return data;
+}
+
+// --- Loading overlay and submit locking ----------------------------------------------
+
+function showLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.hidden = false;
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.hidden = true;
+}
+
+function lockSubmit(form) {
+    form.querySelectorAll('[type="submit"]').forEach(button => {
+        button.disabled = true;
+    });
+}
+
+const DELETE_WARNINGS = {
+    team: 'This removes this season\'s team page, its roster and photos. Award counts are kept if another season still uses the number.',
+    season: 'This removes that season\'s team page and roster.',
+    account: 'They will no longer be able to sign in. Their roster card stays, without a login.',
+    event: 'The event disappears from the homepage.',
+    sponsor: 'The sponsor and its logo disappear from the Donate page.',
+};
+
+function confirmDelete(form, type) {
+    const name = form.dataset.confirmName;
+    Dialog.confirm({
+        title: name ? `Delete ${name}?` : `Delete this ${type}?`,
+        message: `${DELETE_WARNINGS[type] || ''} This cannot be undone.`.trim(),
+        confirmLabel: 'Delete',
+    }).then(confirmed => {
+        if (!confirmed) return;
+        lockSubmit(form);
+        showLoading();
+        form.submit();
+    });
+}
+
+// --- Tabs and search -------------------------------------------------------------------
+
+// Search only the tab the admin is looking at: rows inside its lists are
+// filtered, and whole cards drop out when nothing in them matches.
+function searchAdminContent() {
+    const term = document.getElementById('adminSearch').value.trim().toLowerCase();
+    const panel = document.querySelector('.admin-panel:not([hidden])');
+    if (!panel) return;
+    let shown = 0;
+    panel.querySelectorAll('.admin-card, .site-tile').forEach(card => {
+        const rows = card.querySelectorAll('.data-item, .roster-card, .attention-item, .activity-item, .subscriber-item');
+        let match;
+        if (rows.length) {
+            let rowsShown = 0;
+            rows.forEach(row => {
+                const hit = !term || row.textContent.toLowerCase().includes(term);
+                row.classList.toggle('is-search-hidden', !hit);
+                if (hit) rowsShown++;
+            });
+            const head = card.querySelector('.admin-card-header')?.textContent.toLowerCase() || '';
+            match = !term || rowsShown > 0 || head.includes(term);
+        } else {
+            match = !term || card.textContent.toLowerCase().includes(term);
+        }
+        card.classList.toggle('is-search-hidden', !match);
+        if (match) shown++;
+    });
+    let emptyNote = panel.querySelector('.admin-search-empty');
+    if (!shown && term) {
+        if (!emptyNote) {
+            emptyNote = el('p', { className: 'admin-search-empty', role: 'status' });
+            panel.append(emptyNote);
+        }
+        emptyNote.textContent = `Nothing on this tab matches "${term}".`;
+    } else if (emptyNote) {
+        emptyNote.remove();
+    }
+}
 
 const AdminTabs = (function () {
-    const DEFAULT_TAB = 'stats';
+    const DEFAULT_TAB = 'overview';
 
-    function tabs() {
-        return Array.from(document.querySelectorAll('.admin-tabs [role="tab"]'));
-    }
-
-    function panels() {
-        return Array.from(document.querySelectorAll('.admin-panel'));
-    }
+    const tabs = () => Array.from(document.querySelectorAll('.admin-tabs [role="tab"]'));
+    const panels = () => Array.from(document.querySelectorAll('.admin-panel'));
 
     function currentTab() {
         const hash = location.hash.replace('#', '');
-        const valid = tabs().some(t => t.dataset.tab === hash);
-        return valid ? hash : DEFAULT_TAB;
+        return tabs().some(t => t.dataset.tab === hash) ? hash : DEFAULT_TAB;
     }
 
     function show(name) {
@@ -415,24 +308,23 @@ const AdminTabs = (function () {
             const active = tab.dataset.tab === name;
             tab.setAttribute('aria-selected', active ? 'true' : 'false');
             tab.tabIndex = active ? 0 : -1;
+            if (active) tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         });
         panels().forEach(panel => {
             panel.hidden = panel.dataset.panel !== name;
         });
         const search = document.getElementById('adminSearch');
-        if (search && search.value) searchAdminContent();
-    }
-
-    function go(name) {
-        if (location.hash === '#' + name) {
-            show(name);
-        } else {
-            location.hash = name;
+        if (search) {
+            const label = tabs().find(t => t.dataset.tab === name)?.querySelector('span')?.textContent || 'this tab';
+            search.placeholder = `Search ${label}…  ( / )`;
+            if (search.value) searchAdminContent();
         }
     }
 
-    function onHashChange() {
-        show(currentTab());
+    function go(name, scrollTarget) {
+        if (location.hash === '#' + name) show(name);
+        else location.hash = name;
+        if (scrollTarget) requestAnimationFrame(() => scrollToId(scrollTarget));
     }
 
     function onKeydown(e) {
@@ -453,234 +345,177 @@ const AdminTabs = (function () {
 
     function init() {
         tabs().forEach(tab => {
-            tab.addEventListener('click', function (e) {
+            tab.addEventListener('click', e => {
                 e.preventDefault();
                 go(tab.dataset.tab);
             });
         });
         document.querySelector('.admin-tabs')?.addEventListener('keydown', onKeydown);
-        window.addEventListener('hashchange', onHashChange);
+        window.addEventListener('hashchange', () => show(currentTab()));
         show(currentTab());
     }
 
     return { init, go };
 })();
 
-// --- Delegated wiring ------------------------------------------------------------------------------
+// --- Forms: unsaved changes, sponsors, accounts ------------------------------------------
 
-// Quick-action links: switch tab and start a blank form, asking first if the
-// admin has unsaved edits in it.
-const QUICK_ADD = {
-    events: ['event_form', resetEventForm],
-    teams: ['team_form', resetTeamForm],
-    sponsors: ['sponsor_form', resetSponsorForm],
-};
+const DIRTY_FORMS = ['event_form', 'team_form', 'sponsor_form', 'userForm'];
 
-const RESETS = {
-    'reset-sponsor': ['sponsor_form', resetSponsorForm],
-    'reset-user': ['userForm', resetUserForm],
-};
+function markClean(form) {
+    if (form) delete form.dataset.dirty;
+}
 
-const EDITS = {
-    'edit-sponsor': ['sponsor_form', editSponsor],
-    'edit-user': ['userForm', editUser],
-};
+function isDirty(form) {
+    return Boolean(form && form.dataset.dirty);
+}
 
-function guarded(formId, run) {
-    confirmDiscard(document.getElementById(formId)).then(ok => {
-        if (ok) run();
+// Resolve true when it is safe to throw away the form's contents.
+function confirmDiscard(form) {
+    if (!isDirty(form)) return Promise.resolve(true);
+    return Dialog.confirm({
+        title: 'Discard unsaved changes?',
+        message: 'This form has changes that have not been saved. They will be lost.',
+        confirmLabel: 'Discard',
     });
 }
 
-document.addEventListener('click', function (e) {
-    const trigger = e.target.closest('[data-action]');
-    if (!trigger) return;
-    const action = trigger.dataset.action;
+function resetSimpleForm(id) {
+    return () => {
+        const form = document.getElementById(id);
+        form.reset();
+        markClean(form);
+        form.querySelector('input:not([type="hidden"])')?.focus();
+    };
+}
 
-    if (action === 'quick-add') {
-        e.preventDefault();
-        const [formId, reset] = QUICK_ADD[trigger.dataset.tab];
-        guarded(formId, () => {
-            AdminTabs.go(trigger.dataset.tab);
-            reset();
-        });
-    } else if (RESETS[action]) {
-        const [formId, reset] = RESETS[action];
-        guarded(formId, reset);
-    } else if (EDITS[action]) {
-        const [formId, edit] = EDITS[action];
-        guarded(formId, () => edit(trigger));
-    } else if (action === 'go-tab') {
-        e.preventDefault();
-        AdminTabs.go(trigger.dataset.tab);
-    } else if (action === 'approve-user') {
-        Approvals.approve(trigger.closest('[data-user-id]'));
-    } else if (action === 'reject-user') {
-        Approvals.reject(trigger.closest('[data-user-id]'), trigger.dataset.username);
-    } else if (action === 'copy-reset-link') {
-        copyResetLink();
-    } else if (action === 'select-all') {
-        trigger.select();
-    } else if (action === 'show-help') {
-        showHelp();
-    }
-});
+function setSponsorFormMode(editing, name = '') {
+    document.querySelector('#sponsor_form_title [data-form-title]').textContent = editing ? `Edit ${name}` : 'Add a sponsor';
+    document.querySelector('#sponsor_form [data-submit-label]').textContent = editing ? 'Save changes' : 'Add sponsor';
+}
 
-document.addEventListener('input', function (e) {
-    const target = e.target;
-    if (target.id === 'adminSearch') {
-        searchAdminContent();
-        return;
-    }
-    const form = target.form;
-    if (form && DIRTY_FORMS.includes(form.id)) form.dataset.dirty = '1';
-});
-
-document.addEventListener('change', function (e) {
-    const target = e.target;
-    if (target.dataset.previewTarget) {
-        previewImage(target, target.dataset.previewTarget);
-    }
-    if (target.form && DIRTY_FORMS.includes(target.form.id)) target.form.dataset.dirty = '1';
-
-    if (target.matches('[data-role-user-id]')) Roles.change(target);
-    if (target.matches('.roster-move')) Roster.moveFromSelect(target);
-});
-
-document.addEventListener('submit', function (e) {
-    const form = e.target;
-    if (form.dataset.confirmDelete) {
-        e.preventDefault();
-        confirmDelete(form, form.dataset.confirmDelete);
-        return;
-    }
-    if (e.defaultPrevented) {
-        hideLoading();
-        return;
-    }
-    // Block double submits: a second click on a slow multipart save used to
-    // upload every file twice.
-    lockSubmit(form);
+function editSponsor(button) {
+    const form = document.getElementById('sponsor_form');
+    form.reset();
+    document.getElementById('sponsorLogoPreview')?.replaceChildren();
+    document.getElementById('sponsor_id').value = button.dataset.id;
+    form.querySelector('[name="name"]').value = button.dataset.name;
+    form.querySelector('[name="website"]').value = button.dataset.website;
+    // Level is a segmented control (radios); fall back to the first tier for unknown values.
+    const levels = Array.from(form.querySelectorAll('[name="level"]'));
+    (levels.find(radio => radio.value === button.dataset.level) || levels[0]).checked = true;
+    document.getElementById('removeLogoWrap').hidden = button.dataset.hasLogo !== 'true';
+    setSponsorFormMode(true, button.dataset.name);
     markClean(form);
-    showLoading();
-});
+    scrollToId('sponsor_form_card');
+    form.querySelector('[name="name"]').focus({ preventScroll: true });
+}
 
-// Warn before leaving the page with unsaved edits.
-window.addEventListener('beforeunload', function (e) {
-    const dirty = DIRTY_FORMS.some(id => isDirty(document.getElementById(id))) || Autosave.pending();
-    if (dirty) {
+function resetSponsorForm() {
+    const form = document.getElementById('sponsor_form');
+    form.reset();
+    document.getElementById('sponsor_id').value = '';
+    document.getElementById('sponsorLogoPreview')?.replaceChildren();
+    document.getElementById('removeLogoWrap').hidden = true;
+    setSponsorFormMode(false);
+    markClean(form);
+}
+
+function editUser(button) {
+    const user = button.dataset;
+    const form = document.getElementById('userForm');
+    document.getElementById('user_form_title').textContent = 'Edit account: ' + user.username;
+    document.getElementById('userFormDetails').open = true;
+    form.action = user.updateUrl;
+    form.dataset.mode = 'edit';
+    form.reset();
+    document.getElementById('full_name').value = user.fullName || '';
+    document.getElementById('username').value = user.username;
+    document.getElementById('email').value = user.email || '';
+    document.getElementById('role').value = user.role || 'member';
+    const password = document.getElementById('password');
+    password.required = false;
+    password.placeholder = 'Leave blank to keep the current password';
+    document.getElementById('password_hint').textContent = 'Only fill this in to set a new password (8+ characters).';
+    document.getElementById('user_submit').textContent = 'Save changes';
+    markClean(form);
+    scrollToId('userFormDetails');
+    document.getElementById('full_name').focus({ preventScroll: true });
+}
+
+function resetUserForm() {
+    const form = document.getElementById('userForm');
+    document.getElementById('user_form_title').textContent = 'Add someone manually';
+    form.action = form.dataset.defaultAction;
+    delete form.dataset.mode;
+    form.reset();
+    const password = document.getElementById('password');
+    password.required = true;
+    password.placeholder = 'At least 8 characters';
+    document.getElementById('password_hint').textContent = 'Minimum 8 characters';
+    document.getElementById('user_submit').textContent = 'Create account';
+    markClean(form);
+}
+
+function copyResetLink() {
+    const input = document.getElementById('reset_link_output');
+    if (!input) return;
+    input.select();
+    const finish = ok => Admin.notify(ok ? 'Reset link copied' : 'Copy failed - select and copy manually', ok ? 'success' : 'error');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(() => finish(true), () => finish(false));
+    } else {
+        try {
+            finish(document.execCommand('copy'));
+        } catch (err) {
+            finish(false);
+        }
+    }
+}
+
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    if (!preview) return;
+    const file = input.files[0];
+    if (!file) {
+        preview.replaceChildren();
+        preview.classList.remove('is-visible');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+        preview.replaceChildren(el('img', { src: e.target.result, alt: 'Preview', className: 'preview-thumb' }));
+        preview.classList.add('is-visible');
+    };
+    reader.readAsDataURL(file);
+}
+
+function validateUserForm(e) {
+    const form = e.target;
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    const editing = form.dataset.mode === 'edit';
+    if (editing && !password && !confirmPassword) return;
+    let problem = '';
+    if (password !== confirmPassword) problem = 'The two passwords do not match.';
+    else if (password.length < 8) problem = 'Passwords need at least 8 characters.';
+    if (problem) {
         e.preventDefault();
-        e.returnValue = '';
+        Admin.notify(problem, 'error');
+        document.getElementById(password !== confirmPassword ? 'confirm_password' : 'password').focus();
     }
-});
-
-// Coming back through the back/forward cache: undo the submit lock and overlay.
-window.addEventListener('pageshow', function () {
-    hideLoading();
-    document.querySelectorAll('.admin-container [type="submit"]').forEach(button => {
-        button.disabled = false;
-    });
-});
-
-// --- Page setup ---------------------------------------------------------------------------------------
-
-document.addEventListener('DOMContentLoaded', function () {
-    AdminTabs.init();
-    initMessagesPanel();
-    Autosave.init();
-    TeamAwards.init();
-    Roster.init();
-    Admin.attachListFilter('#events_filter', '#panel-events .event-item');
-    Admin.attachListFilter('#awards_filter', '#panel-awards .award-item');
-    Admin.attachListFilter('#teams_filter', '#panel-teams .data-list > .data-item');
-    Admin.attachListFilter('#sponsors_filter', '#panel-sponsors .data-list > .data-item');
-
-    const usersFilter = document.getElementById('users_filter');
-    const usersRoleFilter = document.getElementById('users_role_filter');
-    function filterUsers() {
-        const term = usersFilter.value.trim().toLowerCase();
-        const role = usersRoleFilter.value;
-        document.querySelectorAll('#panel-users .user-item').forEach(item => {
-            const matches = (!term || item.textContent.toLowerCase().includes(term))
-                && (!role || item.dataset.role === role);
-            item.classList.toggle('is-hidden', !matches);
-        });
-    }
-    usersFilter?.addEventListener('input', filterUsers);
-    usersRoleFilter?.addEventListener('change', filterUsers);
-
-    document.querySelectorAll('#toast-stack .status-msg').forEach(toast => {
-        setTimeout(() => {
-            toast.classList.add('is-leaving');
-            toast.addEventListener('animationend', () => toast.remove(), { once: true });
-        }, 5000);
-    });
-});
-
-// --- Contact messages panel ---------------------------------------------------------------------------
-
-function initMessagesPanel() {
-    const panel = document.getElementById('panel-messages');
-    if (!panel) return;
-
-    const items = Array.from(panel.querySelectorAll('.message-item'));
-    const filters = panel.querySelectorAll('.message-filter');
-
-    filters.forEach(button => {
-        button.addEventListener('click', () => {
-            filters.forEach(b => {
-                b.classList.toggle('active', b === button);
-                b.setAttribute('aria-pressed', String(b === button));
-            });
-            const wanted = button.dataset.status;
-            items.forEach(item => {
-                item.hidden = Boolean(wanted) && item.dataset.status !== wanted;
-            });
-        });
-    });
-
-    panel.querySelectorAll('.message-toggle').forEach(toggle => {
-        toggle.addEventListener('click', () => {
-            const body = document.getElementById(toggle.getAttribute('aria-controls'));
-            if (!body) return;
-            const open = body.hidden;
-            body.hidden = !open;
-            toggle.setAttribute('aria-expanded', String(open));
-        });
-    });
 }
 
-// --- JSON calls ----------------------------------------------------------------------------------------
+// --- Autosave: homepage numbers, award counts, event fields, award names ------------------
 
-// POST JSON to the admin API. Resolves with the parsed body, rejects with an
-// Error whose message is the server's user-facing text.
-async function api(url, body = {}) {
-    let response;
-    try {
-        response = await fetch(url, {
-            method: 'POST',
-            headers: jsonHeaders(),
-            credentials: 'same-origin',
-            body: JSON.stringify(body),
-        });
-    } catch (err) {
-        throw new Error('Could not reach the server. Check your connection.');
-    }
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `Save failed (${response.status}).`);
-    return data;
-}
-
-// --- Autosave: stat steppers, award steppers, inline event fields --------------------------------------
-
-const AUTOSAVE_FIELDS = '[data-stat-field], [data-award-id], [data-event-field]';
+const AUTOSAVE_FIELDS = '[data-stat-field], [data-award-id], [data-event-field], .award-title-input';
 
 const Autosave = (function () {
     const timers = new Map();
     let inFlight = 0;
 
     function mark(input, state) {
-        const holder = input.closest('.stepper, .event-inline');
+        const holder = input.closest('.stepper, .event-inline, .award-row');
         if (!holder) return;
         holder.classList.remove('is-saving', 'is-saved', 'is-error');
         if (state) holder.classList.add(`is-${state}`);
@@ -697,12 +532,34 @@ const Autosave = (function () {
                     return data;
                 });
         }
+        if (input.matches('.award-title-input')) {
+            return Awards.saveField(input.closest('[data-category-id]'), 'title', input.value.trim());
+        }
         const row = input.closest('[data-event-id]');
         return api(`/admin/api/events/${row.dataset.eventId}`, { field: input.dataset.eventField, value: input.value });
     }
 
+    // A number field that is empty or not a whole number is not sent: clearing a
+    // box to retype it used to save 0 to the homepage after a short pause.
+    function invalidNumber(input) {
+        if (input.type !== 'number') return '';
+        const raw = input.value.trim();
+        if (raw === '') return 'empty';
+        const n = Number(raw);
+        if (!Number.isInteger(n) || n < 0) return 'Enter a whole number.';
+        if (input.max && n > Number(input.max)) return `That number can be at most ${Number(input.max).toLocaleString()}.`;
+        return '';
+    }
+
     function save(input) {
-        if (input.value === input.dataset.saved) return;
+        if (input.value === input.dataset.saved || input.disabled) return;
+        const problem = invalidNumber(input);
+        if (problem === 'empty') return;
+        if (problem) {
+            mark(input, 'error');
+            Admin.notify(problem, 'error');
+            return;
+        }
         mark(input, 'saving');
         inFlight++;
         request(input)
@@ -736,9 +593,10 @@ const Autosave = (function () {
 
         document.addEventListener('click', e => {
             const button = e.target.closest('.stepper-btn');
-            if (!button) return;
+            if (!button || button.disabled) return;
             const input = button.parentElement.querySelector('input');
-            input.value = String(Math.max(0, (parseInt(input.value, 10) || 0) + Number(button.dataset.step)));
+            const max = input.max ? Number(input.max) : Infinity;
+            input.value = String(Math.min(max, Math.max(0, (parseInt(input.value, 10) || 0) + Number(button.dataset.step))));
             schedule(input);
         });
 
@@ -753,9 +611,9 @@ const Autosave = (function () {
             save(e.target);
         });
 
-        // Enter commits an inline event field; Escape puts the saved value back.
+        // Enter commits an inline text field; Escape puts the saved value back.
         document.addEventListener('keydown', e => {
-            if (!e.target.matches('[data-event-field]')) return;
+            if (!e.target.matches('[data-event-field], .award-title-input')) return;
             if (e.key === 'Enter') {
                 e.preventDefault();
                 e.target.blur();
@@ -769,14 +627,38 @@ const Autosave = (function () {
     return { init, remember, pending: () => inFlight > 0 || timers.size > 0 };
 })();
 
-// --- Team awards: pick a team chip, edit its counts with steppers --------------------------------------
+// --- Homepage numbers: Auto / Typed --------------------------------------------------------
+
+const StatModes = {
+    change(radio) {
+        const field = radio.dataset.statMode;
+        const row = radio.closest('[data-stat-row]');
+        const input = row.querySelector('[data-stat-field]');
+        const previous = radio.value === 'auto' ? 'manual' : 'auto';
+        api('/admin/api/stats', { field, mode: radio.value })
+            .then(data => {
+                const auto = data.mode === 'auto';
+                row.querySelectorAll('.stepper-btn, input[type="number"]').forEach(node => { node.disabled = auto; });
+                row.querySelector('.stepper').classList.toggle('is-disabled', auto);
+                input.value = String(data.value);
+                Autosave.remember(input);
+                Admin.notify(auto ? 'This number now follows the live count.' : 'This number is now typed in.', 'success');
+            })
+            .catch(err => {
+                row.querySelector(`[data-stat-mode][value="${previous}"]`).checked = true;
+                Admin.notify(err.message, 'error');
+            });
+    },
+};
+
+// --- Awards: club totals, categories, and each team's counts --------------------------------
 
 const TeamAwards = (function () {
     let awards = [];
 
     function stepperFor(award) {
         const input = el('input', {
-            id: `team-award-${award._id}`, type: 'number', min: '0', inputmode: 'numeric',
+            id: `team-award-${award._id}`, type: 'number', min: '0', max: '999', step: '1', inputmode: 'numeric',
             value: String(award.count ?? 0), 'aria-label': `${award.title} count`,
             dataset: { awardId: award._id },
         });
@@ -789,27 +671,25 @@ const TeamAwards = (function () {
         ]);
     }
 
-    function show(teamNumber) {
-        document.querySelectorAll('[data-team-awards]').forEach(chip => {
-            chip.setAttribute('aria-pressed', String(chip.dataset.teamAwards === teamNumber));
-        });
+    function iconFor(award) {
+        if (!award.icon) return el('span', { className: 'award-thumb award-thumb--none', 'aria-hidden': 'true' });
+        return el('img', { className: 'award-thumb', src: `/static/assets/icons/${award.icon}`, alt: '', width: '36', height: '36' });
+    }
+
+    function render(teamNumber) {
         const rows = awards.filter(a => String(a.team_number) === teamNumber);
         document.getElementById('team_awards_list').replaceChildren(...(rows.length
-            ? rows.map(a => el('div', { className: 'data-item award-item' }, [
+            ? rows.map(a => el('div', { className: 'data-item award-item award-row award-row--team' }, [
+                iconFor(a),
                 el('span', { className: 'award-name', text: a.title }),
                 stepperFor(a),
             ]))
-            : [el('p', { className: 'list-empty', text: 'This team has no award categories yet.' })]));
-        document.getElementById('no_team_msg').hidden = true;
+            : [el('p', { className: 'list-empty', text: 'This team has no award categories yet. Add one under Club totals.' })]));
     }
 
     function init() {
         const data = document.getElementById('team_awards_data');
-        if (!data) return;
-        awards = JSON.parse(data.textContent);
-        document.querySelectorAll('[data-team-awards]').forEach(chip => {
-            chip.addEventListener('click', () => show(chip.dataset.teamAwards));
-        });
+        if (data) awards = JSON.parse(data.textContent);
     }
 
     // Keep the local copy current so switching teams and back shows the saved counts.
@@ -818,22 +698,160 @@ const TeamAwards = (function () {
         if (award) award.count = count;
     }
 
-    return { init, remember };
+    return { init, render, remember };
 })();
 
-// --- Sign-up approvals and inline roles ------------------------------------------------------------------
+const Awards = {
+    scope(chip) {
+        const team = chip.dataset.awardScope;
+        document.querySelectorAll('[data-award-scope]').forEach(c => c.setAttribute('aria-selected', String(c === chip)));
+        document.querySelector('[data-scope-panel=""]').hidden = Boolean(team);
+        document.querySelector('[data-scope-panel="team"]').hidden = !team;
+        if (team) TeamAwards.render(team);
+    },
+
+    saveField(row, field, value) {
+        return api(`/admin/api/award-categories/${row.dataset.categoryId}`, { [field]: value });
+    },
+
+    // Style controls save as soon as they change (icon, border, wide, shimmer).
+    styleChange(control) {
+        const row = control.closest('[data-category-id]');
+        const field = control.dataset.categoryField;
+        const value = control.type === 'checkbox' ? (field === 'layout' ? (control.checked ? 'wide' : '') : control.checked)
+            : control.value;
+        Awards.saveField(row, field, value)
+            .then(() => {
+                if (field === 'icon') row.querySelector('.award-thumb')?.setAttribute('src', `/static/assets/icons/${value}`);
+                Admin.notify('Award style saved. Team copies were updated too.', 'success');
+            })
+            .catch(err => Admin.notify(err.message, 'error'));
+    },
+
+    toggleStyle(button) {
+        const panel = button.closest('[data-category-id]').querySelector('.award-style');
+        panel.hidden = !panel.hidden;
+        button.setAttribute('aria-expanded', String(!panel.hidden));
+    },
+
+    move(button) {
+        const row = button.closest('[data-category-id]');
+        api(`/admin/api/award-categories/${row.dataset.categoryId}/move`, { step: Number(button.dataset.step) })
+            .then(() => {
+                const sibling = Number(button.dataset.step) < 0 ? row.previousElementSibling : row.nextElementSibling;
+                if (sibling?.matches('[data-category-id]')) {
+                    if (Number(button.dataset.step) < 0) sibling.before(row);
+                    else sibling.after(row);
+                }
+                Awards.refreshArrows();
+                button.focus();
+            })
+            .catch(err => Admin.notify(err.message, 'error'));
+    },
+
+    refreshArrows() {
+        const rows = Array.from(document.querySelectorAll('#clubAwards [data-category-id]'));
+        rows.forEach((row, i) => {
+            row.querySelector('[data-step="-1"]').disabled = i === 0;
+            row.querySelector('[data-step="1"]').disabled = i === rows.length - 1;
+        });
+    },
+
+    remove(button) {
+        const row = button.closest('[data-category-id]');
+        Dialog.confirm({
+            title: `Delete "${button.dataset.title}"?`,
+            message: 'The category and every team\'s count of it are removed from the site. This cannot be undone.',
+            confirmLabel: 'Delete',
+        }).then(ok => {
+            if (!ok) return;
+            api(`/admin/api/award-categories/${row.dataset.categoryId}`, {}, 'DELETE')
+                .then(() => location.reload())
+                .catch(err => Admin.notify(err.message, 'error'));
+        });
+    },
+
+    add(form) {
+        const title = form.querySelector('#new-award-title').value.trim();
+        const iconFile = form.querySelector('#new-award-icon').value;
+        if (!title) return;
+        lockSubmit(form);
+        api('/admin/api/award-categories', { title, icon: iconFile })
+            .then(() => location.reload())
+            .catch(err => {
+                form.querySelectorAll('[type="submit"]').forEach(b => { b.disabled = false; });
+                Admin.notify(err.message, 'error');
+            });
+    },
+};
+
+// --- Events -------------------------------------------------------------------------------
+
+function prunePastEvents(button) {
+    const count = Number(button.dataset.count);
+    Dialog.confirm({
+        title: `Delete ${plural(count, 'past event')}?`,
+        message: 'They are no longer on the homepage. Delete them to keep this list short. This cannot be undone.',
+        confirmLabel: 'Delete them',
+    }).then(ok => {
+        if (!ok) return;
+        api('/admin/api/events/prune')
+            .then(data => {
+                document.getElementById('past-events')?.remove();
+                Admin.notify(`Deleted ${plural(data.deleted, 'past event')}.`, 'success');
+            })
+            .catch(err => Admin.notify(err.message, 'error'));
+    });
+}
+
+// --- Teams: start a new season ------------------------------------------------------------
+
+function startNewSeason(button) {
+    const { teamId, teamNumber, currentSeason, nextSeason } = button.dataset;
+    const start = parseInt(nextSeason, 10) || new Date().getFullYear();
+    const options = [];
+    for (let y = start; y >= start - 3; y--) {
+        const label = `${y}-${String((y + 1) % 100).padStart(2, '0')}`;
+        if (label !== currentSeason) options.push(el('option', { value: label, text: label }));
+    }
+    const field = el('label', { className: 'dialog-field' }, [
+        el('span', { text: 'Season' }),
+        el('select', {}, options),
+    ]);
+    Dialog.form({
+        title: `Start a new season for ${teamNumber}`,
+        message: 'The nickname, tagline and roster carry over, and logins move to the new season. Specs, goals and '
+            + 'the journey start empty. Last season stays on the team page under its season picker.',
+        field,
+        confirmLabel: 'Start season',
+    }).then(season => {
+        if (!season) return;
+        showLoading();
+        api(`/admin/api/teams/${teamId}/new-season`, { season })
+            .then(data => location.assign(data.url))
+            .catch(err => {
+                hideLoading();
+                Admin.notify(err.message, 'error');
+            });
+    });
+}
+
+// --- People: approvals, roles, roster board -------------------------------------------------
 
 const Approvals = {
     approve(item) {
         const role = item.querySelector('[data-approve-role]').value;
-        const teamId = item.querySelector('[data-approve-team]').value;
-        const name = item.querySelector('strong').textContent;
+        const choice = item.querySelector('[data-approve-team]').value;
+        const name = item.querySelector('[data-display-name]').textContent;
+        const body = { role };
+        if (choice.startsWith('claim:')) body.member_id = choice.slice(6);
+        else body.team_id = choice || null;
         item.classList.add('is-busy');
-        api(`/admin/api/users/${item.dataset.userId}/approve`, { role, team_id: teamId || null })
+        api(`/admin/api/users/${item.dataset.userId}/approve`, body)
             .then(() => {
-                Admin.notify(`${name} approved${teamId ? ' and added to the roster' : ''}. Refreshing…`, 'success');
+                Admin.notify(`${name} approved${choice ? ' and put on the roster' : ''}. Refreshing…`, 'success');
                 // The board and the account list are both server-rendered; reload rather than patch both.
-                setTimeout(() => location.reload(), 1200);
+                setTimeout(() => location.reload(), 1000);
             })
             .catch(err => {
                 item.classList.remove('is-busy');
@@ -878,13 +896,10 @@ const Roles = {
     },
 };
 
-// --- Roster board: drag and drop, Move-to menu, Undo -------------------------------------------------------
-//
 // Team columns hold roster cards (data-member-id, plus data-user-id when the
 // person has a login). The Unassigned column holds accounts (data-user-id
 // only). Only people with a login can go to Unassigned; removing someone
 // without one is a team-editor job, where it gets a confirmation.
-
 const Roster = (function () {
     let dragged = null;
 
@@ -950,6 +965,29 @@ const Roster = (function () {
         move(select.closest('.roster-card'), value === 'none' ? null : value);
     }
 
+    // Give a no-login card an account. The account's Unassigned card goes away.
+    function link(select) {
+        const card = select.closest('.roster-card');
+        const userId = select.value;
+        const account = document.querySelector(`.roster-col--unassigned .roster-card[data-user-id="${userId}"]`);
+        const accountName = select.selectedOptions[0]?.textContent || 'that account';
+        select.value = '';
+        api('/admin/api/roster/link', { member_id: card.dataset.memberId, user_id: userId })
+            .then(() => {
+                card.dataset.userId = userId;
+                const username = accountName.match(/\(@([^)]+)\)/)?.[1];
+                const meta = card.querySelector('[data-card-meta]');
+                meta.textContent = `${meta.textContent.split(' · ')[0]}${username ? ` · @${username}` : ''}`;
+                account?.remove();
+                document.querySelectorAll(`.roster-link option[value="${userId}"]`).forEach(o => o.remove());
+                select.remove();
+                refreshMenu(card);
+                recount();
+                Admin.notify(`${card.dataset.name} is now linked to ${accountName}.`, 'success');
+            })
+            .catch(err => Admin.notify(err.message, 'error'));
+    }
+
     function clearHover() {
         document.querySelectorAll('.roster-col.is-over').forEach(col => col.classList.remove('is-over'));
     }
@@ -994,5 +1032,424 @@ const Roster = (function () {
         });
     }
 
-    return { init, moveFromSelect };
+    return { init, moveFromSelect, link };
 })();
+
+// --- Messages and the newsletter list ----------------------------------------------------------
+
+const Messages = (function () {
+    let panel, status = '';
+
+    const items = () => Array.from(panel.querySelectorAll('.message-item'));
+    const selected = () => items().filter(i => !i.hidden && !i.classList.contains('is-hidden') && i.querySelector('.message-check').checked);
+
+    function applyFilters() {
+        const term = (document.getElementById('messages_filter')?.value || '').trim().toLowerCase();
+        items().forEach(item => {
+            item.hidden = (Boolean(status) && item.dataset.status !== status)
+                || (term !== '' && !item.textContent.toLowerCase().includes(term));
+        });
+        updateBulk();
+    }
+
+    function updateBulk() {
+        const count = selected().length;
+        const label = document.getElementById('messagesSelected');
+        if (label) label.textContent = count ? `${count} selected` : '';
+        panel.querySelectorAll('[data-bulk]').forEach(b => { b.disabled = !count; });
+        const all = document.getElementById('messagesSelectAll');
+        if (all) {
+            const visible = items().filter(i => !i.hidden);
+            all.checked = visible.length > 0 && visible.every(i => i.querySelector('.message-check').checked);
+        }
+    }
+
+    function adjustCount(fromStatus, toStatus) {
+        const bump = (s, d) => {
+            const badge = panel.querySelector(`[data-count-for="${s}"]`);
+            if (!badge) return;
+            const n = Math.max(0, parseInt(badge.textContent, 10) + d);
+            badge.textContent = `${n} ${s}`;
+        };
+        if (fromStatus) bump(fromStatus, -1);
+        if (toStatus && toStatus !== 'deleted') bump(toStatus, 1);
+        const unread = parseInt(panel.querySelector('[data-count-for="new"]')?.textContent, 10) || 0;
+        const tabBadge = document.querySelector('#tab-messages .tab-badge');
+        if (tabBadge) {
+            tabBadge.textContent = String(unread);
+            tabBadge.hidden = unread === 0;
+        }
+    }
+
+    function applyStatus(item, newStatus) {
+        const old = item.dataset.status;
+        if (newStatus === 'deleted') {
+            item.remove();
+            adjustCount(old, null);
+            return;
+        }
+        item.dataset.status = newStatus;
+        const badge = item.querySelector('[data-status-badge]');
+        badge.textContent = newStatus;
+        badge.className = `status-badge ${newStatus}`;
+        item.querySelectorAll('[data-message-action]').forEach(b => {
+            const action = b.dataset.messageAction;
+            b.hidden = (action === 'read' && newStatus === 'read') || (action === 'new' && newStatus === 'new')
+                || (action === 'archive' && newStatus === 'archived');
+        });
+        if (old !== newStatus) adjustCount(old, newStatus);
+    }
+
+    function act(item, action) {
+        const run = () => api(`/admin/api/messages/${item.dataset.messageId}`, { action })
+            .then(data => {
+                applyStatus(item, data.status);
+                applyFilters();
+                Admin.notify(data.status === 'deleted' ? 'Message deleted.' : `Marked ${data.status}.`, 'success');
+            })
+            .catch(err => Admin.notify(err.message, 'error'));
+        if (action !== 'delete') return run();
+        return Dialog.confirm({ title: 'Delete this message?', message: 'This cannot be undone.', confirmLabel: 'Delete' })
+            .then(ok => ok && run());
+    }
+
+    function bulk(action) {
+        const chosen = selected();
+        if (!chosen.length) return;
+        const run = () => api('/admin/api/messages/bulk', { action, ids: chosen.map(i => i.dataset.messageId) })
+            .then(data => {
+                chosen.forEach(item => applyStatus(item, data.status));
+                applyFilters();
+                Admin.notify(`${data.status === 'deleted' ? 'Deleted' : 'Updated'} ${plural(data.count, 'message')}.`, 'success');
+            })
+            .catch(err => Admin.notify(err.message, 'error'));
+        if (action !== 'delete') return run();
+        return Dialog.confirm({
+            title: `Delete ${plural(chosen.length, 'message')}?`, message: 'This cannot be undone.', confirmLabel: 'Delete',
+        }).then(ok => ok && run());
+    }
+
+    function toggle(button) {
+        const item = button.closest('.message-item');
+        const body = document.getElementById(button.getAttribute('aria-controls'));
+        if (!body) return;
+        const open = body.hidden;
+        body.hidden = !open;
+        button.setAttribute('aria-expanded', String(open));
+        item.classList.toggle('is-open', open);
+        // Opening a new message counts as reading it.
+        if (open && item.dataset.status === 'new') {
+            api(`/admin/api/messages/${item.dataset.messageId}`, { action: 'read' })
+                .then(data => applyStatus(item, data.status))
+                .catch(() => {});
+        }
+    }
+
+    function init() {
+        panel = document.getElementById('panel-messages');
+        if (!panel) return;
+        panel.querySelectorAll('.message-filter').forEach(button => {
+            button.addEventListener('click', () => {
+                panel.querySelectorAll('.message-filter').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+                status = button.dataset.status;
+                applyFilters();
+            });
+        });
+        document.getElementById('messages_filter')?.addEventListener('input', applyFilters);
+        panel.addEventListener('click', e => {
+            const toggleBtn = e.target.closest('.message-toggle');
+            if (toggleBtn) return toggle(toggleBtn);
+            const actionBtn = e.target.closest('[data-message-action]');
+            if (actionBtn) return act(actionBtn.closest('.message-item'), actionBtn.dataset.messageAction);
+            const bulkBtn = e.target.closest('[data-bulk]');
+            if (bulkBtn) return bulk(bulkBtn.dataset.bulk);
+            return undefined;
+        });
+        panel.addEventListener('change', e => {
+            if (e.target.id === 'messagesSelectAll') {
+                items().filter(i => !i.hidden).forEach(i => { i.querySelector('.message-check').checked = e.target.checked; });
+            }
+            if (e.target.matches('.message-check, #messagesSelectAll')) updateBulk();
+        });
+    }
+
+    return { init };
+})();
+
+function removeSubscriber(button) {
+    const email = button.dataset.email;
+    Dialog.confirm({
+        title: `Remove ${email}?`,
+        message: 'They will stop getting the newsletter. They can sign up again from the footer.',
+        confirmLabel: 'Remove',
+    }).then(ok => {
+        if (!ok) return;
+        const item = button.closest('[data-subscriber-id]');
+        api(`/admin/api/subscribers/${item.dataset.subscriberId}`, {}, 'DELETE')
+            .then(() => {
+                item.remove();
+                const chip = document.querySelector('#newsletterCard .count-chip');
+                if (chip) chip.textContent = String(Math.max(0, parseInt(chip.textContent, 10) - 1));
+                Admin.notify(`Removed ${email}.`, 'success');
+            })
+            .catch(err => Admin.notify(err.message, 'error'));
+    });
+}
+
+// --- Activity log: filters and paging ----------------------------------------------------------
+
+const Activity = (function () {
+    let group = '';
+
+    function row(a) {
+        const time = el('time', { datetime: a.timestamp, title: a.when, text: a.ago });
+        return el('li', { className: 'activity-item' }, [
+            el('span', { className: 'activity-icon', 'aria-hidden': 'true', text: a.icon }),
+            el('div', { className: 'activity-content' }, [
+                el('div', { className: 'activity-title', text: a.title }),
+                el('div', { className: 'activity-desc', text: a.description }),
+                el('div', { className: 'activity-time' }, [`${a.user} · `, time]),
+            ]),
+        ]);
+    }
+
+    function load(reset) {
+        const list = document.getElementById('activityList');
+        const more = document.getElementById('activityMore');
+        const params = new URLSearchParams();
+        if (group) params.set('group', group);
+        if (!reset && more.dataset.before) params.set('before', more.dataset.before);
+        more.disabled = true;
+        fetch(`/admin/api/activity?${params}`, { credentials: 'same-origin' })
+            .then(r => r.json().then(data => (r.ok ? data : Promise.reject(new Error(data.error || 'Could not load activity.')))))
+            .then(data => {
+                if (reset) list.replaceChildren();
+                data.items.forEach(a => list.append(row(a)));
+                if (reset && !data.items.length) {
+                    list.append(el('li', { className: 'list-empty', text: 'Nothing here yet.' }));
+                }
+                more.dataset.before = data.items.length ? data.items[data.items.length - 1].timestamp : '';
+                more.hidden = !data.more;
+            })
+            .catch(err => Admin.notify(err.message, 'error'))
+            .finally(() => { more.disabled = false; });
+    }
+
+    function filter(chip) {
+        group = chip.dataset.activityGroup;
+        document.querySelectorAll('[data-activity-group]').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
+        load(true);
+    }
+
+    function init() {
+        document.getElementById('activityMore')?.addEventListener('click', () => load(false));
+    }
+
+    return { init, filter };
+})();
+
+// --- Help ----------------------------------------------------------------------------------------
+
+function showHelp() {
+    Dialog.alert({
+        title: 'How the Command Center works',
+        html: `
+            <p><strong>Saving:</strong> numbers, event fields, roles, award names and team pages save the moment you change them. A green tick means it worked; a red mark means it did not, and the old value comes back.</p>
+            <p><strong>Overview:</strong> "Needs attention" lists what is waiting on you. The homepage numbers can count themselves (Auto) or show what you type.</p>
+            <p><strong>People:</strong> approve sign-ups at the top. Drag cards between teams or use <em>Move to</em>; every move has an Undo. <em>Link login</em> connects an account to a card that was added by name.</p>
+            <p><strong>Teams:</strong> open a team to edit its page. <em>New season</em> copies the roster into next season.</p>
+            <p><strong>Site:</strong> edit page text, photos, the announcement bar and more in the site editor.</p>
+            <p><strong>Keyboard:</strong> press <kbd>/</kbd> to search the current tab, and use the arrow keys on the tab bar.</p>
+        `,
+        confirmLabel: 'Got it',
+    });
+}
+
+// --- Delegated wiring -------------------------------------------------------------------------
+
+// Quick-action links: switch tab and start a blank form, asking first if the
+// admin has unsaved edits in it.
+const QUICK_ADD = {
+    events: ['event_form', resetSimpleForm('event_form')],
+    teams: ['team_form', resetSimpleForm('team_form')],
+    sponsors: ['sponsor_form', resetSponsorForm],
+};
+
+const RESETS = {
+    'reset-sponsor': ['sponsor_form', resetSponsorForm],
+    'reset-user': ['userForm', resetUserForm],
+};
+
+const EDITS = {
+    'edit-sponsor': ['sponsor_form', editSponsor],
+    'edit-user': ['userForm', editUser],
+};
+
+function guarded(formId, run) {
+    confirmDiscard(document.getElementById(formId)).then(ok => {
+        if (ok) run();
+    });
+}
+
+document.addEventListener('click', function (e) {
+    const scope = e.target.closest('[data-award-scope]');
+    if (scope) return Awards.scope(scope);
+    const group = e.target.closest('[data-activity-group]');
+    if (group) return Activity.filter(group);
+
+    const trigger = e.target.closest('[data-action]');
+    if (!trigger) return undefined;
+    const action = trigger.dataset.action;
+
+    if (action === 'quick-add') {
+        e.preventDefault();
+        const [formId, reset] = QUICK_ADD[trigger.dataset.tab];
+        guarded(formId, () => {
+            AdminTabs.go(trigger.dataset.tab, formId);
+            reset();
+        });
+    } else if (RESETS[action]) {
+        const [formId, reset] = RESETS[action];
+        guarded(formId, reset);
+    } else if (EDITS[action]) {
+        const [formId, edit] = EDITS[action];
+        guarded(formId, () => edit(trigger));
+    } else if (action === 'go-tab') {
+        e.preventDefault();
+        AdminTabs.go(trigger.dataset.tab, trigger.dataset.scroll);
+    } else if (action === 'approve-user') {
+        Approvals.approve(trigger.closest('[data-user-id]'));
+    } else if (action === 'reject-user') {
+        Approvals.reject(trigger.closest('[data-user-id]'), trigger.dataset.username);
+    } else if (action === 'copy-reset-link') {
+        copyResetLink();
+    } else if (action === 'select-all') {
+        trigger.select();
+    } else if (action === 'show-help') {
+        showHelp();
+    } else if (action === 'award-move') {
+        Awards.move(trigger);
+    } else if (action === 'award-style') {
+        Awards.toggleStyle(trigger);
+    } else if (action === 'award-delete') {
+        Awards.remove(trigger);
+    } else if (action === 'prune-events') {
+        prunePastEvents(trigger);
+    } else if (action === 'new-season') {
+        startNewSeason(trigger);
+    } else if (action === 'remove-subscriber') {
+        removeSubscriber(trigger);
+    }
+    return undefined;
+});
+
+document.addEventListener('input', function (e) {
+    const target = e.target;
+    if (target.id === 'adminSearch') {
+        searchAdminContent();
+        return;
+    }
+    const form = target.form;
+    if (form && DIRTY_FORMS.includes(form.id)) form.dataset.dirty = '1';
+});
+
+document.addEventListener('change', function (e) {
+    const target = e.target;
+    if (target.dataset.previewTarget) previewImage(target, target.dataset.previewTarget);
+    if (target.form && DIRTY_FORMS.includes(target.form.id)) target.form.dataset.dirty = '1';
+
+    if (target.matches('[data-role-user-id]')) Roles.change(target);
+    if (target.matches('.roster-move')) Roster.moveFromSelect(target);
+    if (target.matches('.roster-link')) Roster.link(target);
+    if (target.matches('[data-stat-mode]')) StatModes.change(target);
+    if (target.matches('.award-style [data-category-field]')) Awards.styleChange(target);
+});
+
+document.addEventListener('submit', function (e) {
+    const form = e.target;
+    if (form.id === 'awardCategoryForm') {
+        e.preventDefault();
+        Awards.add(form);
+        return;
+    }
+    if (form.id === 'userForm') validateUserForm(e);
+    if (form.dataset.confirmDelete) {
+        e.preventDefault();
+        confirmDelete(form, form.dataset.confirmDelete);
+        return;
+    }
+    if (e.defaultPrevented) {
+        hideLoading();
+        return;
+    }
+    // Block double submits: a second click on a slow multipart save used to
+    // upload every file twice.
+    lockSubmit(form);
+    markClean(form);
+    showLoading();
+});
+
+// "/" jumps to the tab search, like most dashboards.
+document.addEventListener('keydown', function (e) {
+    if (e.key !== '/' || e.target.matches('input, textarea, select, [contenteditable]')) return;
+    const search = document.getElementById('adminSearch');
+    if (!search) return;
+    e.preventDefault();
+    search.focus();
+    search.select();
+});
+
+// Warn before leaving the page with unsaved edits.
+window.addEventListener('beforeunload', function (e) {
+    const dirty = DIRTY_FORMS.some(id => isDirty(document.getElementById(id))) || Autosave.pending();
+    if (dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+// Coming back through the back/forward cache: undo the submit lock and overlay.
+window.addEventListener('pageshow', function () {
+    hideLoading();
+    document.querySelectorAll('.admin-container [type="submit"]').forEach(button => {
+        button.disabled = false;
+    });
+});
+
+// --- Page setup -----------------------------------------------------------------------------------
+
+document.addEventListener('DOMContentLoaded', function () {
+    AdminTabs.init();
+    Messages.init();
+    Autosave.init();
+    TeamAwards.init();
+    Roster.init();
+    Activity.init();
+    Admin.attachListFilter('#events_filter', '#panel-events .event-item');
+    Admin.attachListFilter('#awards_filter', '#panel-awards .award-item');
+    Admin.attachListFilter('#teams_filter', '#panel-teams .team-tile');
+    Admin.attachListFilter('#sponsors_filter', '#panel-sponsors .sponsor-row');
+    Admin.attachListFilter('#subscribers_filter', '#panel-messages .subscriber-item');
+
+    const usersFilter = document.getElementById('users_filter');
+    const usersRoleFilter = document.getElementById('users_role_filter');
+    function filterUsers() {
+        const term = usersFilter.value.trim().toLowerCase();
+        const role = usersRoleFilter.value;
+        document.querySelectorAll('#panel-users .user-item').forEach(item => {
+            const matches = (!term || item.textContent.toLowerCase().includes(term))
+                && (!role || item.dataset.role === role);
+            item.classList.toggle('is-hidden', !matches);
+        });
+    }
+    usersFilter?.addEventListener('input', filterUsers);
+    usersRoleFilter?.addEventListener('change', filterUsers);
+
+    // Server flash messages fade like the toasts the page makes itself.
+    document.querySelectorAll('#toast-stack .status-msg').forEach(toast => {
+        setTimeout(() => {
+            toast.classList.add('is-leaving');
+            toast.addEventListener('animationend', () => toast.remove(), { once: true });
+        }, 6000);
+    });
+});

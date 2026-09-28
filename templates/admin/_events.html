@@ -1,0 +1,71 @@
+{% from "admin/_macros.html" import card_head, empty %}
+{% macro event_row(comp) -%}
+<div class="data-item event-item event-inline" data-event-id="{{ comp._id }}">
+    <input type="text" class="inline-input inline-input--title" value="{{ comp.name }}" maxlength="200"
+        data-event-field="name" aria-label="Event name" required>
+    <input type="text" class="inline-input" value="{{ comp.location or '' }}" maxlength="200"
+        data-event-field="location" aria-label="Location for {{ comp.name }}" placeholder="Location"
+        list="dl-event-locations" autocomplete="off">
+    <input type="datetime-local" class="inline-input" value="{{ comp.date_str }}"
+        data-event-field="date" aria-label="Date and time for {{ comp.name }}">
+    <input type="url" class="inline-input inline-input--link" value="{{ comp.link or '' }}" maxlength="500"
+        data-event-field="link" aria-label="Event page link for {{ comp.name }}" placeholder="Event page (optional)">
+    <span class="field-status" aria-hidden="true"></span>
+    <form class="form-flush" action="{{ url_for('admin_delete_competition', comp_id=comp._id) }}" method="POST"
+        data-confirm-delete="event" data-confirm-name="{{ comp.name }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="icon-btn icon-btn--danger"
+            aria-label="Delete event: {{ comp.name }}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+    </form>
+</div>
+{%- endmacro %}
+<section class="admin-panel" data-panel="events" id="panel-events" role="tabpanel" aria-labelledby="tab-events"
+    tabindex="0" hidden>
+    <div class="admin-card">
+        {% call card_head('calendar-days', 'Upcoming events', upcoming|length) %}
+        <label class="visually-hidden" for="events_filter">Filter events</label>
+        <input type="search" id="events_filter" class="panel-filter panel-filter--compact" placeholder="Filter events…">
+        {% endcall %}
+        <p class="form-hint">Click any field to change it; it saves when you leave the field (Enter saves, Esc
+            undoes). The soonest event drives the homepage countdown. Add the RobotEvents link so visitors can
+            find the event page.</p>
+        <div class="event-head" aria-hidden="true"><span>Event</span><span>Location</span><span>When</span><span>Link</span></div>
+        <div class="data-list list-events">
+            {% for comp in upcoming %}{{ event_row(comp) }}{% else %}
+            <p class="list-empty">No upcoming events. Add one below.</p>
+            {% endfor %}
+        </div>
+
+        <h3 class="form-section-title" id="event_form_title">Add an event</h3>
+        <form id="event_form" class="inline-create inline-create--event" action="{{ url_for('admin_add_competition') }}" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <label class="visually-hidden" for="f-comp_name">Event name</label>
+            <input id="f-comp_name" type="text" name="comp_name" placeholder="Event name" maxlength="200" required>
+            <label class="visually-hidden" for="f-comp_location">Location</label>
+            <input id="f-comp_location" type="text" name="comp_location" placeholder="Location" maxlength="200"
+                list="dl-event-locations" autocomplete="off">
+            <datalist id="dl-event-locations">
+                {% for loc in event_locations %}<option value="{{ loc }}"></option>{% endfor %}
+            </datalist>
+            <label class="visually-hidden" for="f-comp_date">Date and time</label>
+            <input id="f-comp_date" type="datetime-local" name="comp_date" required>
+            <label class="visually-hidden" for="f-comp_link">Event page link</label>
+            <input id="f-comp_link" type="url" name="comp_link" placeholder="https://www.robotevents.com/… (optional)" maxlength="500">
+            <button type="submit" class="admin-btn admin-btn-success">Add</button>
+        </form>
+    </div>
+
+    {% if past_events %}
+    <details class="admin-card past-events" id="past-events">
+        <summary><i data-lucide="calendar-x" aria-hidden="true"></i> Past events <span class="count-chip">{{ past_events|length }}</span>
+            <span class="summary-hint">Already happened; no longer on the homepage.</span></summary>
+        <div class="past-events-actions">
+            <button type="button" class="admin-btn admin-btn-danger admin-btn-small" data-action="prune-events"
+                data-count="{{ past_events|length }}"><i data-lucide="eraser" aria-hidden="true"></i> Clear all past events</button>
+        </div>
+        <div class="data-list list-events list-events--past">
+            {% for comp in past_events %}{{ event_row(comp) }}{% endfor %}
+        </div>
+    </details>
+    {% endif %}
+</section>

@@ -1,19 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}About | Mepham Robotics Club{% endblock %}
-{% block meta_description %}Learn about the Mepham Robotics Club mission, our sub-teams, and our history of excellence
-in VEX Robotics.{% endblock %}
+{% block title %}About | {{ site.general.club_name }}{% endblock %}
+{% block meta_description %}{{ site.about.meta_description }}{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/about.css') }}">
 {% endblock %}
 
 {% from "partials/picture.html" import picture %}
+{% from "partials/site_macros.html" import hero_attrs %}
+{% set about = site.about %}
 {% block content %}
-<div class="hero-image">
+<div {{ hero_attrs(about.hero_image) }}>
     <div class="hero-content">
-        <h1>About Us</h1>
-        <p>Innovation Driven by Passion</p>
+        <h1>{{ about.hero_title }}</h1>
+        {% if about.hero_tagline %}<p>{{ about.hero_tagline }}</p>{% endif %}
         <div class="hero-cta">
             <a href="{{ url_for('contact') }}" class="cta-button cta-primary">Join the Team</a>
             <a href="#subteams" class="cta-button cta-secondary">Our Teams</a>
@@ -31,14 +32,8 @@ in VEX Robotics.{% endblock %}
 <section id="about" class="fade-in-section">
     <div class="about-content">
         <div class="about-text">
-            <h2 class="about-heading">Who We Are</h2>
-            <p>We are a <strong>student-led robotics club</strong> competing in the <strong>VEX V5 Robotics
-                    Competition</strong>. Our members learn hands-on mechanical design, electrical engineering, and
-                complex C++ / Python programming.</p>
-            <p>Through intense competition and collaboration, we push the boundaries of what high school students
-                can achieve in robotics and engineering.</p>
-            <p>Our teams work year-round to design, build, and program competitive robots that can tackle the
-                season's challenges with precision and creativity.</p>
+            <h2 class="about-heading">{{ about.who_heading }}</h2>
+            {{ about.who_body|rich }}
         </div>
         <figure class="about-photo">
             {{ picture('photos/carousel1', 'Mepham Robotics members working on a robot', '(max-width: 900px) 100vw, 600px') }}
@@ -46,100 +41,62 @@ in VEX Robotics.{% endblock %}
     </div>
 </section>
 
+{% if about['values'] %}
 <section class="about-values fade-in-section">
     <div class="about-values-inner">
-        <h2 class="ripple">What We Stand For</h2>
+        <h2 class="ripple">{{ about.values_heading }}</h2>
         <div class="about-values-grid">
+            {% for card in about['values'] %}
             <div class="about-value-card">
-                <i data-lucide="target" class="about-value-icon"></i>
-                <h3>Excellence</h3>
-                <p>We strive for excellence in every aspect of robotics - from mechanical design to autonomous
-                    programming.</p>
+                <i data-lucide="{{ card.icon }}" class="about-value-icon"></i>
+                <h3>{{ card.title }}</h3>
+                <p>{{ card.text }}</p>
             </div>
-            <div class="about-value-card">
-                <i data-lucide="lightbulb" class="about-value-icon"></i>
-                <h3>Innovation</h3>
-                <p>We encourage creative thinking and innovative solutions to complex engineering challenges.</p>
-            </div>
-            <div class="about-value-card">
-                <i data-lucide="handshake" class="about-value-icon"></i>
-                <h3>Collaboration</h3>
-                <p>Teamwork is at our core. The best solutions come from diverse minds working together, and we
-                    carry that spirit into our school and local community by giving back.</p>
-            </div>
-            <div class="about-value-card">
-                <i data-lucide="mountain" class="about-value-icon"></i>
-                <h3>Perseverance</h3>
-                <p>We embrace challenges and learn from failures, constantly improving our robots and ourselves.</p>
-            </div>
-            <div class="about-value-card">
-                <i data-lucide="scale" class="about-value-icon"></i>
-                <h3>Integrity</h3>
-                <p>We compete with honesty and fairness, upholding the highest standards of sportsmanship.</p>
-            </div>
-            <div class="about-value-card">
-                <i data-lucide="graduation-cap" class="about-value-icon"></i>
-                <h3>Mentorship</h3>
-                <p>Experienced members guide new team members, fostering a culture of continuous learning.</p>
-            </div>
+            {% endfor %}
         </div>
     </div>
 </section>
+{% endif %}
 
 <section id="subteams" class="about-subteams fade-in-section">
-    <h2 class="ripple">Our Sub-Teams</h2>
+    <h2 class="ripple">{{ about.subteams_heading }}</h2>
     <div class="about-subteams-layout">
         <figure class="about-photo">
             {{ picture('photos/carousel7', 'Mepham Robotics sub-teams at work', '(max-width: 900px) 100vw, 600px') }}
         </figure>
         <div class="about-subteam-grid">
+            {% for card in about.subteams %}
             <div class="about-subteam-card">
-                <i data-lucide="cog" class="about-subteam-icon"></i>
-                <h3>Mechanical</h3>
-                <p>CAD, fabrication, drivetrain and manipulator design.</p>
+                <i data-lucide="{{ card.icon }}" class="about-subteam-icon"></i>
+                <h3>{{ card.title }}</h3>
+                <p>{{ card.text }}</p>
             </div>
-            <div class="about-subteam-card">
-                <i data-lucide="zap" class="about-subteam-icon"></i>
-                <h3>Electrical</h3>
-                <p>Wiring, sensors, and V5 brain configuration.</p>
-            </div>
-            <div class="about-subteam-card">
-                <i data-lucide="code" class="about-subteam-icon"></i>
-                <h3>Programming</h3>
-                <p>C++ and Python, autonomous routines, odometry.</p>
-            </div>
-            <div class="about-subteam-card">
-                <i data-lucide="notebook-pen" class="about-subteam-icon"></i>
-                <h3>Notebook &amp; Outreach</h3>
-                <p>Engineering notebook, judging interviews, community events.</p>
-            </div>
+            {% endfor %}
         </div>
     </div>
 </section>
 
+{% if about.culture %}
 <section class="about-culture fade-in-section">
     <div class="about-culture-inner">
-        <h2 class="ripple">Culture &amp; Safety</h2>
+        <h2 class="ripple">{{ about.culture_heading }}</h2>
         <div class="about-culture-grid">
+            {% for card in about.culture %}
             <div class="about-culture-card">
-                <i data-lucide="globe" class="about-culture-icon"></i>
-                <h3>Diversity &amp; Inclusion</h3>
-                <p>Mepham Robotics is committed to fostering an inclusive environment where students of all
-                    backgrounds can thrive in STEM. We believe that diverse perspectives lead to better engineering
-                    solutions and a stronger community.</p>
-            </div>
-            <div class="about-culture-card">
-                <i data-lucide="hard-hat" class="about-culture-icon"></i>
-                <h3>Team Safety Captain</h3>
-                <p>Our dedicated Safety Captain ensures all team members adhere to safety protocols, manages the
-                    safety manual, and conducts regular workshop inspections.</p>
+                <i data-lucide="{{ card.icon }}" class="about-culture-icon"></i>
+                <h3>{{ card.title }}</h3>
+                <p>{{ card.text }}</p>
+                {% if card.link_label and card.link_url %}
                 <div class="about-culture-cta">
-                    <a href="{{ url_for('safety_quiz') }}" class="cta-button cta-primary">Take Safety Quiz</a>
+                    <a href="{{ card.link_url }}" class="cta-button cta-primary">{{ card.link_label }}</a>
                 </div>
+                {% endif %}
             </div>
+            {% endfor %}
         </div>
     </div>
 </section>
+{% endif %}
 
-{% with carousel_title="Team Moments" %}{% include "partials/photo_carousel.html" %}{% endwith %}
+{% with carousel_title=about.gallery_heading %}{% include "partials/photo_carousel.html" %}{% endwith %}
 {% endblock %}
