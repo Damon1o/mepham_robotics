@@ -2132,53 +2132,6 @@ footer::before {
     font-weight: 900;
 }
 
-/* UI Components for Portal */
-.system-status {
-    position: fixed;
-    top: 1.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(26, 26, 26, 0.95);
-    color: #ffd700;
-    padding: 0.8rem 2rem;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.75rem;
-    letter-spacing: 2px;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    border-radius: 50px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 215, 0, 0.3);
-    z-index: 1001;
-    /* Above hero but below menu-toggle/sidenav */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    white-space: nowrap;
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    background: #00ff00;
-    border-radius: 50%;
-    box-shadow: 0 0 8px #00ff00;
-    animation: statusPulse 2s infinite;
-}
-
-@keyframes statusPulse {
-    0% {
-        opacity: 0.4;
-    }
-
-    50% {
-        opacity: 1;
-    }
-
-    100% {
-        opacity: 0.4;
-    }
-}
-
 .logout-link {
     margin-top: auto !important;
     color: #ff4d4d !important;
@@ -3983,26 +3936,6 @@ footer::before {
     border: 0;
 }
 
-/* Lets keyboard users jump past the nav; only visible while focused. */
-.skip-link {
-    position: absolute;
-    top: -100px;
-    left: var(--spacing-sm);
-    z-index: 10000;
-    padding: 12px 20px;
-    background: var(--maroon-dark);
-    color: #fff;
-    font-family: var(--font-body);
-    text-decoration: none;
-    border: 3px solid var(--accent-gold);
-    border-radius: 0 0 8px 8px;
-    transition: top var(--transition-fast);
-}
-
-.skip-link:focus {
-    top: 0;
-}
-
 /* A visible focus ring everywhere — several resets had removed the default. */
 a:focus-visible,
 button:focus-visible,
@@ -4053,7 +3986,6 @@ textarea:focus-visible,
 
 @media (prefers-reduced-motion: reduce) {
 
-    .skip-link,
     .nav-footer .login-btn,
     .theme-toggle {
         transition: none;

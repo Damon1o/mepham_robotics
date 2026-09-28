@@ -38,9 +38,9 @@ def test_admin_dashboard_renders(signed_in):
     assert signed_in('admin').get('/admin').status_code == 200
 
 
-def test_every_page_has_the_skip_link_and_main_landmark(client):
+def test_every_page_has_a_main_landmark_and_no_skip_link(client):
     page = client.get('/').get_data(as_text=True)
-    assert 'class="skip-link"' in page
+    assert 'skip-link' not in page
     assert 'id="main-content"' in page
 
 

@@ -2926,8 +2926,9 @@ def my_team():
         # Editors can open any team, so give them the list instead of guessing one.
         own = my_team_url()
         teams = sorted(_newest_season_docs().values(), key=lambda t: t.get('team_number') or '')
-        choices = [{'url': url_for('manage_team', team_id=str(t['_id'])), 'label': _team_label(t),
-                    'nickname': t.get('nickname') or '', 'members': len(t.get('members') or []),
+        choices = [{'url': url_for('manage_team', team_id=str(t['_id'])), 'number': t.get('team_number') or 'Team',
+                    'season': t.get('season') or '', 'nickname': t.get('nickname') or '',
+                    'members': len(t.get('members') or []),
                     'own': url_for('manage_team', team_id=str(t['_id'])) == own}
                    for t in teams]
         choices.sort(key=lambda c: not c['own'])
