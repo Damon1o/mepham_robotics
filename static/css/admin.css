@@ -1994,10 +1994,14 @@ body:has(.admin-container) #custom-chatbot-container {
     gap: 0.6rem;
 }
 
+/* Stacked: the number and name get the full width, the buttons sit on their own row.
+   Side by side, the buttons left the name about 0px at 18rem columns. */
 .team-tile {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.55rem;
     padding: 0.65rem;
 }
 
@@ -2050,6 +2054,12 @@ body:has(.admin-container) #custom-chatbot-container {
     display: flex;
     align-items: center;
     gap: 0.15rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid var(--admin-line);
+}
+
+.team-tile-actions > .admin-btn {
+    margin-right: auto;
 }
 
 .team-seasons {
@@ -3021,10 +3031,6 @@ body:has(.admin-container) #custom-chatbot-container {
 
     .bulk-actions {
         margin-left: 0;
-    }
-
-    .team-tile {
-        grid-template-columns: minmax(0, 1fr);
     }
 
     .setting-row {
