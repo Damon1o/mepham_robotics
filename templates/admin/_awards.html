@@ -1,0 +1,91 @@
+{% from "admin/_macros.html" import stepper, card_head, empty %}
+<section class="admin-panel" data-panel="awards" id="panel-awards" role="tabpanel" aria-labelledby="tab-awards"
+    tabindex="0" hidden>
+    <div class="admin-card">
+        {% call card_head('trophy', 'Awards') %}
+        <label class="visually-hidden" for="awards_filter">Filter awards</label>
+        <input type="search" id="awards_filter" class="panel-filter panel-filter--compact" placeholder="Filter awards…">
+        {% endcall %}
+
+        <div class="scope-row" role="tablist" aria-label="Whose awards">
+            <button type="button" class="team-chip" role="tab" data-award-scope="" aria-selected="true">
+                <i data-lucide="building-2" aria-hidden="true"></i> Club totals</button>
+            {% for team in current_teams %}
+            <button type="button" class="team-chip" role="tab" data-award-scope="{{ team.team_number }}"
+                aria-selected="false">{{ team.team_number }}{% if team.nickname %} · {{ team.nickname }}{% endif %}</button>
+            {% endfor %}
+        </div>
+
+        {# Club totals: counts plus the award categories themselves. #}
+        <div class="award-scope" data-scope-panel="">
+            <p class="form-hint">These totals appear on the Achievements page. Categories you add here are also added,
+                at zero, to every team. Use the arrows to change the order.</p>
+            <div class="data-list award-list" id="clubAwards">
+                {% for award in awards %}
+                <div class="data-item award-item award-row" data-category-id="{{ award._id }}">
+                    <div class="award-order">
+                        <button type="button" class="icon-btn icon-btn--tiny" data-action="award-move" data-step="-1"
+                            aria-label="Move {{ award.title }} up"{% if loop.first %} disabled{% endif %}><i data-lucide="chevron-up" aria-hidden="true"></i></button>
+                        <button type="button" class="icon-btn icon-btn--tiny" data-action="award-move" data-step="1"
+                            aria-label="Move {{ award.title }} down"{% if loop.last %} disabled{% endif %}><i data-lucide="chevron-down" aria-hidden="true"></i></button>
+                    </div>
+                    {% if award.icon %}
+                    <img class="award-thumb" src="{{ url_for('static', filename='assets/icons/' ~ award.icon) }}" alt="" width="36" height="36" loading="lazy">
+                    {% else %}<span class="award-thumb award-thumb--none" aria-hidden="true"><i data-lucide="image-off"></i></span>{% endif %}
+                    <input type="text" class="inline-input award-title-input" value="{{ award.title }}" maxlength="80"
+                        data-category-field="title" aria-label="Name of {{ award.title }}">
+                    {{ stepper('award-' ~ award._id, award.title ~ ' count', award.count, 'data-award-id', award._id, max=999) }}
+                    <button type="button" class="icon-btn" data-action="award-style" aria-expanded="false"
+                        aria-label="Style for {{ award.title }}" title="Icon and style"><i data-lucide="palette" aria-hidden="true"></i></button>
+                    <button type="button" class="icon-btn icon-btn--danger" data-action="award-delete"
+                        data-title="{{ award.title }}" aria-label="Delete the {{ award.title }} category"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+                    <div class="award-style" hidden>
+                        <label class="stack-label">Icon
+                            <select data-category-field="icon">
+                                {% for icon in award_icons %}
+                                <option value="{{ icon }}" {% if award.icon == icon %}selected{% endif %}>{{ award_icon_label(icon) }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="stack-label">Border
+                            <select data-category-field="border">
+                                <option value="">None</option>
+                                {% for b in award_borders %}
+                                <option value="{{ b }}" {% if award.border == b %}selected{% endif %}>{{ b|capitalize }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="check"><input type="checkbox" data-category-field="layout" value="wide"
+                                {% if award.layout == 'wide' %}checked{% endif %}> Wide tile</label>
+                        <label class="check"><input type="checkbox" data-category-field="shimmer"
+                                {% if award.shimmer %}checked{% endif %}> Shimmer</label>
+                    </div>
+                </div>
+                {% else %}
+                <p class="list-empty">No award categories yet. Add the first one below.</p>
+                {% endfor %}
+            </div>
+
+            <h3 class="form-section-title">Add an award category</h3>
+            <form class="inline-create" id="awardCategoryForm">
+                <label class="visually-hidden" for="new-award-title">Award name</label>
+                <input id="new-award-title" type="text" maxlength="80" placeholder="Award name, e.g. Think Award" required
+                    list="dl-award-names">
+                <datalist id="dl-award-names">
+                    {% for icon in award_icons %}<option value="{{ award_icon_label(icon) }}"></option>{% endfor %}
+                </datalist>
+                <label class="visually-hidden" for="new-award-icon">Icon</label>
+                <select id="new-award-icon" required>
+                    {% for icon in award_icons %}<option value="{{ icon }}">{{ award_icon_label(icon) }}</option>{% endfor %}
+                </select>
+                <button type="submit" class="admin-btn admin-btn-success">Add category</button>
+            </form>
+        </div>
+
+        {# One team's counts, drawn by admin.js from #team_awards_data. #}
+        <div class="award-scope" data-scope-panel="team" hidden>
+            <p class="form-hint">This team's counts show on its team page. Categories come from the club list.</p>
+            <div id="team_awards_list" class="data-list award-list"></div>
+        </div>
+    </div>
+</section>

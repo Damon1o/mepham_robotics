@@ -30,7 +30,7 @@ members, competition results, and season goals.{% endblock %}
 <div class="hero-image fade-in-section" style="--team-hero-image: url('{{ get_image_url(team.hero_image) }}')">
     <div class="hero-content">
         <h1>Team {{ team.team_number }}</h1>
-        <p>{{ team.nickname or 'Build. Code. Compete.' }}</p>
+        <p>{{ team.nickname or site.teams.default_tagline }}</p>
 
         {% if team.members or award_total or team.since or team.worlds_appearances or team.division %}
         <ul class="identity-bar">
@@ -271,13 +271,14 @@ members, competition results, and season goals.{% endblock %}
 {% endif %}
 
 <!-- JOIN CTA -->
+{% if site.teams.cta_show %}
 <section class="teamcta-band fade-in-section">
-    <h2 class="ripple">Interested?</h2>
-    <p class="teamcta-copy">Mepham students can join any time — no experience needed. Come find us in the shop,
-        or reach out and we'll show you around.</p>
+    <h2 class="ripple">{{ site.teams.cta_heading }}</h2>
+    {% if site.teams.cta_body %}<p class="teamcta-copy">{{ site.teams.cta_body }}</p>{% endif %}
     <div class="teamcta-actions">
-        <a href="{{ url_for('contact') }}" class="cta-button cta-primary">Join the Club</a>
+        <a href="{{ url_for('contact') }}" class="cta-button cta-primary">{{ site.teams.cta_button }}</a>
         <a href="{{ url_for('achievements') }}" class="cta-button">All Achievements</a>
     </div>
 </section>
+{% endif %}
 {% endblock %}

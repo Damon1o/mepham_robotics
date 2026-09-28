@@ -1,0 +1,30 @@
+{#- Small building blocks shared by the dashboard tabs. -#}
+
+{% macro stepper(id, label, value, attr, attr_value, max=None, disabled=False) -%}
+<div class="stepper{% if disabled %} is-disabled{% endif %}" data-autosave-wrap>
+    <button type="button" class="stepper-btn" data-step="-1" aria-label="Decrease {{ label }}"
+        {%- if disabled %} disabled{% endif %}>&minus;</button>
+    <input id="{{ id }}" type="number" min="0" step="1"{% if max %} max="{{ max }}"{% endif %} inputmode="numeric"
+        value="{{ value|default(0, true) }}" {{ attr }}="{{ attr_value }}" aria-label="{{ label }}"
+        {%- if disabled %} disabled{% endif %}>
+    <button type="button" class="stepper-btn" data-step="1" aria-label="Increase {{ label }}"
+        {%- if disabled %} disabled{% endif %}>+</button>
+    <span class="field-status" aria-hidden="true"></span>
+</div>
+{%- endmacro %}
+
+{% macro card_head(icon, title, count=None, id=None) -%}
+<div class="admin-card-header">
+    <h2{% if id %} id="{{ id }}"{% endif %}><i data-lucide="{{ icon }}" aria-hidden="true"></i> {{ title }}
+        {%- if count is not none %} <span class="count-chip">{{ count }}</span>{% endif %}</h2>
+    {{ caller() if caller else '' }}
+</div>
+{%- endmacro %}
+
+{% macro empty(icon, title, hint='') -%}
+<div class="empty-state">
+    <i data-lucide="{{ icon }}" class="empty-state-icon" aria-hidden="true"></i>
+    <p class="empty-state-title">{{ title }}</p>
+    {% if hint %}<p class="empty-state-hint">{{ hint }}</p>{% endif %}
+</div>
+{%- endmacro %}

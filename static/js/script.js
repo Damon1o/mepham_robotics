@@ -637,32 +637,16 @@ function showToast(message, type = 'info') {
     });
 
     // --- Channel switch rewrites the form's guidance and the message label ---
-    const CHANNELS = {
-        join: {
-            lede: "Tell us your grade and what you're curious about \u2014 building, coding, driving, or design. " +
-                'No experience needed, and you can join mid-season.',
-            label: 'What would you like to know?'
-        },
-        sponsor: {
-            lede: 'Let us know what you have in mind \u2014 funding, parts, machining time, or mentoring. ' +
-                'We can send the sponsorship packet and this season\'s budget.',
-            label: 'What would you like to support?'
-        },
-        general: {
-            lede: 'Press, outreach invites, event requests, or anything that does not fit a box. ' +
-                'Include dates and a location if you are inviting us somewhere.',
-            label: 'How can we help?'
-        }
-    };
-
+    // The copy for each channel is on its radio (data-lede, data-label), edited in Site settings.
     const channelInputs = [...document.querySelectorAll('[name="topic"]')];
     const ledeEl = document.querySelector('[data-channel-lede]');
     const messageLabel = document.querySelector('[data-message-label]');
 
     function applyChannel(value) {
-        const channel = CHANNELS[value] || CHANNELS.general;
-        if (ledeEl) ledeEl.textContent = channel.lede;
-        if (messageLabel) messageLabel.textContent = channel.label;
+        const input = channelInputs.find(i => i.value === value) || channelInputs[channelInputs.length - 1];
+        if (!input) return;
+        if (ledeEl && input.dataset.lede) ledeEl.textContent = input.dataset.lede;
+        if (messageLabel && input.dataset.label) messageLabel.textContent = input.dataset.label;
     }
 
     channelInputs.forEach(input => {
@@ -738,24 +722,48 @@ function showToast(message, type = 'info') {
 })();
 
 // --- MEETING STATUS (is the lab open right now?) ---
+// The schedule comes from data attributes (Site settings → Meetings), and "now" is
+// read in the club's time zone, so a visitor elsewhere still sees the right answer.
 (function initMeetingStatus() {
     const badge = document.querySelector('[data-meeting-status]');
     if (!badge) return;
 
     const text = badge.querySelector('.status-text');
-    const MEETING_DAYS = [2, 5]; // Tuesday, Friday
-    const START_HOUR = 15;
-    const END_HOUR = 17;
+    const days = (badge.dataset.days || '').split(',').filter(Boolean).map(Number);
+    const toMinutes = hhmm => {
+        const [h, m] = (hhmm || '0:0').split(':').map(Number);
+        return h * 60 + m;
+    };
+    const start = toMinutes(badge.dataset.start || '15:00');
+    const end = toMinutes(badge.dataset.end || '17:00');
+    const startLabel = badge.dataset.startLabel || '3:00 PM';
+    const endLabel = badge.dataset.endLabel || '5:00 PM';
     const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const WEEKDAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+    function clubNow() {
+        try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: badge.dataset.tz || undefined, weekday: 'short', hour: 'numeric', minute: 'numeric',
+                hourCycle: 'h23',
+            }).formatToParts(new Date());
+            const get = type => parts.find(p => p.type === type)?.value;
+            return { day: WEEKDAYS[get('weekday')], minutes: Number(get('hour')) * 60 + Number(get('minute')) };
+        } catch (err) {
+            const now = new Date();
+            return { day: now.getDay(), minutes: now.getHours() * 60 + now.getMinutes() };
+        }
+    }
 
     function render() {
-        const now = new Date();
-        const isMeetingDay = MEETING_DAYS.includes(now.getDay());
-        const hour = now.getHours();
-
-        if (isMeetingDay && hour >= START_HOUR && hour < END_HOUR) {
+        if (!days.length) {
+            text.textContent = 'Meeting times coming soon';
+            return;
+        }
+        const now = clubNow();
+        if (days.includes(now.day) && now.minutes >= start && now.minutes < end) {
             badge.classList.add('is-open');
-            text.textContent = 'In the lab right now — until 5:00 PM';
+            text.textContent = `In the lab right now — until ${endLabel}`;
             return;
         }
 
@@ -763,12 +771,12 @@ function showToast(message, type = 'info') {
 
         // Walk forward to the next meeting day, counting today only if it hasn't started yet.
         for (let offset = 0; offset <= 7; offset++) {
-            const day = (now.getDay() + offset) % 7;
-            if (!MEETING_DAYS.includes(day)) continue;
-            if (offset === 0 && hour >= START_HOUR) continue;
+            const day = (now.day + offset) % 7;
+            if (!days.includes(day)) continue;
+            if (offset === 0 && now.minutes >= start) continue;
 
             const when = offset === 0 ? 'today' : offset === 1 ? 'tomorrow' : DAY_NAMES[day];
-            text.textContent = `Next meeting ${when} at 3:00 PM`;
+            text.textContent = `Next meeting ${when} at ${startLabel}`;
             return;
         }
     }
@@ -941,23 +949,13 @@ function showToast(message, type = 'info') {
    SITE SEARCH
    ============================================ */
 (function initSearch() {
-    const pages = [
-        { title: 'Home', url: '/', desc: 'Welcome to Mepham Robotics — VEX V5 team homepage, timeline, and stats', keywords: 'home robotics vex v5 team homepage mepham' },
-        { title: 'About Us', url: '/about', desc: 'Our mission, values, history, and team culture', keywords: 'about mission values history team culture sub-teams diversity' },
-        { title: 'Achievements', url: '/achievements', desc: 'Awards, competition results, and season highlights', keywords: 'awards achievements competitions results trophies seasons' },
-        { title: 'Donate', url: '/donate', desc: 'Support our team through sponsorship and donations', keywords: 'donate sponsor support fundraising givebutter tiers' },
-        { title: 'Contact', url: '/contact', desc: 'Get in touch — contact form, meeting schedule, and FAQ', keywords: 'contact email form meeting schedule faq questions' },
-        { title: '77628D Team', url: '/team/77628D', desc: 'Team 77628D robot details and competition info', keywords: '77628D robot team' },
-        { title: '77628P Team', url: '/team/77628P', desc: 'Team 77628P robot details and competition info', keywords: '77628P robot team' },
-        { title: 'Glossary', url: '/glossary', desc: 'Robotics terms and definitions from A to Z', keywords: 'glossary terms definitions dictionary pid autonomous drivetrain', members: true },
-        { title: 'Branding Guide', url: '/branding', desc: 'Official team colors, fonts, and logo usage', keywords: 'branding colors fonts logo maroon gold style guide', members: true },
-        { title: 'Design Standards', url: '/standards', desc: 'Build standards, code style, and naming conventions', keywords: 'standards design build code style naming conventions', members: true },
-        { title: 'Member Resources', url: '/resources', desc: 'Guides, links, and tooling for team members', keywords: 'resources guides links tools members downloads', members: true },
-        { title: 'Safety Quiz', url: '/safety-quiz', desc: 'Interactive safety quiz — test your workshop knowledge', keywords: 'safety quiz test workshop lab rules ppe' },
-        { title: 'Engineering Notebook', url: '/notebook', desc: 'Public engineering notebook — design process and logs', keywords: 'notebook engineering design process testing iteration', members: true },
-        { title: 'Privacy Policy', url: '/privacy', desc: 'How we handle your data and privacy', keywords: 'privacy policy data cookies' },
-        { title: 'Site Credits', url: '/credits', desc: 'Website credits and acknowledgments', keywords: 'credits site acknowledgments technologies' },
-    ];
+    // Built by the server (search_index in api/index.py) so team pages match the teams that exist.
+    let pages = [];
+    try {
+        pages = JSON.parse(document.getElementById('search-pages')?.textContent || '[]');
+    } catch (err) {
+        pages = [];
+    }
 
     const signedIn = () => document.body.hasAttribute('data-current-user');
 
@@ -1393,5 +1391,24 @@ function showToast(message, type = 'info') {
             setTyping(false);
             addMessage('Sorry, there was a network error.', 'bot');
         }
+    });
+})();
+
+
+// --- ANNOUNCEMENT BAR (Site settings → Announcement bar) ---
+// A closed announcement stays closed until its text changes.
+(function initAnnouncement() {
+    const bar = document.querySelector('.site-announcement');
+    if (!bar) return;
+    const key = 'mepham-announcement-closed';
+    try {
+        if (localStorage.getItem(key) === bar.dataset.announcement) {
+            bar.remove();
+            return;
+        }
+    } catch (err) { /* storage blocked: just show it */ }
+    bar.querySelector('[data-announcement-close]')?.addEventListener('click', () => {
+        try { localStorage.setItem(key, bar.dataset.announcement); } catch (err) { /* ignore */ }
+        bar.remove();
     });
 })();

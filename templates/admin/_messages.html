@@ -1,0 +1,106 @@
+{% from "admin/_macros.html" import card_head, empty %}
+<section class="admin-panel" data-panel="messages" id="panel-messages" role="tabpanel" aria-labelledby="tab-messages"
+    tabindex="0" hidden>
+    <div class="admin-card" id="messagesCard">
+        {% call card_head('mail', 'Contact messages', message_counts.total) %}
+        <div class="role-summary">
+            <span class="status-badge new" data-count-for="new">{{ message_counts.new }} new</span>
+            <span class="status-badge read" data-count-for="read">{{ message_counts.read }} read</span>
+            <span class="status-badge archived" data-count-for="archived">{{ message_counts.archived }} archived</span>
+        </div>
+        {% endcall %}
+        {% if message_counts.total > messages_shown %}
+        <p class="form-hint">Showing the newest {{ messages_shown }} of {{ message_counts.total }}. Archive or delete
+            old ones to see the rest.</p>
+        {% endif %}
+
+        <div class="list-toolbar">
+            <div class="message-filters segmented segmented--small" role="group" aria-label="Show messages">
+                {% for value, label in [('', 'All'), ('new', 'New'), ('read', 'Read'), ('archived', 'Archived')] %}
+                <button type="button" class="message-filter" data-status="{{ value }}"
+                    aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ label }}</button>
+                {% endfor %}
+            </div>
+            <label class="visually-hidden" for="messages_filter">Search messages</label>
+            <input type="search" id="messages_filter" class="panel-filter" placeholder="Search name, email or text…">
+        </div>
+
+        {% if messages %}
+        <div class="bulk-bar" id="messageBulkBar">
+            <label class="check"><input type="checkbox" id="messagesSelectAll"> Select shown</label>
+            <span class="bulk-count" id="messagesSelected" aria-live="polite"></span>
+            <div class="bulk-actions">
+                <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-bulk="read" disabled>Mark read</button>
+                <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-bulk="archive" disabled>Archive</button>
+                <button type="button" class="admin-btn admin-btn-danger admin-btn-small" data-bulk="delete" disabled>Delete</button>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="data-list message-list">
+            {% for message in messages %}
+            <article class="data-item message-item" data-status="{{ message.status }}" data-message-id="{{ message._id }}">
+                <div class="message-summary">
+                    <input type="checkbox" class="message-check" aria-label="Select the message from {{ message.name }}">
+                    <button type="button" class="message-toggle" aria-expanded="false"
+                        aria-controls="message-body-{{ message._id }}">
+                        <span class="message-from">{{ message.name }}</span>
+                        <span class="message-email">{{ message.email }}</span>
+                        <span class="message-excerpt">{{ message.message|truncate(90) }}</span>
+                    </button>
+                    <span class="message-meta">
+                        {% if message.topic %}<span class="topic-badge topic-{{ message.topic }}">{{ message.topic }}</span>{% endif %}
+                        <span class="status-badge {{ message.status }}" data-status-badge>{{ message.status }}</span>
+                        <time class="message-date" title="{{ message.display_date }}">{{ message.ago }}</time>
+                    </span>
+                </div>
+                <div class="message-body" id="message-body-{{ message._id }}" hidden>
+                    <p class="message-text">{{ message.message }}</p>
+                    <div class="message-actions">
+                        <a class="admin-btn admin-btn-small" href="mailto:{{ message.email }}?subject={{ ('Re: your message to ' ~ site.general.short_name)|urlencode }}">
+                            <i data-lucide="reply" aria-hidden="true"></i> Reply by email</a>
+                        <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-message-action="read"
+                            {% if message.status == 'read' %}hidden{% endif %}>Mark read</button>
+                        <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-message-action="new"
+                            {% if message.status == 'new' %}hidden{% endif %}>Mark unread</button>
+                        <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-message-action="archive"
+                            {% if message.status == 'archived' %}hidden{% endif %}>Archive</button>
+                        <button type="button" class="admin-btn admin-btn-danger admin-btn-small" data-message-action="delete">Delete</button>
+                        <span class="message-received">Received {{ message.display_date }}</span>
+                    </div>
+                </div>
+            </article>
+            {% else %}
+            {{ empty('mail', 'No messages yet', 'Messages sent from the contact page appear here.') }}
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="admin-card" id="newsletterCard">
+        {% call card_head('send', 'Newsletter', subscriber_count) %}
+        <a class="admin-btn admin-btn-small" href="{{ url_for('admin_subscribers_csv') }}" download>
+            <i data-lucide="download" aria-hidden="true"></i> Export CSV</a>
+        {% endcall %}
+        <p class="form-hint">People who signed up in the site footer. The CSV includes each person's unsubscribe link;
+            put it in every email you send.</p>
+        {% if subscribers %}
+        <details class="subscriber-details">
+            <summary>Show the list{% if subscriber_count > subscribers_shown %} (newest {{ subscribers_shown }}){% endif %}</summary>
+            <label class="visually-hidden" for="subscribers_filter">Search subscribers</label>
+            <input type="search" id="subscribers_filter" class="panel-filter" placeholder="Search addresses…">
+            <ul class="subscriber-list">
+                {% for sub in subscribers %}
+                <li class="subscriber-item" data-subscriber-id="{{ sub._id }}">
+                    <span class="subscriber-email">{{ sub.email }}</span>
+                    <small>{{ sub.created_at.strftime('%b %d, %Y') if sub.created_at else '' }}</small>
+                    <button type="button" class="icon-btn icon-btn--danger" data-action="remove-subscriber"
+                        data-email="{{ sub.email }}" aria-label="Remove {{ sub.email }}"><i data-lucide="user-minus" aria-hidden="true"></i></button>
+                </li>
+                {% endfor %}
+            </ul>
+        </details>
+        {% else %}
+        <p class="list-empty">No one has signed up yet.</p>
+        {% endif %}
+    </div>
+</section>

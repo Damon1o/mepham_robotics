@@ -1,17 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Mepham Robotics Club | Build. Code. Compete.{% endblock %}
-{% block meta_description %}Mepham Robotics Club (Team 77628) — Building robots, coding futures, and competing in VEX
-Robotics. Join the legacy.{% endblock %}
+{% block title %}{{ site.general.club_name }} | {{ site.general.tagline }}{% endblock %}
+{% block meta_description %}{{ site.home.meta_description }}{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/index.css') }}">
 {% endblock %}
 
 {% from "partials/picture.html" import picture %}
+{% from "partials/site_macros.html" import hero_attrs %}
+{% set home = site.home %}
 {% block content %}
 <!-- HERO SECTION -->
-<div class="hero-image">
+<div {{ hero_attrs(home.hero_image) }}>
     {{ picture('photos/carousel2', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--l1', decorative=True) }}
     {{ picture('photos/carousel1', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--l2', decorative=True) }}
     {{ picture('photos/carousel3', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--l3', decorative=True) }}
@@ -21,20 +22,27 @@ Robotics. Join the legacy.{% endblock %}
     {{ picture('photos/carousel10', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--r3', decorative=True) }}
     {{ picture('photos/carousel5', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--r4', decorative=True) }}
     <div class="hero-content">
-        <h1>Mepham Robotics</h1>
-        <p>Build. Code. Compete.</p>
+        <h1>{{ home.hero_title }}</h1>
+        {% if home.hero_tagline %}<p>{{ home.hero_tagline }}</p>{% endif %}
+        {% if (home.cta_primary_label and home.cta_primary_url) or (home.cta_secondary_label and home.cta_secondary_url) %}
         <div class="hero-cta">
-            <a href="{{ url_for('about') }}" class="cta-button cta-primary">Learn More</a>
-            <a href="{{ url_for('donate') }}" class="cta-button cta-secondary">Support Us</a>
+            {% if home.cta_primary_label and home.cta_primary_url %}
+            <a href="{{ home.cta_primary_url }}" class="cta-button cta-primary">{{ home.cta_primary_label }}</a>
+            {% endif %}
+            {% if home.cta_secondary_label and home.cta_secondary_url %}
+            <a href="{{ home.cta_secondary_url }}" class="cta-button cta-secondary">{{ home.cta_secondary_label }}</a>
+            {% endif %}
         </div>
+        {% endif %}
     </div>
     <div class="scroll-indicator"></div>
 </div>
 
 <!-- COUNTDOWN SECTION -->
+{% if home.countdown_mode == 'always' or (home.countdown_mode == 'scheduled' and competition) %}
 <section class="countdown-section fade-in-section">
     <div class="text-center">
-        <h2 class="ripple countdown-heading">Next Competition In:</h2>
+        <h2 class="ripple countdown-heading">{{ home.countdown_heading }}</h2>
     </div>
     <div class="countdown-container">
         <div class="countdown-item">
@@ -59,15 +67,16 @@ Robotics. Join the legacy.{% endblock %}
     <span class="visually-hidden" data-countdown-date="{{ competition.date.isoformat() }}"></span>
     {% endif %}
 </section>
+{% endif %}
 
 <section class="timeline">
-    <h2>Upcoming Events</h2>
+    <h2>{{ home.events_heading }}</h2>
     <div class="timeline-wrapper">
         {% for event in upcoming_events %}
         <div class="timeline-card">
             <div class="date-pill">{{ event.month }} {{ event.day }}</div>
             <div class="timeline-content">
-                <h3>{{ event.name }}</h3>
+                <h3>{% if event.link %}<a class="timeline-link" href="{{ event.link }}" target="_blank" rel="noopener">{{ event.name }}</a>{% else %}{{ event.name }}{% endif %}</h3>
                 <div class="info-row">
                     <p class="location">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -92,12 +101,13 @@ Robotics. Join the legacy.{% endblock %}
         </div>
         {% endfor %}
         {% if not upcoming_events %}
-        <p class="timeline-empty">No upcoming events scheduled at this time. Check back soon!</p>
+        <p class="timeline-empty">{{ home.events_empty }}</p>
         {% endif %}
     </div>
 </section>
 
 <!-- STATS SECTION -->
+{% if home.show_stats %}
 <section class="stats-section fade-in-section">
     <div class="stats-container">
         <div class="stat-item">
@@ -118,17 +128,21 @@ Robotics. Join the legacy.{% endblock %}
         </div>
     </div>
 </section>
+{% endif %}
 
 <!-- PHOTO CAROUSEL -->
-{% with carousel_title="Team Gallery" %}{% include "partials/photo_carousel.html" %}{% endwith %}
+{% if home.show_gallery %}
+{% with carousel_title=home.gallery_heading %}{% include "partials/photo_carousel.html" %}{% endwith %}
+{% endif %}
 
 <!-- DONATION CTA -->
+{% if home.show_donate %}
 <section class="donation-cta fade-in-section">
     <div class="donate-container">
-        <h2 class="ripple">Want to Support Us?</h2>
-        <p>Your donation helps us compete at the highest level, acquire new parts, and continue building innovative
-            robots.</p>
-        <a href="{{ url_for('donate') }}" class="cta-donate-btn">Donate Now</a>
+        <h2 class="ripple">{{ home.donate_heading }}</h2>
+        {% if home.donate_body %}<p>{{ home.donate_body }}</p>{% endif %}
+        <a href="{{ url_for('donate') }}" class="cta-donate-btn">{{ home.donate_button }}</a>
     </div>
 </section>
+{% endif %}
 {% endblock %}

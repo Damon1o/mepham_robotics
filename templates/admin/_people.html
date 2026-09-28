@@ -1,0 +1,248 @@
+{% from "admin/_macros.html" import card_head, empty %}
+<section class="admin-panel" data-panel="users" id="panel-users" role="tabpanel" aria-labelledby="tab-users"
+    tabindex="0" hidden>
+
+    {% if pending_users %}
+    <div class="admin-card approvals-card" id="approvals">
+        {{ card_head('user-check', 'Pending approval', pending_users|length) }}
+        <p class="form-hint">Pick a role and a team, then approve. If this person is already on a roster without a
+            login, choose their name under <em>Claim a roster card</em> so they don't end up listed twice.</p>
+        <div class="approval-list">
+            {% for u in pending_users %}
+            <article class="approval-item" data-user-id="{{ u._id }}">
+                <div class="user-avatar" aria-hidden="true">{{ (u.full_name or u.username)|initials }}</div>
+                <div class="approval-who">
+                    <strong data-display-name>{{ u.full_name or u.username }}</strong>
+                    <small>@{{ u.username }} · {{ u.email }}{% if u.requested_ago %} · asked {{ u.requested_ago }}{% endif %}</small>
+                </div>
+                <label class="visually-hidden" for="ap-role-{{ u._id }}">Role for {{ u.username }}</label>
+                <select id="ap-role-{{ u._id }}" data-approve-role>
+                    <option value="member" selected>Member</option>
+                    <option value="editor">Editor</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <label class="visually-hidden" for="ap-team-{{ u._id }}">Team for {{ u.username }}</label>
+                <select id="ap-team-{{ u._id }}" data-approve-team>
+                    <option value="">No team yet</option>
+                    <optgroup label="Add to a team">
+                        {% for id, label in team_choices %}
+                        <option value="{{ id }}" {% if u.requested_team == id %}selected{% endif %}>{{ label }}{% if u.requested_team == id %} (requested){% endif %}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% if claimable %}
+                    <optgroup label="Claim a roster card">
+                        {% for member_id, label in claimable %}
+                        <option value="claim:{{ member_id }}">{{ label }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
+                </select>
+                <div class="approval-actions">
+                    <button type="button" class="admin-btn admin-btn-success admin-btn-small" data-action="approve-user">
+                        <i data-lucide="check" aria-hidden="true"></i> Approve</button>
+                    <button type="button" class="admin-btn admin-btn-danger admin-btn-small" data-action="reject-user"
+                        data-username="{{ u.username }}">Reject</button>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="admin-card" id="roster">
+        {{ card_head('columns-3', 'Team rosters') }}
+        <p class="form-hint">Drag people between teams, or use <em>Move to</em> on a card (keyboard and phone
+            friendly). Every move can be undone from the message that pops up. Cards marked
+            <span class="no-login-chip">no login</span> can be linked to an account with <em>Link login</em>.</p>
+        {% if board %}
+        <div class="roster-board" id="rosterBoard">
+            {% for col in board %}
+            <section class="roster-col" data-team-id="{{ col._id }}" aria-label="{{ col.label }} roster">
+                <header class="roster-col-head">
+                    <span class="roster-col-title"><strong>{{ col.label }}</strong>
+                        {% if col.nickname %}<small>{{ col.nickname }}</small>{% endif %}
+                        {% if col.hidden %}<small class="hidden-chip">hidden from menu</small>{% endif %}</span>
+                    <span class="roster-count">{{ col.cards|length }}</span>
+                </header>
+                <ul class="roster-drop" role="list">
+                    {% for c in col.cards %}
+                    <li class="roster-card" draggable="true" data-member-id="{{ c.member_id }}"{% if c.user_id %} data-user-id="{{ c.user_id }}"{% endif %} data-name="{{ c.name }}">
+                        <span class="roster-avatar" aria-hidden="true">{{ c.name|initials }}</span>
+                        <span class="roster-text">
+                            <strong>{{ c.name }}</strong>
+                            <small data-card-meta>{{ c.role or 'Member' }}{% if c.username %} · @{{ c.username }}{% elif not c.user_id %} · <span class="no-login-chip">no login</span>{% endif %}</small>
+                        </span>
+                        <div class="roster-card-controls">
+                            <select class="roster-move" aria-label="Move {{ c.name }} to">
+                                <option value="" selected disabled>Move to…</option>
+                                {% for id, label in team_choices if id != col._id %}<option value="{{ id }}">{{ label }}</option>{% endfor %}
+                                {% if c.user_id %}<option value="none">Unassigned</option>{% endif %}
+                            </select>
+                            {% if not c.user_id and unassigned %}
+                            <select class="roster-link" aria-label="Link a login to {{ c.name }}">
+                                <option value="" selected disabled>Link login…</option>
+                                {% for u in unassigned %}<option value="{{ u._id }}">{{ u.full_name or u.username }} (@{{ u.username }})</option>{% endfor %}
+                            </select>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <a class="roster-col-link" href="{{ url_for('manage_team', team_id=col._id) }}">
+                    <i data-lucide="pencil" aria-hidden="true"></i> Edit team page</a>
+            </section>
+            {% endfor %}
+            <section class="roster-col roster-col--unassigned" data-team-id="" aria-label="Unassigned accounts">
+                <header class="roster-col-head">
+                    <span class="roster-col-title"><strong>Unassigned</strong><small>Accounts not on any roster</small></span>
+                    <span class="roster-count">{{ unassigned|length }}</span>
+                </header>
+                <ul class="roster-drop" role="list">
+                    {% for u in unassigned %}
+                    <li class="roster-card" draggable="true" data-user-id="{{ u._id }}" data-name="{{ u.full_name or u.username }}">
+                        <span class="roster-avatar" aria-hidden="true">{{ (u.full_name or u.username)|initials }}</span>
+                        <span class="roster-text">
+                            <strong>{{ u.full_name or u.username }}</strong>
+                            <small data-card-meta>@{{ u.username }} · {{ u.role }}</small>
+                        </span>
+                        <div class="roster-card-controls">
+                            <select class="roster-move" aria-label="Move {{ u.username }} to">
+                                <option value="" selected disabled>Move to…</option>
+                                {% for id, label in team_choices %}<option value="{{ id }}">{{ label }}</option>{% endfor %}
+                            </select>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        </div>
+        {% else %}
+        {{ empty('columns-3', 'No teams yet', 'Create a team on the Teams tab, then put people on it here.') }}
+        {% endif %}
+    </div>
+
+    <div class="admin-card" id="user_form_card">
+        {% call card_head('key-round', 'Accounts', users|length) %}
+        <div class="role-summary">
+            <span class="role-badge admin">{{ users|selectattr('role', 'equalto', 'admin')|list|length }} admin</span>
+            <span class="role-badge editor">{{ users|selectattr('role', 'equalto', 'editor')|list|length }} editor</span>
+            <span class="role-badge member">{{ users|selectattr('role', 'equalto', 'member')|list|length }} member</span>
+        </div>
+        {% endcall %}
+        <p class="form-hint"><strong>Members</strong> edit their own team page, <strong>editors</strong> edit every
+            team page, <strong>admins</strong> run this dashboard.</p>
+
+        {% if reset_link %}
+        <div class="reset-link-box" role="status">
+            <p class="reset-link-label">Reset link for <strong>{{ reset_link_user }}</strong> (valid 1 hour, single use).
+                Send it to them privately:</p>
+            <div class="reset-link-row">
+                <input type="text" id="reset_link_output" class="reset-link-input" value="{{ reset_link }}" readonly
+                    data-action="select-all" aria-label="Generated reset link">
+                <button type="button" class="admin-btn admin-btn-small" data-action="copy-reset-link">
+                    <i data-lucide="copy" aria-hidden="true"></i> Copy</button>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="list-toolbar">
+            <label class="visually-hidden" for="users_filter">Filter accounts</label>
+            <input type="search" id="users_filter" class="panel-filter" placeholder="Filter by name, username or email…">
+            <label class="visually-hidden" for="users_role_filter">Filter accounts by role</label>
+            <select id="users_role_filter" class="toolbar-select">
+                <option value="">All roles</option>
+                <option value="admin">Admins</option>
+                <option value="editor">Editors</option>
+                <option value="member">Members</option>
+            </select>
+        </div>
+
+        <div class="data-list user-list">
+            {% for user in users %}
+            <div class="data-item user-item" data-role="{{ user.role }}">
+                <div class="user-avatar" aria-hidden="true">{{ (user.full_name or user.username)|initials }}</div>
+                <div class="user-info">
+                    <strong class="user-name">{{ user.full_name or user.username }}
+                        {% if user.username == session.user %}<span class="you-chip">you</span>{% endif %}</strong>
+                    <small class="user-meta">@{{ user.username }} · {{ user.email or 'no email' }}</small>
+                </div>
+                <div class="data-item-actions">
+                    <label class="visually-hidden" for="role-{{ user._id }}">Role for {{ user.username }}</label>
+                    <select id="role-{{ user._id }}" class="role-inline role-badge {{ user.role }}"
+                        data-role-user-id="{{ user._id }}" data-current="{{ user.role }}">
+                        {% for r in ['member', 'editor', 'admin'] %}
+                        <option value="{{ r }}" {% if user.role == r %}selected{% endif %}>{{ r|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="icon-btn" title="Edit account"
+                        data-id="{{ user._id }}" data-username="{{ user.username }}" data-full-name="{{ user.full_name or '' }}"
+                        data-email="{{ user.email }}" data-role="{{ user.role }}"
+                        data-update-url="{{ url_for('admin_update_user', id=user._id) }}"
+                        aria-label="Edit account: {{ user.username }}" data-action="edit-user"><i data-lucide="pencil" aria-hidden="true"></i></button>
+                    <form action="{{ url_for('admin_generate_reset_link', id=user._id) }}" method="POST" class="form-flush">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="icon-btn" title="Make a password reset link"
+                            aria-label="Make a password reset link for {{ user.username }}"><i data-lucide="key-round" aria-hidden="true"></i></button>
+                    </form>
+                    {% if user.username != session.user %}
+                    <form action="{{ url_for('admin_delete_user', id=user._id) }}" method="POST" class="form-flush"
+                        data-confirm-delete="account" data-confirm-name="{{ user.username }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="icon-btn icon-btn--danger" title="Delete account"
+                            aria-label="Delete account: {{ user.username }}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+                    </form>
+                    {% else %}
+                    <span class="icon-btn-spacer" aria-hidden="true"></span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <details class="manual-add" id="userFormDetails">
+            <summary id="user_form_title">Add someone manually</summary>
+            <p class="form-hint">Usually easier: send people to <strong>{{ url_for('signup', _external=True) }}</strong>
+                and approve them above.</p>
+            <form action="{{ url_for('admin_create_user') }}" data-default-action="{{ url_for('admin_create_user') }}"
+                method="POST" id="userForm" class="form-grid" autocomplete="off">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <div class="field-group">
+                    <label for="full_name">Full name</label>
+                    <input type="text" id="full_name" name="full_name" maxlength="100" placeholder="Shown on rosters" autocomplete="off">
+                </div>
+                <div class="field-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="3-32 letters, numbers, . _ -"
+                        pattern="[A-Za-z0-9_.\-]{3,32}" autocomplete="off" required>
+                </div>
+                <div class="field-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="user@example.com" autocomplete="off">
+                </div>
+                <div class="field-group">
+                    <label for="role">Role</label>
+                    <select id="role" name="role">
+                        <option value="member">Member (edits own team)</option>
+                        <option value="editor">Editor (edits every team)</option>
+                        <option value="admin">Admin (full access)</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="At least 8 characters"
+                        autocomplete="new-password" required>
+                    <small class="form-hint" id="password_hint">Minimum 8 characters</small>
+                </div>
+                <div class="field-group">
+                    <label for="confirm_password">Confirm password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Type it again"
+                        autocomplete="new-password">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="user_submit" class="admin-btn admin-btn-success">Create account</button>
+                    <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-user">Cancel</button>
+                </div>
+            </form>
+        </details>
+    </div>
+</section>

@@ -1,0 +1,39 @@
+{% from "admin/_macros.html" import card_head %}
+<section class="admin-panel" data-panel="site" id="panel-site" role="tabpanel" aria-labelledby="tab-site"
+    tabindex="0" hidden>
+    <div class="admin-card site-intro">
+        {% call card_head('panels-top-left', 'Site content') %}
+        <a class="admin-btn admin-btn-small" href="{{ url_for('admin_site') }}">
+            <i data-lucide="pencil" aria-hidden="true"></i> Open the site editor</a>
+        {% endcall %}
+        <p class="form-hint">Change the words, links, photos and sections on the public pages without touching code.
+            Everything saves as you type, and each setting can be put back to the original.</p>
+        <div class="announcement-status{% if announcement_on %} is-on{% endif %}">
+            <i data-lucide="megaphone" aria-hidden="true"></i>
+            {% if announcement_on %}
+            <span><strong>Announcement is showing:</strong> {{ announcement.text|truncate(90) }}</span>
+            {% elif announcement.enabled and announcement.text %}
+            <span><strong>Announcement is scheduled</strong> but outside its show window right now.</span>
+            {% else %}
+            <span>No announcement is showing.</span>
+            {% endif %}
+            <a class="admin-btn admin-btn-secondary admin-btn-small" href="{{ url_for('admin_site') }}#announcement">
+                {{ 'Edit' if announcement.text else 'Post one' }}</a>
+        </div>
+    </div>
+
+    <div class="site-grid">
+        {% for sec in site_summary %}
+        <a class="site-tile" href="{{ url_for('admin_site') }}#{{ sec.key }}">
+            <i data-lucide="{{ sec.icon }}" aria-hidden="true"></i>
+            <span class="site-tile-text">
+                <strong>{{ sec.title }}</strong>
+                <small>{{ sec.blurb }}</small>
+            </span>
+            {% if sec.custom %}
+            <span class="count-chip" title="Settings changed from the original">{{ sec.custom }} changed</span>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</section>

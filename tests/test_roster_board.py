@@ -36,11 +36,12 @@ def test_move_member_between_teams_keeps_their_details(admin, db, teams):
     assert moved[0]['member_id'] == 'm1'
 
 
-def test_move_member_to_unassigned_removes_them(admin, db, teams):
+def test_member_without_a_login_cannot_be_sent_to_unassigned(admin, db, teams):
+    """Unassigned lists accounts, so a no-login card sent there used to vanish (and Undo 404'd)."""
     d, _ = teams
     resp = admin.post('/admin/api/roster/move', json={'member_id': 'm1', 'to_team_id': None})
-    assert resp.status_code == 200
-    assert _members(db, d) == []
+    assert resp.status_code == 400 and resp.is_json
+    assert [m['member_id'] for m in _members(db, d)] == ['m1']
 
 
 def test_drop_user_account_onto_team_creates_linked_member(admin, db, teams, make_user):

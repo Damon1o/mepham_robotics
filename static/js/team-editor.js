@@ -76,16 +76,23 @@
     // --- Single fields -------------------------------------------------------------
 
     // A radio group (segmented control) saves as one field; its saved value lives on the group.
+    // A checkbox (switch) saves true/false.
+    const currentValue = input => (input.type === 'checkbox' ? String(input.checked) : input.value);
+
     function savedValue(input) {
         return input.type === 'radio' ? input.closest('[role="radiogroup"]').dataset.saved : input.dataset.saved;
     }
 
     function setSaved(input) {
         if (input.type === 'radio') input.closest('[role="radiogroup"]').dataset.saved = input.value;
-        else input.dataset.saved = input.value;
+        else input.dataset.saved = currentValue(input);
     }
 
     function revert(input) {
+        if (input.type === 'checkbox') {
+            input.checked = input.dataset.saved === 'true';
+            return;
+        }
         if (input.type !== 'radio') {
             input.value = input.dataset.saved;
             return;
@@ -95,11 +102,12 @@
     }
 
     function saveField(input) {
-        if (input.value === savedValue(input)) return;
+        if (currentValue(input) === savedValue(input)) return;
         const memberCard = input.closest('[data-member-id]');
+        const value = input.type === 'checkbox' ? input.checked : input.value;
         const request = memberCard
-            ? post(`/member/${memberCard.dataset.memberId}`, { field: input.dataset.memberField, value: input.value })
-            : post('/field', { field: input.dataset.autosave, value: input.value });
+            ? post(`/member/${memberCard.dataset.memberId}`, { field: input.dataset.memberField, value })
+            : post('/field', { field: input.dataset.autosave, value });
         const target = input.type === 'radio' ? input.closest('[role="radiogroup"]') : input;
         track(target, request)
             .then(data => {
@@ -123,7 +131,7 @@
     const FIELD = '[data-autosave], [data-member-field]';
 
     root.querySelectorAll(FIELD).forEach(input => {
-        if (input.type !== 'radio') input.dataset.saved = input.value;
+        if (input.type !== 'radio') input.dataset.saved = currentValue(input);
         else if (input.checked) setSaved(input);
     });
 
@@ -215,6 +223,7 @@
             .then(data => {
                 if (preview && file.type.startsWith('image/')) preview.src = data.url;
                 if (filename) filename.textContent = file.name;
+                removeButtonFor(zone)?.removeAttribute('hidden');
             })
             .catch(() => {
                 if (filename) filename.textContent = 'Upload failed. Try again.';
@@ -242,6 +251,41 @@
         e.preventDefault();
         zone.classList.remove('is-over');
         upload(zone, e.dataTransfer.files[0]);
+    });
+
+    // --- Removing an image, the CAD model, or a member's photo ------------------------------------------
+
+    function removeButtonFor(zone) {
+        const kind = zone.dataset.upload;
+        const scope = zone.closest('[data-member-id]') || zone.closest('.image-field') || root;
+        return scope.querySelector(`[data-action="remove-image"][data-kind="${kind}"]`);
+    }
+
+    root.addEventListener('click', e => {
+        const button = e.target.closest('[data-action="remove-image"]');
+        if (!button) return;
+        const card = button.closest('[data-member-id]');
+        const kind = button.dataset.kind;
+        const zone = (card || button.closest('.image-field')).querySelector(`[data-upload="${kind}"]`);
+        const body = { kind };
+        if (card) body.member_id = card.dataset.memberId;
+        track(zone, post('/image', body, 'DELETE')).then(() => {
+            button.hidden = true;
+            const preview = zone.querySelector('.drop-zone-preview');
+            if (preview) {
+                preview.hidden = true;
+                preview.removeAttribute('src');
+            }
+            const filename = zone.querySelector('.drop-zone-filename');
+            if (filename) filename.textContent = 'Drop an .stl or browse';
+            if (card && !zone.querySelector('.member-initials')) {
+                const name = card.querySelector('[data-member-field="name"]')?.value || '';
+                zone.prepend(Object.assign(document.createElement('span'), {
+                    className: 'member-initials', textContent: toInitials(name),
+                }));
+            }
+            showToast('Removed.', 'success');
+        }).catch(() => {});
     });
 
     // --- Roster: add and remove (editors and admins) -------------------------------------------------------

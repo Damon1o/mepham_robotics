@@ -139,7 +139,7 @@ def test_reject_deletes_the_request(admin, db):
 
 def test_reject_refuses_active_accounts(admin, db, make_user):
     user = make_user(username='active-one', email='a1@example.com')
-    assert admin.post(f"/admin/api/users/{user['_id']}/reject").status_code == 400
+    assert admin.post(f"/admin/api/users/{user['_id']}/reject").status_code == 409
     assert db['users'].find_one({'_id': user['_id']})
 
 

@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Donate | Mepham Robotics Club{% endblock %}
-{% block meta_description %}Support Mepham Robotics (Team 77628) through donations or corporate sponsorship. Help us
-build the future.{% endblock %}
+{% block title %}Donate | {{ site.general.club_name }}{% endblock %}
+{% block meta_description %}{{ site.donate.meta_description }}{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/donate.css') }}">
 {% endblock %}
 
+{% set donate = site.donate %}
 {% block content %}
 <div class="hero-image">
     <div class="hero-content">
-        <h1>Support Us</h1>
-        <p>Help Build The Future</p>
+        <h1>{{ donate.hero_title }}</h1>
+        {% if donate.hero_tagline %}<p>{{ donate.hero_tagline }}</p>{% endif %}
         <div class="hero-cta">
             <a href="#donate" class="cta-button cta-primary">Donate Now</a>
             <a href="{{ url_for('about') }}" class="cta-button cta-secondary">Our Impact</a>
@@ -31,12 +31,11 @@ build the future.{% endblock %}
 <section id="donate" class="fade-in-section">
     <div class="donation-container">
         <div class="text-center">
-            <h2 class="ripple">Support Our Mission</h2>
-            <h4>Every Donation Makes a Difference</h4>
+            <h2 class="ripple">{{ donate.intro_heading }}</h2>
+            {% if donate.intro_subheading %}<h4>{{ donate.intro_subheading }}</h4>{% endif %}
         </div>
 
-        <p>Your generous donation helps us compete at the highest level, purchase new parts and equipment, travel to
-            competitions, and continue building innovative robots that push the boundaries of what's possible.</p>
+        {% if donate.intro_body %}<p>{{ donate.intro_body }}</p>{% endif %}
 
         <!-- Givebutter Embed -->
         <div class="givebutter-container">
@@ -53,81 +52,56 @@ build the future.{% endblock %}
             {% endif %}
         </div>
 
+        {% if donate.note %}
         <div class="text-center donate-note">
-            <p class="donate-note-text">
-                Mepham Robotics Club is a registered student organization. All donations go directly to supporting
-                our teams.
-            </p>
+            <p class="donate-note-text">{{ donate.note }}</p>
         </div>
+        {% endif %}
     </div>
 </section>
 
 <!-- DONATION TIERS -->
+{% if donate.tiers %}
 <section class="donation-tiers fade-in-section">
-    <h2 class="ripple">Sponsorship Levels</h2>
+    <h2 class="ripple">{{ donate.tiers_heading }}</h2>
     <div class="tiers-grid">
-        <div class="tier-card bronze">
+        {% for tier in donate.tiers %}
+        <div class="tier-card {{ tier.colour }}">
             <i data-lucide="award" class="tier-icon"></i>
-            <h3 class="tier-name">Bronze Sponsor</h3>
-            <p class="tier-amount">$50+</p>
+            <h3 class="tier-name">{{ tier.name }}</h3>
+            {% if tier.amount %}<p class="tier-amount">{{ tier.amount }}</p>{% endif %}
+            {% set benefits = tier.benefits|nl_lines %}
+            {% if benefits %}
             <ul class="tier-benefits">
-                <li>Name on website</li>
-                <li>Thank you email</li>
-                <li>Team updates newsletter</li>
+                {% for benefit in benefits %}<li>{{ benefit }}</li>{% endfor %}
             </ul>
+            {% endif %}
         </div>
-        <div class="tier-card gold">
-            <i data-lucide="award" class="tier-icon"></i>
-            <h3 class="tier-name">Gold Sponsor</h3>
-            <p class="tier-amount">$500+</p>
-            <ul class="tier-benefits">
-                <li>All Silver benefits</li>
-                <li>Logo on robot</li>
-                <li>Featured sponsor banner</li>
-                <li>Team presentation</li>
-            </ul>
-        </div>
-        <div class="tier-card silver">
-            <i data-lucide="award" class="tier-icon"></i>
-            <h3 class="tier-name">Silver Sponsor</h3>
-            <p class="tier-amount">$150+</p>
-            <ul class="tier-benefits">
-                <li>All Bronze benefits</li>
-                <li>Logo on team shirts</li>
-                <li>Social media shoutout</li>
-                <li>Invite to competitions</li>
-            </ul>
-        </div>
+        {% endfor %}
     </div>
 </section>
+{% endif %}
 
 <!-- IMPACT STATS -->
+{% if donate.show_impact and donate.impact %}
 <section class="impact-section fade-in-section">
-    <h2 class="ripple impact-heading">Your Impact</h2>
+    <h2 class="ripple impact-heading">{{ donate.impact_heading }}</h2>
     <div class="impact-grid">
+        {% for card in donate.impact %}
         <div class="impact-card">
-            <p class="impact-amount">$25</p>
-            <p class="impact-desc">Buys a VEX motor</p>
+            <p class="impact-amount">{{ card.amount }}</p>
+            <p class="impact-desc">{{ card.text }}</p>
         </div>
-        <div class="impact-card">
-            <p class="impact-amount">$50</p>
-            <p class="impact-desc">Funds team transportation</p>
-        </div>
-        <div class="impact-card">
-            <p class="impact-amount">$100</p>
-            <p class="impact-desc">Covers competition registration</p>
-        </div>
-        <div class="impact-card">
-            <p class="impact-amount">$250</p>
-            <p class="impact-desc">Supplies essential build materials</p>
-        </div>
+        {% endfor %}
     </div>
 </section>
+{% endif %}
 
 <!-- CORPORATE SPONSOR INQUIRY -->
+{% if donate.show_inquiry %}
 <section class="sponsor-inquiry-section fade-in-section">
     <div class="content-page">
-        <h2 class="ripple sponsor-inquiry-title">Become a Corporate Sponsor</h2>
+        <h2 class="ripple sponsor-inquiry-title">{{ donate.inquiry_heading }}</h2>
         <div class="sponsor-form">
             <h3>Partner with Us</h3>
             <form id="sponsorForm" novalidate>
@@ -142,10 +116,14 @@ build the future.{% endblock %}
                 <div class="form-group">
                     <label for="sponsor-level">Sponsorship Level Interest</label>
                     <select id="sponsor-level" name="level">
+                        {% for tier in donate.tiers %}
+                        <option>{{ tier.name }}{% if tier.amount %} ({{ tier.amount }}){% endif %}</option>
+                        {% else %}
                         <option>Bronze ($50+)</option>
                         <option>Silver ($150+)</option>
                         <option>Gold ($500+)</option>
                         <option>Platinum ($1000+)</option>
+                        {% endfor %}
                         <option>Custom Amount</option>
                     </select>
                 </div>
@@ -161,14 +139,19 @@ build the future.{% endblock %}
         </div>
     </div>
 </section>
+{% endif %}
 
 <!-- SPONSORS SECTION -->
 <section class="sponsors-section fade-in-section">
-    <h2 class="ripple">Our Sponsors</h2>
+    <h2 class="ripple">{{ donate.sponsors_heading }}</h2>
     <div class="sponsors-grid">
         {% for sponsor in sponsors %}
         <div class="sponsor-card">
-            <a href="{{ sponsor.website if sponsor.website else '#' }}" target="_blank" class="sponsor-card-link">
+            {% if sponsor.website %}
+            <a href="{{ sponsor.website }}" target="_blank" rel="noopener" class="sponsor-card-link">
+            {% else %}
+            <div class="sponsor-card-link">
+            {% endif %}
                 <div class="sponsor-logo">
                     {% if sponsor.logo_path %}
                     <img src="{{ get_image_url(sponsor.logo_path) }}" alt="{{ sponsor.name }}" class="sponsor-logo-img" loading="lazy" decoding="async">
@@ -178,11 +161,11 @@ build the future.{% endblock %}
                 </div>
                 <div class="sponsor-name">{{ sponsor.name }}</div>
                 <div class="sponsor-level">{{ sponsor.level }} Sponsor</div>
-            </a>
+            {% if sponsor.website %}</a>{% else %}</div>{% endif %}
         </div>
         {% endfor %}
         {% if not sponsors %}
-        <p class="sponsors-empty">Support our team and see your logo here!</p>
+        <p class="sponsors-empty">{{ donate.sponsors_empty }}</p>
         {% endif %}
     </div>
 </section>

@@ -17,17 +17,19 @@ from functools import wraps
 from bson import ObjectId
 import bcrypt
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort, g
 from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError
 import requests
 import mimetypes
 
 try:  # package import on Vercel, flat import when run from the api/ directory
-    from api import robotevents
+    from api import robotevents, site_content
 except ImportError:  # pragma: no cover
     import robotevents
+    import site_content
 
 load_dotenv()
 
@@ -122,6 +124,8 @@ app.config.update(
 # Refuse oversized request bodies before they are buffered into memory.
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
 app.config['MAX_CONTENT_LENGTH'] = MAX_UPLOAD_BYTES
+# Event times and the meeting schedule are club wall-clock time.
+CLUB_TIMEZONE = os.getenv('CLUB_TIMEZONE', 'America/New_York')
 
 @app.template_filter('collapse_ws')
 def collapse_whitespace(value):
@@ -261,86 +265,94 @@ def log_activity(activity_type, description, user=None, details=None):
     except Exception:
         logger.exception('Failed to log activity %s', activity_type)
 
-def seed_team_awards(team_number):
-    """Give a newly created team its own copy of every award category, starting at 0."""
-    if db['awards'].find_one({'team_number': team_number}):
-        return  # already seeded, don't duplicate
-    global_awards = list(db['awards'].find({'team_number': {'$exists': False}}))
-    if not global_awards:
+AWARD_STYLE_KEYS = ('title', 'icon', 'layout', 'border', 'shimmer', 'sort')
+AWARD_ORDER = [('sort', 1), ('_id', 1)]
+
+
+def _award_copy(category, team_number):
+    """A team's counter for one global award category, starting at 0."""
+    doc = {k: category.get(k) for k in AWARD_STYLE_KEYS}
+    doc.update(team_number=team_number, category_id=str(category['_id']), count=0)
+    return doc
+
+
+def link_team_award_categories():
+    """Point team award rows at their global category (matched by title) so renames reach them.
+
+    Rows made before categories were editable carry only a copy of the title.
+    Cheap to repeat: it only touches rows that still lack a category_id.
+    """
+    unlinked = list(db['awards'].find({'team_number': {'$exists': True}, 'category_id': {'$exists': False}},
+                                      {'title': 1}))
+    if not unlinked:
         return
-    new_docs = [
-        {
-            'team_number': team_number,
-            'title': a.get('title'),
-            'icon': a.get('icon'),
-            'layout': a.get('layout'),
-            'border': a.get('border'),
-            'shimmer': a.get('shimmer'),
-            'count': 0
-        }
-        for a in global_awards
-    ]
-    db['awards'].insert_many(new_docs)
+    by_title = {a.get('title'): str(a['_id']) for a in db['awards'].find({'team_number': {'$exists': False}},
+                                                                          {'title': 1})}
+    for row in unlinked:
+        if row.get('title') in by_title:
+            db['awards'].update_one({'_id': row['_id']}, {'$set': {'category_id': by_title[row['title']]}})
+
+
+def seed_team_awards(team_number):
+    """Give a team its own counter for every award category it is missing, starting at 0."""
+    link_team_award_categories()
+    have = {a.get('category_id') for a in db['awards'].find({'team_number': team_number}, {'category_id': 1})}
+    new_docs = [_award_copy(a, team_number)
+                for a in db['awards'].find({'team_number': {'$exists': False}})
+                if str(a['_id']) not in have]
+    if new_docs:
+        db['awards'].insert_many(new_docs)
+
+# type -> (icon, title, filter group). The group drives the Activity tab's filter chips.
+ACTIVITY_TYPES = {
+    'stats_update': ('📊', 'Statistics updated', 'site'),
+    'competition_add': ('📅', 'Event scheduled', 'events'),
+    'competition_update': ('✏️', 'Event updated', 'events'),
+    'competition_delete': ('🗑️', 'Event deleted', 'events'),
+    'team_add': ('🤖', 'Team added', 'teams'),
+    'team_update': ('⚙️', 'Team updated', 'teams'),
+    'team_delete': ('🗑️', 'Team deleted', 'teams'),
+    'season_add': ('🗓️', 'New season started', 'teams'),
+    'team_edit': ('✏️', 'Team page edited', 'teams'),
+    'awards_update': ('🏆', 'Awards updated', 'awards'),
+    'award_category_add': ('🏅', 'Award category added', 'awards'),
+    'award_category_update': ('🏅', 'Award category changed', 'awards'),
+    'award_category_delete': ('🗑️', 'Award category deleted', 'awards'),
+    'user_add': ('👤', 'User created', 'people'),
+    'user_update': ('👥', 'User updated', 'people'),
+    'user_delete': ('🗑️', 'User deleted', 'people'),
+    'password_reset': ('🔑', 'Password reset', 'people'),
+    'reset_link_generate': ('🔗', 'Reset link generated', 'people'),
+    'user_signup': ('🙋', 'Account requested', 'people'),
+    'user_approve': ('✅', 'Account approved', 'people'),
+    'user_reject': ('🚫', 'Account request rejected', 'people'),
+    'roster_move': ('🔀', 'Roster changed', 'people'),
+    'roster_link': ('🔗', 'Login linked to roster', 'people'),
+    'sponsor_add': ('🤝', 'Sponsor added', 'sponsors'),
+    'sponsor_update': ('💼', 'Sponsor updated', 'sponsors'),
+    'sponsor_delete': ('🗑️', 'Sponsor deleted', 'sponsors'),
+    'message_read': ('📬', 'Message read', 'messages'),
+    'message_new': ('📩', 'Message marked unread', 'messages'),
+    'message_archive': ('🗄️', 'Message archived', 'messages'),
+    'message_delete': ('🗑️', 'Message deleted', 'messages'),
+    'subscriber_remove': ('📭', 'Subscriber removed', 'messages'),
+    'subscribers_export': ('📤', 'Subscriber list exported', 'messages'),
+    'site_edit': ('🖊️', 'Site content edited', 'site'),
+}
+ACTIVITY_GROUPS = (('people', 'People'), ('teams', 'Teams'), ('events', 'Events'), ('awards', 'Awards'),
+                   ('sponsors', 'Sponsors'), ('messages', 'Messages'), ('site', 'Site'))
+
 
 def get_activity_icon(activity_type):
-    """Get appropriate icon for activity type"""
-    icons = {
-        'stats_update': '📊',
-        'competition_add': '📅',
-        'competition_update': '✏️',
-        'competition_delete': '🗑️',
-        'team_add': '🤖',
-        'team_update': '⚙️',
-        'team_delete': '🗑️',
-        'awards_update': '🏆',
-        'user_add': '👤',
-        'user_update': '👥',
-        'user_delete': '🗑️',
-        'sponsor_add': '🤝',
-        'sponsor_update': '💼',
-        'sponsor_delete': '🗑️',
-        'password_reset': '🔑',
-        'reset_link_generate': '🔗',
-        'user_signup': '🙋',
-        'user_approve': '✅',
-        'user_reject': '🚫',
-        'roster_move': '🔀',
-        'team_edit': '✏️',
-        'message_read': '📬',
-        'message_archive': '🗄️',
-        'message_delete': '🗑️',
-    }
-    return icons.get(activity_type, '📝')
+    return ACTIVITY_TYPES.get(activity_type, ('📝',))[0]
+
 
 def get_activity_title(activity_type):
-    """Get human-readable title for activity type"""
-    titles = {
-        'stats_update': 'Statistics updated',
-        'competition_add': 'Event scheduled',
-        'competition_update': 'Event updated',
-        'competition_delete': 'Event deleted',
-        'team_add': 'Team added',
-        'team_update': 'Team updated',
-        'team_delete': 'Team deleted',
-        'awards_update': 'Awards updated',
-        'user_add': 'User created',
-        'user_update': 'User updated',
-        'user_delete': 'User deleted',
-        'sponsor_add': 'Sponsor added',
-        'sponsor_update': 'Sponsor updated',
-        'sponsor_delete': 'Sponsor deleted',
-        'password_reset': 'Password reset',
-        'reset_link_generate': 'Reset link generated',
-        'user_signup': 'Account requested',
-        'user_approve': 'Account approved',
-        'user_reject': 'Account request rejected',
-        'roster_move': 'Roster changed',
-        'team_edit': 'Team page edited',
-        'message_read': 'Message read',
-        'message_archive': 'Message archived',
-        'message_delete': 'Message deleted',
-    }
-    return titles.get(activity_type, 'Activity')
+    return ACTIVITY_TYPES.get(activity_type, (None, 'Activity'))[1]
+
+
+def activity_types_in(group):
+    return [t for t, (_, _, g) in ACTIVITY_TYPES.items() if g == group]
 
 # --- MongoDB Connection (lazy) ---
 _client = None
@@ -422,10 +434,10 @@ def _load_image_manifest():
         return {}
 
 
-app.jinja_env.globals['image_manifest'] = _load_image_manifest()
+image_manifest = _load_image_manifest()
+app.jinja_env.globals['image_manifest'] = image_manifest
 
 DEFAULT_IMAGE = 'assets/other/base.png'
-DEFAULT_MEMBER_PHOTO = 'static/' + DEFAULT_IMAGE
 
 
 def get_image_url(image_path, external=False):
@@ -474,12 +486,19 @@ class LazyList:
 
 
 def load_sponsors():
+    """Every sponsor, highest tier first, then by name."""
     sponsors = []
     for sponsor in db['sponsors'].find():
         sponsor['_id'] = str(sponsor['_id'])
         sponsor['logo_path'] = sponsor.get('logo')
         sponsors.append(sponsor)
-    return sponsors
+    return sorted(sponsors, key=sponsor_sort_key)
+
+
+def listed_teams():
+    """One entry per team number for the nav, sitemap and search, skipping teams hidden in their editor."""
+    return sorted((t for t in _newest_season_docs().values() if not t.get('hidden')),
+                  key=lambda t: t.get('team_number') or '')
 
 
 @app.context_processor
@@ -488,12 +507,87 @@ def inject_global_data():
     # nav query only happens if the template iterates nav_teams; awards and
     # sponsors are loaded by the views that show them.
     return dict(
-        nav_teams=LazyList(lambda: list(
-            db['teams'].find({}, {'team_number': 1}).sort('team_number', 1))),
+        nav_teams=LazyList(listed_teams),
+        site=site(),
         get_activity_icon=get_activity_icon,
         get_activity_title=get_activity_title,
         get_image_url=get_image_url,
     )
+
+
+# --- Site content (api/site_content.py) ---------------------------------------------
+# One stored document of overrides; templates read `site.<section>.<field>`.
+
+SITE_CONTENT_ID = 'site_content'
+
+
+def _site_overrides():
+    doc = db['site_metadata'].find_one({'_id': SITE_CONTENT_ID}, {'values': 1}) or {}
+    return doc.get('values') or {}
+
+
+def site():
+    """This request's site content, read at most once and only if a template uses it."""
+    if 'site_content' not in g:
+        g.site_content = site_content.SiteContent(
+            _site_overrides, on_error=lambda: logger.exception('Site content unavailable; using defaults'))
+    return g.site_content
+
+
+app.jinja_env.filters['rich'] = site_content.rich
+app.jinja_env.filters['rich_inline'] = lambda text: site_content.rich(text, paragraphs=False)
+app.jinja_env.filters['nl_lines'] = lambda text: [line.strip() for line in (text or '').splitlines() if line.strip()]
+app.jinja_env.filters['css_url'] = site_content.css_url
+app.jinja_env.filters['short_hash'] = lambda text: hashlib.sha1(str(text).encode('utf-8')).hexdigest()[:12]
+
+# Site search (static/js/script.js). Team pages come from the nav list the page already loaded.
+SEARCH_PAGES = [
+    ('Home', 'index', 'Welcome to Mepham Robotics — VEX V5 team homepage, timeline, and stats',
+     'home robotics vex v5 team homepage mepham', False),
+    ('About Us', 'about', 'Our mission, values, history, and team culture',
+     'about mission values history team culture sub-teams diversity', False),
+    ('Achievements', 'achievements', 'Awards, competition results, and season highlights',
+     'awards achievements competitions results trophies seasons', False),
+    ('Donate', 'donate', 'Support our team through sponsorship and donations',
+     'donate sponsor support fundraising givebutter tiers', False),
+    ('Contact', 'contact', 'Get in touch — contact form, meeting schedule, and FAQ',
+     'contact email form meeting schedule faq questions', False),
+    ('Glossary', 'glossary', 'Robotics terms and definitions from A to Z',
+     'glossary terms definitions dictionary pid autonomous drivetrain', True),
+    ('Branding Guide', 'branding', 'Official team colors, fonts, and logo usage',
+     'branding colors fonts logo maroon gold style guide', True),
+    ('Design Standards', 'standards', 'Build standards, code style, and naming conventions',
+     'standards design build code style naming conventions', True),
+    ('Member Resources', 'resources', 'Guides, links, and tooling for team members',
+     'resources guides links tools members downloads', True),
+    ('Safety Quiz', 'safety_quiz', 'Interactive safety quiz — test your workshop knowledge',
+     'safety quiz test workshop lab rules ppe', False),
+    ('Engineering Notebook', 'notebook', 'Public engineering notebook — design process and logs',
+     'notebook engineering design process testing iteration', True),
+    ('Privacy Policy', 'privacy', 'How we handle your data and privacy', 'privacy policy data cookies', False),
+    ('Site Credits', 'credits_page', 'Website credits and acknowledgments',
+     'credits site acknowledgments technologies', False),
+]
+
+
+def search_index(teams):
+    """Pages the search box offers; member-only pages only to signed-in visitors."""
+    signed_in = 'user' in session
+    pages = [{'title': title, 'url': url_for(endpoint), 'desc': desc, 'keywords': keywords, 'members': members}
+             for title, endpoint, desc, keywords, members in SEARCH_PAGES if signed_in or not members]
+    pages[5:5] = [{'title': f"{t['team_number']} Team", 'url': url_for('team_page', team_number=t['team_number']),
+                   'desc': f"Team {t['team_number']}" + (f" · {t['nickname']}" if t.get('nickname') else '')
+                   + ' robot details and competition info',
+                   'keywords': f"{t['team_number']} {t.get('nickname') or ''} robot team", 'members': False}
+                  for t in teams]
+    return pages
+
+
+app.jinja_env.globals['search_index'] = search_index
+app.jinja_env.globals.update(
+    fmt_time=site_content.fmt_time, fmt_schedule=site_content.fmt_schedule,
+    social_links=site_content.social_links, announcement_live=site_content.announcement_live,
+    club_now=lambda: club_now(), club_timezone=CLUB_TIMEZONE)
 
 USER_ROLES = ('member', 'editor', 'admin')
 # Each role can do everything the roles before it can.
@@ -736,12 +830,17 @@ def _validate_contact(payload):
 def _hash_token(token):
     return hashlib.sha256(token.encode('utf-8')).hexdigest()
 
-def _build_reset_link(token):
-    """Build the absolute reset-password link for a freshly issued token."""
+def _public_url(endpoint, **values):
+    """An absolute link for use outside the site (emails, exports), honouring PUBLIC_BASE_URL."""
     public_base = os.getenv('PUBLIC_BASE_URL', '')
     if public_base:
-        return public_base.rstrip('/') + url_for('reset_password', token=token)
-    return url_for('reset_password', token=token, _external=True)
+        return public_base.rstrip('/') + url_for(endpoint, **values)
+    return url_for(endpoint, _external=True, **values)
+
+
+def _build_reset_link(token):
+    """Build the absolute reset-password link for a freshly issued token."""
+    return _public_url('reset_password', token=token)
 
 def _find_reset(token):
     _ensure_auth_indexes()
@@ -793,7 +892,7 @@ def verify_csrf():
     expected = session.get(CSRF_FIELD, '')
     submitted = _submitted_csrf_token()
     if not expected or not submitted or not hmac.compare_digest(str(submitted), expected):
-        if request.path.startswith('/api/'):
+        if _wants_json():
             return jsonify({'error': 'Your session expired. Refresh the page and try again.'}), 400
         abort(400)
     return None
@@ -801,13 +900,15 @@ def verify_csrf():
 
 @app.errorhandler(400)
 def bad_request(e):
+    if _wants_json():
+        return jsonify({'error': 'That request could not be understood.'}), 400
     return render_template('400.html'), 400
 
 
 @app.errorhandler(413)
 def payload_too_large(e):
     megabytes = MAX_UPLOAD_BYTES // (1024 * 1024)
-    if request.path.startswith('/api/'):
+    if _wants_json():
         return jsonify({'error': f'File too large (max {megabytes} MB).'}), 413
     flash(f'That file is too large. The limit is {megabytes} MB.', 'error')
     return redirect(request.referrer or url_for('index')), 302
@@ -888,7 +989,6 @@ def healthz():
 
 
 UPCOMING_EVENTS_LIMIT = 12
-CLUB_TIMEZONE = os.getenv('CLUB_TIMEZONE', 'America/New_York')
 
 
 def club_now():
@@ -908,9 +1008,7 @@ def club_now():
 
 @app.route('/')
 def index():
-    stats = db['site_metadata'].find_one({'_id': 'global_stats'}) or {
-        'teams_count': 0, 'members_count': 0, 'awards_count': 0, 'hours_built': 0
-    }
+    stats = public_stats(db['site_metadata'].find_one({'_id': 'global_stats'}))
     upcoming_events = list(db['competitions'].find(
         {'date': {'$gte': club_now()}}).sort('date', 1).limit(UPCOMING_EVENTS_LIMIT))
     for event in upcoming_events:
@@ -927,9 +1025,10 @@ def about():
 
 @app.route('/achievements')
 def achievements():
-    global_awards = list(db['awards'].find({'team_number': {'$exists': False}}).sort('_id', 1))
+    global_awards = list(db['awards'].find({'team_number': {'$exists': False}}).sort(AWARD_ORDER))
     return render_template('achievements.html', active_page='achievements',
-                           global_awards=global_awards)
+                           global_awards=global_awards,
+                           live_results=bool(os.getenv('ROBOTEVENTS_API_KEY')) and site().achievements.show_live)
 
 @app.route('/contact')
 def contact():
@@ -942,9 +1041,13 @@ CONTACT_EMAIL = os.getenv('CONTACT_EMAIL', 'mephamrobotics@gmail.com')
 def donate():
     # The embed only renders once a campaign id is configured; until then the
     # template shows an email fallback instead of a broken Givebutter frame.
+    content = site()
+    # The contact page has always shown its own address; the donation fallback
+    # used CONTACT_EMAIL. Once an admin sets the club email, both use it.
+    email = content.general.contact_email if content.is_custom('general.contact_email') else CONTACT_EMAIL
     return render_template('donate.html', active_page='donate',
-                           givebutter_campaign_id=os.getenv('GIVEBUTTER_CAMPAIGN_ID', ''),
-                           contact_email=CONTACT_EMAIL, sponsors=load_sponsors())
+                           givebutter_campaign_id=content.donate.givebutter_id,
+                           contact_email=email, sponsors=load_sponsors())
 
 @app.route('/team/<team_number>')
 def team_page(team_number):
@@ -981,7 +1084,10 @@ def team_page(team_number):
     # Kept as stored paths: the template resolves each with get_image_url.
     robot_photos = [p for photos in raw_photos.values() for p in photos][:6]
 
-    team_awards = list(db['awards'].find({'team_number': team_number}).sort('_id', 1))
+    team_awards = list(db['awards'].find({'team_number': team_number}).sort(AWARD_ORDER))
+    for award in team_awards:
+        # The awards grid builds the icon path from this; a row missing it used to 500 the page.
+        award['icon'] = award.get('icon') or AWARD_ICONS[0]
     return render_template('team.html', team=team, team_awards=team_awards,
                            event_photos=event_photos, robot_photos=robot_photos,
                            seasons=seasons, active_season=team.get('season'),
@@ -1148,33 +1254,59 @@ def _team_choices():
             .sort('team_number', 1)]
 
 
-def _find_team(team_id):
-    """The team document for a string id, or None for anything malformed or missing."""
-    if not team_id or not ObjectId.is_valid(str(team_id)):
+def _find_by_id(collection, doc_id):
+    """The document for a string id, or None for anything malformed or missing."""
+    if not doc_id or not ObjectId.is_valid(str(doc_id)):
         return None
-    return db['teams'].find_one({'_id': ObjectId(str(team_id))})
+    return db[collection].find_one({'_id': ObjectId(str(doc_id))})
+
+
+def _find_team(team_id):
+    return _find_by_id('teams', team_id)
+
+
+FULL_NAME_MAX = 100
+
+
+def _validate_account(username, email, password, confirm=None, existing=None, require_email=True,
+                      require_password=True):
+    """The first problem with these account details, or None. Shared by sign-up and the admin forms.
+
+    When editing (`existing` is the stored user) only changed fields are
+    re-checked, so an older account whose name predates the rules can still
+    have its email or role changed.
+    """
+    name_changed = existing is None or username != existing.get('username')
+    email_changed = existing is None or email != (existing.get('email') or '').lower()
+    if name_changed and not USERNAME_RE.fullmatch(username):
+        return 'Pick a username of 3-32 letters, numbers, dots, dashes or underscores.'
+    if email_changed and (email or require_email):
+        if not _looks_like_email(email) or len(email) > CONTACT_EMAIL_MAX:
+            return 'Please enter a valid email address.'
+    if password or require_password:
+        if len(password) < PASSWORD_MIN_LENGTH:
+            return f'Password must be at least {PASSWORD_MIN_LENGTH} characters.'
+        if confirm is not None and password != confirm:
+            return 'Passwords do not match.'
+    clash = []
+    if name_changed:
+        clash.append({'username': re.compile(f'^{re.escape(username)}$', re.IGNORECASE)})
+    if email and email_changed:
+        clash.append({'email': email})
+    if clash:
+        query = {'$or': clash}
+        if existing is not None:
+            query['_id'] = {'$ne': existing['_id']}
+        if db['users'].find_one(query):
+            return 'That username or email is already registered.'
+    return None
 
 
 def _validate_signup(form):
-    username = form.get('username', '').strip()
-    email = form.get('email', '').strip().lower()
-    password = form.get('password', '')
-    confirm = form.get('confirm_password', '')
-    if not USERNAME_RE.fullmatch(username):
-        return 'Pick a username of 3-32 letters, numbers, dots, dashes or underscores.'
-    if not _looks_like_email(email) or len(email) > CONTACT_EMAIL_MAX:
-        return 'Please enter a valid email address.'
-    if len(password) < PASSWORD_MIN_LENGTH:
-        return f'Password must be at least {PASSWORD_MIN_LENGTH} characters.'
-    if password != confirm:
-        return 'Passwords do not match.'
-    taken = db['users'].find_one({'$or': [
-        {'username': re.compile(f'^{re.escape(username)}$', re.IGNORECASE)},
-        {'email': email},
-    ]})
-    if taken:
-        return 'That username or email is already registered.'
-    return None
+    if len(form.get('full_name', '').strip()) > FULL_NAME_MAX:
+        return f'Your name must be {FULL_NAME_MAX} characters or fewer.'
+    return _validate_account(form.get('username', '').strip(), form.get('email', '').strip().lower(),
+                             form.get('password', ''), form.get('confirm_password', ''))
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -1202,6 +1334,9 @@ def signup():
         'status': 'pending',
         'created_at': _utcnow(),
     }
+    full_name = collapse_whitespace(request.form.get('full_name', ''))
+    if full_name:
+        user['full_name'] = full_name
     requested = _find_team(request.form.get('requested_team'))
     if requested:
         user['requested_team'] = str(requested['_id'])
@@ -1211,149 +1346,246 @@ def signup():
     return render_template('signup.html', active_page='login', submitted=True, teams=teams, form={})
 
 
-def monthly_stat_changes(since):
-    """Net change this month in each dashboard stat, from the activity log.
+# --- Club numbers ---------------------------------------------------------------
+# The homepage shows four numbers. Each of the first three can be typed in
+# ("manual") or follow the database ("auto"). The live counts are cached on
+# the global_stats document, so the homepage still reads a single document.
 
-    Grouped in the database: the old version loaded every activity since the
-    first of the month into memory, and the log is never pruned.
-    """
-    def total(field):
-        return {'$sum': {'$ifNull': [f'$details.{field}', 0]}}
+STAT_FIELDS = ('teams_count', 'members_count', 'awards_count', 'hours_built')
+AUTO_STAT_FIELDS = ('teams_count', 'members_count', 'awards_count')
+STAT_LIMITS = {'teams_count': 999, 'members_count': 9_999, 'awards_count': 9_999, 'hours_built': 1_000_000}
+STAT_LABELS = {'teams_count': 'Teams', 'members_count': 'Members', 'awards_count': 'Awards',
+               'hours_built': 'Hours built'}
 
-    rows = db['activities'].aggregate([
-        {'$match': {'timestamp': {'$gte': since}}},
-        {'$group': {
-            '_id': '$type',
-            'count': {'$sum': 1},
-            'teams_change': total('teams_change'),
-            'members_change': total('members_change'),
-            'awards_change': total('awards_change'),
-            'members_count': total('members_count'),
-            'count_change': {'$sum': {'$ifNull': [
-                '$details.count_change', {'$ifNull': ['$details.total_change', 0]}]}},
-        }},
-    ])
-    by_type = {row['_id']: row for row in rows}
 
-    def get(kind, field):
-        return by_type.get(kind, {}).get(field, 0)
+def _newest_season_docs(query=None):
+    """One team document per team number: the newest season (a missing season sorts oldest)."""
+    newest = {}
+    for team in db['teams'].find(query or {}, {'team_number': 1, 'season': 1, 'members': 1, 'nickname': 1,
+                                               'hidden': 1}):
+        number = team.get('team_number')
+        if number and (number not in newest
+                       or (team.get('season') or '') > (newest[number].get('season') or '')):
+            newest[number] = team
+    return newest
 
+
+def compute_auto_stats():
+    """Live club numbers: listed teams, people on their current rosters, and club award totals."""
+    current = _newest_season_docs({'hidden': {'$ne': True}})
+    awards = db['awards'].find({'team_number': {'$exists': False}}, {'count': 1})
     return {
-        'teams_change': (get('stats_update', 'teams_change')
-                         + get('team_add', 'count') - get('team_delete', 'count')),
-        'members_change': (get('stats_update', 'members_change')
-                           + get('team_add', 'members_count')
-                           - get('team_delete', 'members_count')
-                           + get('team_update', 'members_change')),
-        'awards_change': (get('stats_update', 'awards_change')
-                          + get('awards_update', 'count_change')),
-        'events_change': get('competition_add', 'count') - get('competition_delete', 'count'),
+        'teams_count': len(current),
+        'members_count': sum(len(t.get('members') or []) for t in current.values()),
+        'awards_count': sum(int(a.get('count') or 0) for a in awards),
     }
+
+
+def refresh_auto_stats():
+    """Recount the live numbers after anything that changes teams, rosters or awards."""
+    try:
+        auto = compute_auto_stats()
+        db['site_metadata'].update_one({'_id': 'global_stats'}, {'$set': {'auto': auto}}, upsert=True)
+        return auto
+    except Exception:
+        logger.exception('Could not refresh the automatic club numbers')
+        return None
+
+
+def public_stats(doc):
+    """The homepage numbers: typed-in values, or the live count for fields set to auto."""
+    doc = doc or {}
+    modes, auto = doc.get('modes') or {}, doc.get('auto') or {}
+    return {f: int((auto if modes.get(f) == 'auto' else doc).get(f) or 0) for f in STAT_FIELDS}
+
+
+def monthly_stat_changes(current, today=None):
+    """How far each live number moved since the first dashboard visit this month.
+
+    The first visit of a month stores a snapshot; later visits compare against
+    it. Summing the activity log instead double-counted any change an admin
+    also typed into the stats by hand.
+    """
+    today = today or _utcnow()
+    key = f"stats_snapshot_{today:%Y-%m}"
+    db['site_metadata'].update_one({'_id': key}, {'$setOnInsert': dict(current)}, upsert=True)
+    snapshot = db['site_metadata'].find_one({'_id': key}) or {}
+    return {f: current.get(f, 0) - snapshot.get(f, current.get(f, 0)) for f in current}
+
+
+MESSAGES_SHOWN = 200
+SUBSCRIBERS_SHOWN = 500
+
+
+def _message_counts():
+    counts = {'new': 0, 'read': 0, 'archived': 0}
+    for row in db['contact_messages'].aggregate([{'$group': {'_id': {'$ifNull': ['$status', 'new']},
+                                                             'n': {'$sum': 1}}}]):
+        counts[row['_id']] = counts.get(row['_id'], 0) + row['n']
+    counts['total'] = sum(counts.values())
+    return counts
+
+
+def _attention_items(pending, counts, past_events, upcoming, teams, stats_doc, auto):
+    """Short to-do list for the Overview tab: each item says what is off and where to fix it."""
+    items = []
+
+    def add(icon, text, tab, action, tone='info', target=''):
+        items.append({'icon': icon, 'text': text, 'tab': tab, 'action': action, 'tone': tone, 'target': target})
+
+    def plural(n, word):
+        return f'{n} {word}{"s" if n != 1 else ""}'
+
+    def names(numbers):
+        return ', '.join(numbers[:3]) + (' and more' if len(numbers) > 3 else '')
+
+    if pending:
+        add('user-check', f'{plural(len(pending), "sign-up")} waiting for approval', 'users', 'Review', 'alert',
+            'approvals')
+    if counts.get('new'):
+        add('mail', f'{plural(counts["new"], "unread message")}', 'messages', 'Read', 'alert')
+    if not upcoming:
+        add('calendar-plus', 'No upcoming events, so the homepage countdown says TBD', 'events', 'Add one',
+            target='event_form')
+    if past_events:
+        add('calendar-x', f'{plural(len(past_events), "past event")} still stored', 'events', 'Tidy up',
+            target='past-events')
+    unnamed = [t['team_number'] for t in teams if not t.get('nickname')]
+    if unnamed:
+        add('bot', f'{names(unnamed)} {"has" if len(unnamed) == 1 else "have"} no nickname yet', 'teams', 'Edit')
+    empty = [t['team_number'] for t in teams if not t.get('members')]
+    if empty:
+        add('users', f'{names(empty)} {"has" if len(empty) == 1 else "have"} an empty roster', 'users',
+            'Add people', target='roster')
+    modes = stats_doc.get('modes') or {}
+    drift = [STAT_LABELS[f].lower() for f in AUTO_STAT_FIELDS
+             if modes.get(f) != 'auto' and auto and stats_doc.get(f, 0) != auto.get(f, 0)]
+    if drift:
+        listed = drift[0] if len(drift) == 1 else ', '.join(drift[:-1]) + ' and ' + drift[-1]
+        add('hash', f'Homepage {listed} {"differs" if len(drift) == 1 else "differ"} from the live count',
+            'overview', 'Check',
+            target='homepage-numbers')
+    return items
 
 
 @app.route('/admin')
 @role_required('admin')
 def admin_dashboard():
     _ensure_member_ids()
-    stats = db['site_metadata'].find_one({'_id': 'global_stats'}) or {}
-    if '_id' in stats and not isinstance(stats['_id'], str):
-        stats['_id'] = str(stats['_id'])
-    all_awards = [dict(a, _id=str(a['_id'])) for a in db['awards'].find()]
-    global_awards = [a for a in all_awards if 'team_number' not in a]
-    team_awards_list = [a for a in all_awards if 'team_number' in a]
-    
-    competitions_raw = list(db['competitions'].find().sort('date', 1))
-    competitions = []
-    for c in competitions_raw:
+    _ensure_award_order()
+    auto = refresh_auto_stats() or {}
+    stats_doc = db['site_metadata'].find_one({'_id': 'global_stats'}) or {}
+    stats = public_stats(stats_doc)
+    modes = stats_doc.get('modes') or {}
+
+    # Events: upcoming first (soonest first), past newest first. Undated rows count as past.
+    now = club_now()
+    upcoming, past = [], []
+    for c in db['competitions'].find().sort('date', 1):
         c['_id'] = str(c['_id'])
-        if 'date' in c:
+        if isinstance(c.get('date'), datetime.datetime):
             c['date_str'] = c['date'].strftime('%Y-%m-%dT%H:%M')
-            c['display_date'] = c['date'].strftime('%b %d, %Y @ %I:%M %p')
-        competitions.append(c)
+            c['display_date'] = c['date'].strftime('%a %b %d, %Y · %I:%M %p')
+            c['days_away'] = (c['date'].date() - now.date()).days
+            (upcoming if c['date'] >= now else past).append(c)
+        else:
+            c['date_str'], c['display_date'] = '', 'No date'
+            past.append(c)
+    past.reverse()
+
+    live = dict(auto, events_count=len(upcoming))
+    monthly_changes = monthly_stat_changes(live)
+
     all_users = [dict(u, _id=str(u['_id']), role=u.get('role', 'member'), email=u.get('email', ''),
                       status=u.get('status', 'active'))
-                 for u in db['users'].find({}, {'username': 1, 'email': 1, 'role': 1, 'status': 1,
+                 for u in db['users'].find({}, {'username': 1, 'email': 1, 'role': 1, 'status': 1, 'full_name': 1,
                                                 'requested_team': 1, 'created_at': 1}).sort('username', 1)]
     users = [u for u in all_users if u['status'] == 'active']
     pending_users = [u for u in all_users if u['status'] == 'pending']
     for u in pending_users:
         created = u.get('created_at')
         u['requested_ago'] = get_time_ago(created) if created else ''
-    teams = []
-    for t in db['teams'].find().sort('team_number', 1):
-        t['_id'] = str(t['_id'])
-        if 'members' in t:
-            for m in t['members']:
-                if 'user_id' in m and m['user_id']:
-                    m['user_id'] = str(m['user_id'])
-                if 'photo' in m:
-                    m['photo'] = m['photo'].replace('\\', '/')
-        if 'hero_image' in t and t['hero_image']:
-            t['hero_image'] = t['hero_image'].replace('\\', '/')
-        if 'stl_path' in t and t['stl_path']:
-            t['stl_path'] = t['stl_path'].replace('\\', '/')
-        teams.append(t)
-    sponsors = load_sponsors()
 
-    # Roster board: one column per team, then every active account not on a roster.
-    usernames = {u['_id']: u['username'] for u in users}
-    rostered = set()
-    board = []
+    teams = []
+    for t in db['teams'].find().sort([('team_number', 1), ('season', -1)]):
+        t['_id'] = str(t['_id'])
+        t['members'] = t.get('members') or []
+        for m in t['members']:
+            if m.get('user_id'):
+                m['user_id'] = str(m['user_id'])
+        teams.append(t)
+    current_ids = {str(t['_id']) for t in _newest_season_docs().values()}
     for t in teams:
+        t['is_current'] = t['_id'] in current_ids
+    current_teams = [t for t in teams if t['is_current']]
+
+    # Roster board: one column per team's current season, then every active account not on a roster.
+    usernames = {u['_id']: u['username'] for u in users}
+    rostered = {str(m.get('user_id')) for t in teams for m in t['members'] if m.get('user_id')}
+    board, claimable = [], []
+    for t in current_teams:
         cards = []
-        for m in t.get('members', []):
+        for m in t['members']:
             card = _card(m)
             card['username'] = usernames.get(card['user_id'], '')
-            rostered.add(card['user_id'])
             cards.append(card)
+            if not card['user_id']:
+                claimable.append((card['member_id'], f"{t['team_number']} · {card['name']}"))
         board.append({'_id': t['_id'], 'label': _team_label(t), 'nickname': t.get('nickname') or '',
-                      'cards': cards})
+                      'hidden': bool(t.get('hidden')), 'cards': cards})
     unassigned = [u for u in users if u['_id'] not in rostered]
     team_choices = [(b['_id'], b['label']) for b in board]
 
-    # Get recent activities
-    activities = []
-    monthly_changes = {
-        'teams_change': 0,
-        'members_change': 0,
-        'awards_change': 0,
-        'events_change': 0
-    }
-
-    for a in db['activities'].find().sort('timestamp', -1).limit(10):
-        a['_id'] = str(a['_id'])
-        if 'timestamp' in a:
-            a['display_time'] = get_time_ago(a['timestamp'])
-        activities.append(a)
-
-    first_of_month = _utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    monthly_changes.update(monthly_stat_changes(first_of_month))
-
-    reset_link = session.pop('_generated_reset_link', None)
-    reset_link_user = session.pop('_generated_reset_link_user', None)
+    link_team_award_categories()
+    all_awards = [dict(a, _id=str(a['_id'])) for a in db['awards'].find().sort(AWARD_ORDER)]
+    global_awards = [a for a in all_awards if 'team_number' not in a]
+    team_awards = [{k: a.get(k) for k in ('_id', 'team_number', 'title', 'icon', 'count')}
+                   for a in all_awards if 'team_number' in a]
 
     messages = []
-    for m in db['contact_messages'].find().sort('created_at', -1).limit(200):
+    for m in db['contact_messages'].find().sort('created_at', -1).limit(MESSAGES_SHOWN):
         m['_id'] = str(m['_id'])
         created = m.get('created_at')
         m['display_date'] = created.strftime('%b %d, %Y @ %I:%M %p') if created else ''
+        m['ago'] = get_time_ago(created) if created else ''
         m['status'] = m.get('status', 'new')
         messages.append(m)
-    unread_messages = sum(1 for m in messages if m['status'] == 'new')
+    message_counts = _message_counts()
     subscriber_count = db['newsletter_subscribers'].count_documents({})
+    subscribers = [dict(s, _id=str(s['_id'])) for s in db['newsletter_subscribers'].find(
+        {}, {'email': 1, 'created_at': 1}).sort('created_at', -1).limit(SUBSCRIBERS_SHOWN)]
 
-    return render_template('admin.html', stats=stats, competitions=competitions,
-                           awards=global_awards, team_awards=team_awards_list,
-                           teams=teams, users=users, sponsors=sponsors,
-                           activities=activities, monthly_changes=monthly_changes,
-                           reset_link=reset_link, reset_link_user=reset_link_user,
-                           messages=messages, unread_messages=unread_messages,
-                           subscriber_count=subscriber_count,
-                           pending_users=pending_users, board=board, unassigned=unassigned,
-                           team_choices=team_choices,
-                           event_locations=sorted({c['location'] for c in db['competitions'].find(
-                               {'location': {'$nin': [None, '']}}, {'location': 1})}),
-                           team_number_suggestions=next_team_numbers(t.get('team_number') for t in teams))
+    activities, more_activity = activity_page()
+    overrides = _site_overrides()
+    site_summary = [{'key': sec.key, 'title': sec.title, 'icon': sec.icon, 'blurb': sec.blurb, 'page': sec.page,
+                     'custom': len(overrides.get(sec.key) or {})} for sec in site_content.SECTIONS]
+    announcement = site_content.merged(overrides)['announcement']
+    reset_link = session.pop('_generated_reset_link', None)
+    reset_link_user = session.pop('_generated_reset_link_user', None)
+
+    return render_template(
+        'admin.html', active_page='admin',
+        stats=stats, stats_doc=stats_doc, modes=modes, auto=auto, live=live, monthly_changes=monthly_changes,
+        stat_fields=STAT_FIELDS, auto_stat_fields=AUTO_STAT_FIELDS, stat_labels=STAT_LABELS,
+        stat_limits=STAT_LIMITS,
+        upcoming=upcoming, past_events=past,
+        attention=_attention_items(pending_users, message_counts, past, upcoming, current_teams,
+                                   stats_doc, auto),
+        users=users, pending_users=pending_users, board=board, unassigned=unassigned,
+        team_choices=team_choices, claimable=claimable,
+        teams=teams, current_teams=current_teams, next_season=season_options()[0],
+        awards=global_awards, team_awards=team_awards, award_icons=AWARD_ICONS, award_borders=AWARD_BORDERS,
+        award_icon_label=award_icon_label,
+        sponsors=load_sponsors(), sponsor_tiers=SPONSOR_TIERS,
+        messages=messages, message_counts=message_counts, messages_shown=MESSAGES_SHOWN,
+        subscriber_count=subscriber_count, subscribers=subscribers, subscribers_shown=SUBSCRIBERS_SHOWN,
+        activities=activities, more_activity=more_activity, activity_groups=ACTIVITY_GROUPS,
+        site_summary=site_summary, announcement=announcement,
+        announcement_on=site_content.announcement_live(announcement, club_now()),
+        reset_link=reset_link, reset_link_user=reset_link_user,
+        event_locations=sorted({c['location'] for c in db['competitions'].find(
+            {'location': {'$nin': [None, '']}}, {'location': 1})}),
+        team_number_suggestions=next_team_numbers(t.get('team_number') for t in teams))
 
 
 def next_team_numbers(numbers):
@@ -1366,48 +1598,6 @@ def next_team_numbers(numbers):
             suggestions.append(free)
     return suggestions
 
-@app.route('/admin/update-stats', methods=['POST'])
-@role_required('admin')
-def admin_update_stats():
-    try:
-        data = {
-            'teams_count': int(request.form.get('teams_count', 0)),
-            'members_count': int(request.form.get('members_count', 0)),
-            'awards_count': int(request.form.get('awards_count', 0)),
-            'hours_built': int(request.form.get('hours_built', 0))
-        }
-        # Read the old numbers *before* writing, otherwise every delta is zero.
-        prev_stats = db['site_metadata'].find_one({'_id': 'global_stats'}) or {}
-        db['site_metadata'].update_one({'_id': 'global_stats'}, {'$set': data}, upsert=True)
-        flash('Statistics updated successfully!', 'success')
-        changes = {
-            'teams_change': data['teams_count'] - prev_stats.get('teams_count', 0),
-            'members_change': data['members_count'] - prev_stats.get('members_count', 0),
-            'awards_change': data['awards_count'] - prev_stats.get('awards_count', 0),
-            'hours_change': data['hours_built'] - prev_stats.get('hours_built', 0)
-        }
-
-        log_activity(
-            'stats_update',
-            'Updated site statistics',
-            details={
-                'teams_count': data['teams_count'],
-                'members_count': data['members_count'],
-                'awards_count': data['awards_count'],
-                'hours_built': data['hours_built'],
-                'teams_change': changes['teams_change'],
-                'members_change': changes['members_change'],
-                'awards_change': changes['awards_change'],
-                'hours_change': changes['hours_change']
-            }
-        )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error updating statistics')
-        flash('Error updating statistics. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard'))
-
 def parse_event_date(value):
     try:
         return datetime.datetime.strptime((value or '').strip(), '%Y-%m-%dT%H:%M')
@@ -1415,262 +1605,51 @@ def parse_event_date(value):
         raise UserFacingError('Enter a valid event date and time.') from None
 
 
+EVENT_TEXT_MAX = 200
+
+
+def _admin_redirect(tab):
+    return redirect(url_for('admin_dashboard', _anchor=tab))
+
+
 @app.route('/admin/add-competition', methods=['POST'])
 @role_required('admin')
 def admin_add_competition():
     try:
-        date_obj = parse_event_date(request.form.get('comp_date'))
-        competition_data = {
-            'name': request.form.get('comp_name'),
-            'location': request.form.get('comp_location'),
-            'date': date_obj
+        event = {
+            'name': _clean_text(request.form.get('comp_name'), EVENT_TEXT_MAX, 'Event name', required=True),
+            'location': _clean_text(request.form.get('comp_location'), EVENT_TEXT_MAX, 'Location'),
+            'date': parse_event_date(request.form.get('comp_date')),
         }
-        db['competitions'].insert_one(competition_data)
-        flash('New competition added successfully!', 'success')
-
-        # Log activity
-        log_activity(
-            'competition_add',
-            f'Added new competition: {competition_data["name"]}',
-            details={'name': competition_data['name'], 'location': competition_data['location'],
-                    'date': competition_data['date'].strftime('%Y-%m-%d %H:%M')}
-        )
+        link = _clean_url(request.form.get('comp_link'), 'Event link')
+        if link:
+            event['link'] = link
+        db['competitions'].insert_one(event)
+        flash(f'Added {event["name"]}.', 'success')
+        log_activity('competition_add', f'Added new competition: {event["name"]}',
+                     details={'name': event['name'], 'location': event['location'],
+                              'date': event['date'].strftime('%Y-%m-%d %H:%M')})
     except UserFacingError as e:
         flash(str(e), 'error')
     except Exception:
         logger.exception('Error adding competition')
         flash('Error adding competition. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard'))
+    return _admin_redirect('events')
 
-@app.route('/admin/update-competition/<id>', methods=['POST'])
-@role_required('admin')
-def admin_edit_competition(id):
-    try:
-        date_obj = parse_event_date(request.form.get('comp_date'))
-        competition_data = {
-            'name': request.form.get('comp_name'),
-            'location': request.form.get('comp_location'),
-            'date': date_obj
-        }
-        db['competitions'].update_one({'_id': ObjectId(id)}, {'$set': competition_data})
-        flash('Event updated successfully!', 'success')
-
-        # Log activity
-        log_activity(
-            'competition_update',
-            f'Updated competition: {competition_data["name"]}',
-            details={'name': competition_data['name'], 'location': competition_data['location'],
-                    'date': competition_data['date'].strftime('%Y-%m-%d %H:%M')}
-        )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error updating event')
-        flash('Error updating event. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/delete-competition/<comp_id>', methods=['POST'])
 @role_required('admin')
 def admin_delete_competition(comp_id):
-    try:
-        # Get competition info before deleting for logging
-        competition = db['competitions'].find_one({'_id': ObjectId(comp_id)})
-        db['competitions'].delete_one({'_id': ObjectId(comp_id)})
-        flash('Competition removed.', 'success')
-
-        # Log activity
-        if competition:
-            log_activity(
-                'competition_delete',
-                f'Deleted competition: {competition.get("name", "Unknown")}',
-                details={'name': competition.get('name', 'Unknown'),
-                        'location': competition.get('location', 'Unknown')}
-            )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error deleting competition')
-        flash('Error deleting competition. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/save-team', methods=['POST'])
-@role_required('admin')
-def admin_save_team():
-    try:
-        team_id = request.form.get('team_id')
-        team_number = request.form.get('team_number')
-
-        # Handle file uploads
-        hero_image_url = None
-        stl_file_url = None
-
-        # Upload hero image if provided
-        if 'hero_image' in request.files and request.files['hero_image'].filename:
-            hero_image_url = checked_upload(
-                request.files['hero_image'], 'teams', team_number,
-                allowed=IMAGE_EXTENSIONS, stem='hero')
-
-        # Upload STL file if provided
-        if 'stl_file' in request.files and request.files['stl_file'].filename:
-            stl_file_url = checked_upload(
-                request.files['stl_file'], 'teams', team_number,
-                allowed={'stl'}, stem='model')
-
-        team_data = {
-            'team_number': team_number,
-            'nickname': request.form.get('nickname'),
-            'tagline': request.form.get('tagline'),
-            'specs': {
-                'drive_train': request.form.get('drive_train'),
-                'lift_system': request.form.get('lift_system'),
-                'intake': request.form.get('intake'),
-                'auton_consistency': request.form.get('auton_consistency')
-            },
-            'notebook_link': request.form.get('notebook_link', '#')
-        }
-
-        # Optional profile fields. A blank input stores nothing rather than an empty
-        # string or a misleading 0, so the team page can hide what was never filled in.
-        for field in ('season', 'division', 'robotevents_number'):
-            value = (request.form.get(field) or '').strip()
-            if value:
-                team_data[field] = value
-        for field in ('since', 'worlds_appearances'):
-            value = (request.form.get(field) or '').strip()
-            if value:
-                try:
-                    team_data[field] = int(value)
-                except ValueError:
-                    pass
-
-        # Add file URLs if uploaded
-        if hero_image_url:
-            team_data['hero_image'] = hero_image_url
-        if stl_file_url:
-            team_data['stl_path'] = stl_file_url
-
-        # Handle member photos
-        members = []
-        for i in form_row_indexes('member_name'):
-            member_photo_url = None
-
-            # Check if a new photo was uploaded for this member
-            member_photo_key = f'member_photo_{i}'
-            if member_photo_key in request.files and request.files[member_photo_key].filename:
-                member_photo_url = checked_upload(
-                    request.files[member_photo_key],
-                    'teams', team_number, 'members',
-                    allowed=IMAGE_EXTENSIONS,
-                    stem=request.form.get(f'member_name_{i}') or 'member')
-            else:
-                # Use existing photo path from hidden field
-                member_photo_url = request.form.get(f'member_photo_path_{i}') or DEFAULT_MEMBER_PHOTO
-
-            member = {
-                'name': request.form.get(f'member_name_{i}'),
-                'role': request.form.get(f'member_role_{i}'),
-                'user_id': request.form.get(f'member_user_{i}'),
-                'photo': member_photo_url
-            }
-
-            roles = [r.strip() for r in (request.form.get(f'member_roles_{i}') or '').split(',') if r.strip()]
-            if roles:
-                member['roles'] = roles
-            subteam = (request.form.get(f'member_subteam_{i}') or '').strip()
-            if subteam:
-                member['subteam'] = subteam
-            since = (request.form.get(f'member_since_{i}') or '').strip()
-            if since:
-                try:
-                    member['since'] = int(since)
-                except ValueError:
-                    pass
-
-            members.append(member)
-
-        team_data['members'] = members
-        team_data['goals'] = [
-            {'name': request.form.get(f'goal_name_{j}'),
-             'progress': _clamp_percent(request.form.get(f'goal_progress_{j}', 0))}
-            for j in form_row_indexes('goal_name')
-        ]
-
-        team_data['journey'] = [
-            {'date': request.form.get(f'journey_date_{k}', ''),
-             'title': request.form.get(f'journey_title_{k}', ''),
-             'description': request.form.get(f'journey_description_{k}', '')}
-            for k in form_row_indexes('journey_title')
-        ]
-
-        if team_id and len(team_id) == 24:
-            # Update existing team - handle old file deletion
-            prev_team = db['teams'].find_one({'_id': ObjectId(team_id)})
-
-            # Delete old files from blob if they're being replaced
-            if prev_team:
-                if hero_image_url and 'hero_image' in prev_team and prev_team['hero_image'].startswith('http'):
-                    try:
-                        delete_from_vercel_blob(prev_team['hero_image'])
-                    except Exception:
-                        logger.exception('Error deleting old hero image')
-
-                if stl_file_url and 'stl_path' in prev_team and prev_team['stl_path'].startswith('http'):
-                    try:
-                        delete_from_vercel_blob(prev_team['stl_path'])
-                    except Exception:
-                        logger.exception('Error deleting old STL file')
-
-            db['teams'].update_one({'_id': ObjectId(team_id)}, {'$set': team_data})
-            flash(f'Team {team_number} updated!', 'success')
-
-            # Log activity for team update
-            prev_member_count = len(prev_team.get('members', [])) if prev_team else 0
-            new_member_count = len(team_data.get('members', []))
-            members_change = new_member_count - prev_member_count
-
-            log_activity(
-                'team_update',
-                f'Updated team {team_number}: {team_data.get("nickname", "")}',
-                details={
-                    'team_number': team_number,
-                    'nickname': team_data.get('nickname', ''),
-                    'members_change': members_change
-                }
-            )
-        else:
-            # Create new team
-            db['teams'].insert_one(team_data)
-            seed_team_awards(team_number)
-            flash(f'Team {team_number} created!', 'success')
-
-            # Log activity for new team
-            log_activity(
-                'team_add',
-                f'Added new team {team_number}: {team_data.get("nickname", "")}',
-                details={
-                    'team_number': team_number,
-                    'nickname': team_data.get('nickname', ''),
-                    'members_count': len(team_data.get('members', []))
-                }
-            )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error saving team')
-        flash('Error saving team. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard'))
-
-def form_row_indexes(prefix):
-    """Sorted row numbers present in the form for `<prefix>_<n>` fields.
-
-    The dashboard numbers member and goal rows as it creates them, and deleting
-    a row leaves a gap. Reading `0, 1, 2, ...` until the first missing number
-    silently dropped every row after a deleted one, so collect what is there.
-    """
-    pattern = re.compile(rf'{re.escape(prefix)}_(\d+)')
-    found = {int(m.group(1)) for key in request.form
-             if (m := pattern.fullmatch(key))}
-    return sorted(found)
+    competition = _find_by_id('competitions', comp_id)
+    if not competition:
+        flash('That event no longer exists.', 'error')
+        return _admin_redirect('events')
+    db['competitions'].delete_one({'_id': competition['_id']})
+    flash(f'Removed {competition.get("name") or "the event"}.', 'success')
+    log_activity('competition_delete', f'Deleted competition: {competition.get("name", "Unknown")}',
+                 details={'name': competition.get('name', 'Unknown'),
+                          'location': competition.get('location', 'Unknown')})
+    return _admin_redirect('events')
 
 
 def _clamp_percent(value):
@@ -1687,471 +1666,299 @@ def _team_blob_urls(team):
     return [u for u in urls if isinstance(u, str) and u.startswith('http')]
 
 
+def _blob_still_used(url):
+    """True when another team document (another season, say) still shows this file."""
+    return bool(db['teams'].find_one({'$or': [{'hero_image': url}, {'stl_path': url}, {'members.photo': url}]},
+                                     {'_id': 1}))
+
+
+def _delete_blobs(urls, why):
+    for url in urls:
+        if _blob_still_used(url):
+            continue
+        try:
+            delete_from_vercel_blob(url)
+        except Exception:
+            logger.exception('Failed to delete blob %s for %s', url, why)
+
+
+def _park_roster_card(member, keep_photo=True):
+    """Keep a linked member's card on their account, so putting them back restores it."""
+    uid = str(member.get('user_id') or '')
+    if ObjectId.is_valid(uid):
+        card = dict(member) if keep_photo else dict(member, photo='')
+        db['users'].update_one({'_id': ObjectId(uid)}, {'$set': {'roster_card': card}})
+
+
 @app.route('/admin/delete-team/<id>', methods=['POST'])
 @role_required('admin')
 def admin_delete_team(id):
-    try:
-        # Get team info before deleting for logging
-        team = db['teams'].find_one({'_id': ObjectId(id)})
-        db['teams'].delete_one({'_id': ObjectId(id)})
-        if team:
-            # Drop the team's own award counters and blobs so nothing is orphaned.
-            db['awards'].delete_many({'team_number': team.get('team_number')})
-            for url in _team_blob_urls(team):
-                try:
-                    delete_from_vercel_blob(url)
-                except Exception:
-                    logger.exception('Failed to delete blob %s for deleted team', url)
-        flash('Team removed.', 'success')
+    team = _find_team(id)
+    if not team:
+        flash('That team no longer exists.', 'error')
+        return _admin_redirect('teams')
+    number = team.get('team_number', 'Unknown')
+    db['teams'].delete_one({'_id': team['_id']})
+    # Award counters are keyed by team number and shared by every season of it.
+    other_season = db['teams'].find_one({'team_number': number}, {'_id': 1})
+    if not other_season:
+        db['awards'].delete_many({'team_number': number})
+    for member in team.get('members', []):
+        _park_roster_card(member, keep_photo=False)
+    _delete_blobs(_team_blob_urls(team), 'a deleted team')
+    refresh_auto_stats()
+    label = _team_label(team)
+    flash(f'Removed {label}.' + (' Its award counts were kept for the other season.' if other_season else ''),
+          'success')
+    log_activity('team_delete', f'Deleted team {label}: {team.get("nickname", "")}',
+                 details={'team_number': number, 'nickname': team.get('nickname', ''),
+                          'members_count': len(team.get('members', []))})
+    return _admin_redirect('teams')
 
-        # Log activity
-        if team:
-            log_activity(
-                'team_delete',
-                f'Deleted team {team.get("team_number", "Unknown")}: {team.get("nickname", "")}',
-                details={
-                    'team_number': team.get('team_number', 'Unknown'),
-                    'nickname': team.get('nickname', ''),
-                    'members_count': len(team.get('members', []))
-                }
-            )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error deleting team')
-        flash('Error deleting team. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/update-awards', methods=['POST'])
-@role_required('admin')
-def admin_update_awards():
-    try:
-        total_change = 0
-        award_changes = []
-
-        for key, value in request.form.items():
-            if key.startswith('award_'):
-                award_id = key.replace('award_', '')
-                new_count = int(value)
-
-                # Get previous count
-                prev_award = db['awards'].find_one({'_id': ObjectId(award_id)})
-                prev_count = prev_award.get('count', 0) if prev_award else 0
-                count_change = new_count - prev_count
-
-                # Update award
-                db['awards'].update_one({'_id': ObjectId(award_id)},
-                                        {'$set': {'count': new_count}})
-
-                if count_change != 0:
-                    total_change += count_change
-                    award_changes.append({
-                        'name': prev_award.get('title', 'Unknown') if prev_award else 'Unknown',
-                        'change': count_change
-                    })
-
-        flash('Award inventory updated!', 'success')
-
-        # Log activity if there were changes
-        if total_change != 0:
-            description = f'Updated awards inventory'
-            if len(award_changes) == 1:
-                award = award_changes[0]
-                direction = "increased" if award['change'] > 0 else "decreased"
-                description = f'"{award["name"]}" count {direction} by {abs(award["change"])}'
-            elif len(award_changes) > 1:
-                description = f'Updated {len(award_changes)} awards, net change: {total_change}'
-
-            log_activity(
-                'awards_update',
-                description,
-                details={
-                    'total_change': total_change,
-                    'award_changes': award_changes,
-                    'count_change': total_change  # For monthly change calculation
-                }
-            )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error updating awards')
-        flash('Error updating awards. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/update-team-awards', methods=['POST'])
-@role_required('admin')
-def admin_update_team_awards():
-    try:
-        total_change = 0
-        team_award_changes = []
-
-        for key, value in request.form.items():
-            if key.startswith('team_award_'):
-                award_id = key.replace('team_award_', '')
-                new_count = int(value)
-
-                # Get previous count and team info
-                prev_award = db['awards'].find_one({'_id': ObjectId(award_id)})
-                prev_count = prev_award.get('count', 0) if prev_award else 0
-                count_change = new_count - prev_count
-
-                # Update award
-                db['awards'].update_one({'_id': ObjectId(award_id)},
-                                        {'$set': {'count': new_count}})
-
-                if count_change != 0:
-                    total_change += count_change
-                    team_award_changes.append({
-                        'team': prev_award.get('team_number', 'Unknown') if prev_award else 'Unknown',
-                        'award': prev_award.get('title', 'Unknown') if prev_award else 'Unknown',
-                        'change': count_change
-                    })
-
-        flash('Team awards updated successfully!', 'success')
-
-        # Log activity if there were changes
-        if total_change != 0:
-            description = f'Updated team awards'
-            if len(team_award_changes) == 1:
-                change = team_award_changes[0]
-                direction = "increased" if change['change'] > 0 else "decreased"
-                description = f'Team {change["team"]} "{change["award"]}" {direction} by {abs(change["change"])}'
-            elif len(team_award_changes) > 1:
-                description = f'Updated {len(team_award_changes)} team awards, net change: {total_change}'
-
-            log_activity(
-                'awards_update',
-                description,
-                details={
-                    'total_change': total_change,
-                    'team_award_changes': team_award_changes,
-                    'count_change': total_change  # For monthly change calculation
-                }
-            )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error updating team awards')
-        flash('Error updating team awards. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/create-user', methods=['POST'])
 @role_required('admin')
 def admin_create_user():
-    try:
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '').strip()
-        if not username or not password:
-            flash('Username and password are required.', 'error')
-            return redirect(url_for('admin_dashboard', _anchor='users'))
-        if len(password) < PASSWORD_MIN_LENGTH:
-            flash(f'Password must be at least {PASSWORD_MIN_LENGTH} characters.', 'error')
-            return redirect(url_for('admin_dashboard', _anchor='users'))
-        if db['users'].find_one({'username': username}):
-            flash('Username already exists.', 'error')
-            return redirect(url_for('admin_dashboard', _anchor='users'))
-        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        role = request.form.get('role', 'member')
-        if role not in USER_ROLES:
-            flash('Invalid role.', 'error')
-            return redirect(url_for('admin_dashboard', _anchor='users'))
-        user_data = {
-            'username': username,
-            'email': request.form.get('email', '').strip(),
-            'password': hashed,
-            'role': role
-        }
-        db['users'].insert_one(user_data)
-        flash(f'User "{username}" created successfully!', 'success')
+    form = request.form
+    username = form.get('username', '').strip()
+    email = form.get('email', '').strip().lower()
+    password = form.get('password', '')
+    role = form.get('role', 'member')
+    full_name = collapse_whitespace(form.get('full_name', ''))
+    error = ('Pick a valid role.' if role not in USER_ROLES else
+             f'Names must be {FULL_NAME_MAX} characters or fewer.' if len(full_name) > FULL_NAME_MAX else
+             _validate_account(username, email, password, form.get('confirm_password'), require_email=False))
+    if error:
+        flash(error, 'error')
+        return _admin_redirect('users')
+    user = {'username': username, 'email': email, 'role': role, 'status': 'active', 'created_at': _utcnow(),
+            'password': bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())}
+    if full_name:
+        user['full_name'] = full_name
+    db['users'].insert_one(user)
+    flash(f'Account "{username}" created. Put them on a team from the roster board.', 'success')
+    log_activity('user_add', f'Created new user: {username}', details={'username': username, 'role': role})
+    return _admin_redirect('users')
 
-        # Log activity
-        log_activity(
-            'user_add',
-            f'Created new user: {username}',
-            details={
-                'username': username,
-                'role': user_data['role']
-            }
-        )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error creating user')
-        flash('Error creating user. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard', _anchor='users'))
 
 def _other_admin_exists(user_id):
-    return db['users'].count_documents({'role': 'admin', '_id': {'$ne': user_id}}, limit=1) > 0
+    """Another admin who can actually sign in (a pending request does not count)."""
+    return db['users'].count_documents({'role': 'admin', '_id': {'$ne': user_id},
+                                        'status': {'$nin': ['pending']}}, limit=1) > 0
+
 
 @app.route('/admin/update-user/<id>', methods=['POST'])
 @role_required('admin')
 def admin_update_user(id):
-    try:
-        user = db['users'].find_one({'_id': ObjectId(id)})
-        if not user:
-            flash('User not found.', 'error')
-            return redirect(url_for('admin_dashboard', _anchor='users'))
+    user = _find_by_id('users', id)
+    if not user:
+        flash('That account no longer exists.', 'error')
+        return _admin_redirect('users')
+    form = request.form
+    username = form.get('username', '').strip()
+    email = form.get('email', '').strip().lower()
+    password = form.get('password', '')
+    role = form.get('role', 'member')
+    full_name = collapse_whitespace(form.get('full_name', ''))
+    error = ('Pick a valid role.' if role not in USER_ROLES else
+             f'Names must be {FULL_NAME_MAX} characters or fewer.' if len(full_name) > FULL_NAME_MAX else
+             _validate_account(username, email, password, form.get('confirm_password') if password else None,
+                               existing=user, require_email=False, require_password=False))
+    if not error and user.get('role') == 'admin' and role != 'admin' and not _other_admin_exists(user['_id']):
+        error = 'Cannot remove the last admin.'
+    if error:
+        flash(error, 'error')
+        return _admin_redirect('users')
 
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '').strip()
-        role = request.form.get('role', 'member')
-        if not username:
-            flash('Username is required.', 'error')
-            return redirect(url_for('admin_dashboard', _anchor='users'))
-        if password and len(password) < PASSWORD_MIN_LENGTH:
-            flash(f'Password must be at least {PASSWORD_MIN_LENGTH} characters.', 'error')
-            return redirect(url_for('admin_dashboard', _anchor='users'))
-        if role not in USER_ROLES:
-            flash('Invalid role.', 'error')
-            return redirect(url_for('admin_dashboard', _anchor='users'))
-        if db['users'].find_one({'username': username, '_id': {'$ne': user['_id']}}):
-            flash('Username already exists.', 'error')
-            return redirect(url_for('admin_dashboard', _anchor='users'))
-        if user.get('role') == 'admin' and role != 'admin' and not _other_admin_exists(user['_id']):
-            flash('Cannot remove the last admin.', 'error')
-            return redirect(url_for('admin_dashboard', _anchor='users'))
+    updates = {'username': username, 'email': email, 'role': role, 'full_name': full_name}
+    changes = [f for f in updates if (user.get(f) or '') != updates[f]]
+    if password:
+        updates['password'] = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        changes.append('password')
+    # Any change that could let an existing session act as someone else
+    # (or with a role/password it shouldn't have) invalidates that session.
+    security_relevant = any(c in ('username', 'role', 'password') for c in changes)
+    update_ops = {'$set': updates}
+    if security_relevant:
+        update_ops['$inc'] = {'session_version': 1}
+    db['users'].update_one({'_id': user['_id']}, update_ops)
 
-        updates = {
-            'username': username,
-            'email': request.form.get('email', '').strip(),
-            'role': role
-        }
-        if password:
-            updates['password'] = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
-        changes = [f for f in ('username', 'email', 'role') if user.get(f, '') != updates[f]]
-        if password:
-            changes.append('password')
-        # Any change that could let an existing session act as someone else
-        # (or with a role/password it shouldn't have) invalidates that session.
-        security_relevant = any(c in ('username', 'role', 'password') for c in changes)
-
-        update_ops = {'$set': updates}
+    # Keep the current session in sync when admins edit themselves
+    if session.get('user') == user['username']:
+        session['user'] = username
+        session['role'] = role
         if security_relevant:
-            update_ops['$inc'] = {'session_version': 1}
-        db['users'].update_one({'_id': user['_id']}, update_ops)
+            session['session_version'] = user.get('session_version', 0) + 1
 
-        # Keep the current session in sync when admins edit themselves
-        if session.get('user') == user['username']:
-            session['user'] = username
-            session['role'] = role
-            if security_relevant:
-                session['session_version'] = user.get('session_version', 0) + 1
-
-        flash(f'User "{username}" updated!', 'success')
-        log_activity(
-            'user_update',
-            f'Updated user: {username}',
-            details={'username': username, 'role': role, 'changes': changes}
-        )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error updating user')
-        flash('Error updating user. The details were logged for the site maintainer.', 'error')
+    flash(f'Saved {username}.' if changes else 'Nothing changed.', 'success')
+    if changes:
+        log_activity('user_update', f'Updated user: {username}',
+                     details={'username': username, 'role': role, 'changes': changes})
     if session.get('role') != 'admin':
         return redirect(url_for('index'))
-    return redirect(url_for('admin_dashboard', _anchor='users'))
+    return _admin_redirect('users')
+
 
 @app.route('/admin/delete-user/<id>', methods=['POST'])
 @role_required('admin')
 def admin_delete_user(id):
-    try:
-        user = db['users'].find_one({'_id': ObjectId(id)})
-        if not user:
-            flash('User not found.', 'error')
-        elif user['username'] == session.get('user'):
-            flash('You cannot delete your own account.', 'error')
-        elif user.get('role') == 'admin' and not _other_admin_exists(user['_id']):
-            flash('Cannot delete the last admin.', 'error')
-        else:
-            db['users'].delete_one({'_id': user['_id']})
-            # Unlink the account from any team member entries
-            for team in db['teams'].find({'members.user_id': id}):
-                members = [dict(mem, user_id='') if mem.get('user_id') == id else mem
-                           for mem in team['members']]
-                db['teams'].update_one({'_id': team['_id']}, {'$set': {'members': members}})
-            flash(f'User "{user["username"]}" deleted.', 'success')
-            log_activity(
-                'user_delete',
-                f'Deleted user: {user["username"]}',
-                details={'username': user['username'], 'role': user.get('role', 'member')}
-            )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error deleting user')
-        flash('Error deleting user. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard', _anchor='users'))
+    user = _find_by_id('users', id)
+    if not user:
+        flash('That account no longer exists.', 'error')
+    elif user['username'] == session.get('user'):
+        flash('You cannot delete your own account.', 'error')
+    elif user.get('role') == 'admin' and not _other_admin_exists(user['_id']):
+        flash('Cannot delete the last admin.', 'error')
+    else:
+        db['users'].delete_one({'_id': user['_id']})
+        # Keep their roster card (it is still a real person), just without the login.
+        for team in db['teams'].find({'members.user_id': id}):
+            members = [dict(mem, user_id='') if mem.get('user_id') == id else mem
+                       for mem in team['members']]
+            db['teams'].update_one({'_id': team['_id']}, {'$set': {'members': members}})
+        flash(f'Account "{user["username"]}" deleted. Their roster card stays, without a login.', 'success')
+        log_activity('user_delete', f'Deleted user: {user["username"]}',
+                     details={'username': user['username'], 'role': user.get('role', 'member')})
+    return _admin_redirect('users')
+
 
 @app.route('/admin/generate-reset-link/<id>', methods=['POST'])
 @role_required('admin')
 def admin_generate_reset_link(id):
-    try:
-        user = db['users'].find_one({'_id': ObjectId(id)})
-        if not user:
-            flash('User not found.', 'error')
-        else:
-            _ensure_auth_indexes()
-            token = secrets.token_urlsafe(32)
-            db['password_resets'].delete_many({'user_id': user['_id']})
-            db['password_resets'].insert_one({
-                'user_id': user['_id'],
-                'token_hash': _hash_token(token),
-                'created_at': _utcnow(),
-            })
-            session['_generated_reset_link'] = _build_reset_link(token)
-            session['_generated_reset_link_user'] = user['username']
-            flash(f'Reset link generated for {user["username"]}. Copy it below.', 'success')
-            log_activity(
-                'reset_link_generate',
-                f'Generated reset link for {user["username"]}',
-                details={'username': user['username']}
-            )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error generating reset link')
-        flash('Error generating reset link. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard', _anchor='users'))
+    user = _find_by_id('users', id)
+    if not user:
+        flash('That account no longer exists.', 'error')
+        return _admin_redirect('users')
+    _ensure_auth_indexes()
+    token = secrets.token_urlsafe(32)
+    db['password_resets'].delete_many({'user_id': user['_id']})
+    db['password_resets'].insert_one({'user_id': user['_id'], 'token_hash': _hash_token(token),
+                                      'created_at': _utcnow()})
+    session['_generated_reset_link'] = _build_reset_link(token)
+    session['_generated_reset_link_user'] = user['username']
+    flash(f'Reset link generated for {user["username"]}. Copy it below.', 'success')
+    log_activity('reset_link_generate', f'Generated reset link for {user["username"]}',
+                 details={'username': user['username']})
+    return _admin_redirect('users')
+
+
+MESSAGE_STATUSES = {'read': 'read', 'archive': 'archived', 'new': 'new'}
+
+
+def _apply_message_action(message, action):
+    """Mark read/unread, archive or delete one contact message. Returns the new status or 'deleted'."""
+    if action == 'delete':
+        db['contact_messages'].delete_one({'_id': message['_id']})
+        # Log the sender only - never the message body.
+        log_activity('message_delete', f'Deleted message from {message.get("email", "unknown")}',
+                     details={'message_id': str(message['_id'])})
+        return 'deleted'
+    status = MESSAGE_STATUSES[action]
+    db['contact_messages'].update_one({'_id': message['_id']}, {'$set': {'status': status}})
+    log_activity(f'message_{action}', f'Message from {message.get("email", "unknown")} marked {status}',
+                 details={'message_id': str(message['_id'])})
+    return status
+
 
 @app.route('/admin/messages/<id>/<action>', methods=['POST'])
 @role_required('admin')
 def admin_message_action(id, action):
-    """Mark a contact message read, archive it, or delete it."""
-    if action not in ('read', 'archive', 'delete'):
+    """Mark a contact message read, archive it, or delete it (no-JavaScript fallback)."""
+    if action not in MESSAGE_STATUSES and action != 'delete':
         flash('Unknown message action.', 'error')
-        return redirect(url_for('admin_dashboard', _anchor='messages'))
-    try:
-        message = db['contact_messages'].find_one({'_id': ObjectId(id)})
-        if not message:
-            flash('Message not found.', 'error')
-        elif action == 'delete':
-            db['contact_messages'].delete_one({'_id': message['_id']})
-            flash('Message deleted.', 'success')
-            # Log the sender only - never the message body.
-            log_activity('message_delete', f'Deleted message from {message.get("email", "unknown")}',
-                         details={'message_id': str(message['_id'])})
-        else:
-            status = 'read' if action == 'read' else 'archived'
-            db['contact_messages'].update_one({'_id': message['_id']}, {'$set': {'status': status}})
-            flash(f'Message marked {status}.', 'success')
-            log_activity(f'message_{action}', f'Message from {message.get("email", "unknown")} marked {status}',
-                         details={'message_id': str(message['_id'])})
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error updating message')
-        flash('Error updating message. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard', _anchor='messages'))
+        return _admin_redirect('messages')
+    message = _find_by_id('contact_messages', id)
+    if not message:
+        flash('Message not found.', 'error')
+    else:
+        result = _apply_message_action(message, action)
+        flash('Message deleted.' if result == 'deleted' else f'Message marked {result}.', 'success')
+    return _admin_redirect('messages')
+
+
+SPONSOR_TIERS = ('Platinum', 'Gold', 'Silver', 'Bronze')
+SPONSOR_NAME_MAX = 100
+
+
+def sponsor_sort_key(sponsor):
+    level = sponsor.get('level')
+    rank = SPONSOR_TIERS.index(level) if level in SPONSOR_TIERS else len(SPONSOR_TIERS)
+    return (rank, (sponsor.get('name') or '').lower())
+
 
 @app.route('/admin/save-sponsor', methods=['POST'])
 @role_required('admin')
 def admin_save_sponsor():
+    form = request.form
+    sponsor_id = form.get('sponsor_id', '').strip()
+    previous = None
     try:
-        sponsor_id = request.form.get('sponsor_id')
-        name = request.form.get('name')
-
-        # Handle logo upload
-        logo_url = None
-        if 'logo' in request.files and request.files['logo'].filename:
-            logo_url = checked_upload(
-                request.files['logo'], 'sponsors',
-                allowed=IMAGE_EXTENSIONS, stem=name or 'sponsor')
-
-        sponsor_data = {
-            'name': name,
-            'website': request.form.get('website', ''),
-            'level': request.form.get('level', 'Bronze')
-        }
-
-        # Add logo URL if uploaded
-        if logo_url:
-            sponsor_data['logo'] = logo_url
-
-        if sponsor_id and len(sponsor_id) == 24:
-            # Update existing sponsor - handle old logo deletion
-            prev_sponsor = db['sponsors'].find_one({'_id': ObjectId(sponsor_id)})
-
-            # Delete old logo from blob if it's being replaced
-            if prev_sponsor and logo_url and 'logo' in prev_sponsor and prev_sponsor['logo'].startswith('http'):
-                try:
-                    delete_from_vercel_blob(prev_sponsor['logo'])
-                except Exception:
-                    logger.exception('Error deleting old sponsor logo')
-
-            db['sponsors'].update_one({'_id': ObjectId(sponsor_id)}, {'$set': sponsor_data})
-            flash(f'Sponsor "{name}" updated!', 'success')
-
-            # Log activity
-            log_activity(
-                'sponsor_update',
-                f'Updated sponsor: {name}',
-                details={
-                    'name': name,
-                    'level': sponsor_data['level']
-                }
-            )
-        else:
-            # Create new sponsor
-            db['sponsors'].insert_one(sponsor_data)
-            flash(f'Sponsor "{name}" added!', 'success')
-
-            # Log activity
-            log_activity(
-                'sponsor_add',
-                f'Added new sponsor: {name}',
-                details={
-                    'name': name,
-                    'level': sponsor_data['level']
-                }
-            )
+        if sponsor_id:
+            previous = _find_by_id('sponsors', sponsor_id)
+            if not previous:
+                raise UserFacingError('That sponsor no longer exists. Reload the page and try again.')
+        name = _clean_text(form.get('name'), SPONSOR_NAME_MAX, 'Sponsor name', required=True)
+        website = _clean_url(form.get('website'), 'Website')
+        level = form.get('level', 'Bronze')
+        if level not in SPONSOR_TIERS:
+            raise UserFacingError('Pick a sponsorship level.')
+        data = {'name': name, 'website': website, 'level': level}
+        logo = request.files.get('logo')
+        if logo and logo.filename:
+            data['logo'] = checked_upload(logo, 'sponsors', allowed=IMAGE_EXTENSIONS, stem=name)
     except UserFacingError as e:
         flash(str(e), 'error')
+        return _admin_redirect('sponsors')
     except Exception:
         logger.exception('Error saving sponsor')
         flash('Error saving sponsor. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard'))
+        return _admin_redirect('sponsors')
+
+    old_logo = (previous or {}).get('logo')
+    remove_logo = form.get('remove_logo') == '1' and 'logo' not in data
+    if previous:
+        update = {'$set': data}
+        if remove_logo:
+            update['$unset'] = {'logo': ''}
+        db['sponsors'].update_one({'_id': previous['_id']}, update)
+        flash(f'Sponsor "{name}" updated.', 'success')
+        log_activity('sponsor_update', f'Updated sponsor: {name}', details={'name': name, 'level': level})
+    else:
+        db['sponsors'].insert_one(data)
+        flash(f'Sponsor "{name}" added.', 'success')
+        log_activity('sponsor_add', f'Added new sponsor: {name}', details={'name': name, 'level': level})
+    if isinstance(old_logo, str) and old_logo.startswith('http') and ('logo' in data or remove_logo):
+        try:
+            delete_from_vercel_blob(old_logo)
+        except Exception:
+            logger.exception('Error deleting old sponsor logo')
+    return _admin_redirect('sponsors')
+
 
 @app.route('/admin/delete-sponsor/<id>', methods=['POST'])
 @role_required('admin')
 def admin_delete_sponsor(id):
-    try:
-        # Get sponsor info before deleting for logging
-        sponsor = db['sponsors'].find_one({'_id': ObjectId(id)})
-        db['sponsors'].delete_one({'_id': ObjectId(id)})
-        logo = (sponsor or {}).get('logo')
-        if isinstance(logo, str) and logo.startswith('http'):
-            try:
-                delete_from_vercel_blob(logo)
-            except Exception:
-                logger.exception('Failed to delete logo blob %s for deleted sponsor', logo)
-        flash('Sponsor removed.', 'success')
-
-        # Log activity
-        if sponsor:
-            log_activity(
-                'sponsor_delete',
-                f'Deleted sponsor: {sponsor.get("name", "Unknown")}',
-                details={
-                    'name': sponsor.get('name', 'Unknown'),
-                    'level': sponsor.get('level', 'Unknown')
-                }
-            )
-    except UserFacingError as e:
-        flash(str(e), 'error')
-    except Exception:
-        logger.exception('Error deleting sponsor')
-        flash('Error deleting sponsor. The details were logged for the site maintainer.', 'error')
-    return redirect(url_for('admin_dashboard'))
+    sponsor = _find_by_id('sponsors', id)
+    if not sponsor:
+        flash('That sponsor no longer exists.', 'error')
+        return _admin_redirect('sponsors')
+    db['sponsors'].delete_one({'_id': sponsor['_id']})
+    logo = sponsor.get('logo')
+    if isinstance(logo, str) and logo.startswith('http'):
+        try:
+            delete_from_vercel_blob(logo)
+        except Exception:
+            logger.exception('Failed to delete logo blob %s for deleted sponsor', logo)
+    flash(f'Removed {sponsor.get("name") or "the sponsor"}.', 'success')
+    log_activity('sponsor_delete', f'Deleted sponsor: {sponsor.get("name", "Unknown")}',
+                 details={'name': sponsor.get('name', 'Unknown'), 'level': sponsor.get('level', 'Unknown')})
+    return _admin_redirect('sponsors')
 
 # --- People, roster board, inline admin edits, and the shared team editor ---
 # Everything here speaks JSON to static/js/admin.js and static/js/team-editor.js.
 # The CSRF hook covers these routes like any other POST; the browser sends the
 # token in the X-CSRF-Token header.
 
-STAT_FIELDS = ('teams_count', 'members_count', 'awards_count', 'hours_built')
-EVENT_TEXT_MAX = 200
 SUBTEAMS = ('Mechanical', 'Electrical', 'Programming', 'Notebook & Outreach')
 DIVISIONS = ('High School', 'Middle School')
 # Offered as <datalist> suggestions; people can still type anything.
@@ -2284,8 +2091,8 @@ def _card_for_user(user):
     parked = user.get('roster_card')
     if isinstance(parked, dict) and parked.get('member_id'):
         return dict(parked, user_id=str(user['_id']))
-    return {'member_id': _new_member_id(), 'name': user.get('username', ''), 'role': 'Member',
-            'user_id': str(user['_id']), 'photo': ''}
+    return {'member_id': _new_member_id(), 'name': user.get('full_name') or user.get('username', ''),
+            'role': 'Member', 'user_id': str(user['_id']), 'photo': ''}
 
 
 def _place_user_on_team(user, team):
@@ -2299,6 +2106,28 @@ def _place_user_on_team(user, team):
 
 # --- Approvals and roles ---
 
+def _is_active(user):
+    # Accounts made before sign-up existed have no status and count as active.
+    return user.get('status', 'active') == 'active'
+
+
+def _unlinked_card_team(member_id):
+    """The team holding this roster card, if the card has no login linked to it yet."""
+    return db['teams'].find_one({'members': {'$elemMatch': {'member_id': member_id,
+                                                            'user_id': {'$in': ['', None]}}}})
+
+
+def _link_card(team, member_id, user):
+    """Attach a login to a roster card that had none. The account leaves any other roster."""
+    uid = str(user['_id'])
+    _pull_user_from_rosters(uid)
+    db['teams'].update_one({'_id': team['_id'], 'members.member_id': member_id},
+                           {'$set': {'members.$.user_id': uid}})
+    db['users'].update_one({'_id': user['_id']}, {'$unset': {'roster_card': ''}})
+    team = db['teams'].find_one({'_id': team['_id']})
+    return next(m for m in team.get('members', []) if m.get('member_id') == member_id)
+
+
 @app.route('/admin/api/users/<id>/approve', methods=['POST'])
 @role_required('admin')
 def admin_api_approve_user(id):
@@ -2306,11 +2135,17 @@ def admin_api_approve_user(id):
     role = body.get('role', 'member')
     if role not in USER_ROLES:
         return _json_error('Pick a valid role.')
-    user = db['users'].find_one({'_id': ObjectId(id)}) if ObjectId.is_valid(id) else None
-    if not user or user.get('status') != 'pending':
-        return _json_error('That request is no longer waiting for approval.')
-    team = None
-    if body.get('team_id'):
+    user = _find_by_id('users', id)
+    if not user:
+        return _json_error('That account no longer exists.', 404)
+    if user.get('status') != 'pending':
+        return _json_error('That request was already handled.', 409)
+    team, claim = None, str(body.get('member_id') or '')
+    if claim:
+        team = _unlinked_card_team(claim)
+        if not team:
+            return _json_error('That roster card is already linked to a login, or was removed.', 409)
+    elif body.get('team_id'):
         team = _find_team(body['team_id'])
         if not team:
             return _json_error('That team no longer exists.', 404)
@@ -2318,7 +2153,12 @@ def admin_api_approve_user(id):
     db['users'].update_one({'_id': user['_id']},
                            {'$set': {'status': 'active', 'role': role},
                             '$unset': {'requested_team': ''}})
-    card = _card(_place_user_on_team(user, team)) if team else None
+    card = None
+    if claim:
+        card = _card(_link_card(team, claim, user))
+    elif team:
+        card = _card(_place_user_on_team(user, team))
+    refresh_auto_stats()
     log_activity('user_approve', f"Approved {user['username']} as {role}"
                  + (f" on {_team_label(team)}" if team else ''),
                  details={'username': user['username'], 'role': role})
@@ -2329,9 +2169,11 @@ def admin_api_approve_user(id):
 @app.route('/admin/api/users/<id>/reject', methods=['POST'])
 @role_required('admin')
 def admin_api_reject_user(id):
-    user = db['users'].find_one({'_id': ObjectId(id)}) if ObjectId.is_valid(id) else None
-    if not user or user.get('status') != 'pending':
-        return _json_error('Only pending requests can be rejected.')
+    user = _find_by_id('users', id)
+    if not user:
+        return _json_error('That account no longer exists.', 404)
+    if user.get('status') != 'pending':
+        return _json_error('Only pending requests can be rejected.', 409)
     db['users'].delete_one({'_id': user['_id']})
     log_activity('user_reject', f"Rejected account request from {user['username']}",
                  details={'username': user['username']})
@@ -2344,9 +2186,11 @@ def admin_api_user_role(id):
     role = _json_body().get('role')
     if role not in USER_ROLES:
         return _json_error('Pick a valid role.')
-    user = db['users'].find_one({'_id': ObjectId(id)}) if ObjectId.is_valid(id) else None
+    user = _find_by_id('users', id)
     if not user:
         return _json_error('User not found.', 404)
+    if not _is_active(user):
+        return _json_error('Approve this account first.', 409)
     if user.get('role') == role:
         return jsonify({'ok': True})
     if user.get('role') == 'admin' and not _other_admin_exists(user['_id']):
@@ -2387,14 +2231,21 @@ def admin_api_roster_move():
             return _json_error('That person is no longer on a roster.', 404)
         member = next(m for m in source['members'] if m.get('member_id') == member_id)
     elif user_id:
-        user = db['users'].find_one({'_id': ObjectId(user_id)}) if ObjectId.is_valid(str(user_id)) else None
+        user = _find_by_id('users', user_id)
         if not user:
             return _json_error('User not found.', 404)
+        if not _is_active(user):
+            return _json_error('Approve this account before putting it on a team.', 409)
         source = db['teams'].find_one({'members.user_id': str(user['_id'])})
         member = (next(m for m in source['members'] if m.get('user_id') == str(user['_id'])) if source
                   else _card_for_user(user))
     else:
         return _json_error('Say who to move.')
+
+    linked = str(member.get('user_id') or '')
+    if not target and not linked:
+        # Unassigned lists accounts; a card with no login would simply vanish.
+        return _json_error('People without a login are removed in the team editor.')
 
     from_id = str(source['_id']) if source else None
     if target and source and source['_id'] == target['_id']:
@@ -2403,7 +2254,6 @@ def admin_api_roster_move():
     if source:
         db['teams'].update_one({'_id': source['_id']},
                                {'$pull': {'members': {'member_id': member['member_id']}}})
-    linked = str(member.get('user_id') or '')
     if linked:
         _pull_user_from_rosters(linked)
     if target:
@@ -2411,6 +2261,7 @@ def admin_api_roster_move():
     if linked and ObjectId.is_valid(linked):
         update = {'$unset': {'roster_card': ''}} if target else {'$set': {'roster_card': member}}
         db['users'].update_one({'_id': ObjectId(linked)}, update)
+    refresh_auto_stats()
 
     where = _team_label(target) if target else 'Unassigned'
     log_activity('roster_move', f"Moved {member.get('name') or 'a member'} to {where}",
@@ -2420,7 +2271,56 @@ def admin_api_roster_move():
                     'to_team_id': str(target['_id']) if target else None})
 
 
-# --- Inline stats, awards, events ---
+@app.route('/admin/api/roster/link', methods=['POST'])
+@role_required('admin')
+def admin_api_roster_link():
+    """Give a roster card with no login an account, or (user_id null) take the login off a card."""
+    body = _json_body()
+    member_id = str(body.get('member_id') or '')
+    team = db['teams'].find_one({'members.member_id': member_id}) if member_id else None
+    if not team:
+        return _json_error('That person is no longer on a roster.', 404)
+    member = next(m for m in team['members'] if m.get('member_id') == member_id)
+    if body.get('user_id') is None:
+        linked = str(member.get('user_id') or '')
+        if not linked:
+            return jsonify({'ok': True, 'member': _card(member)})
+        db['teams'].update_one({'_id': team['_id'], 'members.member_id': member_id},
+                               {'$set': {'members.$.user_id': ''}})
+        log_activity('roster_link', f"Unlinked the login from {member.get('name')}'s card on {_team_label(team)}",
+                     details={'member_id': member_id})
+        return jsonify({'ok': True, 'member': _card(dict(member, user_id=''))})
+
+    user = _find_by_id('users', body.get('user_id'))
+    if not user:
+        return _json_error('User not found.', 404)
+    if not _is_active(user):
+        return _json_error('Approve this account first.', 409)
+    if member.get('user_id'):
+        return _json_error('That card already has a login. Unlink it first.', 409)
+    card = _link_card(team, member_id, user)
+    refresh_auto_stats()
+    log_activity('roster_link', f"Linked {user['username']} to {member.get('name')} on {_team_label(team)}",
+                 details={'member_id': member_id, 'username': user['username']})
+    return jsonify({'ok': True, 'member': _card(card), 'team_id': str(team['_id'])})
+
+
+# --- Club numbers, awards, events ---
+
+def _clean_count(value, limit, label='That number'):
+    """A whole number from 0 to limit. JSON floats like 3.0 pass; booleans, 3.9 and Infinity do not."""
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    elif isinstance(value, str) and value.strip().isdigit():
+        value = int(value.strip())
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise UserFacingError('Enter a whole number.')
+    if value < 0:
+        raise UserFacingError(f'{label} cannot be negative.')
+    if value > limit:
+        raise UserFacingError(f'{label} can be at most {limit:,}.')
+    return value
+
 
 @app.route('/admin/api/stats', methods=['POST'])
 @role_required('admin')
@@ -2429,30 +2329,169 @@ def admin_api_stats():
     field = body.get('field')
     if field not in STAT_FIELDS:
         return _json_error('Unknown statistic.')
+    label = STAT_LABELS[field]
+    if 'mode' in body:
+        mode = body.get('mode')
+        if field not in AUTO_STAT_FIELDS or mode not in ('auto', 'manual'):
+            return _json_error('That number cannot count itself.')
+        refresh_auto_stats()
+        db['site_metadata'].update_one({'_id': 'global_stats'}, {'$set': {f'modes.{field}': mode}}, upsert=True)
+        shown = public_stats(db['site_metadata'].find_one({'_id': 'global_stats'}))[field]
+        log_activity('stats_update', f'{label} is now {"counted automatically" if mode == "auto" else "typed in"}',
+                     details={'field': field, 'mode': mode})
+        return jsonify({'ok': True, 'mode': mode, 'value': shown})
     try:
-        value = int(body.get('value'))
-    except (TypeError, ValueError):
-        return _json_error('Enter a whole number.')
-    if value < 0:
-        return _json_error('Numbers cannot be negative.')
+        value = _clean_count(body.get('value'), STAT_LIMITS[field], label)
+    except UserFacingError as e:
+        return _json_error(str(e))
     prev = (db['site_metadata'].find_one({'_id': 'global_stats'}) or {}).get(field, 0)
     db['site_metadata'].update_one({'_id': 'global_stats'}, {'$set': {field: value}}, upsert=True)
     change_key = field.replace('_count', '').replace('_built', '') + '_change'
-    log_activity('stats_update', f'Set {field.replace("_", " ")} to {value}',
-                 details={field: value, change_key: value - prev})
+    log_activity('stats_update', f'Set {label.lower()} to {value}', details={field: value, change_key: value - prev})
     return jsonify({'ok': True, 'value': value})
+
+
+AWARD_COUNT_MAX = 999
+AWARD_TITLE_MAX = 80
+# The award artwork in static/assets/icons (the other files there are site icons).
+AWARD_ICONS = ('exellence_award.png', 'tournament_champions.png', 'tournament_finalists.png',
+               'design_award.png', 'judges_award.png', 'innovate_award.png', 'create_award.png',
+               'amaze_award.png', 'robot_skills_champion.png', 'sportsmanship.png', 'triple_crown.png',
+               'world_championship.png')
+AWARD_BORDERS = ('gold', 'purple', 'red', 'green', 'blue', 'yellow', 'grey')
+
+
+def award_icon_label(filename):
+    return filename.rsplit('.', 1)[0].replace('exellence', 'excellence').replace('_', ' ').title()
+
+
+def _ensure_award_order():
+    """Give every club award category a sort position, and every team copy its category's."""
+    link_team_award_categories()
+    unsorted = list(db['awards'].find({'team_number': {'$exists': False}, 'sort': {'$exists': False}},
+                                      {'_id': 1}).sort('_id', 1))
+    if unsorted:
+        top = max([a.get('sort') or 0 for a in db['awards'].find({'team_number': {'$exists': False},
+                                                                  'sort': {'$exists': True}}, {'sort': 1})],
+                  default=0)
+        for offset, award in enumerate(unsorted, 1):
+            db['awards'].update_one({'_id': award['_id']}, {'$set': {'sort': top + offset}})
+    for category in db['awards'].find({'team_number': {'$exists': False}}, {'sort': 1}):
+        db['awards'].update_many({'category_id': str(category['_id']), 'sort': {'$ne': category.get('sort')}},
+                                 {'$set': {'sort': category.get('sort')}})
+
+
+def _award_category_fields(body, partial=False):
+    """Validated style fields for an award category, from a JSON body."""
+    out = {}
+    if 'title' in body or not partial:
+        out['title'] = _clean_text(body.get('title'), AWARD_TITLE_MAX, 'Award name', required=True)
+    if 'icon' in body or not partial:
+        if body.get('icon') not in AWARD_ICONS:
+            raise UserFacingError('Pick an icon for the award.')
+        out['icon'] = body['icon']
+    if 'border' in body:
+        if body['border'] not in ('',) + AWARD_BORDERS:
+            raise UserFacingError('Pick a listed border colour.')
+        out['border'] = body['border'] or None
+    if 'layout' in body:
+        if body['layout'] not in ('', 'wide'):
+            raise UserFacingError('Pick a listed layout.')
+        out['layout'] = body['layout'] or None
+    if 'shimmer' in body:
+        out['shimmer'] = bool(body['shimmer'])
+    return out
+
+
+def _category_title_taken(title, exclude=None):
+    query = {'team_number': {'$exists': False}, 'title': re.compile(f'^{re.escape(title)}$', re.IGNORECASE)}
+    if exclude is not None:
+        query['_id'] = {'$ne': exclude}
+    return bool(db['awards'].find_one(query, {'_id': 1}))
+
+
+@app.route('/admin/api/award-categories', methods=['POST'])
+@role_required('admin')
+def admin_api_award_category_add():
+    try:
+        fields = _award_category_fields(_json_body())
+    except UserFacingError as e:
+        return _json_error(str(e))
+    if _category_title_taken(fields['title']):
+        return _json_error(f'There is already an award called "{fields["title"]}".', 409)
+    _ensure_award_order()
+    top = max([a.get('sort') or 0 for a in db['awards'].find({'team_number': {'$exists': False}}, {'sort': 1})],
+              default=0)
+    category = dict(fields, count=0, sort=top + 1)
+    category['_id'] = db['awards'].insert_one(category).inserted_id
+    numbers = sorted({n for n in db['teams'].distinct('team_number') if n})
+    if numbers:
+        db['awards'].insert_many([_award_copy(category, n) for n in numbers])
+    log_activity('award_category_add', f'Added award category "{fields["title"]}"',
+                 details={'title': fields['title']})
+    flash(f'Added "{fields["title"]}" to the club and to every team.', 'success')
+    return jsonify({'ok': True, 'id': str(category['_id'])})
+
+
+@app.route('/admin/api/award-categories/<id>', methods=['POST', 'DELETE'])
+@role_required('admin')
+def admin_api_award_category(id):
+    category = _find_by_id('awards', id)
+    if not category or 'team_number' in category:
+        return _json_error('That award category no longer exists.', 404)
+    link_team_award_categories()
+    if request.method == 'DELETE':
+        db['awards'].delete_many({'category_id': str(category['_id'])})
+        db['awards'].delete_one({'_id': category['_id']})
+        refresh_auto_stats()
+        log_activity('award_category_delete', f'Deleted award category "{category.get("title")}"',
+                     details={'title': category.get('title')})
+        flash(f'Deleted "{category.get("title")}" and every team\'s count of it.', 'success')
+        return jsonify({'ok': True})
+    try:
+        fields = _award_category_fields(_json_body(), partial=True)
+    except UserFacingError as e:
+        return _json_error(str(e))
+    if not fields:
+        return _json_error('Nothing to change.')
+    if 'title' in fields and _category_title_taken(fields['title'], exclude=category['_id']):
+        return _json_error(f'There is already an award called "{fields["title"]}".', 409)
+    db['awards'].update_one({'_id': category['_id']}, {'$set': fields})
+    db['awards'].update_many({'category_id': str(category['_id'])}, {'$set': fields})
+    log_activity('award_category_update', f'Changed award category "{category.get("title")}"',
+                 details={'title': category.get('title'), 'fields': sorted(fields)})
+    return jsonify({'ok': True, **{k: v for k, v in fields.items()}})
+
+
+@app.route('/admin/api/award-categories/<id>/move', methods=['POST'])
+@role_required('admin')
+def admin_api_award_category_move(id):
+    step = _json_body().get('step')
+    if step not in (-1, 1):
+        return _json_error('Move up or down one place.')
+    _ensure_award_order()
+    ordered = list(db['awards'].find({'team_number': {'$exists': False}}).sort(AWARD_ORDER))
+    index = next((i for i, a in enumerate(ordered) if str(a['_id']) == id), None)
+    if index is None:
+        return _json_error('That award category no longer exists.', 404)
+    other = index + step
+    if not 0 <= other < len(ordered):
+        return jsonify({'ok': True})
+    a, b = ordered[index], ordered[other]
+    for doc, sort in ((a, b.get('sort')), (b, a.get('sort'))):
+        db['awards'].update_one({'_id': doc['_id']}, {'$set': {'sort': sort}})
+        db['awards'].update_many({'category_id': str(doc['_id'])}, {'$set': {'sort': sort}})
+    return jsonify({'ok': True})
 
 
 @app.route('/admin/api/awards/<id>', methods=['POST'])
 @role_required('admin')
 def admin_api_award(id):
     try:
-        count = int(_json_body().get('count'))
-    except (TypeError, ValueError):
-        return _json_error('Enter a whole number.')
-    if count < 0:
-        return _json_error('Counts cannot be negative.')
-    award = db['awards'].find_one({'_id': ObjectId(id)}) if ObjectId.is_valid(id) else None
+        count = _clean_count(_json_body().get('count'), AWARD_COUNT_MAX, 'Counts')
+    except UserFacingError as e:
+        return _json_error(str(e))
+    award = _find_by_id('awards', id)
     if not award:
         return _json_error('Award not found.', 404)
     change = count - award.get('count', 0)
@@ -2460,8 +2499,14 @@ def admin_api_award(id):
     if change:
         owner = f"Team {award['team_number']} " if award.get('team_number') else ''
         log_activity('awards_update', f'{owner}"{award.get("title", "Award")}" set to {count}',
-                     details={'count_change': change, 'total_change': change})
+                     details={'title': award.get('title'), 'team_number': award.get('team_number'),
+                              'count_change': change})
+        if not award.get('team_number'):
+            refresh_auto_stats()
     return jsonify({'ok': True, 'count': count})
+
+
+EVENT_FIELDS = ('name', 'location', 'date', 'link')
 
 
 @app.route('/admin/api/events/<id>', methods=['POST'])
@@ -2469,24 +2514,55 @@ def admin_api_award(id):
 def admin_api_event(id):
     body = _json_body()
     field = body.get('field')
-    event = db['competitions'].find_one({'_id': ObjectId(id)}) if ObjectId.is_valid(id) else None
+    event = _find_by_id('competitions', id)
     if not event:
         return _json_error('Event not found.', 404)
+    if field not in EVENT_FIELDS:
+        return _json_error('That field cannot be edited here.')
     try:
         if field == 'name':
             value = _clean_text(body.get('value'), EVENT_TEXT_MAX, 'Event name', required=True)
         elif field == 'location':
             value = _clean_text(body.get('value'), EVENT_TEXT_MAX, 'Location')
-        elif field == 'date':
-            value = parse_event_date(body.get('value'))
+        elif field == 'link':
+            value = _clean_url(body.get('value'), 'Event link')
         else:
-            return _json_error('That field cannot be edited here.')
+            value = parse_event_date(body.get('value'))
     except UserFacingError as e:
         return _json_error(str(e))
+    old = event.get(field)
     db['competitions'].update_one({'_id': event['_id']}, {'$set': {field: value}})
     log_activity('competition_update', f'Updated {field} of {event.get("name", "an event")}',
-                 details={'name': event.get('name'), 'field': field})
+                 details={'name': event.get('name'), 'field': field,
+                          'from': _loggable(old), 'to': _loggable(value)})
     return jsonify({'ok': True})
+
+
+@app.route('/admin/api/events/prune', methods=['POST'])
+@role_required('admin')
+def admin_api_events_prune():
+    """Delete every event whose start time has passed."""
+    result = db['competitions'].delete_many({'date': {'$lt': club_now()}})
+    if result.deleted_count:
+        log_activity('competition_delete', f'Cleared {result.deleted_count} past event'
+                     f'{"s" if result.deleted_count != 1 else ""}', details={'count': result.deleted_count})
+    return jsonify({'ok': True, 'deleted': result.deleted_count})
+
+
+def _loggable(value, limit=200):
+    """A short, JSON-safe copy of a value for the activity log."""
+    if isinstance(value, datetime.datetime):
+        return value.strftime('%Y-%m-%d %H:%M')
+    if isinstance(value, list):
+        value = ', '.join(str(v) for v in value)
+    text = '' if value is None else str(value)
+    return text if len(text) <= limit else text[:limit - 1] + '…'
+
+
+# --- Teams and seasons ---
+
+TEAM_NUMBER_RE = re.compile(r'[A-Z0-9-]{1,20}')
+SEASON_RE = re.compile(r'\d{4}-\d{2}')
 
 
 @app.route('/admin/quick-team', methods=['POST'])
@@ -2494,18 +2570,274 @@ def admin_api_event(id):
 def admin_quick_team():
     """Create a team from just its number and go straight to the editor."""
     number = request.form.get('team_number', '').strip().upper()
-    if not re.fullmatch(r'[A-Z0-9-]{1,20}', number):
+    if not TEAM_NUMBER_RE.fullmatch(number):
         flash('Enter a team number like 77628D.', 'error')
-        return redirect(url_for('admin_dashboard', _anchor='teams'))
+        return _admin_redirect('teams')
     if db['teams'].find_one({'team_number': number}):
-        flash(f'Team {number} already exists.', 'error')
-        return redirect(url_for('admin_dashboard', _anchor='teams'))
-    team_id = db['teams'].insert_one({'team_number': number, 'nickname': '', 'tagline': '',
-                                      'specs': {}, 'members': [], 'goals': [], 'journey': []}).inserted_id
+        flash(f'Team {number} already exists. To start its next season, use "New season" on its card.', 'error')
+        return _admin_redirect('teams')
+    team_id = db['teams'].insert_one({'team_number': number, 'season': current_season(), 'nickname': '',
+                                      'tagline': '', 'specs': {}, 'members': [], 'goals': [],
+                                      'journey': []}).inserted_id
     seed_team_awards(number)
+    refresh_auto_stats()
     log_activity('team_add', f'Added new team {number}', details={'team_number': number, 'members_count': 0})
     flash(f'Team {number} created. Fill in the details below; everything saves as you go.', 'success')
     return redirect(url_for('manage_team', team_id=str(team_id)))
+
+
+CARRIED_TEAM_FIELDS = ('team_number', 'nickname', 'tagline', 'division', 'since', 'worlds_appearances',
+                       'robotevents_number', 'notebook_link', 'hero_image')
+
+
+@app.route('/admin/api/teams/<id>/new-season', methods=['POST'])
+@role_required('admin')
+def admin_api_new_season(id):
+    """Start a team's next season: same identity and roster, fresh specs, goals and journey.
+
+    Logins move to the new season's cards; last season keeps its roster as
+    names only, so each account still sits on exactly one card.
+    """
+    team = _find_team(id)
+    if not team:
+        return _json_error('That team no longer exists.', 404)
+    season = str(_json_body().get('season') or '').strip()
+    if not SEASON_RE.fullmatch(season):
+        return _json_error('Pick a season like 2026-27.')
+    number = team.get('team_number')
+    if db['teams'].find_one({'team_number': number, 'season': season}, {'_id': 1}):
+        return _json_error(f'{number} already has a {season} profile.', 409)
+    members = team.get('members') or []
+    doc = {k: team[k] for k in CARRIED_TEAM_FIELDS if team.get(k) not in (None, '')}
+    doc.update(season=season, specs={}, goals=[], journey=[],
+               members=[dict(m, member_id=_new_member_id()) for m in members])
+    try:
+        new_id = db['teams'].insert_one(doc).inserted_id
+    except DuplicateKeyError:
+        return _json_error(f'{number} already has a {season} profile.', 409)
+    if any(m.get('user_id') for m in members):
+        db['teams'].update_one({'_id': team['_id']},
+                               {'$set': {'members': [dict(m, user_id='') for m in members]}})
+    seed_team_awards(number)
+    refresh_auto_stats()
+    log_activity('season_add', f'Started {season} for {number}', details={'team_number': number, 'season': season})
+    flash(f'{number} {season} is ready. Last season stays on the team page under its season picker.', 'success')
+    return jsonify({'ok': True, 'url': url_for('manage_team', team_id=str(new_id))})
+
+
+# --- Contact messages, newsletter, activity ---
+
+@app.route('/admin/api/messages/<id>', methods=['POST'])
+@role_required('admin')
+def admin_api_message(id):
+    action = _json_body().get('action')
+    if action not in MESSAGE_STATUSES and action != 'delete':
+        return _json_error('Unknown message action.')
+    message = _find_by_id('contact_messages', id)
+    if not message:
+        return _json_error('That message no longer exists.', 404)
+    return jsonify({'ok': True, 'status': _apply_message_action(message, action)})
+
+
+@app.route('/admin/api/messages/bulk', methods=['POST'])
+@role_required('admin')
+def admin_api_messages_bulk():
+    body = _json_body()
+    action, ids = body.get('action'), body.get('ids')
+    if action not in MESSAGE_STATUSES and action != 'delete':
+        return _json_error('Unknown message action.')
+    if not isinstance(ids, list) or not ids or len(ids) > 500:
+        return _json_error('Pick up to 500 messages.')
+    object_ids = [ObjectId(i) for i in ids if isinstance(i, str) and ObjectId.is_valid(i)]
+    query = {'_id': {'$in': object_ids}}
+    if action == 'delete':
+        done = db['contact_messages'].delete_many(query).deleted_count
+    else:
+        done = db['contact_messages'].update_many(query, {'$set': {'status': MESSAGE_STATUSES[action]}}).matched_count
+    if done:
+        verb = 'Deleted' if action == 'delete' else f'Marked {MESSAGE_STATUSES[action]}'
+        log_activity('message_delete' if action == 'delete' else f'message_{action}',
+                     f'{verb} {done} message{"s" if done != 1 else ""}', details={'count': done})
+    return jsonify({'ok': True, 'count': done, 'status': 'deleted' if action == 'delete' else MESSAGE_STATUSES[action]})
+
+
+@app.route('/admin/api/subscribers/<id>', methods=['DELETE'])
+@role_required('admin')
+def admin_api_subscriber_delete(id):
+    subscriber = _find_by_id('newsletter_subscribers', id)
+    if not subscriber:
+        return _json_error('That address is no longer on the list.', 404)
+    db['newsletter_subscribers'].delete_one({'_id': subscriber['_id']})
+    log_activity('subscriber_remove', f'Removed {subscriber.get("email")} from the newsletter',
+                 details={'email': subscriber.get('email')})
+    return jsonify({'ok': True})
+
+
+ACTIVITY_PAGE = 30
+
+
+def _activity_row(a):
+    stamp = a.get('timestamp')
+    return {'_id': str(a['_id']), 'type': a.get('type'), 'icon': get_activity_icon(a.get('type')),
+            'title': get_activity_title(a.get('type')), 'description': a.get('description') or '',
+            'user': a.get('user') or '', 'ago': get_time_ago(stamp) if stamp else '',
+            'when': stamp.strftime('%b %d, %Y %I:%M %p UTC') if stamp else '',
+            'timestamp': stamp.isoformat() if stamp else ''}
+
+
+def activity_page(group='', before=None, limit=None):
+    """Newest activity first; `before` (an ISO timestamp) continues an earlier page."""
+    limit = limit or ACTIVITY_PAGE
+    query = {}
+    if group:
+        query['type'] = {'$in': activity_types_in(group)}
+    if before:
+        query['timestamp'] = {'$lt': before}
+    rows = [_activity_row(a) for a in db['activities'].find(query).sort('timestamp', -1).limit(limit + 1)]
+    return rows[:limit], len(rows) > limit
+
+
+@app.route('/admin/api/activity')
+@role_required('admin')
+def admin_api_activity():
+    group = request.args.get('group', '')
+    if group and group not in dict(ACTIVITY_GROUPS):
+        return _json_error('Unknown filter.')
+    before = None
+    if request.args.get('before'):
+        try:
+            before = datetime.datetime.fromisoformat(request.args['before'])
+        except ValueError:
+            return _json_error('Bad page marker.')
+    rows, more = activity_page(group, before)
+    return jsonify({'items': rows, 'more': more})
+
+
+# --- Site content editor ---
+
+def _blob_srcs(value):
+    """Uploaded image URLs anywhere inside a stored site-content value."""
+    if isinstance(value, dict):
+        found = [value['src']] if isinstance(value.get('src'), str) else []
+        return found + [s for v in value.values() if isinstance(v, (dict, list)) for s in _blob_srcs(v)]
+    if isinstance(value, list):
+        return [s for v in value for s in _blob_srcs(v)]
+    return []
+
+
+@app.route('/admin/site')
+@role_required('admin')
+def admin_site():
+    overrides = _site_overrides()
+    values = site_content.merged(overrides)
+    return render_template('site_editor.html', active_page='admin', sections=site_content.SECTIONS,
+                           values=values, overrides=overrides, icons=site_content.ICONS,
+                           platforms=site_content.SOCIAL_PLATFORMS, day_names=site_content.DAY_NAMES,
+                           gallery_keys=sorted(k for k in image_manifest if k.startswith('photos/carousel')),
+                           club_timezone=CLUB_TIMEZONE)
+
+
+def _site_field(key):
+    section, field = site_content.field_for(key)
+    if not field:
+        raise UserFacingError('That setting does not exist.')
+    return section, field
+
+
+@app.route('/admin/api/site', methods=['POST'])
+@role_required('admin')
+def admin_api_site():
+    body = _json_body()
+    key = str(body.get('key') or '')
+    try:
+        section, field = _site_field(key)
+        value = site_content.clean_value(field, body.get('value'))
+    except (UserFacingError, site_content.ContentError) as e:
+        return _json_error(str(e))
+    stored = _site_overrides()
+    old = (stored.get(section.key) or {}).get(field.key, field.default)
+    path = f'values.{section.key}.{field.key}'
+    if value == field.default:
+        update = {'$unset': {path: ''}}
+    else:
+        update = {'$set': {path: value}}
+    update.setdefault('$set', {}).update(updated_at=_utcnow(), updated_by=session.get('user'))
+    db['site_metadata'].update_one({'_id': SITE_CONTENT_ID}, update, upsert=True)
+    gone = set(_blob_srcs(old)) - set(_blob_srcs(value))
+    _delete_site_blobs(gone)
+    if old != value:
+        log_activity('site_edit', f'Changed "{field.label}" on {section.title}',
+                     details={'key': key, 'from': _loggable(old), 'to': _loggable(value)})
+    return jsonify({'ok': True, 'value': value, 'custom': value != field.default})
+
+
+@app.route('/admin/api/site/reset', methods=['POST'])
+@role_required('admin')
+def admin_api_site_reset():
+    key = str(_json_body().get('key') or '')
+    try:
+        section, field = _site_field(key)
+    except UserFacingError as e:
+        return _json_error(str(e))
+    old = (_site_overrides().get(section.key) or {}).get(field.key, field.default)
+    db['site_metadata'].update_one({'_id': SITE_CONTENT_ID},
+                                   {'$unset': {f'values.{section.key}.{field.key}': ''},
+                                    '$set': {'updated_at': _utcnow(), 'updated_by': session.get('user')}},
+                                   upsert=True)
+    _delete_site_blobs(set(_blob_srcs(old)))
+    if old != field.default:
+        log_activity('site_edit', f'Reset "{field.label}" on {section.title} to the original',
+                     details={'key': key, 'from': _loggable(old)})
+    return jsonify({'ok': True, 'value': field.default, 'custom': False})
+
+
+def _delete_site_blobs(urls):
+    """Delete uploaded site images that no setting uses any more."""
+    if not urls:
+        return
+    still_used = set(_blob_srcs(_site_overrides()))
+    for url in urls:
+        if url in still_used or not url.startswith('https://'):
+            continue
+        try:
+            delete_from_vercel_blob(url)
+        except Exception:
+            logger.exception('Could not delete site image %s', url)
+
+
+@app.route('/admin/api/site/image', methods=['POST'])
+@role_required('admin')
+def admin_api_site_image():
+    """Store an image for a site setting. The browser sends its pixel size, since
+    production has no image library to measure it."""
+    file = request.files.get('file')
+    if not file or not file.filename:
+        return _json_error('Choose an image to upload.')
+    try:
+        width = _clean_count(int(request.form.get('width', 0)), site_content.IMAGE_MAX_SIDE, 'Width')
+        height = _clean_count(int(request.form.get('height', 0)), site_content.IMAGE_MAX_SIDE, 'Height')
+        if not width or not height:
+            raise UserFacingError('Could not read the image size. Try a JPEG or PNG.')
+        url = checked_upload(file, 'site', allowed=MEMBER_UPLOAD_EXTENSIONS, stem='image')
+    except ValueError as e:
+        message = str(e) if isinstance(e, UserFacingError) else 'Could not read the image size.'
+        return _json_error(message)
+    except Exception:
+        logger.exception('Site image upload failed')
+        return _json_error('Upload failed. Try again in a moment.', 502)
+    return jsonify({'ok': True, 'image': {'src': url, 'width': width, 'height': height}})
+
+
+def site_image_url(image):
+    """URL for a stored site image: a built-in photo key or an uploaded file."""
+    if not image:
+        return ''
+    if image.get('key') in image_manifest:
+        return url_for('static', filename=image_manifest[image['key']]['src'])
+    return site_content.css_url(image.get('src'))
+
+
+app.jinja_env.globals['site_image_url'] = site_image_url
 
 
 # --- Shared team editor ---
@@ -2528,14 +2860,18 @@ ADMIN_TEAM_FIELDS = {
     'robotevents_number': ('RobotEvents number', 20),
     'since': ('Competing since', None),
     'worlds_appearances': ('Worlds appearances', None),
+    'hidden': ('Hidden from the site menu', None),
 }
 MEMBER_CARD_FIELDS = {'name': ('Name', 100), 'role': ('Role', 100), 'roles': ('Roles', 200),
                       'subteam': ('Sub-team', 60), 'since': ('Member since', None)}
 
 
 def _session_user():
-    user = _current_db_user()
-    return db['users'].find_one({'_id': user['_id']}) if user else None
+    """The full user document for this request, looked up once."""
+    if 'session_user' not in g:
+        user = _current_db_user()
+        g.session_user = db['users'].find_one({'_id': user['_id']}) if user else None
+    return g.session_user
 
 
 def _team_access(team, user):
@@ -2561,18 +2897,22 @@ def _load_team_for_edit(team_id):
     return (team, user, can_admin, own), None
 
 
-def _team_edit_log(team, user, what):
+def _team_edit_log(team, user, what, old=None, new=None):
+    details = {'team_number': team.get('team_number'), 'what': what}
+    if old is not None or new is not None:
+        details.update({'from': _loggable(old), 'to': _loggable(new)})
     log_activity('team_edit', f"{user['username']} updated {what} on {_team_label(team)}",
-                 user=user['username'], details={'team_number': team.get('team_number'), 'what': what})
+                 user=user['username'], details=details)
 
 
 def my_team_url():
     """Link to the signed-in user's team editor, or None. Called from the nav only."""
+    if 'my_team_url' in g:
+        return g.my_team_url
     user = _current_db_user()
-    if not user:
-        return None
-    team = db['teams'].find_one({'members.user_id': str(user['_id'])}, {'_id': 1})
-    return url_for('manage_team', team_id=str(team['_id'])) if team else None
+    team = db['teams'].find_one({'members.user_id': str(user['_id'])}, {'_id': 1}) if user else None
+    g.my_team_url = url_for('manage_team', team_id=str(team['_id'])) if team else None
+    return g.my_team_url
 
 
 app.jinja_env.globals['my_team_url'] = my_team_url
@@ -2581,6 +2921,17 @@ app.jinja_env.globals['my_team_url'] = my_team_url
 @app.route('/my-team')
 @login_required
 def my_team():
+    user = _session_user()
+    if user and role_at_least(user.get('role', 'member'), 'editor'):
+        # Editors can open any team, so give them the list instead of guessing one.
+        own = my_team_url()
+        teams = sorted(_newest_season_docs().values(), key=lambda t: t.get('team_number') or '')
+        choices = [{'url': url_for('manage_team', team_id=str(t['_id'])), 'label': _team_label(t),
+                    'nickname': t.get('nickname') or '', 'members': len(t.get('members') or []),
+                    'own': url_for('manage_team', team_id=str(t['_id'])) == own}
+                   for t in teams]
+        choices.sort(key=lambda c: not c['own'])
+        return render_template('my_team.html', active_page='my_team', team_choices=choices)
     url = my_team_url()
     if url:
         return redirect(url)
@@ -2601,8 +2952,11 @@ def manage_team(team_id):
         return render_template('my_team.html', active_page='my_team', forbidden=True), 403
     team['_id'] = str(team['_id'])
     team.setdefault('specs', {})
+    other_seasons = [{'label': d.get('season') or 'No season', 'url': url_for('manage_team', team_id=str(d['_id']))}
+                     for d in db['teams'].find({'team_number': team.get('team_number'),
+                                                '_id': {'$ne': ObjectId(team['_id'])}}, {'season': 1})]
     return render_template('team_editor.html', active_page='my_team', team=team,
-                           can_admin=can_admin, own_member_id=own,
+                           can_admin=can_admin, own_member_id=own, other_seasons=other_seasons,
                            cards=[_card(m) | {'roles': ', '.join(m.get('roles') or []),
                                               'since': m.get('since') or ''}
                                   for m in team.get('members', [])],
@@ -2611,6 +2965,47 @@ def manage_team(team_id):
                            years=year_options(), months=month_suggestions(),
                            role_suggestions=ROLE_SUGGESTIONS, goal_suggestions=GOAL_SUGGESTIONS,
                            spec_suggestions=SPEC_SUGGESTIONS)
+
+
+def _clean_team_field(field, value, label, limit):
+    if field == 'notebook_link':
+        return _clean_url(value, label)
+    if field in ('since', 'worlds_appearances'):
+        return _clean_year(value, label)
+    if field == 'hidden':
+        return bool(value) or None
+    text = _clean_text(value, limit, label, required=(field == 'team_number'))
+    if field in ('team_number', 'robotevents_number'):
+        text = text.upper()
+        if text and not TEAM_NUMBER_RE.fullmatch(text):
+            raise UserFacingError(f'{label} can only use letters, digits and dashes, like 77628A.')
+    if field == 'season' and text and not SEASON_RE.fullmatch(text):
+        raise UserFacingError('Pick a season like 2026-27.')
+    if field == 'division' and text and text not in DIVISIONS:
+        raise UserFacingError('Pick a listed division.')
+    return text
+
+
+def _move_team_awards(old, new):
+    """Carry award counters from one team number to another (after a rename).
+
+    Counters stay put when another season still uses the old number. When the
+    new number already has counters, counts for the same category are added
+    together rather than leaving duplicate rows.
+    """
+    if not old or old == new or db['teams'].find_one({'team_number': old}, {'_id': 1}):
+        seed_team_awards(new)
+        return
+    link_team_award_categories()
+    existing = {a.get('category_id') or a.get('title'): a for a in db['awards'].find({'team_number': new})}
+    for row in db['awards'].find({'team_number': old}):
+        key = row.get('category_id') or row.get('title')
+        if key in existing:
+            db['awards'].update_one({'_id': existing[key]['_id']}, {'$inc': {'count': int(row.get('count') or 0)}})
+            db['awards'].delete_one({'_id': row['_id']})
+        else:
+            db['awards'].update_one({'_id': row['_id']}, {'$set': {'team_number': new}})
+    seed_team_awards(new)
 
 
 @app.route('/api/team/<team_id>/field', methods=['POST'])
@@ -2634,30 +3029,33 @@ def api_team_field(team_id):
                            400 if can_admin else 403)
 
     try:
-        if field == 'notebook_link':
-            value = _clean_url(body.get('value'), label)
-        elif field in ('since', 'worlds_appearances'):
-            value = _clean_year(body.get('value'), label)
-        else:
-            value = _clean_text(body.get('value'), limit, label, required=(field == 'team_number'))
-            if field == 'team_number':
-                value = value.upper()
-            if field == 'division' and value and value not in DIVISIONS:
-                raise UserFacingError('Pick a listed division.')
+        value = _clean_team_field(field, body.get('value'), label, limit)
     except UserFacingError as e:
         return _json_error(str(e))
 
-    if field == 'team_number' and value != team.get('team_number'):
-        old = team.get('team_number')
-        # Awards are keyed by number; carry them over unless another season still uses the old one.
-        if not db['teams'].find_one({'team_number': old, '_id': {'$ne': team['_id']}}):
-            db['awards'].update_many({'team_number': old}, {'$set': {'team_number': value}})
+    old = team.get('team_number') if field == 'team_number' else (
+        team.get('specs', {}).get(field.split('.', 1)[1]) if field.startswith('specs.') else team.get(field))
+    if field in ('team_number', 'season'):
+        number = value if field == 'team_number' else team.get('team_number')
+        season = value if field == 'season' else team.get('season')
+        clash = db['teams'].find_one({'team_number': number, 'season': season or None,
+                                      '_id': {'$ne': team['_id']}}, {'_id': 1})
+        if clash:
+            return _json_error(f'Another profile already uses {number} for {season or "no season"}.', 409)
 
-    if field in ADMIN_TEAM_FIELDS and value in (None, ''):
-        db['teams'].update_one({'_id': team['_id']}, {'$unset': {field: ''}})
-    else:
-        db['teams'].update_one({'_id': team['_id']}, {'$set': {field: value}})
-    _team_edit_log(team, user, label.lower())
+    try:
+        if field in ADMIN_TEAM_FIELDS and value in (None, ''):
+            db['teams'].update_one({'_id': team['_id']}, {'$unset': {field: ''}})
+        else:
+            db['teams'].update_one({'_id': team['_id']}, {'$set': {field: value}})
+    except DuplicateKeyError:
+        return _json_error('Another profile already uses that team number and season.', 409)
+
+    if field == 'team_number' and value != old:
+        _move_team_awards(old, value)
+    if field in ('team_number', 'hidden'):
+        refresh_auto_stats()
+    _team_edit_log(team, user, label.lower(), old, value)
     return jsonify({'ok': True, 'value': value})
 
 
@@ -2665,7 +3063,7 @@ def api_team_field(team_id):
 @login_required
 def api_team_list(team_id, kind):
     if kind not in ('goals', 'journey'):
-        abort(404)
+        return _json_error('Unknown list.', 404)
     loaded, error = _load_team_for_edit(team_id)
     if error:
         return error
@@ -2709,6 +3107,11 @@ def api_team_member(team_id, member_id):
         if not can_admin:
             return _json_error('Only editors and admins can remove members.', 403)
         db['teams'].update_one({'_id': team['_id']}, {'$pull': {'members': {'member_id': member_id}}})
+        _park_roster_card(member)
+        if not member.get('user_id'):
+            _delete_blobs([u for u in [member.get('photo')] if isinstance(u, str) and u.startswith('http')],
+                          'a removed member')
+        refresh_auto_stats()
         _team_edit_log(team, user, f"roster (removed {member.get('name')})")
         return jsonify({'ok': True})
 
@@ -2733,7 +3136,7 @@ def api_team_member(team_id, member_id):
         return _json_error(str(e))
     db['teams'].update_one({'_id': team['_id'], 'members.member_id': member_id},
                            {'$set': {f'members.$.{field}': value}})
-    _team_edit_log(team, user, f"{member.get('name')}'s {label.lower()}")
+    _team_edit_log(team, user, f"{member.get('name')}'s {label.lower()}", member.get(field), value)
     return jsonify({'ok': True, 'value': value})
 
 
@@ -2752,17 +3155,48 @@ def api_team_add_member(team_id):
         return _json_error(str(e))
     member = {'member_id': _new_member_id(), 'name': name, 'role': 'Member', 'user_id': '', 'photo': ''}
     db['teams'].update_one({'_id': team['_id']}, {'$push': {'members': member}})
+    refresh_auto_stats()
     _team_edit_log(team, user, f'roster (added {name})')
     return jsonify({'ok': True, 'member': _card(member)})
 
 
-@app.route('/api/team/<team_id>/image', methods=['POST'])
+TEAM_IMAGE_KINDS = ('hero_image', 'stl_file', 'member_photo')
+
+
+@app.route('/api/team/<team_id>/image', methods=['POST', 'DELETE'])
 @login_required
 def api_team_image(team_id):
     loaded, error = _load_team_for_edit(team_id)
     if error:
         return error
     team, user, can_admin, own = loaded
+
+    if request.method == 'DELETE':
+        body = _json_body()
+        kind, member_id = body.get('kind'), str(body.get('member_id') or '')
+        if kind not in TEAM_IMAGE_KINDS:
+            return _json_error('Say which image to remove.')
+        if kind == 'stl_file' and not can_admin:
+            return _json_error('Only editors and admins can remove the CAD model.', 403)
+        if kind == 'member_photo':
+            member = next((m for m in team.get('members', []) if m.get('member_id') == member_id), None)
+            if not member:
+                return _json_error('That member is no longer on this team.', 404)
+            if not can_admin and member_id != own:
+                return _json_error('You can only change your own photo.', 403)
+            old = member.get('photo')
+            db['teams'].update_one({'_id': team['_id'], 'members.member_id': member_id},
+                                   {'$set': {'members.$.photo': ''}})
+        else:
+            key = 'hero_image' if kind == 'hero_image' else 'stl_path'
+            old = team.get(key)
+            db['teams'].update_one({'_id': team['_id']}, {'$unset': {key: ''}})
+        if isinstance(old, str) and old.startswith('http'):
+            _delete_blobs([old], 'a removed image')
+        _team_edit_log(team, user, {'hero_image': 'banner photo', 'stl_file': 'CAD model',
+                                    'member_photo': 'a photo'}[kind] + ' (removed)')
+        return jsonify({'ok': True})
+
     files = request.files
     try:
         if files.get('hero_image') and files['hero_image'].filename:
@@ -2797,15 +3231,11 @@ def api_team_image(team_id):
 
     db['teams'].update_one(query, update)
     if isinstance(old, str) and old.startswith('http'):
-        try:
-            delete_from_vercel_blob(old)
-        except Exception:
-            logger.exception('Could not delete replaced blob %s', old)
+        _delete_blobs([old], 'a replaced image')
     _team_edit_log(team, user, what)
     return jsonify({'ok': True, 'url': get_image_url(url)})
 
 
-ROBOTEVENTS_TEAM_NUMBERS = ['77628D', '77628P']
 MATCHES_CACHE_SECONDS = 300
 _matches_cache = {'expires_at': 0.0, 'payload': None}
 _matches_cache_lock = threading.Lock()
@@ -2845,7 +3275,10 @@ def _fetch_matches():
             logger.warning('RobotEvents fetch failed for %s', endpoint, exc_info=True)
             return None
 
-    number_qs = '&'.join(f'number[]={n}' for n in ROBOTEVENTS_TEAM_NUMBERS)
+    numbers = sorted({t.get('robotevents_number') or t['team_number'] for t in listed_teams()})
+    if not numbers:
+        return {'matches': []}
+    number_qs = '&'.join(f'number[]={urllib.parse.quote(n)}' for n in numbers)
     teams_data = fetch(f'teams?{number_qs}')
     if not teams_data or not teams_data.get('data'):
         return {'matches': []}
@@ -2918,6 +3351,17 @@ CHAT_SYSTEM_PROMPT = (
     "You are Steven, the official AI assistant for the Mepham Robotics Club "
     "(VEX V5 Team 77628). Be helpful, enthusiastic about robotics, and concise."
 )
+
+
+def chat_system_prompt():
+    """The assistant's instructions plus the facts admins keep current in Site settings."""
+    content = site()
+    meeting = content.meeting
+    facts = [f"The club meets {site_content.fmt_schedule(meeting)} in {meeting['room']} at {meeting['school']}.",
+             f"The club email is {content.general.contact_email}."]
+    if content.assistant.knowledge:
+        facts.append(content.assistant.knowledge)
+    return CHAT_SYSTEM_PROMPT + ' Facts you can rely on: ' + ' '.join(facts)
 
 
 NEWSLETTER_RATE_LIMIT = 5
@@ -2993,11 +3437,17 @@ def admin_subscribers_csv():
     """Download the newsletter list so it can be pasted into a mail tool."""
     buffer = StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(['email', 'subscribed_at'])
+    writer.writerow(['email', 'subscribed_at', 'unsubscribe_url'])
+    rows = 0
     for sub in db['newsletter_subscribers'].find().sort('created_at', -1):
         created = sub.get('created_at')
+        token = sub.get('unsubscribe_token')
         writer.writerow([csv_safe(sub.get('email', '')),
-                         csv_safe(created.strftime('%Y-%m-%d %H:%M') if created else '')])
+                         csv_safe(created.strftime('%Y-%m-%d %H:%M') if created else ''),
+                         csv_safe(_public_url('unsubscribe', token=token) if token else '')])
+        rows += 1
+    log_activity('subscribers_export', f'Exported {rows} newsletter address{"es" if rows != 1 else ""}',
+                 details={'count': rows})
     return Response(
         buffer.getvalue(),
         mimetype='text/csv',
@@ -3032,7 +3482,7 @@ def api_chat():
             headers={"Authorization": f"Bearer {os.getenv('CHATBOT_API_KEY')}",
                      "Content-Type": "application/json"},
             json={"model": os.getenv('CHATBOT_MODEL', "gpt-4o-mini"),
-                  "messages": [{"role": "system", "content": CHAT_SYSTEM_PROMPT},
+                  "messages": [{"role": "system", "content": chat_system_prompt()},
                                {"role": "user", "content": user_message}]},
             timeout=CHAT_TIMEOUT_SECONDS)
         response.raise_for_status()
@@ -3065,6 +3515,7 @@ def robots_txt():
         'User-agent: *',
         'Allow: /',
         'Disallow: /admin',
+        'Disallow: /manage/',
         'Disallow: /login',
         'Disallow: /logout',
         'Disallow: /api/',
@@ -3082,7 +3533,7 @@ def sitemap_xml():
             'priority': priority,
             'changefreq': changefreq,
         })
-    for team in db['teams'].find({}, {'team_number': 1}):
+    for team in listed_teams():
         urls.append({
             'loc': url_for('team_page', team_number=team['team_number'], _external=True),
             'priority': 0.6,
@@ -3099,13 +3550,28 @@ def sitemap_xml():
     xml_parts.append('</urlset>')
     return Response('\n'.join(xml_parts), mimetype='application/xml')
 
+SERVER_ERROR_TEXT = 'Something went wrong on the server. Try again in a moment.'
+
+
+# JSON callers (admin.js, team-editor.js) show the 'error' text; an HTML error
+# page there used to surface only as "Save failed (500)."
 @app.errorhandler(404)
 def page_not_found(e):
+    if _wants_json():
+        return jsonify({'error': 'Not found.'}), 404
     return render_template('404.html'), 404
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    if _wants_json():
+        return jsonify({'error': 'That action is not supported here.'}), 405
+    return e
 
 @app.errorhandler(500)
 def internal_server_error(e):
     logger.exception("Internal server error: %s", e)
+    if _wants_json():
+        return jsonify({'error': SERVER_ERROR_TEXT}), 500
     return render_template('500.html'), 500
 
 @app.errorhandler(Exception)
@@ -3115,6 +3581,8 @@ def handle_unexpected_error(e):
     if isinstance(e, HTTPException):
         return e
     logger.exception("Unhandled exception: %s", e)
+    if _wants_json():
+        return jsonify({'error': SERVER_ERROR_TEXT}), 500
     return render_template('500.html'), 500
 
 @app.after_request

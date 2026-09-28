@@ -1,0 +1,20 @@
+{#- Site-wide announcement, edited under Site settings → Announcement bar. -#}
+{% set notice = site.announcement %}
+{% if announcement_live(notice, club_now()) %}
+{% set icon = {'info': 'megaphone', 'celebrate': 'party-popper', 'alert': 'triangle-alert'}[notice.tone] %}
+<div class="site-announcement site-announcement--{{ notice.tone }}" role="region" aria-label="Announcement"
+    data-announcement="{{ (notice.text ~ notice.link_url)|short_hash }}">
+    <div class="site-announcement-inner">
+        <i data-lucide="{{ icon }}" class="site-announcement-icon" aria-hidden="true"></i>
+        <p class="site-announcement-text">{{ notice.text|rich_inline }}</p>
+        {% if notice.link_label and notice.link_url %}
+        <a class="site-announcement-link" href="{{ notice.link_url }}">{{ notice.link_label }}
+            <i data-lucide="arrow-right" aria-hidden="true"></i></a>
+        {% endif %}
+        {% if notice.dismissible %}
+        <button type="button" class="site-announcement-close" data-announcement-close
+            aria-label="Dismiss announcement"><i data-lucide="x" aria-hidden="true"></i></button>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

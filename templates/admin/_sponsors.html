@@ -1,0 +1,90 @@
+{% from "admin/_macros.html" import card_head, empty %}
+<section class="admin-panel" data-panel="sponsors" id="panel-sponsors" role="tabpanel" aria-labelledby="tab-sponsors"
+    tabindex="0" hidden>
+    <div class="sponsor-layout">
+        <div class="admin-card">
+            {% call card_head('handshake', 'Sponsors', sponsors|length) %}
+            <label class="visually-hidden" for="sponsors_filter">Filter sponsors</label>
+            <input type="search" id="sponsors_filter" class="panel-filter panel-filter--compact" placeholder="Filter sponsors…">
+            {% endcall %}
+            <p class="form-hint">Shown on the Donate page, highest level first.
+                <a href="{{ url_for('donate') }}#donate" target="_blank" rel="noopener">View the page</a></p>
+            <div class="data-list list-sponsors">
+                {% for sponsor in sponsors %}
+                <div class="data-item sponsor-row">
+                    <div class="sponsor-thumb">
+                        {% if sponsor.logo %}
+                        <img src="{{ get_image_url(sponsor.logo) }}" alt="" loading="lazy">
+                        {% else %}
+                        <i data-lucide="building-2" aria-hidden="true"></i>
+                        {% endif %}
+                    </div>
+                    <div class="sponsor-info">
+                        <strong class="item-title">{{ sponsor.name }}</strong>
+                        <small class="item-meta">
+                            <span class="sponsor-badge {{ (sponsor.level or '')|lower }}">{{ sponsor.level }}</span>
+                            {% if sponsor.website %}
+                            <a class="item-link" href="{{ sponsor.website }}" target="_blank" rel="noopener">{{ sponsor.website|replace('https://', '')|replace('http://', '')|truncate(40) }}</a>
+                            {% else %}<span>No website</span>{% endif %}
+                        </small>
+                    </div>
+                    <div class="data-item-actions">
+                        <button type="button" class="icon-btn" title="Edit sponsor"
+                            data-id="{{ sponsor._id }}" data-name="{{ sponsor.name }}"
+                            data-website="{{ sponsor.website or '' }}" data-level="{{ sponsor.level }}"
+                            data-has-logo="{{ 'true' if sponsor.logo else 'false' }}"
+                            aria-label="Edit sponsor: {{ sponsor.name }}" data-action="edit-sponsor"><i data-lucide="pencil" aria-hidden="true"></i></button>
+                        <form class="form-flush" action="{{ url_for('admin_delete_sponsor', id=sponsor._id) }}" method="POST"
+                            data-confirm-delete="sponsor" data-confirm-name="{{ sponsor.name }}">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="icon-btn icon-btn--danger" title="Delete sponsor"
+                                aria-label="Delete sponsor: {{ sponsor.name }}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                {{ empty('handshake', 'No sponsors yet', 'Add your first sponsor with the form.') }}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="admin-card" id="sponsor_form_card">
+            <div class="admin-card-header">
+                <h2 id="sponsor_form_title"><i data-lucide="circle-plus" aria-hidden="true"></i> <span data-form-title>Add a sponsor</span></h2>
+            </div>
+            <form id="sponsor_form" class="form-stack" action="{{ url_for('admin_save_sponsor') }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="sponsor_id" name="sponsor_id">
+                <div class="field-group">
+                    <label for="f-name">Name</label>
+                    <input id="f-name" type="text" name="name" required maxlength="100" placeholder="e.g. Acme Corp">
+                </div>
+                <div class="field-group">
+                    <label for="f-website">Website</label>
+                    <input id="f-website" type="url" name="website" maxlength="500" placeholder="https://example.com">
+                </div>
+                <div class="field-group">
+                    <span class="field-label" id="l-level">Level</span>
+                    <div class="segmented" role="radiogroup" aria-labelledby="l-level">
+                        {% for tier in sponsor_tiers|reverse %}
+                        <label class="segment"><input type="radio" name="level" value="{{ tier }}" {% if loop.first %}checked{% endif %}><span>{{ tier }}</span></label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label for="f-logo">Logo <small>(optional)</small></label>
+                    <input id="f-logo" type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+                        data-preview-target="sponsorLogoPreview">
+                    <div id="sponsorLogoPreview" class="image-preview"></div>
+                    <small class="form-hint">Square, transparent background works best. Up to 8 MB.</small>
+                    <label class="check" id="removeLogoWrap" hidden><input type="checkbox" name="remove_logo" value="1"
+                            id="f-remove-logo"> Remove the current logo</label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="admin-btn admin-btn-success" data-submit-label>Add sponsor</button>
+                    <button type="button" class="admin-btn admin-btn-secondary" data-action="reset-sponsor">Clear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>

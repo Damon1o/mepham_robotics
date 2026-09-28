@@ -40,13 +40,15 @@
 
 {% block content %}
 {% set api = '/api/team/' ~ team._id %}
-<div class="admin-container team-editor" id="teamEditor" data-api="{{ api }}"
+<div class="admin-container admin-editor team-editor" id="teamEditor" data-api="{{ api }}"
     data-can-admin="{{ 'true' if can_admin else 'false' }}" data-own-member="{{ own_member_id or '' }}">
 
     <header class="editor-bar">
         <div class="editor-bar-title">
             <h1>{{ team.team_number }}{% if team.nickname %} <span>· {{ team.nickname }}</span>{% endif %}</h1>
-            <p>Every change saves on its own.</p>
+            <p>{% if team.season %}{{ team.season }} season. {% endif %}Every change saves on its own.
+                {% if other_seasons %}Other seasons:
+                {% for other in other_seasons %}<a href="{{ other.url }}">{{ other.label }}</a>{{ ', ' if not loop.last }}{% endfor %}{% endif %}</p>
         </div>
         <div class="editor-bar-actions">
             <span class="save-status" id="saveStatus" role="status" aria-live="polite">All changes saved</span>
@@ -97,12 +99,16 @@
                     data-autosave="notebook_link" placeholder="https://docs.google.com/…">
                 {% endcall %}
                 {% call row('Banner photo', hint='Wide photos look best') %}
-                <label class="drop-zone drop-zone--inline" data-upload="hero_image">
-                    <img class="drop-zone-preview" alt="" {% if team.hero_image %}src="{{ get_image_url(team.hero_image) }}"{% else %}hidden{% endif %}>
-                    <span class="drop-zone-text"><i data-lucide="image-up" aria-hidden="true"></i>
-                        Drop an image or <u>browse</u></span>
-                    <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="visually-hidden">
-                </label>
+                <div class="image-field">
+                    <label class="drop-zone drop-zone--inline" data-upload="hero_image">
+                        <img class="drop-zone-preview" alt="" {% if team.hero_image %}src="{{ get_image_url(team.hero_image) }}"{% else %}hidden{% endif %}>
+                        <span class="drop-zone-text"><i data-lucide="image-up" aria-hidden="true"></i>
+                            Drop an image or <u>browse</u></span>
+                        <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="visually-hidden">
+                    </label>
+                    <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-action="remove-image"
+                        data-kind="hero_image"{% if not team.hero_image %} hidden{% endif %}>Remove</button>
+                </div>
                 {% endcall %}
             </section>
 
@@ -185,6 +191,10 @@
                             {% endif %}
                         </label>
                         {% if editable %}
+                        <button type="button" class="photo-remove" data-action="remove-image" data-kind="member_photo"
+                            aria-label="Remove {{ m.name }}'s photo" title="Remove photo"{% if not m.photo %} hidden{% endif %}>&times;</button>
+                        {% endif %}
+                        {% if editable %}
                         {{ member_fields(m) }}
                         {% if can_admin %}
                         <button type="button" class="icon-btn icon-btn--danger member-remove" data-action="remove-member"
@@ -210,7 +220,7 @@
                     <input id="f-new-member" type="text" maxlength="100" placeholder="Add someone by name…" required>
                     <button type="submit" class="admin-btn admin-btn-small">Add</button>
                 </form>
-                <p class="form-hint">To link someone to their login, drag them on the admin People board.</p>
+                <p class="form-hint">To link someone to their login, use <em>Link login</em> on the admin People board.</p>
                 {% endif %}
             </section>
 
@@ -259,10 +269,21 @@
                     data-autosave="robotevents_number" placeholder="{{ team.team_number }}">
                 {% endcall %}
                 {% call row('CAD model', hint='.stl file for the 3D viewer') %}
-                <label class="drop-zone drop-zone--inline" data-upload="stl_file">
-                    <span class="drop-zone-text"><i data-lucide="box" aria-hidden="true"></i>
-                        <span class="drop-zone-filename">{{ team.stl_path.split('/')[-1] if team.stl_path else 'Drop an .stl or browse' }}</span></span>
-                    <input type="file" accept=".stl" class="visually-hidden">
+                <div class="image-field">
+                    <label class="drop-zone drop-zone--inline" data-upload="stl_file">
+                        <span class="drop-zone-text"><i data-lucide="box" aria-hidden="true"></i>
+                            <span class="drop-zone-filename">{{ team.stl_path.split('/')[-1] if team.stl_path else 'Drop an .stl or browse' }}</span></span>
+                        <input type="file" accept=".stl" class="visually-hidden">
+                    </label>
+                    <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-action="remove-image"
+                        data-kind="stl_file"{% if not team.stl_path %} hidden{% endif %}>Remove</button>
+                </div>
+                {% endcall %}
+                {% call row('Site menu', hint='Retired teams can stay on record without a menu link') %}
+                <label class="switch">
+                    <input type="checkbox" data-autosave="hidden" {% if team.hidden %}checked{% endif %}>
+                    <span class="switch-track" aria-hidden="true"></span>
+                    <span class="switch-text">Hide this team from the site menu and search</span>
                 </label>
                 {% endcall %}
             </section>
@@ -306,6 +327,8 @@
             <span class="member-initials"></span>
             <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="visually-hidden" aria-label="Change photo">
         </label>
+        <button type="button" class="photo-remove" data-action="remove-image" data-kind="member_photo"
+            aria-label="Remove photo" title="Remove photo" hidden>&times;</button>
         {{ member_fields({'name': '', 'role': '', 'roles': '', 'subteam': '', 'since': ''}) }}
         <button type="button" class="icon-btn icon-btn--danger member-remove" data-action="remove-member" aria-label="Remove from the roster">
             <i data-lucide="trash-2" aria-hidden="true"></i></button>

@@ -1,0 +1,32 @@
+{% from "admin/_macros.html" import card_head, empty %}
+<section class="admin-panel" data-panel="activity" id="panel-activity" role="tabpanel" aria-labelledby="tab-activity"
+    tabindex="0" hidden>
+    <div class="admin-card">
+        {{ card_head('history', 'Activity') }}
+        <div class="scope-row" role="group" aria-label="Show activity for">
+            <button type="button" class="team-chip" data-activity-group="" aria-pressed="true">Everything</button>
+            {% for key, label in activity_groups %}
+            <button type="button" class="team-chip" data-activity-group="{{ key }}" aria-pressed="false">{{ label }}</button>
+            {% endfor %}
+        </div>
+        <ol class="activity-list" id="activityList" aria-live="polite">
+            {% for a in activities %}
+            <li class="activity-item">
+                <span class="activity-icon" aria-hidden="true">{{ a.icon }}</span>
+                <div class="activity-content">
+                    <div class="activity-title">{{ a.title }}</div>
+                    <div class="activity-desc">{{ a.description }}</div>
+                    <div class="activity-time">{{ a.user }} · <time datetime="{{ a.timestamp }}" title="{{ a.when }}">{{ a.ago }}</time></div>
+                </div>
+            </li>
+            {% endfor %}
+        </ol>
+        {% if not activities %}
+        {{ empty('history', 'No activity yet', 'Changes made here and in the team editor show up in this log.') }}
+        {% endif %}
+        <div class="load-more">
+            <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" id="activityMore"
+                data-before="{{ activities[-1].timestamp if activities else '' }}"{% if not more_activity %} hidden{% endif %}>Load older</button>
+        </div>
+    </div>
+</section>

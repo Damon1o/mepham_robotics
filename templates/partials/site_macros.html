@@ -1,0 +1,26 @@
+{#- Helpers for admin-editable content (api/site_content.py).
+
+    hero_attrs(image)  class + custom property for a page hero whose photo was changed
+                       in Site settings. Without one, the page stylesheet's photo stays.
+    site_photo(photo, sizes, decorative=False)
+                       one gallery entry: a built-in photo from the image manifest,
+                       or an uploaded image with its stored size.
+-#}
+{% from "partials/picture.html" import picture %}
+
+{% macro hero_attrs(image) -%}
+{%- set url = site_image_url(image) -%}
+class="hero-image{% if url %} has-custom-hero{% endif %}"{% if url %} style="--hero-image: url('{{ url }}')"{% endif %}
+{%- endmacro %}
+
+{% macro site_photo(photo, sizes, decorative=False) -%}
+{%- set img = photo.image or {} -%}
+{%- if img.key and image_manifest.get(img.key) -%}
+{{ picture(img.key, '' if decorative else photo.alt, sizes, decorative=decorative) }}
+{%- elif img.src -%}
+<picture class="responsive-picture">
+    <img src="{{ img.src }}" width="{{ img.width }}" height="{{ img.height }}" alt="{{ '' if decorative else photo.alt }}"
+        {%- if decorative %} aria-hidden="true"{% endif %} decoding="async" loading="lazy">
+</picture>
+{%- endif -%}
+{%- endmacro %}

@@ -100,6 +100,7 @@ def test_error_pages_have_a_heading_and_the_theme(client):
 # the awards grid partial is protected from edits.
 STYLE_ALLOWED = {
     'team.html': ['--team-hero-image'],
+    'site_macros.html': ['--hero-image'],
     'awards_grid.html': ['grid-column: 1 / -1'],
 }
 

@@ -52,6 +52,9 @@
 html {
     scroll-behavior: smooth;
     overflow-x: hidden;
+    /* clip hides sideways overflow like hidden, but does not turn the page into
+       a scroll container, so position: sticky keeps working (settings navs). */
+    overflow-x: clip;
 }
 
 /* --- LUCIDE ICONS --- */
@@ -69,6 +72,7 @@ body {
     color: var(--text-dark);
     background-color: var(--bg-light);
     overflow-x: hidden;
+    overflow-x: clip;
     position: relative;
 }
 
@@ -1198,13 +1202,15 @@ footer::before {
     transform: scale(1.08);
 }
 
+/* The track holds the photo list twice; moving by one copy (half the track plus
+   half a gap) lands the second copy exactly where the first started. */
 @keyframes scrollCarousel {
     0% {
         transform: translateX(0);
     }
 
     100% {
-        transform: translateX(-50%);
+        transform: translateX(calc(-50% - 1rem));
     }
 }
 
@@ -4346,4 +4352,140 @@ textarea:focus-visible,
 [data-theme="dark"] .breadcrumb .current,
 [data-theme="dark"] .breadcrumb .separator {
     color: #aaa;
+}
+
+/* ==========================================================================
+   ADMIN-EDITABLE CONTENT (Site settings)
+   ========================================================================== */
+
+/* Announcement bar, above each page's content. The left padding keeps the
+   text clear of the fixed MENU button. */
+.site-announcement {
+    position: relative;
+    z-index: 5;
+    padding: 0.6rem 1rem 0.6rem 10rem;
+    border-bottom: 3px solid var(--text-dark);
+    background: var(--maroon-dark);
+    color: #ffffff;
+}
+
+.site-announcement-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: 64rem;
+    margin: 0 auto;
+    font-size: 0.98rem;
+    line-height: 1.45;
+}
+
+.site-announcement-icon {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.site-announcement-text {
+    flex: 1;
+    margin: 0;
+}
+
+.site-announcement a {
+    color: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.site-announcement-link {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.75rem;
+    border: 2px solid currentColor;
+    border-radius: 999px;
+    text-decoration: none !important;
+    white-space: nowrap;
+}
+
+.site-announcement-link svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.site-announcement-close {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.site-announcement-close:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.site-announcement-close:focus-visible,
+.site-announcement-link:focus-visible {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 2px;
+}
+
+.site-announcement--celebrate {
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+.site-announcement--celebrate .site-announcement-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.site-announcement--celebrate :focus-visible {
+    outline-color: var(--maroon-dark);
+}
+
+.site-announcement--alert {
+    background: #b3261e;
+    color: #ffffff;
+}
+
+@media (max-width: 640px) {
+    .site-announcement {
+        padding: 0.6rem 0.75rem 0.6rem 9.5rem;
+    }
+
+    .site-announcement-inner {
+        flex-wrap: wrap;
+        gap: 0.4rem 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    .site-announcement-icon {
+        display: none;
+    }
+}
+
+/* A page hero whose photo was changed in Site settings. The class outranks each
+   page stylesheet's .hero-image background, so no page CSS needs to change. */
+.hero-image.has-custom-hero {
+    background: linear-gradient(135deg, rgba(128, 0, 0, 0.72) 0%, rgba(90, 0, 0, 0.6) 100%),
+        var(--hero-image) center/cover no-repeat;
+}
+
+/* Upcoming-event cards link to the event page when an admin added one. */
+.timeline-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.timeline-link:hover,
+.timeline-link:focus-visible {
+    text-decoration: underline;
 }

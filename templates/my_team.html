@@ -1,12 +1,32 @@
 {% extends "base.html" %}
 
-{% block title %}My Team | Mepham Robotics{% endblock %}
+{% block title %}My Team | {{ site.general.short_name }}{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team_editor.css') }}">
 {% endblock %}
 
 {% block content %}
+{% if team_choices is defined %}
+<section class="team-picker">
+    <h1>Team pages</h1>
+    <p>As an {{ session.get('role') }}, you can edit any team. Pick one to open its editor.</p>
+    {% if team_choices %}
+    <ul class="team-picker-list">
+        {% for t in team_choices %}
+        <li><a href="{{ t.url }}">
+            <span class="team-picker-number">{{ t.label }}</span>
+            <span class="team-picker-text"><strong>{{ t.nickname or 'No nickname yet' }}</strong>
+                <small>{{ t.members }} member{{ 's' if t.members != 1 }}</small></span>
+            {% if t.own %}<span class="team-picker-own">Your team</span>{% endif %}
+        </a></li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No teams have been created yet.</p>
+    {% endif %}
+</section>
+{% else %}
 <section class="my-team-empty">
     <i data-lucide="{{ 'lock' if forbidden else 'users' }}" class="my-team-empty-icon" aria-hidden="true"></i>
     {% if forbidden %}
@@ -19,4 +39,5 @@
     {% endif %}
     <a class="cta-button cta-primary" href="{{ url_for('contact') }}">Message the admins</a>
 </section>
+{% endif %}
 {% endblock %}

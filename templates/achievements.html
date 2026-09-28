@@ -1,18 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}Achievements | Mepham Robotics Club{% endblock %}
-{% block meta_description %}Our history of excellence in VEX Robotics competitions, including awards and match
-results.{% endblock %}
+{% block title %}Achievements | {{ site.general.club_name }}{% endblock %}
+{% block meta_description %}{{ site.achievements.meta_description }}{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/achievements.css') }}">
 {% endblock %}
 
+{% from "partials/site_macros.html" import hero_attrs %}
+{% set achievements = site.achievements %}
 {% block content %}
-<div class="hero-image">
+<div {{ hero_attrs(achievements.hero_image) }}>
     <div class="hero-content">
-        <h1>Achievements</h1>
-        <p>Our Competition History</p>
+        <h1>{{ achievements.hero_title }}</h1>
+        {% if achievements.hero_tagline %}<p>{{ achievements.hero_tagline }}</p>{% endif %}
         <div class="hero-cta">
             <a href="{{ url_for('index') }}" class="cta-button cta-primary">Back Home</a>
             <a href="#awards" class="cta-button cta-secondary">View Awards</a>
@@ -29,7 +30,7 @@ results.{% endblock %}
 
 <section id="awards" class="award-container fade-in-section">
     <div class="text-center">
-        <h2 class="ripple">All-Time VEX V5 Competition Awards</h2>
+        <h2 class="ripple">{{ achievements.awards_heading }}</h2>
     </div>
 
     <div class="awards-grid">
@@ -52,10 +53,11 @@ results.{% endblock %}
     </div>
 </section>
 
+{% if live_results %}
 <section class="live-results-section fade-in-section">
     <div class="text-center">
-        <h2 class="ripple results-heading">Live Match Results</h2>
-        <p class="results-lede">Recent scores from our latest competition, straight from RobotEvents</p>
+        <h2 class="ripple results-heading">{{ achievements.live_heading }}</h2>
+        <p class="results-lede">{{ achievements.live_lede }}</p>
     </div>
 
     <div class="results-table-container">
@@ -79,4 +81,5 @@ results.{% endblock %}
         <small>Data provided by RobotEvents API</small>
     </div>
 </section>
+{% endif %}
 {% endblock %}
