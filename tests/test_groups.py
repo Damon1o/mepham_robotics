@@ -72,7 +72,7 @@ def test_nav_lists_groups_after_teams(client, db, club):
     page = client.get('/').get_data(as_text=True)
     menu = page[page.index('id="teamDropdown"'):]
     menu = menu[:menu.index('</div>')]
-    assert menu.index('77628P') < menu.index('Groups') < menu.index('>Media</a>')
+    assert menu.index('Competing Teams') < menu.index('77628D') < menu.index('77628P') < menu.index('Groups')         < menu.index('>Media</a>')
 
 
 def test_group_page_has_no_robot_sections(client, db, club):

@@ -313,6 +313,12 @@ body::before {
     text-transform: uppercase;
 }
 
+/* The first label sits right under the Team button: no divider above it. */
+.dropdown-label:first-child {
+    margin-top: 0;
+    border-top: 0;
+}
+
 /* --- OVERLAY ENHANCEMENT --- */
 .overlay {
     position: fixed;

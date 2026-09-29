@@ -57,6 +57,9 @@
                 aria-expanded="false">Team</button>
             <div id="teamDropdown" class="dropdown-container">
                 {% for n_team in nav_teams %}
+                {% if loop.first and n_team is not group %}
+                <span class="dropdown-label" role="presentation">Competing Teams</span>
+                {% endif %}
                 {% if n_team is group and loop.previtem is not group %}
                 <span class="dropdown-label" role="presentation">Groups</span>
                 {% endif %}

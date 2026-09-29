@@ -16,7 +16,9 @@ def member(client, make_user):
 
 # --- Achievements --------------------------------------------------------------
 
-def test_achievements_ships_no_fabricated_matches(client):
+def test_achievements_ships_no_fabricated_matches(client, monkeypatch):
+    # The live results table only renders with a RobotEvents key; CI has none.
+    monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'test-key')
     page = client.get('/achievements').get_data(as_text=True)
     for fake in ('1234A', '5678B', '9999Z', '45 - 30'):
         assert fake not in page
