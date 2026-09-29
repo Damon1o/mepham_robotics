@@ -495,10 +495,28 @@ def load_sponsors():
     return sorted(sponsors, key=sponsor_sort_key)
 
 
+# A team document is a robot team unless `kind` says it is a group: a non-competing
+# crew like Media or Fundraising, named by `title`, whose `team_number` is its URL slug.
+GROUP_KIND = 'group'
+ROBOT_TEAMS = {'kind': {'$ne': GROUP_KIND}}
+
+
+def is_group(team):
+    return (team or {}).get('kind') == GROUP_KIND
+
+
+app.jinja_env.tests['group'] = is_group
+
+
+def team_sort_key(team):
+    """Robot teams by number, then groups by title."""
+    name = (team.get('title') if is_group(team) else None) or team.get('team_number') or ''
+    return is_group(team), name.lower()
+
+
 def listed_teams():
-    """One entry per team number for the nav, sitemap and search, skipping teams hidden in their editor."""
-    return sorted((t for t in _newest_season_docs().values() if not t.get('hidden')),
-                  key=lambda t: t.get('team_number') or '')
+    """One entry per team for the nav, sitemap and search, skipping teams hidden in their editor."""
+    return sorted((t for t in _newest_season_docs().values() if not t.get('hidden')), key=team_sort_key)
 
 
 @app.context_processor
@@ -575,12 +593,20 @@ def search_index(teams):
     signed_in = 'user' in session
     pages = [{'title': title, 'url': url_for(endpoint), 'desc': desc, 'keywords': keywords, 'members': members}
              for title, endpoint, desc, keywords, members in SEARCH_PAGES if signed_in or not members]
-    pages[5:5] = [{'title': f"{t['team_number']} Team", 'url': url_for('team_page', team_number=t['team_number']),
-                   'desc': f"Team {t['team_number']}" + (f" · {t['nickname']}" if t.get('nickname') else '')
-                   + ' robot details and competition info',
-                   'keywords': f"{t['team_number']} {t.get('nickname') or ''} robot team", 'members': False}
-                  for t in teams]
+    pages[5:5] = [_search_entry(t) for t in teams]
     return pages
+
+
+def _search_entry(t):
+    url = url_for('team_page', team_number=t['team_number'])
+    if is_group(t):
+        title = t.get('title') or t['team_number']
+        return {'title': title, 'url': url, 'desc': f'The {title} group: members, goals and journey',
+                'keywords': f"{title} {t['team_number']} group crew", 'members': False}
+    return {'title': f"{t['team_number']} Team", 'url': url,
+            'desc': f"Team {t['team_number']}" + (f" · {t['nickname']}" if t.get('nickname') else '')
+            + ' robot details and competition info',
+            'keywords': f"{t['team_number']} {t.get('nickname') or ''} robot team", 'members': False}
 
 
 app.jinja_env.globals['search_index'] = search_index
@@ -1084,14 +1110,14 @@ def team_page(team_number):
     # Kept as stored paths: the template resolves each with get_image_url.
     robot_photos = [p for photos in raw_photos.values() for p in photos][:6]
 
-    team_awards = list(db['awards'].find({'team_number': team_number}).sort(AWARD_ORDER))
+    team_awards = [] if is_group(team) else list(db['awards'].find({'team_number': team_number}).sort(AWARD_ORDER))
     for award in team_awards:
         # The awards grid builds the icon path from this; a row missing it used to 500 the page.
         award['icon'] = award.get('icon') or AWARD_ICONS[0]
     return render_template('team.html', team=team, team_awards=team_awards,
                            event_photos=event_photos, robot_photos=robot_photos,
                            seasons=seasons, active_season=team.get('season'),
-                           live_enabled=bool(os.environ.get('ROBOTEVENTS_TOKEN')),
+                           live_enabled=bool(os.environ.get('ROBOTEVENTS_TOKEN')) and not is_group(team),
                            active_page=team_number)
 
 @app.route('/api/team/<team_number>/live')
@@ -1102,7 +1128,7 @@ def team_live_data(team_number):
     The page renders without these panels in that case, so this never fails hard.
     """
     team = db['teams'].find_one({'team_number': team_number})
-    if not team:
+    if not team or is_group(team):
         return Response(status=204)
 
     lookup_number = team.get('robotevents_number') or team_number
@@ -1247,11 +1273,12 @@ SIGNUP_RATE_WINDOW = datetime.timedelta(hours=1)
 
 
 def _team_choices():
-    """(id, label) for every team, for the sign-up and approval team pickers."""
-    return [(str(t['_id']), ' '.join(filter(None, [t.get('team_number'), t.get('nickname'),
+    """(id, label) for every team, then every group, for the sign-up and approval team pickers."""
+    teams = db['teams'].find({}, {'team_number': 1, 'nickname': 1, 'season': 1, 'kind': 1, 'title': 1})
+    return [(str(t['_id']), ' '.join(filter(None, [t.get('title') if is_group(t) else t.get('team_number'),
+                                                   None if is_group(t) else t.get('nickname'),
                                                    f"({t['season']})" if t.get('season') else None])))
-            for t in db['teams'].find({}, {'team_number': 1, 'nickname': 1, 'season': 1})
-            .sort('team_number', 1)]
+            for t in sorted(teams, key=team_sort_key)]
 
 
 def _find_by_id(collection, doc_id):
@@ -1362,7 +1389,7 @@ def _newest_season_docs(query=None):
     """One team document per team number: the newest season (a missing season sorts oldest)."""
     newest = {}
     for team in db['teams'].find(query or {}, {'team_number': 1, 'season': 1, 'members': 1, 'nickname': 1,
-                                               'hidden': 1}):
+                                               'hidden': 1, 'kind': 1, 'title': 1}):
         number = team.get('team_number')
         if number and (number not in newest
                        or (team.get('season') or '') > (newest[number].get('season') or '')):
@@ -1371,12 +1398,17 @@ def _newest_season_docs(query=None):
 
 
 def compute_auto_stats():
-    """Live club numbers: listed teams, people on their current rosters, and club award totals."""
+    """Live club numbers: listed robot teams, people on current rosters, and club award totals.
+
+    Groups aren't teams, but their people count; someone on a team and in Media counts once.
+    """
     current = _newest_season_docs({'hidden': {'$ne': True}})
     awards = db['awards'].find({'team_number': {'$exists': False}}, {'count': 1})
+    people = {str(m.get('user_id') or '') or m.get('member_id') or id(m)
+              for t in current.values() for m in t.get('members') or []}
     return {
-        'teams_count': len(current),
-        'members_count': sum(len(t.get('members') or []) for t in current.values()),
+        'teams_count': sum(not is_group(t) for t in current.values()),
+        'members_count': len(people),
         'awards_count': sum(int(a.get('count') or 0) for a in awards),
     }
 
@@ -1517,7 +1549,8 @@ def admin_dashboard():
     current_ids = {str(t['_id']) for t in _newest_season_docs().values()}
     for t in teams:
         t['is_current'] = t['_id'] in current_ids
-    current_teams = [t for t in teams if t['is_current']]
+    current_teams = sorted((t for t in teams if t['is_current']), key=team_sort_key)
+    current_robot_teams = [t for t in current_teams if not is_group(t)]
 
     # Roster board: one column per team's current season, then every active account not on a roster.
     usernames = {u['_id']: u['username'] for u in users}
@@ -1530,11 +1563,16 @@ def admin_dashboard():
             card['username'] = usernames.get(card['user_id'], '')
             cards.append(card)
             if not card['user_id']:
-                claimable.append((card['member_id'], f"{t['team_number']} · {card['name']}"))
-        board.append({'_id': t['_id'], 'label': _team_label(t), 'nickname': t.get('nickname') or '',
+                claimable.append((card['member_id'], f"{_team_label(t)} · {card['name']}"))
+        board.append({'_id': t['_id'], 'label': _team_label(t), 'group': is_group(t),
+                      'nickname': '' if is_group(t) else t.get('nickname') or '',
                       'hidden': bool(t.get('hidden')), 'cards': cards})
     unassigned = [u for u in users if u['_id'] not in rostered]
-    team_choices = [(b['_id'], b['label']) for b in board]
+    team_choices = [(b['_id'], b['label']) for b in board if not b['group']]
+    group_choices = [(b['_id'], b['label']) for b in board if b['group']]
+    # For the Move-to menus: which groups each person is already in, and their robot team.
+    group_members = {b['_id']: {c['user_id'] for c in b['cards'] if c['user_id']} for b in board if b['group']}
+    robot_team_of = {c['user_id']: b['_id'] for b in board if not b['group'] for c in b['cards'] if c['user_id']}
 
     link_team_award_categories()
     all_awards = [dict(a, _id=str(a['_id'])) for a in db['awards'].find().sort(AWARD_ORDER)]
@@ -1569,10 +1607,11 @@ def admin_dashboard():
         stat_fields=STAT_FIELDS, auto_stat_fields=AUTO_STAT_FIELDS, stat_labels=STAT_LABELS,
         stat_limits=STAT_LIMITS,
         upcoming=upcoming, past_events=past,
-        attention=_attention_items(pending_users, message_counts, past, upcoming, current_teams,
+        attention=_attention_items(pending_users, message_counts, past, upcoming, current_robot_teams,
                                    stats_doc, auto),
         users=users, pending_users=pending_users, board=board, unassigned=unassigned,
-        team_choices=team_choices, claimable=claimable,
+        team_choices=team_choices, group_choices=group_choices, group_members=group_members,
+        robot_team_of=robot_team_of, claimable=claimable,
         teams=teams, current_teams=current_teams, next_season=season_options()[0],
         awards=global_awards, team_awards=team_awards, award_icons=AWARD_ICONS, award_borders=AWARD_BORDERS,
         award_icon_label=award_icon_label,
@@ -1585,7 +1624,7 @@ def admin_dashboard():
         reset_link=reset_link, reset_link_user=reset_link_user,
         event_locations=sorted({c['location'] for c in db['competitions'].find(
             {'location': {'$nin': [None, '']}}, {'location': 1})}),
-        team_number_suggestions=next_team_numbers(t.get('team_number') for t in teams))
+        team_number_suggestions=next_team_numbers(t.get('team_number') for t in teams if not is_group(t)))
 
 
 def next_team_numbers(numbers):
@@ -2030,7 +2069,7 @@ def _ensure_member_ids():
 
 
 def _team_label(team):
-    label = team.get('team_number') or 'Team'
+    label = (team.get('title') if is_group(team) else None) or team.get('team_number') or 'Team'
     if team.get('season'):
         label += f" ({team['season']})"
     return label
@@ -2077,8 +2116,23 @@ def _clean_url(value, field_label):
     return text
 
 
-def _pull_user_from_rosters(user_id):
-    db['teams'].update_many({'members.user_id': user_id}, {'$pull': {'members': {'user_id': user_id}}})
+def _rosters_to_leave(user_id, team):
+    """Rosters an account must leave to join `team`: every robot team, or just that group.
+
+    A person is on at most one robot team but can sit in any number of groups
+    (Media, Fundraising, ...), with or without a robot team.
+    """
+    if is_group(team):
+        return {'_id': team['_id'], 'members.user_id': user_id}
+    return {'members.user_id': user_id, **ROBOT_TEAMS}
+
+
+def _pull_user_from_rosters(user_id, team):
+    db['teams'].update_many(_rosters_to_leave(user_id, team), {'$pull': {'members': {'user_id': user_id}}})
+
+
+def _on_any_roster(user_id):
+    return db['teams'].find_one({'members.user_id': user_id}, {'_id': 1}) is not None
 
 
 def _card_for_user(user):
@@ -2096,8 +2150,8 @@ def _card_for_user(user):
 
 
 def _place_user_on_team(user, team):
-    """Add an account to a roster (taking it off any other). Returns the new card."""
-    _pull_user_from_rosters(str(user['_id']))
+    """Add an account to a roster (taking it off any other robot team). Returns the new card."""
+    _pull_user_from_rosters(str(user['_id']), team)
     member = _card_for_user(user)
     db['teams'].update_one({'_id': team['_id']}, {'$push': {'members': member}})
     db['users'].update_one({'_id': user['_id']}, {'$unset': {'roster_card': ''}})
@@ -2118,9 +2172,9 @@ def _unlinked_card_team(member_id):
 
 
 def _link_card(team, member_id, user):
-    """Attach a login to a roster card that had none. The account leaves any other roster."""
+    """Attach a login to a roster card that had none. The account leaves any other robot team."""
     uid = str(user['_id'])
-    _pull_user_from_rosters(uid)
+    _pull_user_from_rosters(uid, team)
     db['teams'].update_one({'_id': team['_id'], 'members.member_id': member_id},
                            {'$set': {'members.$.user_id': uid}})
     db['users'].update_one({'_id': user['_id']}, {'$unset': {'roster_card': ''}})
@@ -2210,10 +2264,14 @@ def admin_api_user_role(id):
 @app.route('/admin/api/roster/move', methods=['POST'])
 @role_required('admin')
 def admin_api_roster_move():
-    """Put a roster card (or a not-yet-rostered account) on a team, or take it off.
+    """Put a roster card (or a not-yet-rostered account) on a team or group, or take it off.
 
-    `to_team_id` null means "Unassigned". The response carries where the card
-    came from so the page can offer Undo.
+    Each person is on at most one robot team, so dropping on a team moves them
+    there, keeping their groups. Dropping on a group adds them to it and leaves
+    them where they were. `to_team_id` null takes the card off its roster (a card
+    with no login only with `remove`, which Undo uses). `mode` in the response is
+    "move" when a card changed rosters and "add" when a new card joined one while
+    the dragged card stayed put; `from_team_id` is where the card came from, for Undo.
     """
     body = _json_body()
     member_id, user_id, to_id = body.get('member_id'), body.get('user_id'), body.get('to_team_id')
@@ -2225,6 +2283,7 @@ def admin_api_roster_move():
         if not target:
             return _json_error('That team no longer exists.', 404)
 
+    user = None
     if member_id:
         source = db['teams'].find_one({'members.member_id': member_id})
         if not source:
@@ -2236,39 +2295,71 @@ def admin_api_roster_move():
             return _json_error('User not found.', 404)
         if not _is_active(user):
             return _json_error('Approve this account before putting it on a team.', 409)
-        source = db['teams'].find_one({'members.user_id': str(user['_id'])})
+        source = db['teams'].find_one({'members.user_id': str(user['_id']), **ROBOT_TEAMS})
         member = (next(m for m in source['members'] if m.get('user_id') == str(user['_id'])) if source
                   else _card_for_user(user))
     else:
         return _json_error('Say who to move.')
 
     linked = str(member.get('user_id') or '')
-    if not target and not linked:
+    name = member.get('name') or 'That person'
+    if not target and not linked and not body.get('remove'):
         # Unassigned lists accounts; a card with no login would simply vanish.
         return _json_error('People without a login are removed in the team editor.')
+    if target and source and source['_id'] == target['_id']:
+        return jsonify({'ok': True, 'mode': 'move', 'member': _card(member), 'from_team_id': str(source['_id']),
+                        'to_team_id': str(source['_id'])})
+
+    # A group card dropped on a team stays in its group. If the person already
+    # has a team card, that card moves; otherwise they get a new one.
+    added = bool(target) and (is_group(target) or (source is not None and is_group(source)))
+    if target and not is_group(target) and source and is_group(source):
+        robot = db['teams'].find_one({'members.user_id': linked, **ROBOT_TEAMS}) if linked else None
+        if robot and robot['_id'] == target['_id']:
+            return _json_error(f'{name} is already on {_team_label(target)}.', 409)
+        if robot:
+            source, added = robot, False
+            member = next(m for m in robot['members'] if m.get('user_id') == linked)
+        else:
+            account = _find_by_id('users', linked) if linked else None
+            source, member = None, (_card_for_user(account) if account else _copied_card(member))
+    elif target and is_group(target):
+        if linked and db['teams'].find_one({'_id': target['_id'], 'members.user_id': linked}, {'_id': 1}):
+            return _json_error(f'{name} is already in {_team_label(target)}.', 409)
+        member = _copied_card(member)
 
     from_id = str(source['_id']) if source else None
-    if target and source and source['_id'] == target['_id']:
-        return jsonify({'ok': True, 'member': _card(member), 'from_team_id': from_id, 'to_team_id': from_id})
-
-    if source:
+    if source and not added:
         db['teams'].update_one({'_id': source['_id']},
                                {'$pull': {'members': {'member_id': member['member_id']}}})
-    if linked:
-        _pull_user_from_rosters(linked)
     if target:
+        if linked:
+            _pull_user_from_rosters(linked, target)
         db['teams'].update_one({'_id': target['_id']}, {'$push': {'members': member}})
     if linked and ObjectId.is_valid(linked):
-        update = {'$unset': {'roster_card': ''}} if target else {'$set': {'roster_card': member}}
-        db['users'].update_one({'_id': ObjectId(linked)}, update)
+        if target and not is_group(target):
+            db['users'].update_one({'_id': ObjectId(linked)}, {'$unset': {'roster_card': ''}})
+        elif not target and source and not is_group(source):
+            db['users'].update_one({'_id': ObjectId(linked)}, {'$set': {'roster_card': member}})
     refresh_auto_stats()
 
-    where = _team_label(target) if target else 'Unassigned'
-    log_activity('roster_move', f"Moved {member.get('name') or 'a member'} to {where}",
+    who = member.get('name') or 'a member'
+    if not target:
+        what = f"Took {who} off {_team_label(source) if source else 'every roster'}"
+    else:
+        what = f"{'Added' if added else 'Moved'} {who} to {_team_label(target)}"
+    log_activity('roster_move', what,
                  details={'name': member.get('name'), 'from': from_id,
                           'to': str(target['_id']) if target else None})
-    return jsonify({'ok': True, 'member': _card(member), 'from_team_id': from_id,
-                    'to_team_id': str(target['_id']) if target else None})
+    return jsonify({'ok': True, 'mode': 'add' if added else 'move', 'member': _card(member),
+                    'from_team_id': from_id, 'to_team_id': str(target['_id']) if target else None,
+                    'unassigned': bool(linked) and not target and not _on_any_roster(linked)})
+
+
+def _copied_card(member):
+    """A new roster card for the same person: name, photo and login, but a fresh id and role."""
+    return {'member_id': _new_member_id(), 'name': member.get('name') or '', 'role': 'Member',
+            'user_id': str(member.get('user_id') or ''), 'photo': member.get('photo') or ''}
 
 
 @app.route('/admin/api/roster/link', methods=['POST'])
@@ -2424,7 +2515,7 @@ def admin_api_award_category_add():
               default=0)
     category = dict(fields, count=0, sort=top + 1)
     category['_id'] = db['awards'].insert_one(category).inserted_id
-    numbers = sorted({n for n in db['teams'].distinct('team_number') if n})
+    numbers = sorted({n for n in db['teams'].distinct('team_number', ROBOT_TEAMS) if n})
     if numbers:
         db['awards'].insert_many([_award_copy(category, n) for n in numbers])
     log_activity('award_category_add', f'Added award category "{fields["title"]}"',
@@ -2562,6 +2653,8 @@ def _loggable(value, limit=200):
 # --- Teams and seasons ---
 
 TEAM_NUMBER_RE = re.compile(r'[A-Z0-9-]{1,20}')
+GROUP_SLUG_RE = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*')
+GROUP_SLUG_MAX, GROUP_TITLE_MAX = 40, 60
 SEASON_RE = re.compile(r'\d{4}-\d{2}')
 
 
@@ -2586,7 +2679,34 @@ def admin_quick_team():
     return redirect(url_for('manage_team', team_id=str(team_id)))
 
 
-CARRIED_TEAM_FIELDS = ('team_number', 'nickname', 'tagline', 'division', 'since', 'worlds_appearances',
+def group_slug(title):
+    """The URL slug for a group title: "Media & Outreach" becomes media-outreach."""
+    return re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')[:GROUP_SLUG_MAX].strip('-')
+
+
+@app.route('/admin/quick-group', methods=['POST'])
+@role_required('admin')
+def admin_quick_group():
+    """Create a group (Media, Fundraising, ...) from just its title and go to its editor."""
+    title = collapse_whitespace(request.form.get('title', ''))
+    slug = group_slug(title)
+    if not slug or len(title) > GROUP_TITLE_MAX:
+        flash(f'Give the group a name of up to {GROUP_TITLE_MAX} characters, like Media.', 'error')
+        return _admin_redirect('teams')
+    clash = db['teams'].find_one({'team_number': {'$in': [slug, slug.upper()]}}, {'kind': 1, 'title': 1})
+    if clash:
+        flash(f'{_team_label(clash)} already uses that name.', 'error')
+        return _admin_redirect('teams')
+    team_id = db['teams'].insert_one({'kind': GROUP_KIND, 'team_number': slug, 'title': title,
+                                      'season': current_season(), 'tagline': '', 'members': [], 'goals': [],
+                                      'journey': []}).inserted_id
+    refresh_auto_stats()
+    log_activity('team_add', f'Added new group {title}', details={'team_number': slug, 'members_count': 0})
+    flash(f'{title} created. Fill in the details below; everything saves as you go.', 'success')
+    return redirect(url_for('manage_team', team_id=str(team_id)))
+
+
+CARRIED_TEAM_FIELDS = ('kind', 'title', 'team_number', 'nickname', 'tagline', 'division', 'since', 'worlds_appearances',
                        'robotevents_number', 'notebook_link', 'hero_image')
 
 
@@ -2618,7 +2738,8 @@ def admin_api_new_season(id):
     if any(m.get('user_id') for m in members):
         db['teams'].update_one({'_id': team['_id']},
                                {'$set': {'members': [dict(m, user_id='') for m in members]}})
-    seed_team_awards(number)
+    if not is_group(team):
+        seed_team_awards(number)
     refresh_auto_stats()
     log_activity('season_add', f'Started {season} for {number}', details={'team_number': number, 'season': season})
     flash(f'{number} {season} is ready. Last season stays on the team page under its season picker.', 'success')
@@ -2861,7 +2982,12 @@ ADMIN_TEAM_FIELDS = {
     'since': ('Competing since', None),
     'worlds_appearances': ('Worlds appearances', None),
     'hidden': ('Hidden from the site menu', None),
+    'title': ('Group name', GROUP_TITLE_MAX),
 }
+# Fields that only mean something for one kind of team.
+ROBOT_ONLY_FIELDS = {'nickname', 'notebook_link', 'division', 'robotevents_number', 'worlds_appearances',
+                     'specs.drive_train', 'specs.lift_system', 'specs.intake', 'specs.auton_consistency'}
+GROUP_ONLY_FIELDS = {'title'}
 MEMBER_CARD_FIELDS = {'name': ('Name', 100), 'role': ('Role', 100), 'roles': ('Roles', 200),
                       'subteam': ('Sub-team', 60), 'since': ('Member since', None)}
 
@@ -2905,14 +3031,21 @@ def _team_edit_log(team, user, what, old=None, new=None):
                  user=user['username'], details=details)
 
 
+def _own_rosters():
+    """Current-season teams and groups the signed-in user is on: their team first, then groups."""
+    if 'own_rosters' not in g:
+        user = _current_db_user()
+        g.own_rosters = sorted(_newest_season_docs({'members.user_id': str(user['_id'])}).values(),
+                               key=team_sort_key) if user else []
+    return g.own_rosters
+
+
 def my_team_url():
-    """Link to the signed-in user's team editor, or None. Called from the nav only."""
-    if 'my_team_url' in g:
-        return g.my_team_url
-    user = _current_db_user()
-    team = db['teams'].find_one({'members.user_id': str(user['_id'])}, {'_id': 1}) if user else None
-    g.my_team_url = url_for('manage_team', team_id=str(team['_id'])) if team else None
-    return g.my_team_url
+    """Link to the signed-in user's team editor, the picker if they are on several, or None."""
+    own = _own_rosters()
+    if len(own) > 1:
+        return url_for('my_team')
+    return url_for('manage_team', team_id=str(own[0]['_id'])) if own else None
 
 
 app.jinja_env.globals['my_team_url'] = my_team_url
@@ -2922,20 +3055,22 @@ app.jinja_env.globals['my_team_url'] = my_team_url
 @login_required
 def my_team():
     user = _session_user()
-    if user and role_at_least(user.get('role', 'member'), 'editor'):
-        # Editors can open any team, so give them the list instead of guessing one.
-        own = my_team_url()
-        teams = sorted(_newest_season_docs().values(), key=lambda t: t.get('team_number') or '')
-        choices = [{'url': url_for('manage_team', team_id=str(t['_id'])), 'number': t.get('team_number') or 'Team',
+    own = _own_rosters()
+    own_ids = {t['_id'] for t in own}
+    editor = bool(user) and role_at_least(user.get('role', 'member'), 'editor')
+    if editor or len(own) > 1:
+        # Editors can open any team, and someone on a team and in a group has two pages,
+        # so give them a list instead of guessing one.
+        teams = sorted(_newest_season_docs().values(), key=team_sort_key) if editor else own
+        choices = [{'url': url_for('manage_team', team_id=str(t['_id'])), 'group': is_group(t),
+                    'number': (t.get('title') if is_group(t) else t.get('team_number')) or 'Team',
                     'season': t.get('season') or '', 'nickname': t.get('nickname') or '',
-                    'members': len(t.get('members') or []),
-                    'own': url_for('manage_team', team_id=str(t['_id'])) == own}
+                    'members': len(t.get('members') or []), 'own': t['_id'] in own_ids}
                    for t in teams]
         choices.sort(key=lambda c: not c['own'])
-        return render_template('my_team.html', active_page='my_team', team_choices=choices)
-    url = my_team_url()
-    if url:
-        return redirect(url)
+        return render_template('my_team.html', active_page='my_team', team_choices=choices, editor=editor)
+    if own:
+        return redirect(url_for('manage_team', team_id=str(own[0]['_id'])))
     return render_template('my_team.html', active_page='my_team')
 
 
@@ -2987,6 +3122,16 @@ def _clean_team_field(field, value, label, limit):
     return text
 
 
+def _clean_group_field(field, value, label, limit):
+    text = collapse_whitespace(_clean_text(value, limit, label, required=True))
+    if field == 'title':
+        return text
+    slug = text.lower()
+    if len(slug) > GROUP_SLUG_MAX or not GROUP_SLUG_RE.fullmatch(slug):
+        raise UserFacingError('Use lowercase letters, digits and single dashes, like media or fundraising.')
+    return slug
+
+
 def _move_team_awards(old, new):
     """Carry award counters from one team number to another (after a rename).
 
@@ -3028,9 +3173,15 @@ def api_team_field(team_id):
     else:
         return _json_error('That field cannot be edited.' if can_admin else 'You cannot change that.',
                            400 if can_admin else 403)
+    if field in (ROBOT_ONLY_FIELDS if is_group(team) else GROUP_ONLY_FIELDS):
+        return _json_error(f"{'Groups' if is_group(team) else 'Robot teams'} don't have that field.")
 
     try:
-        value = _clean_team_field(field, body.get('value'), label, limit)
+        if is_group(team) and field in ('team_number', 'title'):
+            value = (_clean_group_field(field, body.get('value'), 'Page address', GROUP_SLUG_MAX)
+                     if field == 'team_number' else _clean_group_field(field, body.get('value'), label, limit))
+        else:
+            value = _clean_team_field(field, body.get('value'), label, limit)
     except UserFacingError as e:
         return _json_error(str(e))
 
@@ -3052,7 +3203,7 @@ def api_team_field(team_id):
     except DuplicateKeyError:
         return _json_error('Another profile already uses that team number and season.', 409)
 
-    if field == 'team_number' and value != old:
+    if field == 'team_number' and value != old and not is_group(team):
         _move_team_awards(old, value)
     if field in ('team_number', 'hidden'):
         refresh_auto_stats()
@@ -3276,7 +3427,7 @@ def _fetch_matches():
             logger.warning('RobotEvents fetch failed for %s', endpoint, exc_info=True)
             return None
 
-    numbers = sorted({t.get('robotevents_number') or t['team_number'] for t in listed_teams()})
+    numbers = sorted({t.get('robotevents_number') or t['team_number'] for t in listed_teams() if not is_group(t)})
     if not numbers:
         return {'matches': []}
     number_qs = '&'.join(f'number[]={urllib.parse.quote(n)}' for n in numbers)

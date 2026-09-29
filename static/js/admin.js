@@ -234,6 +234,7 @@ function lockSubmit(form) {
 const DELETE_WARNINGS = {
     team: 'This removes this season\'s team page, its roster and photos. Award counts are kept if another season still uses the number.',
     season: 'This removes that season\'s team page and roster.',
+    group: 'This removes this season\'s group page and roster. Members keep their robot teams and other groups.',
     account: 'They will no longer be able to sign in. Their roster card stays, without a login.',
     event: 'The event disappears from the homepage.',
     sponsor: 'The sponsor and its logo disappear from the Donate page.',
@@ -896,18 +897,32 @@ const Roles = {
     },
 };
 
-// Team columns hold roster cards (data-member-id, plus data-user-id when the
-// person has a login). The Unassigned column holds accounts (data-user-id
-// only). Only people with a login can go to Unassigned; removing someone
-// without one is a team-editor job, where it gets a confirmation.
+// Team and group columns hold roster cards (data-member-id, plus data-user-id
+// when the person has a login). The Unassigned column holds accounts
+// (data-user-id only). A person is on one robot team at most but can be in any
+// number of groups, so dropping on a group adds a card and leaves the dragged
+// one where it was; dropping on a team moves the person's team card. Only
+// people with a login can go to Unassigned; removing someone without one is a
+// team-editor job, where it gets a confirmation.
 const Roster = (function () {
     let dragged = null;
 
     const columns = () => Array.from(document.querySelectorAll('.roster-col'));
     const columnFor = teamId => columns().find(col => (col.dataset.teamId || null) === (teamId || null));
-    const teamOf = card => card.closest('.roster-col').dataset.teamId || null;
+    const teamOf = card => card.closest('.roster-col')?.dataset.teamId || null;
     const labelOf = col => col.querySelector('.roster-col-head strong').textContent;
-    const canGo = (card, teamId) => Boolean(teamId) || Boolean(card.dataset.userId);
+    const isGroup = col => col?.dataset.kind === 'group';
+    const cardsOf = userId => Array.from(document.querySelectorAll(`.roster-card[data-user-id="${userId}"]`))
+        .filter(card => teamOf(card));
+
+    function canGo(card, teamId) {
+        const col = columnFor(teamId);
+        if (!col || col === card.closest('.roster-col')) return false;
+        if (!teamId) return Boolean(card.dataset.userId);
+        const userId = card.dataset.userId;
+        // Not into a group they are already in, nor onto the team they are already on.
+        return !userId || !cardsOf(userId).some(other => other.closest('.roster-col') === col);
+    }
 
     function recount() {
         columns().forEach(col => {
@@ -915,46 +930,110 @@ const Roster = (function () {
         });
     }
 
-    // Rebuild a card's Move-to menu for the column it now sits in.
+    // Rebuild a card's Move-to menu for the column it now sits in (same shape as move_options in _people.html).
     function refreshMenu(card) {
-        const here = teamOf(card);
+        const here = card.closest('.roster-col');
+        const option = col => el('option', { value: col.dataset.teamId, text: labelOf(col) });
+        const targets = columns().filter(col => col.dataset.teamId && canGo(card, col.dataset.teamId));
+        const teams = targets.filter(col => !isGroup(col)).map(option);
+        const groups = targets.filter(isGroup).map(option);
         const options = [el('option', { value: '', text: 'Move to…', selected: true, disabled: true })];
-        columns().forEach(col => {
-            const id = col.dataset.teamId || null;
-            if (id === here || !canGo(card, id)) return;
-            options.push(el('option', { value: id || 'none', text: labelOf(col) }));
-        });
+        if (teams.length) options.push(el('optgroup', { label: 'Move to team' }, teams));
+        if (groups.length) options.push(el('optgroup', { label: 'Also add to group' }, groups));
+        if (here.dataset.teamId && card.dataset.userId) {
+            options.push(el('option', {
+                value: 'none', text: isGroup(here) ? `Remove from ${labelOf(here)}` : 'Unassigned',
+            }));
+        }
         card.querySelector('.roster-move').replaceChildren(...options);
+    }
+
+    // One move can change what several cards may do (a person's other cards), so redo them all.
+    function refresh() {
+        document.querySelectorAll('.roster-card').forEach(refreshMenu);
+        recount();
     }
 
     function place(card, teamId) {
         columnFor(teamId).querySelector('.roster-drop').append(card);
-        refreshMenu(card);
-        recount();
+        refresh();
     }
 
-    function move(card, toTeamId, undoable = true) {
-        const from = teamOf(card);
+    // A new card for a person just added to a group (or to a team, from a group card).
+    function newCard(member, like) {
+        const username = like.querySelector('[data-card-meta]')?.textContent.match(/@(\S+)/)?.[1];
+        const role = member.role || 'Member';
+        const meta = el('small', { dataset: { cardMeta: '' } }, member.user_id
+            ? [`${role}${username ? ` · @${username}` : ''}`]
+            : [`${role} · `, el('span', { className: 'no-login-chip', text: 'no login' })]);
+        const dataset = { memberId: member.member_id, name: member.name };
+        if (member.user_id) dataset.userId = member.user_id;
+        return el('li', { className: 'roster-card', draggable: 'true', dataset }, [
+            el('span', { className: 'roster-avatar', 'aria-hidden': 'true',
+                text: like.querySelector('.roster-avatar')?.textContent || '' }),
+            el('span', { className: 'roster-text' }, [el('strong', { text: member.name }), meta]),
+            el('div', { className: 'roster-card-controls' }, [
+                el('select', { className: 'roster-move', 'aria-label': `Move ${member.name} to` }),
+            ]),
+        ]);
+    }
+
+    // Show what the server did. Returns the card now at `to` (or the removed one), for Undo.
+    function show(card, data, to) {
+        if (!to) {
+            // Its card is gone from the roster, so Undo puts the person back by account.
+            delete card.dataset.memberId;
+            if (data.unassigned) {
+                place(card, null);
+            } else {
+                card.remove();
+                refresh();
+            }
+            return card;
+        }
+        // An account card (in Unassigned, or taken off the board by an earlier move) goes itself.
+        if (data.mode === 'add' && teamOf(card) && card.isConnected) {
+            const added = newCard(data.member, card);
+            place(added, to);
+            return added;
+        }
+        const moved = document.querySelector(`.roster-card[data-member-id="${data.member.member_id}"]`) || card;
+        moved.dataset.memberId = data.member.member_id;
+        place(moved, to);
+        return moved;
+    }
+
+    function move(card, toTeamId, isUndo = false) {
+        const fromCol = card.closest('.roster-col');
         const to = toTeamId || null;
-        if (to === from || !canGo(card, to) || !columnFor(to)) return;
+        if (!isUndo && !canGo(card, to)) return;
 
         const body = { to_team_id: to };
         if (card.dataset.memberId) body.member_id = card.dataset.memberId;
         else body.user_id = card.dataset.userId;
+        if (isUndo && !to) body.remove = true;
 
-        place(card, to);
         card.classList.add('is-busy');
         api('/admin/api/roster/move', body)
             .then(data => {
                 card.classList.remove('is-busy');
-                if (to) card.dataset.memberId = data.member.member_id;
-                else delete card.dataset.memberId;
-                Admin.notify(`${card.dataset.name} moved to ${labelOf(columnFor(to))}.`, 'success',
-                    undoable ? { label: 'Undo', run: () => move(card, from, false) } : null);
+                const result = show(card, data, to);
+                const name = card.dataset.name;
+                let message, revert;
+                if (!to) {
+                    message = data.unassigned ? `${name} is now unassigned.` : `${name} is off ${labelOf(fromCol)}.`;
+                    revert = () => move(result, fromCol.dataset.teamId, true);
+                } else if (data.mode === 'add') {
+                    message = `${name} added to ${labelOf(columnFor(to))}.`;
+                    revert = () => move(result, null, true);
+                } else {
+                    message = `${name} moved to ${labelOf(columnFor(to))}.`;
+                    revert = () => move(result, data.from_team_id, true);
+                }
+                Admin.notify(message, 'success', isUndo ? null : { label: 'Undo', run: revert });
             })
             .catch(err => {
                 card.classList.remove('is-busy');
-                place(card, from);
                 Admin.notify(err.message, 'error');
             });
     }
@@ -981,8 +1060,7 @@ const Roster = (function () {
                 account?.remove();
                 document.querySelectorAll(`.roster-link option[value="${userId}"]`).forEach(o => o.remove());
                 select.remove();
-                refreshMenu(card);
-                recount();
+                refresh();
                 Admin.notify(`${card.dataset.name} is now linked to ${accountName}.`, 'success');
             })
             .catch(err => Admin.notify(err.message, 'error'));
@@ -999,7 +1077,7 @@ const Roster = (function () {
         board.addEventListener('dragstart', e => {
             dragged = e.target.closest('.roster-card');
             if (!dragged) return;
-            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.effectAllowed = 'copyMove';
             e.dataTransfer.setData('text/plain', dragged.dataset.name || '');
             dragged.classList.add('is-dragging');
             board.classList.add('is-dragging');
@@ -1014,6 +1092,9 @@ const Roster = (function () {
             const col = e.target.closest('.roster-col');
             if (!col || !dragged || !canGo(dragged, col.dataset.teamId || null)) return;
             e.preventDefault();
+            // Into or out of a group, the dragged card stays put and a new one is added: show a copy cursor.
+            const copies = teamOf(dragged) && col.dataset.teamId && (isGroup(col) || isGroup(dragged.closest('.roster-col')));
+            e.dataTransfer.dropEffect = copies ? 'copy' : 'move';
             if (!col.classList.contains('is-over')) {
                 clearHover();
                 col.classList.add('is-over');

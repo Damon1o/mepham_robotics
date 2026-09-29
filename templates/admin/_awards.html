@@ -10,7 +10,7 @@
         <div class="scope-row" role="tablist" aria-label="Whose awards">
             <button type="button" class="team-chip" role="tab" data-award-scope="" aria-selected="true">
                 <i data-lucide="building-2" aria-hidden="true"></i> Club totals</button>
-            {% for team in current_teams %}
+            {% for team in current_teams|reject("group") %}
             <button type="button" class="team-chip" role="tab" data-award-scope="{{ team.team_number }}"
                 aria-selected="false">{{ team.team_number }}{% if team.nickname %} · {{ team.nickname }}{% endif %}</button>
             {% endfor %}

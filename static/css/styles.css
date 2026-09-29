@@ -291,13 +291,26 @@ body::before {
 }
 
 .dropdown-container.active {
-    max-height: 500px;
+    max-height: 900px;
 }
 
 .dropdown-container a {
     font-size: 1.05rem;
     padding-left: 50px;
     opacity: 0.9;
+}
+
+/* Divides robot teams from groups (Media, Fundraising, ...) in the Team menu. */
+.dropdown-label {
+    display: block;
+    margin-top: 0.35rem;
+    padding: 0.6rem 20px 0.2rem 50px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--accent-gold);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
 /* --- OVERLAY ENHANCEMENT --- */

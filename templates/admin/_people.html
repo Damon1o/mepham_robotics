@@ -1,4 +1,18 @@
 {% from "admin/_macros.html" import card_head, empty %}
+
+{#- Move-to menu for a roster card in `col` (None: an Unassigned account). Teams move the person;
+    groups add them, skipping groups they are already in. Keep in step with Roster.refreshMenu in admin.js. -#}
+{% macro move_options(card, col) -%}
+{% set here = col._id if col else '' %}
+{% set teams = team_choices|rejectattr(0, 'equalto', here)|rejectattr(0, 'equalto', robot_team_of.get(card.user_id))|list %}
+{% set groups = [] %}
+{% for id, label in group_choices if id != here and not (card.user_id and card.user_id in group_members[id]) %}
+{% set _ = groups.append((id, label)) %}
+{% endfor %}
+{% if teams %}<optgroup label="Move to team">{% for id, label in teams %}<option value="{{ id }}">{{ label }}</option>{% endfor %}</optgroup>{% endif %}
+{% if groups %}<optgroup label="Also add to group">{% for id, label in groups %}<option value="{{ id }}">{{ label }}</option>{% endfor %}</optgroup>{% endif %}
+{% if col and card.user_id %}<option value="none">{{ 'Remove from ' ~ col.label if col.group else 'Unassigned' }}</option>{% endif %}
+{%- endmacro %}
 <section class="admin-panel" data-panel="users" id="panel-users" role="tabpanel" aria-labelledby="tab-users"
     tabindex="0" hidden>
 
@@ -29,6 +43,13 @@
                         <option value="{{ id }}" {% if u.requested_team == id %}selected{% endif %}>{{ label }}{% if u.requested_team == id %} (requested){% endif %}</option>
                         {% endfor %}
                     </optgroup>
+                    {% if group_choices %}
+                    <optgroup label="Add to a group">
+                        {% for id, label in group_choices %}
+                        <option value="{{ id }}" {% if u.requested_team == id %}selected{% endif %}>{{ label }}{% if u.requested_team == id %} (requested){% endif %}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
                     {% if claimable %}
                     <optgroup label="Claim a roster card">
                         {% for member_id, label in claimable %}
@@ -52,14 +73,18 @@
     <div class="admin-card" id="roster">
         {{ card_head('columns-3', 'Team rosters') }}
         <p class="form-hint">Drag people between teams, or use <em>Move to</em> on a card (keyboard and phone
-            friendly). Every move can be undone from the message that pops up. Cards marked
+            friendly). Everyone is on one robot team at most, but can join any number of groups: dropping on a
+            group adds them and keeps them where they were; drop a group card on <em>Unassigned</em> to take them
+            out of that group. Every move can be undone from the message that pops up. Cards marked
             <span class="no-login-chip">no login</span> can be linked to an account with <em>Link login</em>.</p>
         {% if board %}
         <div class="roster-board" id="rosterBoard">
             {% for col in board %}
-            <section class="roster-col" data-team-id="{{ col._id }}" aria-label="{{ col.label }} roster">
+            <section class="roster-col{% if col.group %} roster-col--group{% endif %}" data-team-id="{{ col._id }}"
+                data-kind="{{ 'group' if col.group else 'team' }}" aria-label="{{ col.label }} roster">
                 <header class="roster-col-head">
                     <span class="roster-col-title"><strong>{{ col.label }}</strong>
+                        {% if col.group %}<small class="group-chip"><i data-lucide="users" aria-hidden="true"></i> Group</small>{% endif %}
                         {% if col.nickname %}<small>{{ col.nickname }}</small>{% endif %}
                         {% if col.hidden %}<small class="hidden-chip">hidden from menu</small>{% endif %}</span>
                     <span class="roster-count">{{ col.cards|length }}</span>
@@ -75,8 +100,7 @@
                         <div class="roster-card-controls">
                             <select class="roster-move" aria-label="Move {{ c.name }} to">
                                 <option value="" selected disabled>Move to…</option>
-                                {% for id, label in team_choices if id != col._id %}<option value="{{ id }}">{{ label }}</option>{% endfor %}
-                                {% if c.user_id %}<option value="none">Unassigned</option>{% endif %}
+                                {{ move_options(c, col) }}
                             </select>
                             {% if not c.user_id and unassigned %}
                             <select class="roster-link" aria-label="Link a login to {{ c.name }}">
@@ -108,7 +132,7 @@
                         <div class="roster-card-controls">
                             <select class="roster-move" aria-label="Move {{ u.username }} to">
                                 <option value="" selected disabled>Move to…</option>
-                                {% for id, label in team_choices %}<option value="{{ id }}">{{ label }}</option>{% endfor %}
+                                {{ move_options({'user_id': u._id}, None) }}
                             </select>
                         </div>
                     </li>

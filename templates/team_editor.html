@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Edit {{ team.team_number }} | Mepham Robotics{% endblock %}
+{% set is_group = team is group %}
+{% block title %}Edit {{ team.title or team.team_number if is_group else team.team_number }} | Mepham Robotics{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
@@ -45,7 +46,11 @@
 
     <header class="editor-bar">
         <div class="editor-bar-title">
+            {% if is_group %}
+            <h1>{{ team.title or team.team_number }} <span>· group</span></h1>
+            {% else %}
             <h1>{{ team.team_number }}{% if team.nickname %} <span>· {{ team.nickname }}</span>{% endif %}</h1>
+            {% endif %}
             <p>{% if team.season %}{{ team.season }} season. {% endif %}Every change saves on its own.
                 {% if other_seasons %}Other seasons:
                 {% for other in other_seasons %}<a href="{{ other.url }}">{{ other.label }}</a>{{ ', ' if not loop.last }}{% endfor %}{% endif %}</p>
@@ -72,7 +77,9 @@
     <div class="settings-layout">
         <nav class="settings-nav" aria-label="Editor sections">
             <a href="#s-identity"><i data-lucide="flag" aria-hidden="true"></i> Identity</a>
+            {% if not is_group %}
             <a href="#s-specs"><i data-lucide="cog" aria-hidden="true"></i> Robot</a>
+            {% endif %}
             <a href="#s-goals"><i data-lucide="target" aria-hidden="true"></i> Goals</a>
             <a href="#s-roster"><i data-lucide="users" aria-hidden="true"></i> Roster</a>
             {% if can_admin %}
@@ -84,20 +91,24 @@
         <div class="settings-main">
             <!-- IDENTITY -->
             <section class="settings-section" id="s-identity" aria-labelledby="h-identity">
-                <h2 id="h-identity">Team identity</h2>
+                <h2 id="h-identity">{{ 'Group' if is_group else 'Team' }} identity</h2>
+                {% if not is_group %}
                 {% call row('Nickname', 'f-nickname') %}
                 <input id="f-nickname" type="text" maxlength="80" value="{{ team.nickname or '' }}"
                     data-autosave="nickname" placeholder="e.g. Prometheus">
                 {% endcall %}
+                {% endif %}
                 {% call row('Tagline', 'f-tagline', 'One short line under the name') %}
                 <input id="f-tagline" type="text" maxlength="200" value="{{ team.tagline or '' }}"
-                    data-autosave="tagline" placeholder="Precision. Power. Performance.">
+                    data-autosave="tagline" placeholder="{{ 'Telling the club’s story.' if is_group else 'Precision. Power. Performance.' }}">
                 {% endcall %}
+                {% if not is_group %}
                 {% call row('Notebook link', 'f-notebook', 'Google Drive or Docs share link') %}
                 <input id="f-notebook" type="url" maxlength="500"
                     value="{{ team.notebook_link if team.notebook_link and team.notebook_link != '#' else '' }}"
                     data-autosave="notebook_link" placeholder="https://docs.google.com/…">
                 {% endcall %}
+                {% endif %}
                 {% call row('Banner photo', hint='Wide photos look best') %}
                 <div class="image-field">
                     <label class="drop-zone drop-zone--inline" data-upload="hero_image">
@@ -112,6 +123,7 @@
                 {% endcall %}
             </section>
 
+            {% if not is_group %}
             <!-- SPECS -->
             <section class="settings-section" id="s-specs" aria-labelledby="h-specs">
                 <h2 id="h-specs">Robot specs</h2>
@@ -127,6 +139,7 @@
                 {% endcall %}
                 {% endfor %}
             </section>
+            {% endif %}
 
             <!-- GOALS -->
             <section class="settings-section" id="s-goals" aria-labelledby="h-goals">
@@ -227,11 +240,23 @@
             {% if can_admin %}
             <!-- EDITOR-ONLY DETAILS -->
             <section class="settings-section" id="s-details" aria-labelledby="h-details">
-                <h2 id="h-details">Team details <span class="role-badge editor">editors</span></h2>
+                <h2 id="h-details">{{ 'Group' if is_group else 'Team' }} details <span class="role-badge editor">editors</span></h2>
+                {% if is_group %}
+                {% call row('Group name', 'f-title', 'Shown in the Team menu and on the page') %}
+                <input id="f-title" type="text" maxlength="60" required value="{{ team.title or '' }}"
+                    data-autosave="title" placeholder="e.g. Media">
+                {% endcall %}
+                {% call row('Page address', 'f-team_number', 'The end of the link: /team/' ~ team.team_number) %}
+                <input id="f-team_number" type="text" name="team_number" maxlength="40" required
+                    value="{{ team.team_number }}" data-autosave="team_number" autocapitalize="none"
+                    pattern="[a-z0-9]+(-[a-z0-9]+)*">
+                {% endcall %}
+                {% else %}
                 {% call row('Team number', 'f-team_number') %}
                 <input id="f-team_number" type="text" name="team_number" maxlength="20" required
                     value="{{ team.team_number }}" data-autosave="team_number" autocapitalize="characters">
                 {% endcall %}
+                {% endif %}
                 {% call row('Season', 'f-season') %}
                 <select id="f-season" data-autosave="season">
                     <option value="">Not set</option>
@@ -240,6 +265,7 @@
                     {% endfor %}
                 </select>
                 {% endcall %}
+                {% if not is_group %}
                 {% call row('Division') %}
                 <div class="segmented" role="radiogroup" aria-labelledby="lbl-division">
                     {% for d in [''] + divisions|list %}
@@ -248,7 +274,8 @@
                     {% endfor %}
                 </div>
                 {% endcall %}
-                {% call row('Competing since', 'f-since') %}
+                {% endif %}
+                {% call row('Started' if is_group else 'Competing since', 'f-since') %}
                 <select id="f-since" data-autosave="since">
                     <option value="">Not set</option>
                     {% for y in years %}
@@ -256,6 +283,7 @@
                     {% endfor %}
                 </select>
                 {% endcall %}
+                {% if not is_group %}
                 {% call row('Worlds appearances', 'f-worlds') %}
                 <select id="f-worlds" data-autosave="worlds_appearances">
                     <option value="">Not set</option>
@@ -279,17 +307,18 @@
                         data-kind="stl_file"{% if not team.stl_path %} hidden{% endif %}>Remove</button>
                 </div>
                 {% endcall %}
-                {% call row('Site menu', hint='Retired teams can stay on record without a menu link') %}
+                {% endif %}
+                {% call row('Site menu', hint='Retired ' ~ ('groups' if is_group else 'teams') ~ ' can stay on record without a menu link') %}
                 <label class="switch">
                     <input type="checkbox" data-autosave="hidden" {% if team.hidden %}checked{% endif %}>
                     <span class="switch-track" aria-hidden="true"></span>
-                    <span class="switch-text">Hide this team from the site menu and search</span>
+                    <span class="switch-text">Hide this {{ 'group' if is_group else 'team' }} from the site menu and search</span>
                 </label>
                 {% endcall %}
             </section>
 
             <section class="settings-section" id="s-journey" aria-labelledby="h-journey">
-                <h2 id="h-journey">Team journey <span class="role-badge editor">editors</span></h2>
+                <h2 id="h-journey">{{ 'Group' if is_group else 'Team' }} journey <span class="role-badge editor">editors</span></h2>
                 <datalist id="dl-months">
                     {% for mo in months %}<option value="{{ mo }}"></option>{% endfor %}
                 </datalist>

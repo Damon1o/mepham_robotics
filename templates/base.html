@@ -57,8 +57,12 @@
                 aria-expanded="false">Team</button>
             <div id="teamDropdown" class="dropdown-container">
                 {% for n_team in nav_teams %}
+                {% if n_team is group and loop.previtem is not group %}
+                <span class="dropdown-label" role="presentation">Groups</span>
+                {% endif %}
                 <a href="{{ url_for('team_page', team_number=n_team.team_number) }}" {% if
-                    active_page==n_team.team_number %} class="active" {% endif %}>{{ n_team.team_number }}</a>
+                    active_page==n_team.team_number %} class="active" {% endif %}>{{ n_team.title or
+                    n_team.team_number if n_team is group else n_team.team_number }}</a>
                 {% endfor %}
             </div>
 
