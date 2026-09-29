@@ -265,6 +265,13 @@
     font-size: 0.82rem;
 }
 
+/* Beside "Add photo": the gallery takes several dropped photos at once. */
+.site-editor .drop-hint {
+    align-self: center;
+    color: var(--admin-muted);
+    font-size: 0.8rem;
+}
+
 @media (max-width: 720px) {
     .site-editor .setting-row--wide {
         grid-template-columns: minmax(0, 1fr);

@@ -8,8 +8,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team_editor.css') }}">
 {% endblock %}
 
-{% macro row(label, for_id='', hint='') %}
-<div class="setting-row">
+{#- `drop` makes the whole row take a dropped file, with that text shown while dragging. -#}
+{% macro row(label, for_id='', hint='', drop='') %}
+<div class="setting-row"{% if drop %} data-drop data-drop-label="{{ drop }}"{% endif %}>
     <div class="setting-label">
         {% if for_id %}<label for="{{ for_id }}">{{ label }}</label>{% else %}<span id="lbl-{{ label|lower|replace(' ', '-') }}">{{ label }}</span>{% endif %}
         {% if hint %}<small>{{ hint }}</small>{% endif %}
@@ -109,7 +110,7 @@
                     data-autosave="notebook_link" placeholder="https://docs.google.com/…">
                 {% endcall %}
                 {% endif %}
-                {% call row('Banner photo', hint='Wide photos look best') %}
+                {% call row('Banner photo', hint='Wide photos look best', drop='Use as the banner photo') %}
                 <div class="image-field">
                     <label class="drop-zone drop-zone--inline" data-upload="hero_image">
                         <img class="drop-zone-preview" alt="" {% if team.hero_image %}src="{{ get_image_url(team.hero_image) }}"{% else %}hidden{% endif %}>
@@ -181,7 +182,11 @@
                     {% for r in role_suggestions %}<option value="{{ r }}"></option>{% endfor %}
                 </datalist>
                 <datalist id="dl-extra-roles" data-roles="{{ role_suggestions|join('|') }}"></datalist>
-                <div class="member-list" id="memberGrid" role="list">
+                <div class="member-list" id="memberGrid" role="list"
+                    {%- if can_admin %} data-drop="event" data-drop-multiple
+                    data-drop-accept="image/png,image/jpeg,image/gif,image/webp,.csv,.txt"
+                    data-drop-label="Drop photos named after people, or a .csv or .txt list of names"
+                    data-drop-label-many="Drop {n} files: photos go to the people they are named after"{% endif %}>
                     <div class="member-head" aria-hidden="true">
                         <span></span><span>Name</span><span>Main role</span><span>Other roles</span>
                         <span>Sub-team</span><span>Joined</span><span></span>
@@ -189,7 +194,8 @@
                     {% for m in cards %}
                     {% set editable = can_admin or m.member_id == own_member_id %}
                     <div class="member-card{% if m.member_id == own_member_id %} is-you{% endif %}{% if not editable %} is-readonly{% endif %}"
-                        data-member-id="{{ m.member_id }}" role="listitem">
+                        data-member-id="{{ m.member_id }}" role="listitem"
+                        {%- if editable %} data-drop data-drop-label="Set as {{ m.name ~ '’s' if m.name else 'their' }} photo"{% endif %}>
                         <label class="member-photo{% if editable %} drop-zone drop-zone--round{% endif %}"
                             {% if editable %}data-upload="member_photo" title="Change photo"{% endif %}>
                             {% if m.photo %}
@@ -228,6 +234,8 @@
                     {% endfor %}
                 </div>
                 {% if can_admin %}
+                <p class="form-hint drop-hint"><i data-lucide="image-up" aria-hidden="true"></i> Drop a photo on someone’s row,
+                    a batch of photos named after people on the list, or a .csv or .txt of names to add everyone at once.</p>
                 <form class="inline-add" id="addMemberForm">
                     <label for="f-new-member" class="visually-hidden">New member name</label>
                     <input id="f-new-member" type="text" maxlength="100" placeholder="Add someone by name…" required>
@@ -296,7 +304,7 @@
                 <input id="f-re" type="text" maxlength="20" value="{{ team.robotevents_number or '' }}"
                     data-autosave="robotevents_number" placeholder="{{ team.team_number }}">
                 {% endcall %}
-                {% call row('CAD model', hint='.stl file for the 3D viewer') %}
+                {% call row('CAD model', hint='.stl file for the 3D viewer', drop='Use as the CAD model') %}
                 <div class="image-field">
                     <label class="drop-zone drop-zone--inline" data-upload="stl_file">
                         <span class="drop-zone-text"><i data-lucide="box" aria-hidden="true"></i>
@@ -350,7 +358,7 @@
 </div>
 
 <template id="tpl-member">
-    <div class="member-card" data-member-id="" role="listitem">
+    <div class="member-card" data-member-id="" role="listitem" data-drop data-drop-label="Set as their photo">
         <label class="member-photo drop-zone drop-zone--round" data-upload="member_photo" title="Change photo">
             <img class="drop-zone-preview" alt="" hidden>
             <span class="member-initials"></span>

@@ -2,16 +2,20 @@
 <section class="admin-panel" data-panel="sponsors" id="panel-sponsors" role="tabpanel" aria-labelledby="tab-sponsors"
     tabindex="0" hidden>
     <div class="sponsor-layout">
-        <div class="admin-card">
+        <div class="admin-card" id="sponsor_list_card" data-drop="event"
+            data-drop-accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" data-drop-label="Drop a logo to add a new sponsor">
             {% call card_head('handshake', 'Sponsors', sponsors|length) %}
             <label class="visually-hidden" for="sponsors_filter">Filter sponsors</label>
             <input type="search" id="sponsors_filter" class="panel-filter panel-filter--compact" placeholder="Filter sponsors…">
             {% endcall %}
-            <p class="form-hint">Shown on the Donate page, highest level first.
+            <p class="form-hint">Shown on the Donate page, highest level first. Drop a logo on a sponsor to replace
+                theirs, or anywhere else here to start a new one.
                 <a href="{{ url_for('donate') }}#donate" target="_blank" rel="noopener">View the page</a></p>
             <div class="data-list list-sponsors">
                 {% for sponsor in sponsors %}
-                <div class="data-item sponsor-row">
+                <div class="data-item sponsor-row" data-sponsor-id="{{ sponsor._id }}" data-drop="event"
+                    data-drop-accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+                    data-drop-label="Use as {{ sponsor.name }}’s logo">
                     <div class="sponsor-thumb">
                         {% if sponsor.logo %}
                         <img src="{{ get_image_url(sponsor.logo) }}" alt="" loading="lazy">
@@ -48,7 +52,7 @@
             </div>
         </div>
 
-        <div class="admin-card" id="sponsor_form_card">
+        <div class="admin-card" id="sponsor_form_card" data-drop data-drop-input="f-logo" data-drop-label="Use as the logo">
             <div class="admin-card-header">
                 <h2 id="sponsor_form_title"><i data-lucide="circle-plus" aria-hidden="true"></i> <span data-form-title>Add a sponsor</span></h2>
             </div>

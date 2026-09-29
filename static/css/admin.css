@@ -1905,6 +1905,13 @@ body:has(.admin-container) #custom-chatbot-container {
     font-size: 0.72rem;
 }
 
+.roster-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
 .roster-col--unassigned .roster-avatar {
     background: #5c5451;
 }
@@ -2113,6 +2120,22 @@ body:has(.admin-container) #custom-chatbot-container {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* The banner photo, when the team has one; drop a photo on the tile to set it. */
+.team-tile-photo {
+    flex: none;
+    width: 4.2rem;
+    height: 2.6rem;
+    margin-left: auto;
+    border-radius: var(--admin-radius-sm);
+    object-fit: cover;
+}
+
+/* A file dropped on a tile or row is on its way up. */
+.data-item.is-uploading {
+    opacity: 0.6;
+    cursor: progress;
 }
 
 .team-tile-actions {
@@ -2803,6 +2826,17 @@ body:has(.admin-container) #custom-chatbot-container {
 
 .setting-row--top {
     align-items: start;
+}
+
+/* A settings row that takes a dropped file has no padding of its own, so its drag
+   outline and veil sit a little outside it, clear of the label text. */
+html.ctl-dragging .admin-editor .setting-row[data-drop] {
+    outline-offset: 4px;
+    border-radius: var(--admin-radius-sm);
+}
+
+.admin-editor .setting-row[data-drop-now]::before {
+    inset: -4px;
 }
 
 .setting-label label,

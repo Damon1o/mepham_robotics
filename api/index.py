@@ -1993,6 +1993,35 @@ def admin_delete_sponsor(id):
                  details={'name': sponsor.get('name', 'Unknown'), 'level': sponsor.get('level', 'Unknown')})
     return _admin_redirect('sponsors')
 
+
+@app.route('/admin/api/sponsor/<id>/logo', methods=['POST'])
+@role_required('admin')
+def admin_api_sponsor_logo(id):
+    """Replace one sponsor's logo: a file dropped or pasted on its row in the list."""
+    sponsor = _find_by_id('sponsors', id)
+    if not sponsor:
+        return _json_error('That sponsor no longer exists. Reload the page and try again.', 404)
+    logo = request.files.get('logo')
+    if not logo or not logo.filename:
+        return _json_error('Choose a logo to upload.')
+    name = sponsor.get('name') or 'sponsor'
+    try:
+        url = checked_upload(logo, 'sponsors', allowed=IMAGE_EXTENSIONS, stem=name)
+    except UserFacingError as e:
+        return _json_error(str(e))
+    except Exception:
+        logger.exception('Sponsor logo upload failed')
+        return _json_error('Upload failed. Try again in a moment.', 502)
+    db['sponsors'].update_one({'_id': sponsor['_id']}, {'$set': {'logo': url}})
+    old = sponsor.get('logo')
+    if isinstance(old, str) and old.startswith('http') and old != url:
+        try:
+            delete_from_vercel_blob(old)
+        except Exception:
+            logger.exception('Error deleting old sponsor logo')
+    log_activity('sponsor_update', f'Updated logo for sponsor: {name}', details={'name': name, 'level': sponsor.get('level')})
+    return jsonify({'ok': True, 'url': get_image_url(url)})
+
 # --- People, roster board, inline admin edits, and the shared team editor ---
 # Everything here speaks JSON to static/js/admin.js and static/js/team-editor.js.
 # The CSRF hook covers these routes like any other POST; the browser sends the
