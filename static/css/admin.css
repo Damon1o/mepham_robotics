@@ -546,6 +546,7 @@ body:has(.admin-container) #custom-chatbot-container {
 .admin-container input[type="datetime-local"],
 .admin-container input[type="time"],
 .admin-container select,
+.admin-container .dp-trigger,
 .admin-container textarea {
     box-sizing: border-box;
     min-height: 2.3rem;
@@ -570,6 +571,8 @@ body:has(.admin-container) #custom-chatbot-container {
 
 .admin-container input:focus,
 .admin-container select:focus,
+.admin-container .dp-trigger:focus-visible,
+.admin-container .dp-trigger[aria-expanded="true"],
 .admin-container textarea:focus {
     border-color: var(--admin-accent);
     outline: none;
@@ -577,7 +580,8 @@ body:has(.admin-container) #custom-chatbot-container {
 }
 
 .admin-container input:disabled,
-.admin-container select:disabled {
+.admin-container select:disabled,
+.admin-container .dp-trigger:disabled {
     cursor: not-allowed;
     opacity: 0.7;
     background: var(--admin-surface);
@@ -688,8 +692,9 @@ body:has(.admin-container) #custom-chatbot-container {
     flex: 1 1 11rem;
 }
 
-.inline-create input[type="datetime-local"] {
-    flex: 0 1 13rem;
+.inline-create input[type="datetime-local"],
+.inline-create .dp-trigger {
+    flex: 0 1 15rem;
 }
 
 .inline-create .admin-btn {
@@ -1127,6 +1132,28 @@ body:has(.admin-container) #custom-chatbot-container {
     gap: 0.3rem;
     margin-top: 0.9rem;
     font-weight: 700;
+}
+
+/* The dialog sits outside .admin-container, so its field needs the look spelled out. */
+.dialog-field select,
+.dialog-field input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 2.4rem;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--admin-field-border);
+    border-radius: var(--admin-radius-sm);
+    background-color: var(--admin-field-bg);
+    color: var(--admin-text);
+    font: inherit;
+    font-weight: 400;
+}
+
+.dialog-field select:focus,
+.dialog-field input:focus {
+    border-color: var(--admin-accent);
+    outline: none;
+    box-shadow: var(--admin-focus-ring);
 }
 
 .loading-overlay {
@@ -1887,6 +1914,8 @@ body:has(.admin-container) #custom-chatbot-container {
 }
 
 .admin-container .roster-card-controls select {
+    --cs-pad: 1.5rem;
+    --cs-chevron-x: 0.45rem;
     flex: 1;
     min-width: 0;
     min-height: 1.9rem;
@@ -1964,6 +1993,8 @@ body:has(.admin-container) #custom-chatbot-container {
 }
 
 .admin-container .role-inline {
+    --cs-pad: 1.6rem;
+    --cs-chevron-x: 0.55rem;
     min-height: 1.9rem;
     padding: 0.1rem 1.6rem 0.1rem 0.6rem;
     border: 0;
@@ -2769,6 +2800,10 @@ body:has(.admin-container) #custom-chatbot-container {
 .setting-control > textarea {
     flex: 1 1 14rem;
     width: 100%;
+}
+
+.setting-control > .dp-trigger {
+    flex: 0 1 17rem;
 }
 
 .admin-editor .is-saving {

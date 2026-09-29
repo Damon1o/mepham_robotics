@@ -1,0 +1,873 @@
+/* ==========================================================================
+   Custom form controls (static/js/controls.js), on every page.
+
+     1. Tokens (light, then dark)
+     2. The hidden native element
+     3. Dropdowns: the select itself, then its menu
+     4. Popover frame and bottom sheet
+     5. Suggestion lists
+     6. Date and time pickers
+     7. File drop zone
+     8. Checkboxes and radios
+     9. Sliders, number fields, search fields
+    10. Reduced motion
+   The menus and pickers are placed on <body>, outside any page container, so
+   they take their colours from the --ctl-* tokens below, not the page's.
+   ========================================================================== */
+
+/* 1. Tokens ================================================================= */
+:root {
+    --ctl-bg: #ffffff;
+    --ctl-surface: #faf7f5;
+    --ctl-hover: #f8eded;
+    --ctl-line: #e6e0dc;
+    --ctl-border: #b3a9a4;
+    --ctl-text: #1f1b1a;
+    --ctl-muted: #5c5451;
+    --ctl-accent: #800000;
+    --ctl-accent-ink: #800000;
+    --ctl-on-accent: #ffffff;
+    --ctl-gold: #ffd700;
+    --ctl-gold-soft: #fff4c2;
+    --ctl-ink-on-gold: #1a1a1a;
+    --ctl-danger: #b3261e;
+    --ctl-shadow: 0 14px 34px rgba(50, 15, 15, 0.16), 0 2px 6px rgba(50, 15, 15, 0.08);
+    --ctl-radius: 12px;
+    --ctl-radius-sm: 8px;
+}
+
+[data-theme="dark"] {
+    --ctl-bg: #1e1e1e;
+    --ctl-surface: #252222;
+    --ctl-hover: #3a2425;
+    --ctl-line: #393434;
+    --ctl-border: #6a6260;
+    --ctl-text: #ece7e4;
+    --ctl-muted: #b8aeaa;
+    --ctl-accent: #9e2a2b;
+    --ctl-accent-ink: #efbcbd;
+    --ctl-on-accent: #ffffff;
+    --ctl-gold-soft: #3a3310;
+    --ctl-danger: #ff9b91;
+    --ctl-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* 2. The native element behind a custom control ============================== */
+/* Still in the form and still focusable by code; just not drawn. */
+.ctl-native {
+    position: absolute !important;
+    width: 1px !important;
+    min-width: 0 !important;
+    height: 1px !important;
+    min-height: 0 !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+}
+
+.ctl-icon {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* 3. Dropdowns ================================================================ */
+/* Pages style their selects as fields; these rules only swap the arrow and keep
+   room for it. --cs-pad and --cs-chevron-x let a page tune both. The chevron
+   image itself is drawn by controls.js in the select's text colour. */
+select:not([multiple]) {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    padding-right: var(--cs-pad, 2.1rem) !important;
+    background-image: var(--cs-chevron, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1.5 1.75 6 6.25l4.5-4.5' fill='none' stroke='%23857b77' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")) !important;
+    background-repeat: no-repeat !important;
+    background-position: right var(--cs-chevron-x, 0.75rem) center !important;
+    background-size: 0.7rem auto !important;
+    cursor: pointer;
+    text-overflow: ellipsis;
+}
+
+select:not([multiple]):disabled {
+    cursor: not-allowed;
+}
+
+select.cs-select[aria-expanded="true"] {
+    border-color: var(--ctl-accent);
+}
+
+/* The open menu */
+.cs-menu {
+    display: flex;
+    flex-direction: column;
+    max-width: min(26rem, calc(100vw - 16px));
+    padding: 0.3rem;
+}
+
+.cs-list {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: min(20rem, var(--pop-max, 20rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    outline: none;
+}
+
+.cs-option {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.15rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--ctl-radius-sm);
+    color: var(--ctl-text);
+    font-size: 0.93rem;
+    line-height: 1.3;
+    cursor: pointer;
+    user-select: none;
+}
+
+.cs-option.is-active {
+    background: var(--ctl-hover);
+}
+
+.cs-option[aria-selected="true"] {
+    color: var(--ctl-accent-ink);
+    font-weight: 700;
+}
+
+.cs-option[aria-disabled="true"] {
+    color: var(--ctl-muted);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.cs-option[hidden],
+.cs-group[hidden],
+.cs-empty[hidden] {
+    display: none;
+}
+
+.cs-label {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.cs-check {
+    visibility: hidden;
+    color: var(--ctl-accent-ink);
+}
+
+.cs-option[aria-selected="true"] .cs-check {
+    visibility: visible;
+}
+
+.cs-thumb {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    object-fit: contain;
+}
+
+.cs-lucide,
+.cs-option svg.lucide {
+    flex: none;
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.cs-group {
+    padding: 0.55rem 0.6rem 0.2rem;
+    color: var(--ctl-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.cs-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.3rem;
+    padding: 0 0.55rem;
+    border: 1px solid var(--ctl-line);
+    border-radius: var(--ctl-radius-sm);
+    background: var(--ctl-surface);
+    color: var(--ctl-muted);
+}
+
+.cs-search-wrap:focus-within {
+    border-color: var(--ctl-accent);
+}
+
+.cs-search {
+    flex: 1;
+    min-width: 0;
+    padding: 0.45rem 0;
+    border: 0;
+    background: transparent;
+    color: var(--ctl-text);
+    font: inherit;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+/* The box around it shows focus; a second ring inside it would double up. */
+.cs-menu .cs-search:focus-visible {
+    outline: none;
+}
+
+.cs-search-wrap:focus-within {
+    box-shadow: 0 0 0 2px var(--ctl-gold);
+}
+
+.cs-empty {
+    margin: 0;
+    padding: 0.6rem;
+    color: var(--ctl-muted);
+    font-size: 0.88rem;
+}
+
+/* 4. Popover frame ============================================================= */
+.ctl-pop {
+    position: fixed;
+    z-index: 10050;
+    box-sizing: border-box;
+    max-height: var(--pop-max, 80vh);
+    overflow: auto;
+    border: 1px solid var(--ctl-line);
+    border-radius: var(--ctl-radius);
+    background: var(--ctl-bg);
+    box-shadow: var(--ctl-shadow);
+    color: var(--ctl-text);
+    font-family: var(--font-body, inherit);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+}
+
+.ctl-pop.is-open {
+    opacity: 1;
+    transform: none;
+}
+
+/* Phones: dock to the bottom edge, full width, with a grab bar. */
+.ctl-pop.is-sheet {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-width: none;
+    padding-top: 1.1rem;
+    border-radius: 18px 18px 0 0;
+    transform: translateY(24px);
+}
+
+.ctl-pop.is-sheet::before {
+    content: "";
+    position: absolute;
+    top: 0.45rem;
+    left: 50%;
+    width: 2.5rem;
+    height: 0.25rem;
+    border-radius: 999px;
+    background: var(--ctl-border);
+    transform: translateX(-50%);
+}
+
+.ctl-pop.is-sheet.is-open {
+    transform: none;
+}
+
+.ctl-pop.is-sheet .cs-list {
+    max-height: 60vh;
+}
+
+.ctl-pop.is-sheet .cs-option {
+    min-height: 2.75rem;
+    font-size: 1rem;
+}
+
+/* 5. Suggestion lists ============================================================ */
+.sg-menu .cs-option {
+    flex-wrap: wrap;
+    row-gap: 0;
+}
+
+.sg-menu mark {
+    background: var(--ctl-gold-soft);
+    color: inherit;
+    border-radius: 3px;
+}
+
+.sg-note {
+    flex-basis: 100%;
+    color: var(--ctl-muted);
+    font-size: 0.8rem;
+}
+
+/* 6. Date and time pickers ======================================================== */
+/* The button that stands in for the input. Pages size it like their fields;
+   admin.css gives it the admin field look. */
+.dp-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 2.3rem;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid var(--ctl-border);
+    border-radius: var(--ctl-radius-sm);
+    background: var(--ctl-bg);
+    color: var(--ctl-text);
+    font: inherit;
+    font-size: 0.93rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.dp-trigger .ctl-icon {
+    color: var(--ctl-accent-ink);
+}
+
+.dp-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dp-trigger.is-empty .dp-text {
+    color: var(--ctl-muted);
+}
+
+.dp-trigger[aria-expanded="true"] {
+    border-color: var(--ctl-accent);
+}
+
+.dp-trigger.is-invalid {
+    border-color: var(--ctl-danger) !important;
+}
+
+.dp-trigger:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.dp-trigger[hidden] {
+    display: none;
+}
+
+.dp-pop {
+    padding: 0.75rem;
+}
+
+.dp-body {
+    display: flex;
+    gap: 0.9rem;
+}
+
+.dp-cal {
+    width: 16.5rem;
+}
+
+.dp-head {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0.4rem;
+}
+
+.dp-nav,
+.dp-title,
+.dp-day,
+.dp-month,
+.dp-cell,
+.dp-link,
+.dp-done {
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+.dp-nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ctl-text);
+}
+
+.dp-title {
+    flex: 1;
+    padding: 0.35rem;
+    border-radius: var(--ctl-radius-sm);
+    background: transparent;
+    color: var(--ctl-text);
+    font-weight: 700;
+}
+
+.dp-nav:hover,
+.dp-title:hover,
+.dp-link:hover {
+    background: var(--ctl-hover);
+}
+
+.dp-week,
+.dp-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.dp-week {
+    margin-bottom: 0.15rem;
+    color: var(--ctl-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.dp-week[hidden],
+.dp-grid[hidden],
+.dp-months[hidden] {
+    display: none;
+}
+
+.dp-day {
+    position: relative;
+    height: 2.2rem;
+    margin: 1px;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ctl-text);
+    font-size: 0.88rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.dp-day:hover:not(:disabled) {
+    background: var(--ctl-hover);
+}
+
+.dp-day.is-outside {
+    color: var(--ctl-muted);
+    opacity: 0.7;
+}
+
+.dp-day.is-today {
+    box-shadow: inset 0 0 0 2px var(--ctl-gold);
+    font-weight: 700;
+}
+
+.dp-day.is-selected,
+.dp-day.is-selected:hover {
+    background: var(--ctl-accent);
+    color: var(--ctl-on-accent);
+    font-weight: 700;
+    opacity: 1;
+}
+
+.dp-day:disabled {
+    cursor: not-allowed;
+    opacity: 0.3;
+    text-decoration: line-through;
+}
+
+.dp-months {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.3rem;
+    padding-top: 0.2rem;
+}
+
+.dp-month {
+    padding: 0.7rem 0.2rem;
+    border-radius: var(--ctl-radius-sm);
+    background: var(--ctl-surface);
+    color: var(--ctl-text);
+    font-size: 0.9rem;
+}
+
+.dp-month:hover {
+    background: var(--ctl-hover);
+}
+
+.dp-month.is-selected {
+    background: var(--ctl-accent);
+    color: var(--ctl-on-accent);
+    font-weight: 700;
+}
+
+/* The clock: hour, minute and AM/PM columns */
+.dp-clock {
+    display: flex;
+    gap: 0.3rem;
+    padding-left: 0.9rem;
+    border-left: 1px solid var(--ctl-line);
+}
+
+.dp-pop--time .dp-clock {
+    flex: 1;
+    padding-left: 0;
+    border-left: 0;
+}
+
+.dp-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: relative;
+    width: 3.2rem;
+    height: 16.5rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.dp-pop--time {
+    width: 17rem;
+}
+
+.dp-pop--time .dp-col {
+    flex: 1;
+    width: auto;
+    min-width: 3.2rem;
+    height: 13rem;
+}
+
+.dp-cell {
+    flex: none;
+    height: 2.1rem;
+    border-radius: var(--ctl-radius-sm);
+    background: transparent;
+    color: var(--ctl-text);
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.dp-cell:hover {
+    background: var(--ctl-hover);
+}
+
+.dp-cell.is-selected {
+    background: var(--ctl-accent);
+    color: var(--ctl-on-accent);
+    font-weight: 700;
+}
+
+.dp-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--ctl-line);
+}
+
+.dp-tools {
+    display: flex;
+    gap: 0.2rem;
+}
+
+.dp-link {
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--ctl-radius-sm);
+    background: transparent;
+    color: var(--ctl-accent-ink);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.dp-summary {
+    flex: 1;
+    min-width: 8rem;
+    color: var(--ctl-muted);
+    font-size: 0.82rem;
+    text-align: right;
+}
+
+.dp-pop--time .dp-summary {
+    display: none;
+}
+
+.dp-done {
+    margin-left: auto;
+    padding: 0.4rem 1rem;
+    border-radius: var(--ctl-radius-sm);
+    background: var(--ctl-accent);
+    color: var(--ctl-on-accent);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.dp-done:hover {
+    filter: brightness(1.12);
+}
+
+.dp-pop :focus-visible,
+.cs-menu :focus-visible {
+    outline: 3px solid var(--ctl-gold);
+    outline-offset: 1px;
+}
+
+.ctl-pop.is-sheet .dp-body {
+    flex-direction: column;
+    align-items: center;
+}
+
+.ctl-pop.is-sheet .dp-cal {
+    width: min(21rem, 100%);
+}
+
+.ctl-pop.is-sheet .dp-clock {
+    justify-content: center;
+    padding: 0.6rem 0 0;
+    border-top: 1px solid var(--ctl-line);
+    border-left: 0;
+}
+
+.ctl-pop.is-sheet .dp-col {
+    width: 4.5rem;
+    height: 10rem;
+}
+
+.ctl-pop.is-sheet .dp-day {
+    height: 2.6rem;
+}
+
+/* 7. File drop zone ================================================================ */
+.file-drop {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.6rem;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.7rem 0.85rem;
+    border: 2px dashed var(--ctl-border);
+    border-radius: var(--ctl-radius-sm);
+    background: var(--ctl-surface);
+    color: var(--ctl-text);
+    font: inherit;
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.file-drop .ctl-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+    color: var(--ctl-accent-ink);
+}
+
+.file-drop strong {
+    color: var(--ctl-accent-ink);
+}
+
+.file-drop:hover,
+.file-drop.is-over {
+    border-color: var(--ctl-accent);
+    background: var(--ctl-hover);
+}
+
+.fd-name {
+    flex-basis: 100%;
+    color: var(--ctl-muted);
+    font-size: 0.82rem;
+    overflow-wrap: anywhere;
+}
+
+.fd-name:empty {
+    display: none;
+}
+
+.file-drop[hidden] {
+    display: none;
+}
+
+/* 8. Checkboxes and radios ======================================================== */
+/* Zero specificity (:where), so any component that hides its input (switches,
+   segmented controls, chips) still wins without trying. */
+:where(input[type="checkbox"], input[type="radio"]) {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-grid;
+    flex: none;
+    place-content: center;
+    box-sizing: border-box;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0;
+    border: 2px solid var(--ctl-border);
+    border-radius: 5px;
+    background: var(--ctl-bg);
+    vertical-align: -0.2em;
+    cursor: pointer;
+    transition: background-color 0.12s, border-color 0.12s;
+}
+
+:where(input[type="radio"]) {
+    border-radius: 50%;
+}
+
+:where(input[type="checkbox"])::before {
+    content: "";
+    width: 0.62rem;
+    height: 0.62rem;
+    background: var(--ctl-on-accent);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    transform: scale(0);
+    transition: transform 0.12s ease-out;
+}
+
+:where(input[type="radio"])::before {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--ctl-on-accent);
+    transform: scale(0);
+    transition: transform 0.12s ease-out;
+}
+
+:where(input[type="checkbox"], input[type="radio"]):checked {
+    border-color: var(--ctl-accent);
+    background: var(--ctl-accent);
+}
+
+:where(input[type="checkbox"], input[type="radio"]):checked::before {
+    transform: scale(1);
+}
+
+:where(input[type="checkbox"]):indeterminate {
+    border-color: var(--ctl-accent);
+    background: var(--ctl-accent);
+}
+
+:where(input[type="checkbox"]):indeterminate::before {
+    height: 0.15rem;
+    clip-path: none;
+    transform: scale(1);
+}
+
+:where(input[type="checkbox"], input[type="radio"]):hover:not(:disabled) {
+    border-color: var(--ctl-accent);
+}
+
+:where(input[type="checkbox"], input[type="radio"]):focus-visible {
+    outline: 3px solid var(--ctl-gold);
+    outline-offset: 2px;
+}
+
+:where(input[type="checkbox"], input[type="radio"]):disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* 9. Sliders, number fields, search fields ========================================== */
+:where(input[type="range"]) {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 1.4rem;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+:where(input[type="range"])::-webkit-slider-runnable-track {
+    height: 0.45rem;
+    border-radius: 999px;
+    background: linear-gradient(to right, var(--ctl-accent) var(--fill, 0%), var(--ctl-line) var(--fill, 0%));
+}
+
+:where(input[type="range"])::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: -0.35rem;
+    border: 2px solid var(--ctl-accent);
+    border-radius: 50%;
+    background: var(--ctl-gold);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform 0.12s;
+}
+
+:where(input[type="range"]):active::-webkit-slider-thumb {
+    transform: scale(1.15);
+}
+
+:where(input[type="range"])::-moz-range-track {
+    height: 0.45rem;
+    border-radius: 999px;
+    background: var(--ctl-line);
+}
+
+:where(input[type="range"])::-moz-range-progress {
+    height: 0.45rem;
+    border-radius: 999px;
+    background: var(--ctl-accent);
+}
+
+:where(input[type="range"])::-moz-range-thumb {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--ctl-accent);
+    border-radius: 50%;
+    background: var(--ctl-gold);
+}
+
+:where(input[type="range"]):focus-visible {
+    outline: 3px solid var(--ctl-gold);
+    outline-offset: 3px;
+    border-radius: 999px;
+}
+
+/* The +/- stepper buttons replace the browser's spinner arrows. */
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    width: 0.85rem;
+    height: 0.85rem;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 6 6 18M6 6l12 12' fill='none' stroke='%23857b77' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+    cursor: pointer;
+}
+
+/* 10. Reduced motion ================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    .ctl-pop,
+    :where(input[type="checkbox"], input[type="radio"]),
+    :where(input[type="checkbox"], input[type="radio"])::before,
+    .file-drop {
+        transition: none;
+    }
+}

@@ -43,7 +43,7 @@
                         <label class="stack-label">Icon
                             <select data-category-field="icon">
                                 {% for icon in award_icons %}
-                                <option value="{{ icon }}" {% if award.icon == icon %}selected{% endif %}>{{ award_icon_label(icon) }}</option>
+                                <option value="{{ icon }}" data-image="{{ url_for('static', filename='assets/icons/' ~ icon) }}" {% if award.icon == icon %}selected{% endif %}>{{ award_icon_label(icon) }}</option>
                                 {% endfor %}
                             </select>
                         </label>
@@ -76,7 +76,7 @@
                 </datalist>
                 <label class="visually-hidden" for="new-award-icon">Icon</label>
                 <select id="new-award-icon" required>
-                    {% for icon in award_icons %}<option value="{{ icon }}">{{ award_icon_label(icon) }}</option>{% endfor %}
+                    {% for icon in award_icons %}<option value="{{ icon }}" data-image="{{ url_for('static', filename='assets/icons/' ~ icon) }}">{{ award_icon_label(icon) }}</option>{% endfor %}
                 </select>
                 <button type="submit" class="admin-btn admin-btn-success">Add category</button>
             </form>
