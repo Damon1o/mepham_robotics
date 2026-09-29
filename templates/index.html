@@ -8,8 +8,40 @@
 {% endblock %}
 
 {% from "partials/picture.html" import picture %}
-{% from "partials/site_macros.html" import hero_attrs %}
+{% from "partials/site_macros.html" import hero_attrs, site_photo %}
 {% set home = site.home %}
+
+{#- "Happening now", "Today", "Tomorrow", or "In 5 days". -#}
+{% macro fundraiser_badge(f) -%}
+<span class="fundraiser-badge{% if f.live %} fundraiser-badge--live{% endif %}">
+    {{- 'Happening now' if f.live else 'Today' if f.days_away == 0 else 'Tomorrow' if f.days_away == 1 else 'In ' ~ f.days_away ~ ' days' -}}
+</span>
+{%- endmacro %}
+
+{#- Sat, Oct 12 · 10:00 AM, or Oct 12 – Oct 14 for a fundraiser over several days. -#}
+{% macro fundraiser_when(f) -%}
+{%- if f.ends and f.end.date() != f.start.date() -%}
+{{ f.start.strftime('%b ') ~ f.start.day ~ ' – ' ~ f.end.strftime('%b ') ~ f.end.day }}
+{%- else -%}
+{{ f.start.strftime('%a, %b ') ~ f.start.day }} · {{ f.start.strftime('%I:%M %p').lstrip('0') }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro fundraiser_details(f, big=False) -%}
+<p class="fundraiser-meta"><i data-lucide="calendar" aria-hidden="true"></i><span>{{ fundraiser_when(f) }}</span></p>
+{% if f.location %}<p class="fundraiser-meta"><i data-lucide="map-pin" aria-hidden="true"></i><span>{{ f.location }}</span></p>{% endif %}
+{% if f.description %}<p class="fundraiser-description">{{ f.description }}</p>{% endif %}
+{% if site.fundraisers.show_progress and f.percent is not none %}
+<div class="fundraiser-progress">
+    <progress max="100" value="{{ f.percent }}" aria-label="{{ f.name }}: {{ f.percent }}% of the goal"></progress>
+    <p><strong>${{ '{:,}'.format(f.raised or 0) }}</strong> raised of ${{ '{:,}'.format(f.goal) }}</p>
+</div>
+{% endif %}
+{% if f.link_url %}
+<a class="{{ 'cta-donate-btn fundraiser-cta' if big else 'fundraiser-link' }}" href="{{ f.link_url }}"
+    {%- if f.link_url.startswith('http') %} target="_blank" rel="noopener"{% endif %}>{{ f.link_label or 'Learn more' }}</a>
+{% endif %}
+{%- endmacro %}
 {% block content %}
 <!-- HERO SECTION -->
 <div {{ hero_attrs(home.hero_image) }}>
@@ -105,6 +137,41 @@
         {% endif %}
     </div>
 </section>
+
+{% set fr = site.fundraisers %}
+{% if fr.mode == 'always' or (fr.mode == 'scheduled' and fundraisers) %}
+<!-- FUNDRAISERS -->
+<section class="fundraisers-section fade-in-section" aria-labelledby="fundraisers-heading">
+    <h2 id="fundraisers-heading" class="ripple">{{ fr.heading }}</h2>
+    {% if fundraisers %}
+    {% set next = fundraisers[0] %}
+    <article class="fundraiser-feature{% if not next.image %} fundraiser-feature--no-photo{% endif %}">
+        {% if next.image %}
+        <div class="fundraiser-photo">{{ site_photo({'image': next.image}, '(max-width: 768px) 100vw, 480px', decorative=True) }}</div>
+        {% endif %}
+        <div class="fundraiser-body">
+            {{ fundraiser_badge(next) }}
+            <h3>{{ next.name }}</h3>
+            {{ fundraiser_details(next, big=True) }}
+        </div>
+    </article>
+    {% if fundraisers|length > 1 %}
+    {% if fr.more_heading %}<h3 class="fundraisers-more">{{ fr.more_heading }}</h3>{% endif %}
+    <ul class="fundraiser-grid">
+        {% for f in fundraisers[1:] %}
+        <li class="fundraiser-card">
+            {{ fundraiser_badge(f) }}
+            <h4>{{ f.name }}</h4>
+            {{ fundraiser_details(f) }}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% else %}
+    <p class="fundraisers-empty">{{ fr.empty_text }}</p>
+    {% endif %}
+</section>
+{% endif %}
 
 <!-- STATS SECTION -->
 {% if home.show_stats %}

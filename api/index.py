@@ -338,6 +338,7 @@ ACTIVITY_TYPES = {
     'subscriber_remove': ('📭', 'Subscriber removed', 'messages'),
     'subscribers_export': ('📤', 'Subscriber list exported', 'messages'),
     'site_edit': ('🖊️', 'Site content edited', 'site'),
+    'fundraiser_edit': ('💰', 'Fundraisers edited', 'events'),
 }
 ACTIVITY_GROUPS = (('people', 'People'), ('teams', 'Teams'), ('events', 'Events'), ('awards', 'Awards'),
                    ('sponsors', 'Sponsors'), ('messages', 'Messages'), ('site', 'Site'))
@@ -1042,8 +1043,11 @@ def index():
         event['day'] = event['date'].strftime('%d')
         event['time'] = event['date'].strftime('%I:%M %p')
     competition = upcoming_events[0] if upcoming_events else None
+    settings = site().fundraisers
+    fundraisers = (site_content.fundraiser_cards(settings.entries, club_now(), settings.max_shown)
+                   if settings.mode != 'never' else [])
     return render_template('index.html', active_page='index', stats=stats,
-                           competition=competition, upcoming_events=upcoming_events)
+                           competition=competition, upcoming_events=upcoming_events, fundraisers=fundraisers)
 
 @app.route('/about')
 def about():
@@ -2884,7 +2888,7 @@ def admin_site():
                            values=values, overrides=overrides, icons=site_content.ICONS,
                            platforms=site_content.SOCIAL_PLATFORMS, day_names=site_content.DAY_NAMES,
                            gallery_keys=sorted(k for k in image_manifest if k.startswith('photos/carousel')),
-                           club_timezone=CLUB_TIMEZONE)
+                           club_timezone=CLUB_TIMEZONE, group_choices=_group_choices(), can_pick_group=True)
 
 
 def _site_field(key):
@@ -2894,16 +2898,44 @@ def _site_field(key):
     return section, field
 
 
+class SiteAccessError(UserFacingError):
+    status = 403
+
+
+def _is_admin(user):
+    return bool(user) and role_at_least(user.get('role', 'member'), 'admin')
+
+
+def _check_site_access(section, field):
+    """Admins edit everything. The fundraising group edits its own section, but only
+    editors and admins choose which group that is."""
+    user = _session_user()
+    if _is_admin(user):
+        return
+    if section.role == 'fundraisers' and can_manage_fundraisers(user):
+        if field.key == 'owner_group' and not role_at_least(user.get('role', 'member'), 'editor'):
+            raise SiteAccessError('Only editors and admins can change the fundraising group.')
+        return
+    raise SiteAccessError('You do not have permission to do that.')
+
+
+def _site_log_type(section):
+    return 'fundraiser_edit' if section.key == 'fundraisers' else 'site_edit'
+
+
 @app.route('/admin/api/site', methods=['POST'])
-@role_required('admin')
+@login_required
 def admin_api_site():
     body = _json_body()
     key = str(body.get('key') or '')
     try:
         section, field = _site_field(key)
+        _check_site_access(section, field)
         value = site_content.clean_value(field, body.get('value'))
     except (UserFacingError, site_content.ContentError) as e:
-        return _json_error(str(e))
+        return _json_error(str(e), getattr(e, 'status', 400))
+    if key == 'fundraisers.owner_group' and value not in _group_slugs():
+        return _json_error('Pick one of the groups.')
     stored = _site_overrides()
     old = (stored.get(section.key) or {}).get(field.key, field.default)
     path = f'values.{section.key}.{field.key}'
@@ -2916,19 +2948,20 @@ def admin_api_site():
     gone = set(_blob_srcs(old)) - set(_blob_srcs(value))
     _delete_site_blobs(gone)
     if old != value:
-        log_activity('site_edit', f'Changed "{field.label}" on {section.title}',
+        log_activity(_site_log_type(section), f'Changed "{field.label}" on {section.title}',
                      details={'key': key, 'from': _loggable(old), 'to': _loggable(value)})
     return jsonify({'ok': True, 'value': value, 'custom': value != field.default})
 
 
 @app.route('/admin/api/site/reset', methods=['POST'])
-@role_required('admin')
+@login_required
 def admin_api_site_reset():
     key = str(_json_body().get('key') or '')
     try:
         section, field = _site_field(key)
+        _check_site_access(section, field)
     except UserFacingError as e:
-        return _json_error(str(e))
+        return _json_error(str(e), getattr(e, 'status', 400))
     old = (_site_overrides().get(section.key) or {}).get(field.key, field.default)
     db['site_metadata'].update_one({'_id': SITE_CONTENT_ID},
                                    {'$unset': {f'values.{section.key}.{field.key}': ''},
@@ -2936,7 +2969,7 @@ def admin_api_site_reset():
                                    upsert=True)
     _delete_site_blobs(set(_blob_srcs(old)))
     if old != field.default:
-        log_activity('site_edit', f'Reset "{field.label}" on {section.title} to the original',
+        log_activity(_site_log_type(section), f'Reset "{field.label}" on {section.title} to the original',
                      details={'key': key, 'from': _loggable(old)})
     return jsonify({'ok': True, 'value': field.default, 'custom': False})
 
@@ -2956,10 +2989,13 @@ def _delete_site_blobs(urls):
 
 
 @app.route('/admin/api/site/image', methods=['POST'])
-@role_required('admin')
+@login_required
 def admin_api_site_image():
     """Store an image for a site setting. The browser sends its pixel size, since
     production has no image library to measure it."""
+    user = _session_user()
+    if not (_is_admin(user) or can_manage_fundraisers(user)):
+        return _json_error('You do not have permission to do that.', 403)
     file = request.files.get('file')
     if not file or not file.filename:
         return _json_error('Choose an image to upload.')
@@ -3078,6 +3114,54 @@ def my_team_url():
 
 
 app.jinja_env.globals['my_team_url'] = my_team_url
+
+
+def _group_choices():
+    """(slug, title) for every group, for the fundraising-group picker."""
+    groups = sorted(_newest_season_docs({'kind': GROUP_KIND}).values(), key=team_sort_key)
+    return [(g['team_number'], g.get('title') or g['team_number']) for g in groups]
+
+
+def _group_slugs():
+    return {slug for slug, _ in _group_choices()}
+
+
+def fundraising_group():
+    """The current-season group whose members run the fundraisers, or None."""
+    slug = site().fundraisers.owner_group
+    return _newest_season_docs({'kind': GROUP_KIND, 'team_number': slug}).get(slug)
+
+
+def can_manage_fundraisers(user=None):
+    """Editors and admins, plus everyone on the fundraising group's current roster."""
+    user = user if user is not None else _session_user()
+    if not user:
+        return False
+    if role_at_least(user.get('role', 'member'), 'editor'):
+        return True
+    group = fundraising_group()
+    uid = str(user['_id'])
+    return bool(group) and any(str(m.get('user_id') or '') == uid for m in group.get('members') or [])
+
+
+app.jinja_env.globals['can_manage_fundraisers'] = can_manage_fundraisers
+
+
+@app.route('/manage/fundraisers')
+@login_required
+def manage_fundraisers():
+    user = _session_user()
+    if not can_manage_fundraisers(user):
+        flash('Only the fundraising group can edit fundraisers.', 'error')
+        return redirect(url_for('my_team'))
+    section = site_content.SECTION_MAP['fundraisers']
+    overrides = _site_overrides()
+    return render_template('site_editor.html', active_page='my_team', sections=(section,),
+                           values=site_content.merged(overrides), overrides=overrides, icons=site_content.ICONS,
+                           platforms=site_content.SOCIAL_PLATFORMS, day_names=site_content.DAY_NAMES,
+                           gallery_keys=[], club_timezone=CLUB_TIMEZONE, fundraiser_editor=True,
+                           group_choices=_group_choices(),
+                           can_pick_group=role_at_least(user.get('role', 'member'), 'editor'))
 
 
 @app.route('/my-team')
@@ -3234,6 +3318,9 @@ def api_team_field(team_id):
 
     if field == 'team_number' and value != old and not is_group(team):
         _move_team_awards(old, value)
+    if field == 'team_number' and value != old and is_group(team) and site().fundraisers.owner_group == old:
+        db['site_metadata'].update_one({'_id': SITE_CONTENT_ID},
+                                       {'$set': {'values.fundraisers.owner_group': value}}, upsert=True)
     if field in ('team_number', 'hidden'):
         refresh_auto_stats()
     _team_edit_log(team, user, label.lower(), old, value)
