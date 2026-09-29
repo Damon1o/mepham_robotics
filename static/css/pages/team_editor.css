@@ -202,8 +202,15 @@
     color: var(--text-light);
 }
 
+/* Wide enough for three 18rem cards a row, too narrow for a fourth. */
+/* Roster rows are tight; a smaller gap for the dropdown arrow keeps "Joined?" readable. */
+select[data-member-field] {
+    --cs-pad: 1.7rem;
+    --cs-chevron-x: 0.55rem;
+}
+
 .team-picker {
-    max-width: 44rem;
+    max-width: 64rem;
     margin: 5.5rem auto 3rem;
     padding: 0 1.25rem;
 }
@@ -225,8 +232,8 @@
 
 .team-picker-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: 0.75rem;
     margin: 0;
     padding: 0;
     list-style: none;

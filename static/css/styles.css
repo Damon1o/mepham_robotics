@@ -2446,14 +2446,9 @@ footer::before {
     color: var(--text-dark);
     transition: all var(--transition-fast);
     box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.05);
-    /* Drop the native control so the box matches the text inputs */
-    appearance: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232b2b2b' stroke-width='2' stroke-linecap='square'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 1.2rem center;
-    background-size: 12px 8px;
+    /* The arrow and its menu come from controls.css/js; these place the arrow. */
+    --cs-pad: 3rem;
+    --cs-chevron-x: 1.2rem;
 }
 
 .sponsor-form .form-group select:focus {

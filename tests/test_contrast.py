@@ -10,7 +10,7 @@ import re
 import pytest
 
 CSS = pathlib.Path(__file__).resolve().parent.parent / 'static' / 'css'
-FILES = sorted([CSS / 'styles.css', CSS / 'admin.css', *(CSS / 'pages').glob('*.css')], key=str)
+FILES = sorted([CSS / 'styles.css', CSS / 'admin.css', CSS / 'controls.css', *(CSS / 'pages').glob('*.css')], key=str)
 RULE = re.compile(r'([^{}]+)\{([^{}]*)\}')
 
 
