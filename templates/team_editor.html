@@ -60,6 +60,10 @@
             <span class="save-status" id="saveStatus" role="status" aria-live="polite">All changes saved</span>
             <a class="admin-btn admin-btn-secondary admin-btn-small" href="{{ url_for('team_page', team_number=team.team_number) }}"
                 target="_blank" rel="noopener"><i data-lucide="external-link" aria-hidden="true"></i> View page</a>
+            {% if is_group and site.fundraisers.owner_group == team.team_number %}
+            <a class="admin-btn admin-btn-small" href="{{ url_for('manage_fundraisers') }}">
+                <i data-lucide="piggy-bank" aria-hidden="true"></i> Fundraisers</a>
+            {% endif %}
             {% if session.get('role') == 'admin' %}
             <a class="admin-btn admin-btn-secondary admin-btn-small" href="{{ url_for('admin_dashboard', _anchor='teams') }}">
                 <i data-lucide="arrow-left" aria-hidden="true"></i> Dashboard</a>

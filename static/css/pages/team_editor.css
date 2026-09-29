@@ -434,3 +434,14 @@ select[data-member-field] {
 [data-theme="dark"] .team-picker-list a.is-own {
     border-color: var(--accent-gold);
 }
+
+/* Link to /manage/fundraisers under the picker, for the fundraising group and editors. */
+.team-picker-extra {
+    margin-top: 1.5rem;
+}
+
+.team-picker-extra .cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}

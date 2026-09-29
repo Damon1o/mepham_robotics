@@ -99,12 +99,13 @@
         if (radio) return radio.value;
         const input = row.querySelector('[data-value]');
         if (!input) return null;
-        return input.type === 'checkbox' ? input.checked : input.value;
+        return itemValue(input);
     }
 
     function itemValue(control) {
         if (control.classList.contains('site-image')) return JSON.parse(control.dataset.image || 'null');
         if (control.type === 'checkbox') return control.checked;
+        if (control.type === 'number') return control.value === '' ? null : Number(control.value);
         return control.value;
     }
 

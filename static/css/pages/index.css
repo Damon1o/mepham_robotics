@@ -335,3 +335,277 @@
 [data-theme="dark"] .donate-container p {
     color: #bbb;
 }
+
+/* --- FUNDRAISERS (Fundraisers editor: /manage/fundraisers) --- */
+.fundraisers-section {
+    padding: 5rem 2rem;
+    background: var(--accent-light);
+    border-top: 4px solid var(--maroon-dark);
+    font-family: var(--font-body);
+}
+
+.fundraisers-section h2 {
+    margin-bottom: var(--spacing-lg);
+    color: var(--maroon-dark);
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 2.5rem);
+    text-align: center;
+}
+
+.fundraiser-feature,
+.fundraiser-card {
+    position: relative;
+    background: white;
+    border: 3px solid var(--text-dark);
+    border-radius: 12px;
+    box-shadow: var(--shadow-brutal);
+    color: var(--text-dark);
+}
+
+.fundraiser-feature {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    max-width: 1000px;
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+.fundraiser-feature--no-photo {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 760px;
+}
+
+.fundraiser-photo {
+    border-right: 3px solid var(--text-dark);
+    background: var(--maroon-dark);
+}
+
+.fundraiser-photo picture,
+.fundraiser-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 16rem;
+    object-fit: cover;
+}
+
+.fundraiser-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+}
+
+.fundraiser-body h3 {
+    color: var(--maroon-dark);
+    font-size: clamp(1.6rem, 4vw, 2.1rem);
+    line-height: 1.2;
+}
+
+.fundraiser-badge {
+    display: inline-block;
+    padding: 0.25rem 0.8rem;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    border: 2px solid var(--ink-on-gold);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.fundraiser-badge--live {
+    background: var(--maroon-dark);
+    color: #fff;
+    border-color: var(--maroon-dark);
+}
+
+.fundraiser-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    color: var(--text-light);
+}
+
+.fundraiser-meta svg,
+.fundraiser-meta i {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--maroon-light);
+}
+
+.fundraiser-description {
+    margin: 0.35rem 0 0;
+    color: var(--text-dark);
+    line-height: 1.55;
+}
+
+.fundraiser-progress {
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+.fundraiser-progress progress {
+    display: block;
+    width: 100%;
+    height: 1.1rem;
+    border: 2px solid var(--text-dark);
+    border-radius: 999px;
+    background: #fff;
+    overflow: hidden;
+    appearance: none;
+}
+
+.fundraiser-progress progress::-webkit-progress-bar {
+    background: #fff;
+}
+
+.fundraiser-progress progress::-webkit-progress-value {
+    background: linear-gradient(90deg, var(--maroon-dark), var(--maroon-accent));
+}
+
+.fundraiser-progress progress::-moz-progress-bar {
+    background: linear-gradient(90deg, var(--maroon-dark), var(--maroon-accent));
+}
+
+.fundraiser-progress p {
+    margin: 0.35rem 0 0;
+    color: var(--text-light);
+    font-size: 0.95rem;
+}
+
+.fundraiser-progress strong {
+    color: var(--maroon-dark);
+}
+
+.fundraiser-cta {
+    margin-top: 0.75rem;
+    padding: 0.9rem 2rem;
+    font-size: 1rem;
+}
+
+.fundraisers-more {
+    margin: var(--spacing-xl) 0 var(--spacing-md);
+    color: var(--maroon-dark);
+    font-size: 1.5rem;
+    text-align: center;
+}
+
+.fundraiser-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 320px));
+    justify-content: center;
+    gap: var(--spacing-md);
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+}
+
+.fundraiser-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+    padding: var(--spacing-md);
+    transition: var(--transition-base);
+}
+
+.fundraiser-card:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.3);
+}
+
+.fundraiser-card h4 {
+    color: var(--maroon-dark);
+    font-size: 1.25rem;
+}
+
+.fundraiser-link {
+    margin-top: auto;
+    padding-top: 0.5rem;
+    color: var(--maroon-dark);
+    font-weight: 700;
+}
+
+.fundraisers-empty {
+    color: var(--text-light);
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .fundraisers-section {
+        padding: 3.5rem 1rem;
+    }
+
+    .fundraiser-feature,
+    .fundraiser-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fundraiser-photo {
+        border-right: 0;
+        border-bottom: 3px solid var(--text-dark);
+    }
+
+    .fundraiser-photo picture,
+    .fundraiser-photo img {
+        min-height: 0;
+        aspect-ratio: 16 / 9;
+    }
+
+    .fundraiser-body {
+        padding: var(--spacing-md);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fundraiser-card,
+    .fundraiser-card:hover {
+        transition: none;
+        transform: none;
+    }
+}
+
+[data-theme="dark"] .fundraisers-section {
+    background: #181818;
+}
+
+[data-theme="dark"] .fundraisers-section h2,
+[data-theme="dark"] .fundraisers-more,
+[data-theme="dark"] .fundraiser-body h3,
+[data-theme="dark"] .fundraiser-card h4,
+[data-theme="dark"] .fundraiser-progress strong,
+[data-theme="dark"] .fundraiser-link {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .fundraiser-feature,
+[data-theme="dark"] .fundraiser-card {
+    background: #1e1e1e;
+    border-color: #444;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .fundraiser-photo {
+    border-color: #444;
+}
+
+[data-theme="dark"] .fundraiser-meta,
+[data-theme="dark"] .fundraiser-progress p,
+[data-theme="dark"] .fundraisers-empty {
+    color: #bbb;
+}
+
+[data-theme="dark"] .fundraiser-meta svg,
+[data-theme="dark"] .fundraiser-meta i {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .fundraiser-progress progress,
+[data-theme="dark"] .fundraiser-progress progress::-webkit-progress-bar {
+    background: #2a2a2a;
+    border-color: #555;
+}
