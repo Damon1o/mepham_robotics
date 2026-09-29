@@ -275,6 +275,19 @@ select[data-member-field] {
     white-space: nowrap;
 }
 
+.team-picker-number--group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+.team-picker-number--group svg {
+    width: 1.3rem;
+    height: 1.3rem;
+}
+
 .team-picker-text {
     display: flex;
     flex: 1;

@@ -10,16 +10,24 @@
 {% if team_choices is defined %}
 <section class="team-picker">
     <h1>Team pages</h1>
-    <p>As an {{ session.get('role') }}, you can edit any team. Pick one to open its editor.</p>
+    {% if editor %}
+    <p>As an {{ session.get('role') }}, you can edit any team or group. Pick one to open its editor.</p>
+    {% else %}
+    <p>You're on more than one roster. Pick a page to edit.</p>
+    {% endif %}
     {% if team_choices %}
     <ul class="team-picker-list">
         {% for t in team_choices %}
         <li><a class="team-picker-card{% if t.own %} is-own{% endif %}" href="{{ t.url }}">
+            {% if t.group %}
+            <span class="team-picker-number team-picker-number--group"><i data-lucide="users" aria-hidden="true"></i></span>
+            {% else %}
             <span class="team-picker-number">{{ t.number }}</span>
+            {% endif %}
             <span class="team-picker-text">
-                <span class="team-picker-name"><strong>{{ t.nickname or 'No nickname yet' }}</strong>
-                    {%- if t.own %}<span class="team-picker-own">Your team</span>{% endif %}</span>
-                <small>{% if t.season %}{{ t.season }} · {% endif %}{{ t.members }} member{{ 's' if t.members != 1 }}</small>
+                <span class="team-picker-name"><strong>{{ t.number if t.group else t.nickname or 'No nickname yet' }}</strong>
+                    {%- if t.own %}<span class="team-picker-own">{{ 'Your group' if t.group else 'Your team' }}</span>{% endif %}</span>
+                <small>{% if t.group %}Group · {% endif %}{% if t.season %}{{ t.season }} · {% endif %}{{ t.members }} member{{ 's' if t.members != 1 }}</small>
             </span>
         </a></li>
         {% endfor %}

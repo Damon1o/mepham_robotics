@@ -1,66 +1,82 @@
 {% from "admin/_macros.html" import card_head, empty %}
+
+{% macro team_tile(team, older) -%}
+{% set grp = team is group %}
+{% set name = (team.title or team.team_number) if grp else team.team_number %}
+<article class="data-item team-tile{% if grp %} is-group{% endif %}{% if team.hidden %} is-hidden-team{% endif %}">
+    <a class="team-tile-main" href="{{ url_for('manage_team', team_id=team._id) }}">
+        {% if grp %}
+        <span class="team-number-box team-number-box--group"><i data-lucide="users" aria-hidden="true"></i></span>
+        {% else %}
+        <span class="team-number-box">{{ team.team_number }}</span>
+        {% endif %}
+        <span class="team-tile-text">
+            <strong class="item-title">{{ name if grp else team.nickname or 'No nickname yet' }}</strong>
+            <small class="item-meta">{% if grp %}/team/{{ team.team_number }} · {% endif %}{{ team.season or 'No season' }} ·
+                {{ team.members|length }} member{{ 's' if team.members|length != 1 }}
+                {%- if team.hidden %} · hidden from menu{% endif %}</small>
+        </span>
+    </a>
+    <div class="team-tile-actions">
+        <a class="admin-btn admin-btn-small" href="{{ url_for('manage_team', team_id=team._id) }}">
+            <i data-lucide="pencil" aria-hidden="true"></i> Edit</a>
+        <a class="icon-btn" title="View public page" aria-label="View {{ name }}'s public page"
+            target="_blank" rel="noopener" href="{{ url_for('team_page', team_number=team.team_number) }}">
+            <i data-lucide="external-link" aria-hidden="true"></i></a>
+        <button type="button" class="icon-btn" title="Start a new season" data-action="new-season"
+            data-team-id="{{ team._id }}" data-team-number="{{ name }}"
+            data-current-season="{{ team.season or '' }}" data-next-season="{{ next_season }}"
+            aria-label="Start a new season for {{ name }}"><i data-lucide="calendar-plus" aria-hidden="true"></i></button>
+        <form class="form-flush" action="{{ url_for('admin_delete_team', id=team._id) }}" method="POST"
+            data-confirm-delete="{{ 'group' if grp else 'team' }}" data-confirm-name="{{ name }}{% if team.season %} ({{ team.season }}){% endif %}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="icon-btn icon-btn--danger" title="Delete this season's profile"
+                aria-label="Delete {{ 'group' if grp else 'team' }}: {{ name }}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+        </form>
+    </div>
+    {% if older %}
+    <div class="team-seasons">
+        <span>Past seasons:</span>
+        {% for doc in older %}
+        <span class="season-chip">
+            <a href="{{ url_for('manage_team', team_id=doc._id) }}">{{ doc.season or 'No season' }}</a>
+            <form class="form-flush" action="{{ url_for('admin_delete_team', id=doc._id) }}" method="POST"
+                data-confirm-delete="season" data-confirm-name="{{ name }} {{ doc.season or '' }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="chip-remove" aria-label="Delete {{ name }} {{ doc.season or '' }}"
+                    title="Delete this season"><i data-lucide="x" aria-hidden="true"></i></button>
+            </form>
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+</article>
+{%- endmacro %}
+
+{% macro tiles(docs_list) -%}
+<div class="team-tiles list-teams">
+    {% for number, docs in docs_list|groupby('team_number') %}
+    {% set team = (docs|selectattr('is_current')|first) or docs[0] %}
+    {{ team_tile(team, docs|rejectattr('_id', 'equalto', team._id)|list) }}
+    {% endfor %}
+</div>
+{%- endmacro %}
+
+{% set robot_teams = teams|reject('group')|list %}
+{% set groups = teams|select('group')|list %}
 <section class="admin-panel" data-panel="teams" id="panel-teams" role="tabpanel" aria-labelledby="tab-teams"
     tabindex="0" hidden>
     <div class="admin-card" id="team_form_card">
-        {% call card_head('bot', 'Teams', current_teams|length) %}
-        <label class="visually-hidden" for="teams_filter">Filter teams</label>
+        {% call card_head('bot', 'Teams', current_teams|reject('group')|list|length) %}
+        <label class="visually-hidden" for="teams_filter">Filter teams and groups</label>
         <input type="search" id="teams_filter" class="panel-filter panel-filter--compact" placeholder="Filter teams…">
         {% endcall %}
         <p class="form-hint">Each team has one profile per season. Open a team to edit its page; anyone on its roster
             can edit it too. Start a team's next season with <em>New season</em>: the roster and identity carry over,
             and last season stays on the team page under its season picker.</p>
 
-        {% if teams %}
-        <div class="team-tiles list-teams">
-            {% for number, docs in teams|groupby('team_number') %}
-            {% set team = (docs|selectattr('is_current')|first) or docs[0] %}
-            {% set older = docs|rejectattr('_id', 'equalto', team._id)|list %}
-            <article class="data-item team-tile{% if team.hidden %} is-hidden-team{% endif %}">
-                <a class="team-tile-main" href="{{ url_for('manage_team', team_id=team._id) }}">
-                    <span class="team-number-box">{{ team.team_number }}</span>
-                    <span class="team-tile-text">
-                        <strong class="item-title">{{ team.nickname or 'No nickname yet' }}</strong>
-                        <small class="item-meta">{{ team.season or 'No season' }} ·
-                            {{ team.members|length }} member{{ 's' if team.members|length != 1 }}
-                            {%- if team.hidden %} · hidden from menu{% endif %}</small>
-                    </span>
-                </a>
-                <div class="team-tile-actions">
-                    <a class="admin-btn admin-btn-small" href="{{ url_for('manage_team', team_id=team._id) }}">
-                        <i data-lucide="pencil" aria-hidden="true"></i> Edit</a>
-                    <a class="icon-btn" title="View public page" aria-label="View {{ team.team_number }}'s public page"
-                        target="_blank" rel="noopener" href="{{ url_for('team_page', team_number=team.team_number) }}">
-                        <i data-lucide="external-link" aria-hidden="true"></i></a>
-                    <button type="button" class="icon-btn" title="Start a new season" data-action="new-season"
-                        data-team-id="{{ team._id }}" data-team-number="{{ team.team_number }}"
-                        data-current-season="{{ team.season or '' }}" data-next-season="{{ next_season }}"
-                        aria-label="Start a new season for {{ team.team_number }}"><i data-lucide="calendar-plus" aria-hidden="true"></i></button>
-                    <form class="form-flush" action="{{ url_for('admin_delete_team', id=team._id) }}" method="POST"
-                        data-confirm-delete="team" data-confirm-name="{{ team.team_number }}{% if team.season %} ({{ team.season }}){% endif %}">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="icon-btn icon-btn--danger" title="Delete this season's profile"
-                            aria-label="Delete team: {{ team.team_number }}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
-                    </form>
-                </div>
-                {% if older %}
-                <div class="team-seasons">
-                    <span>Past seasons:</span>
-                    {% for doc in older %}
-                    <span class="season-chip">
-                        <a href="{{ url_for('manage_team', team_id=doc._id) }}">{{ doc.season or 'No season' }}</a>
-                        <form class="form-flush" action="{{ url_for('admin_delete_team', id=doc._id) }}" method="POST"
-                            data-confirm-delete="season" data-confirm-name="{{ doc.team_number }} {{ doc.season or '' }}">
-                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="chip-remove" aria-label="Delete {{ doc.team_number }} {{ doc.season or '' }}"
-                                title="Delete this season"><i data-lucide="x" aria-hidden="true"></i></button>
-                        </form>
-                    </span>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </article>
-            {% endfor %}
-        </div>
+        {% if robot_teams %}
+        {{ tiles(robot_teams) }}
         {% else %}
         {{ empty('bot', 'No teams yet', 'Create the first one below.') }}
         {% endif %}
@@ -75,6 +91,32 @@
                 pattern="[A-Za-z0-9\-]{1,20}">
             <datalist id="dl-team-numbers">
                 {% for n in team_number_suggestions %}<option value="{{ n }}"></option>{% endfor %}
+            </datalist>
+            <button type="submit" class="admin-btn admin-btn-success">Create &amp; open editor</button>
+        </form>
+    </div>
+
+    <div class="admin-card" id="group_form_card">
+        {{ card_head('users', 'Groups', current_teams|select('group')|list|length) }}
+        <p class="form-hint">Groups are crews that don't compete, like Media or Fundraising. Each gets a page in the
+            Team menu and a column on the People board. People can be in any number of groups, on a robot team
+            or not.</p>
+
+        {% if groups %}
+        {{ tiles(groups) }}
+        {% else %}
+        {{ empty('users', 'No groups yet', 'Name one below, like Media or Fundraising.') }}
+        {% endif %}
+
+        <h3 class="form-section-title" id="group_form_title">New group</h3>
+        <form id="group_form" class="inline-create" action="{{ url_for('admin_quick_group') }}" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <label class="visually-hidden" for="f-group_title">Group name</label>
+            <input id="f-group_title" type="text" name="title" placeholder="Group name, e.g. Media"
+                maxlength="60" required list="dl-group-names" autocomplete="off">
+            <datalist id="dl-group-names">
+                {% for n in ['Media', 'Fundraising', 'Outreach', 'Programming', 'CAD & Design', 'Mentors']
+                if n|lower not in groups|map(attribute='title', default='')|map('lower')|list %}<option value="{{ n }}"></option>{% endfor %}
             </datalist>
             <button type="submit" class="admin-btn admin-btn-success">Create &amp; open editor</button>
         </form>

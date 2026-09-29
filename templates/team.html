@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Team {{ team.team_number }} | Mepham Robotics Club{% endblock %}
-{% block meta_description %}Meet Team {{ team.team_number }} of the Mepham Robotics Club. View our robot specs, team
-members, competition results, and season goals.{% endblock %}
+{% set is_group = team is group %}
+{% set team_name = (team.title or team.team_number) if is_group else 'Team ' ~ team.team_number %}
+{% block title %}{{ team_name }} | Mepham Robotics Club{% endblock %}
+{% block meta_description %}{% if is_group %}Meet the {{ team_name }} group of the Mepham Robotics Club: its members,
+goals, and journey.{% else %}Meet Team {{ team.team_number }} of the Mepham Robotics Club. View our robot specs, team
+members, competition results, and season goals.{% endif %}{% endblock %}
 {% block og_image %}{{ get_image_url(team.hero_image, external=True) }}{% endblock %}
 
 {% block page_styles %}
@@ -29,8 +32,8 @@ members, competition results, and season goals.{% endblock %}
 {% block content %}
 <div class="hero-image fade-in-section" style="--team-hero-image: url('{{ get_image_url(team.hero_image) }}')">
     <div class="hero-content">
-        <h1>Team {{ team.team_number }}</h1>
-        <p>{{ team.nickname or site.teams.default_tagline }}</p>
+        <h1>{{ team_name }}</h1>
+        <p>{{ (team.tagline or site.teams.default_tagline) if is_group else team.nickname or site.teams.default_tagline }}</p>
 
         {% if team.members or award_total or team.since or team.worlds_appearances or team.division %}
         <ul class="identity-bar">
@@ -50,7 +53,7 @@ members, competition results, and season goals.{% endblock %}
 <nav class="breadcrumb">
     <a href="{{ url_for('index') }}">Home</a>
     <span class="separator">›</span>
-    <span class="current">Team {{ team.team_number }}</span>
+    <span class="current">{{ team_name }}</span>
 </nav>
 
 {% if seasons|length > 1 %}
@@ -119,7 +122,9 @@ members, competition results, and season goals.{% endblock %}
 </section>
 {% endif %}
 
+{% if not is_group %}
 {% include "partials/awards_grid.html" %}
+{% endif %}
 
 {% if live_enabled %}
 <!-- EVENT RESULTS (filled by static/js/team.js) -->
@@ -134,7 +139,7 @@ members, competition results, and season goals.{% endblock %}
 <!-- ROSTER -->
 <section id="team" class="roster-section fade-in-section">
     <div class="text-center">
-        <h2 class="ripple">Meet the Team</h2>
+        <h2 class="ripple">Meet the {{ 'Group' if is_group else 'Team' }}</h2>
     </div>
 
     {% if groups %}
@@ -167,10 +172,11 @@ members, competition results, and season goals.{% endblock %}
     </div>
     {% endfor %}
     {% else %}
-    <p class="roster-empty">Roster coming soon for this team.</p>
+    <p class="roster-empty">Roster coming soon for this {{ 'group' if is_group else 'team' }}.</p>
     {% endif %}
 </section>
 
+{% if not is_group %}
 <!-- ROBOT SHOWCASE -->
 <section class="robot-showcase fade-in-section">
     <h2 class="ripple">Our Robot{% if team.nickname %}: "{{ team.nickname }}"{% endif %}</h2>
@@ -216,7 +222,9 @@ members, competition results, and season goals.{% endblock %}
 </section>
 {% endif %}
 
-{% if has_notebook %}
+{% endif %}
+
+{% if has_notebook and not is_group %}
 <div class="text-center specs-cta">
     <a href="{{ team.notebook_link }}" class="download-btn" target="_blank" rel="noopener">
         <i data-lucide="book" class="download-icon" aria-hidden="true"></i>
@@ -254,7 +262,7 @@ members, competition results, and season goals.{% endblock %}
 <!-- TEAM JOURNEY -->
 <section class="journey-section fade-in-section">
     <div class="text-center">
-        <h2 class="ripple">Team Journey</h2>
+        <h2 class="ripple">{{ 'Our' if is_group else 'Team' }} Journey</h2>
     </div>
     <ol class="journey-list">
         {% for milestone in team.journey %}

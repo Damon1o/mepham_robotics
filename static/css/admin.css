@@ -1796,6 +1796,30 @@ body:has(.admin-container) #custom-chatbot-container {
     border-style: dashed;
 }
 
+/* Groups (Media, Fundraising, ...): a gold top edge sets them apart from robot teams. */
+.roster-col--group {
+    border-top: 3px solid var(--admin-gold);
+}
+
+.roster-col-title .group-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    align-self: flex-start;
+    margin: 0.15rem 0;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    background: var(--admin-gold-soft);
+    color: var(--admin-text);
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.group-chip svg {
+    width: 0.8rem;
+    height: 0.8rem;
+}
+
 .roster-board.is-dragging .roster-col {
     border-color: var(--admin-line-strong);
 }
@@ -2067,6 +2091,16 @@ body:has(.admin-container) #custom-chatbot-container {
     font-family: 'Space Mono', monospace;
     font-size: 0.9rem;
     font-weight: 700;
+}
+
+.team-number-box--group {
+    background: var(--admin-gold);
+    color: var(--ink-on-gold);
+}
+
+.team-number-box--group svg {
+    width: 1.2rem;
+    height: 1.2rem;
 }
 
 .team-tile-text {
