@@ -14,6 +14,9 @@
 //   <input type="file">                       (visible ones) becomes a drop zone
 //   <input type="range">                      gets a filled track (--fill)
 //
+// Every drop zone, including the editors' own and any [data-drop] card, takes
+// dragged or pasted files through one shared handler (see "Dropping and pasting").
+//
 // Options can carry data-image (a picture) or data-icon (a Lucide icon name),
 // shown next to their label in the menu. Put data-native on an element, or on
 // a wrapper, to keep the browser's own control.
@@ -1078,16 +1081,18 @@
 
     // --- File inputs ------------------------------------------------------------------------------
     // Only visible ones; the editors already draw their own drop zones around hidden inputs.
+    // Dropping and pasting are handled for every zone at once, further down.
 
     const FileDrop = (function () {
         const zones = new WeakMap();
+        const inputs = new WeakMap();
 
         function sync(input) {
             const zone = zones.get(input);
             if (!zone) return;
-            const file = input.files && input.files[0];
-            zone.querySelector('.fd-name').textContent = file ? file.name : '';
-            zone.classList.toggle('has-file', Boolean(file));
+            const count = input.files ? input.files.length : 0;
+            zone.querySelector('.fd-name').textContent = count > 1 ? `${count} files` : count ? input.files[0].name : '';
+            zone.classList.toggle('has-file', count > 0);
             zone.disabled = input.disabled;
             zone.hidden = input.hidden;
         }
@@ -1101,31 +1106,247 @@
                 h('span', { className: 'fd-name' }),
             ]);
             zones.set(input, zone);
+            inputs.set(zone, input);
             input.after(zone);
             input.classList.add('ctl-native');
             input.tabIndex = -1;
             zone.addEventListener('click', () => input.click());
-            zone.addEventListener('dragover', e => {
-                e.preventDefault();
-                zone.classList.add('is-over');
-            });
-            zone.addEventListener('dragleave', () => zone.classList.remove('is-over'));
-            zone.addEventListener('drop', e => {
-                e.preventDefault();
-                zone.classList.remove('is-over');
-                if (!e.dataTransfer.files.length) return;
-                try {
-                    input.files = e.dataTransfer.files;
-                } catch (err) {
-                    return;
-                }
-                fire(input, 'input', 'change');
-            });
             input.addEventListener('change', () => sync(input));
             sync(input);
         }
 
-        return { enhance, sync, owns: input => zones.has(input), zoneFor: input => zones.get(input) };
+        return {
+            enhance, sync,
+            owns: input => zones.has(input),
+            zoneFor: input => zones.get(input),
+            inputOf: zone => inputs.get(zone),
+        };
+    })();
+
+    // --- Dropping and pasting files -------------------------------------------------------------------
+    // Every drop zone on the page takes files dragged onto it, or pasted (Ctrl+V) while it has
+    // the keyboard focus or the pointer:
+    //   .drop-zone, .file-drop   an upload box around (or beside) a file input
+    //   [data-drop]              a bigger target, like a whole card or row. It feeds the file input
+    //                            inside it or the one named by data-drop-input; with
+    //                            data-drop="event" it only fires ctl:files (below).
+    // Files are checked against the input's accept list (or data-drop-accept). A zone takes one
+    // file unless its input is multiple or it has data-drop-multiple; several files over a
+    // one-file zone go to the nearest zone around it that takes several.
+    //
+    // The zone first gets a bubbling, cancelable ctl:files event with detail.files. Page code
+    // can preventDefault() it to handle the files itself; otherwise they are put on the input,
+    // which fires input and change as if a person had picked them.
+    //
+    // While files are over the page, html.ctl-dragging lights up every zone. The one under the
+    // pointer gets .is-over and shows its data-drop-label (data-drop-label-many for several
+    // files, {n} being the count). A drop that misses every zone is refused, so the browser
+    // never replaces the page, and its unsaved edits, with the file.
+
+    (function drops() {
+        const ZONE = '.drop-zone, .file-drop, [data-drop]';
+        const IDLE_MS = 1200;
+        const status = h('div', { className: 'visually-hidden', role: 'status', 'aria-live': 'polite' });
+        let dragging = false;
+        let over = null;
+        let hovered = null;
+        let idle = 0;
+        let note = null;
+        let noteTimer = 0;
+
+        const hasFiles = e => Boolean(e.dataTransfer) && Array.from(e.dataTransfer.types || []).includes('Files');
+        const elementOf = node => (node && node.nodeType === 1 ? node : node && node.parentElement) || null;
+        const outerZone = zone => zone.parentElement && zone.parentElement.closest(ZONE);
+
+        function inputFor(zone) {
+            if (zone.dataset.drop === 'event') return null;
+            if (zone.dataset.dropInput) return document.getElementById(zone.dataset.dropInput);
+            return FileDrop.inputOf(zone) || zone.querySelector('input[type="file"]');
+        }
+
+        function usable(zone) {
+            if (!zone.isConnected || zone.hidden || zone.disabled || keepsNative(zone)) return false;
+            if (zone.dataset.drop === 'event') return true;
+            const input = inputFor(zone);
+            return Boolean(input) && !input.disabled;
+        }
+
+        const takesMany = zone => zone.hasAttribute('data-drop-multiple') || Boolean(inputFor(zone)?.multiple);
+        const acceptOf = zone => zone.dataset.dropAccept || inputFor(zone)?.accept || '';
+
+        // The zone a drop on `node` belongs to, for `count` files.
+        function zoneFor(node, count = 1) {
+            let zone = elementOf(node)?.closest(ZONE) || null;
+            while (zone && !usable(zone)) zone = outerZone(zone);
+            if (!zone || count < 2 || takesMany(zone)) return zone;
+            let outer = outerZone(zone);
+            while (outer && !(usable(outer) && takesMany(outer))) outer = outerZone(outer);
+            return outer || zone;
+        }
+
+        function rulesOf(accept) {
+            return accept.split(',').map(rule => rule.trim().toLowerCase()).filter(Boolean);
+        }
+
+        function accepts(file, accept) {
+            const rules = rulesOf(accept);
+            if (!rules.length) return true;
+            const type = (file.type || '').toLowerCase();
+            const name = file.name.toLowerCase();
+            return rules.some(rule => {
+                if (rule.startsWith('.')) return name.endsWith(rule);
+                if (rule.endsWith('/*')) return type.startsWith(rule.slice(0, -1));
+                return type === rule;
+            });
+        }
+
+        const NAMES = { jpeg: 'JPG', 'svg+xml': 'SVG', webp: 'WebP', plain: '.txt', csv: '.csv' };
+        const orList = items => (items.length < 2 ? items.join('')
+            : `${items.slice(0, -1).join(', ')} or ${items[items.length - 1]}`);
+
+        // "Only PNG, JPG or WebP images go here." from an accept list.
+        function describe(accept) {
+            const rules = rulesOf(accept);
+            if (rules.includes('image/*') && rules.length === 1) return 'Only images go here.';
+            const images = rules.filter(rule => rule.startsWith('image/'));
+            const kinds = [...new Set(rules.map(rule => {
+                const sub = rule.startsWith('.') ? rule : rule.split('/')[1];
+                return NAMES[sub] || (sub.startsWith('.') ? sub : sub.toUpperCase());
+            }))];
+            return `Only ${orList(kinds)} ${images.length === rules.length ? 'images' : 'files'} go here.`;
+        }
+
+        // A short message beside the zone, also read out by screen readers.
+        function tell(zone, message) {
+            status.textContent = message;
+            note?.remove();
+            note = h('div', { className: 'drop-note', text: message });
+            document.body.append(note);
+            const rect = zone.getBoundingClientRect();
+            const room = window.innerHeight - rect.bottom;
+            note.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - note.offsetWidth - 8))}px`;
+            note.style.top = `${room > note.offsetHeight + 14 ? rect.bottom + 6 : Math.max(8, rect.top - note.offsetHeight - 6)}px`;
+            clearTimeout(noteTimer);
+            const shown = note;
+            noteTimer = setTimeout(() => {
+                shown.classList.add('is-leaving');
+                setTimeout(() => shown.remove(), 250);
+            }, 3600);
+        }
+
+        function deliver(zone, files) {
+            const input = inputFor(zone);
+            const accept = acceptOf(zone);
+            const fits = files.filter(file => accepts(file, accept));
+            if (!fits.length) {
+                tell(zone, describe(accept));
+                return;
+            }
+            const chosen = takesMany(zone) ? fits : fits.slice(0, 1);
+            const event = new CustomEvent('ctl:files', { bubbles: true, cancelable: true, detail: { files: chosen, input } });
+            if (zone.dispatchEvent(event) && input) {
+                const transfer = new DataTransfer();
+                chosen.forEach(file => transfer.items.add(file));
+                input.files = transfer.files;
+                fire(input, 'input', 'change');
+            }
+            const skipped = files.length - chosen.length;
+            if (skipped && fits.length > chosen.length) tell(zone, `One file at a time here, so only ${chosen[0].name} was used.`);
+            else if (skipped) tell(zone, `Skipped ${skipped} file${skipped === 1 ? '' : 's'}. ${describe(accept)}`);
+        }
+
+        // --- Highlighting ----------------------------------------------------------------
+
+        function point(zone, count, y) {
+            if (over && over !== zone) {
+                over.classList.remove('is-over');
+                over.removeAttribute('data-drop-now');
+                over.style.removeProperty('--drop-y');
+            }
+            over = zone;
+            if (!zone) return;
+            // dragover repeats many times a second; only touch the DOM when something changes.
+            if (!zone.classList.contains('is-over')) zone.classList.add('is-over');
+            const template = (count > 1 && zone.dataset.dropLabelMany) || zone.dataset.dropLabel || '';
+            const label = template.replace('{n}', count);
+            if (label && zone.dataset.dropNow !== label) zone.dataset.dropNow = label;
+            else if (!label) zone.removeAttribute('data-drop-now');
+            // On a tall zone the label sits level with the pointer, so it is always in view.
+            const rect = zone.getBoundingClientRect();
+            if (label && rect.height > 120) {
+                zone.style.setProperty('--drop-y', `${Math.round(Math.max(28, Math.min(rect.height - 28, y - rect.top)))}px`);
+            }
+        }
+
+        function stop() {
+            dragging = false;
+            clearTimeout(idle);
+            document.documentElement.classList.remove('ctl-dragging');
+            point(null);
+        }
+
+        // Browsers do not always say how many files are coming until the drop.
+        function countOf(e) {
+            const items = e.dataTransfer.items;
+            const count = items ? Array.from(items).filter(item => item.kind === 'file').length : 0;
+            return count || 1;
+        }
+
+        function onDrag(e) {
+            if (!hasFiles(e) || !document.querySelector(ZONE)) return;
+            e.preventDefault();
+            if (!dragging) {
+                dragging = true;
+                document.documentElement.classList.add('ctl-dragging');
+            }
+            // dragover repeats while the pointer is on the page; silence means it left.
+            clearTimeout(idle);
+            idle = setTimeout(stop, IDLE_MS);
+            const count = countOf(e);
+            const zone = zoneFor(e.target, count);
+            point(zone, count, e.clientY);
+            e.dataTransfer.dropEffect = zone ? 'copy' : 'none';
+        }
+
+        document.addEventListener('dragenter', onDrag);
+        document.addEventListener('dragover', onDrag);
+        document.addEventListener('dragleave', e => {
+            if (!dragging || e.relatedTarget) return;
+            const { clientX: x, clientY: y } = e;
+            if (x <= 0 || y <= 0 || x >= window.innerWidth || y >= window.innerHeight) stop();
+        });
+        document.addEventListener('drop', e => {
+            if (!dragging || !hasFiles(e)) return;
+            e.preventDefault();
+            const files = Array.from(e.dataTransfer.files || []);
+            const zone = zoneFor(e.target, files.length);
+            stop();
+            if (zone && files.length) deliver(zone, files);
+        });
+        document.addEventListener('dragend', stop);
+
+        // --- Pasting --------------------------------------------------------------------------
+
+        document.addEventListener('mouseover', e => {
+            hovered = e.target;
+        }, { passive: true });
+
+        document.addEventListener('paste', e => {
+            const data = e.clipboardData;
+            const files = Array.from((data && data.files) || []);
+            if (!files.length) return;
+            const focused = document.activeElement;
+            // Text copied with a picture (from a web page, say) is meant for the text field.
+            if (focused && focused.matches('input:not([type="file"]), textarea, [contenteditable]')
+                && Array.from(data.types).includes('text/plain')) return;
+            const zone = (focused && focused !== document.body && zoneFor(focused, files.length))
+                || zoneFor(hovered, files.length);
+            if (!zone) return;
+            e.preventDefault();
+            deliver(zone, files);
+        });
+
+        document.body.append(status);
     })();
 
     // --- Sliders --------------------------------------------------------------------------------------

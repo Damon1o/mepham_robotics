@@ -178,6 +178,63 @@
     width: auto;
 }
 
+/* --- Dropping files on the roster ------------------------------------------------ */
+.drop-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+}
+
+.drop-hint svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.1rem;
+}
+
+/* The check shown before a dropped list of names is added. */
+.roster-import {
+    margin: 0 0 0.75rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--admin-gold);
+    border-radius: var(--admin-radius-sm);
+    background: var(--admin-surface);
+}
+
+.roster-import-title {
+    margin: 0 0 0.5rem;
+    color: var(--admin-muted);
+    font-size: 0.9rem;
+}
+
+.roster-import-title strong {
+    color: var(--admin-text);
+}
+
+.roster-import-names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    max-height: 9rem;
+    margin: 0 0 0.6rem;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.roster-import-names li {
+    padding: 0.1rem 0.55rem;
+    border: 1px solid var(--admin-line);
+    border-radius: 999px;
+    background: var(--admin-card-bg);
+    font-size: 0.85rem;
+}
+
+.roster-import-actions {
+    display: flex;
+    gap: 0.4rem;
+}
+
 /* --- /my-team: no team yet, someone else's team, or an editor's team list ------------ */
 .my-team-empty {
     max-width: 38rem;

@@ -147,8 +147,12 @@
                 {% set id = 'c-' ~ section.key ~ '-' ~ field.key %}
                 {% set value = values[section.key][field.key] %}
                 {% set custom = field.key in stored %}
+                {% set photo_list = field.kind == 'list' and field.items|selectattr('kind', 'equalto', 'image')|list %}
                 <div class="setting-row{% if field.kind in ('textarea', 'rich', 'list', 'image') %} setting-row--top setting-row--wide{% endif %}"
-                    data-key="{{ key }}" data-kind="{{ field.kind }}">
+                    data-key="{{ key }}" data-kind="{{ field.kind }}"
+                    {%- if field.kind == 'image' %} data-drop data-drop-label="Use this photo"
+                    {%- elif photo_list %} data-drop="event" data-drop-multiple data-drop-accept="image/png,image/jpeg,image/webp,image/gif"
+                    data-drop-label="Drop photos to add them" data-drop-label-many="Drop {n} photos to add them"{% endif %}>
                     <div class="setting-label">
                         {% if field.kind in ('text', 'email', 'url', 'link', 'textarea', 'rich', 'time', 'datetime', 'toggle')
                               or (field.kind == 'choice' and field.choices|length > 5) %}
@@ -169,6 +173,7 @@
                         <button type="button" class="add-more-btn" data-action="row-add"
                             {% if field.max_items and value|length >= field.max_items %} disabled{% endif %}>
                             <i data-lucide="plus" aria-hidden="true"></i> Add {{ 'photo' if field.key == 'photos' else 'entry' }}</button>
+                        {% if photo_list %}<small class="drop-hint">or drop several photos here at once</small>{% endif %}
                         {% else %}
                         {{ control(field, value, id) }}
                         {% endif %}

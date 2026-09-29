@@ -7,8 +7,9 @@
 //
 // Sections, in order: DOM helpers, notifications, dialog, JSON calls, tabs and
 // search, forms (sponsor/account editors), autosave (numbers, awards, events),
-// homepage number modes, awards, events, teams, people (approvals, roles,
-// roster), messages and newsletter, activity, help, and the delegated wiring.
+// homepage number modes, awards, events, teams, dropped files (team banners,
+// sponsor logos), people (approvals, roles, roster), messages and newsletter,
+// activity, help, and the delegated wiring.
 
 // --- DOM helpers --------------------------------------------------------------
 
@@ -210,6 +211,23 @@ async function api(url, body = {}, method = 'POST') {
     }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `Save failed (${response.status}).`);
+    return data;
+}
+
+// Send a form upload ({field: file or text}). Same promise shape as api().
+async function uploadFile(url, fields) {
+    const body = new FormData();
+    Object.entries(fields).forEach(([name, value]) => body.append(name, value));
+    let response;
+    try {
+        response = await fetch(url, {
+            method: 'POST', headers: { 'X-CSRF-Token': csrfToken() }, credentials: 'same-origin', body,
+        });
+    } catch (err) {
+        throw new Error('Could not reach the server. Check your connection.');
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Upload failed (${response.status}).`);
     return data;
 }
 
@@ -837,6 +855,104 @@ function startNewSeason(button) {
     });
 }
 
+// --- Dropped files: team banners and sponsor logos ------------------------------------------
+// controls.js finds the zone under the pointer and checks the file type, then fires
+// ctl:files on it; these send the file where that zone says.
+
+const DroppedFiles = (function () {
+    function busy(node, promise) {
+        node.classList.add('is-uploading');
+        node.setAttribute('aria-busy', 'true');
+        return promise
+            .catch(err => Admin.notify(err.message, 'error'))
+            .finally(() => {
+                node.classList.remove('is-uploading');
+                node.removeAttribute('aria-busy');
+            });
+    }
+
+    function teamBanner(tile, file) {
+        busy(tile, uploadFile(`/api/team/${tile.dataset.teamId}/image`, { hero_image: file }).then(data => {
+            let photo = tile.querySelector('.team-tile-photo');
+            if (!photo) {
+                photo = el('img', { className: 'team-tile-photo', alt: '' });
+                tile.querySelector('.team-tile-main').append(photo);
+            }
+            photo.src = data.url;
+            Admin.notify(`New banner photo for ${tile.dataset.teamName}.`, 'success');
+        }));
+    }
+
+    function sponsorLogo(row, file) {
+        const edit = row.querySelector('[data-action="edit-sponsor"]');
+        busy(row, uploadFile(`/admin/api/sponsor/${row.dataset.sponsorId}/logo`, { logo: file }).then(data => {
+            row.querySelector('.sponsor-thumb').replaceChildren(el('img', { src: data.url, alt: '' }));
+            if (edit) edit.dataset.hasLogo = 'true';
+            Admin.notify(`New logo for ${edit ? edit.dataset.name : 'the sponsor'}.`, 'success');
+        }));
+    }
+
+    // "acme_corp-logo-final.png" suggests the name "Acme Corp".
+    const FILLER = /^(logos?|final|transparent|icon|vector|colou?r|hi|res|hires|rgb|cmyk|white|black|dark|light|copy|v?\d+(px)?|\d+x\d*)$/i;
+
+    function nameFromFile(fileName) {
+        return fileName.replace(/\.[^.]+$/, '').split(/[\s_.-]+/)
+            .filter(word => word && !FILLER.test(word))
+            .map(word => (word === word.toUpperCase() ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+            .join(' ')
+            .slice(0, 100);
+    }
+
+    // A photo dropped on a People board card: that person's photo on that team or group.
+    function memberPhoto(card, file) {
+        const teamId = card.closest('.roster-col')?.dataset.teamId;
+        busy(card, uploadFile(`/api/team/${teamId}/image`, { member_photo: file, member_id: card.dataset.memberId })
+            .then(data => {
+                card.querySelector('.roster-avatar').replaceChildren(el('img', { src: data.url, alt: '' }));
+                Admin.notify(`New photo for ${card.dataset.name}.`, 'success');
+            }));
+    }
+
+    // A logo dropped on the list, not on a sponsor: start a new sponsor with it.
+    function newSponsor(file) {
+        guarded('sponsor_form', () => {
+            resetSponsorForm();
+            const form = document.getElementById('sponsor_form');
+            const input = document.getElementById('f-logo');
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            input.files = transfer.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            const name = form.querySelector('[name="name"]');
+            name.value = nameFromFile(file.name);
+            scrollToId('sponsor_form_card');
+            name.focus({ preventScroll: true });
+            name.select();
+        });
+    }
+
+    function onFiles(e) {
+        const zone = e.target;
+        const file = e.detail.files[0];
+        if (!file) return;
+        if (zone.matches('.team-tile')) {
+            e.preventDefault();
+            teamBanner(zone, file);
+        } else if (zone.matches('.sponsor-row')) {
+            e.preventDefault();
+            sponsorLogo(zone, file);
+        } else if (zone.id === 'sponsor_list_card') {
+            e.preventDefault();
+            newSponsor(file);
+        } else if (zone.matches('.roster-card')) {
+            e.preventDefault();
+            memberPhoto(zone, file);
+        }
+    }
+
+    return { onFiles };
+})();
+
 // --- People: approvals, roles, roster board -------------------------------------------------
 
 const Approvals = {
@@ -930,8 +1046,21 @@ const Roster = (function () {
         });
     }
 
+    // A card on a team or group takes a dropped photo for that spot; an account in Unassigned has
+    // no roster spot to hold one.
+    function photoDrop(card) {
+        if (card.dataset.memberId && teamOf(card)) {
+            card.dataset.drop = 'event';
+            card.dataset.dropAccept = 'image/png,image/jpeg,image/gif,image/webp';
+            card.dataset.dropLabel = `Set as ${card.dataset.name}’s photo`;
+        } else {
+            ['drop', 'dropAccept', 'dropLabel'].forEach(key => delete card.dataset[key]);
+        }
+    }
+
     // Rebuild a card's Move-to menu for the column it now sits in (same shape as move_options in _people.html).
     function refreshMenu(card) {
+        photoDrop(card);
         const here = card.closest('.roster-col');
         const option = col => el('option', { value: col.dataset.teamId, text: labelOf(col) });
         const targets = columns().filter(col => col.dataset.teamId && canGo(card, col.dataset.teamId));
@@ -969,8 +1098,8 @@ const Roster = (function () {
         const dataset = { memberId: member.member_id, name: member.name };
         if (member.user_id) dataset.userId = member.user_id;
         return el('li', { className: 'roster-card', draggable: 'true', dataset }, [
-            el('span', { className: 'roster-avatar', 'aria-hidden': 'true',
-                text: like.querySelector('.roster-avatar')?.textContent || '' }),
+            like.querySelector('.roster-avatar')?.cloneNode(true)
+                || el('span', { className: 'roster-avatar', 'aria-hidden': 'true' }),
             el('span', { className: 'roster-text' }, [el('strong', { text: member.name }), meta]),
             el('div', { className: 'roster-card-controls' }, [
                 el('select', { className: 'roster-move', 'aria-label': `Move ${member.name} to` }),
@@ -1073,6 +1202,7 @@ const Roster = (function () {
     function init() {
         const board = document.getElementById('rosterBoard');
         if (!board) return;
+        board.querySelectorAll('.roster-card').forEach(photoDrop);
 
         board.addEventListener('dragstart', e => {
             dragged = e.target.closest('.roster-card');
@@ -1445,6 +1575,8 @@ document.addEventListener('change', function (e) {
     if (target.matches('[data-stat-mode]')) StatModes.change(target);
     if (target.matches('.award-style [data-category-field]')) Awards.styleChange(target);
 });
+
+document.addEventListener('ctl:files', DroppedFiles.onFiles);
 
 document.addEventListener('submit', function (e) {
     const form = e.target;
