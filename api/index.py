@@ -17,7 +17,7 @@ from functools import wraps
 from bson import ObjectId
 import bcrypt
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort, g
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort, g, send_from_directory
 from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 from pymongo import MongoClient
@@ -3858,6 +3858,15 @@ STATIC_PUBLIC_PAGES = [
     ('privacy', 0.3, 'yearly'),
     ('credits_page', 0.3, 'yearly'),
 ]
+
+GOOGLE_SITE_VERIFICATION = 'googleb1225e3231cfbee0.html'
+
+
+@app.route(f'/{GOOGLE_SITE_VERIFICATION}')
+def google_site_verification():
+    # Google Search Console fetches this file from the site root to prove ownership.
+    return send_from_directory(_root, GOOGLE_SITE_VERIFICATION, mimetype='text/html')
+
 
 @app.route('/robots.txt')
 def robots_txt():

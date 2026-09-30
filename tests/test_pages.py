@@ -90,6 +90,13 @@ def test_robots_blocks_private_areas(client):
         assert rule in body
 
 
+def test_google_site_verification_is_served_from_the_root(client):
+    resp = client.get('/googleb1225e3231cfbee0.html')
+    assert resp.status_code == 200
+    assert resp.mimetype == 'text/html'
+    assert resp.get_data(as_text=True).strip() == 'google-site-verification: googleb1225e3231cfbee0.html'
+
+
 def test_static_assets_are_cached_hard(client):
     resp = client.get('/static/js/theme.js')
     assert resp.status_code == 200
