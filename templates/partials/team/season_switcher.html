@@ -1,0 +1,10 @@
+{% if seasons|length > 1 %}
+<nav class="season-switcher" aria-label="Season archive">
+    <span class="season-switcher-label">Season</span>
+    {% for season in seasons %}
+    <a class="season-pill {{ 'is-active' if season == active_season }}"
+        href="{{ url_for('team_page', team_number=team.team_number, season=season) }}" {% if season==active_season
+        %}aria-current="page" {% endif %}>{{ season }}</a>
+    {% endfor %}
+</nav>
+{% endif %}

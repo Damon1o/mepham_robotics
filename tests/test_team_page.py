@@ -1,5 +1,7 @@
 import pytest
 
+from api import site_content
+
 
 @pytest.fixture
 def team_factory(db):
@@ -89,9 +91,11 @@ def test_awards_section_always_present(client, db, team_factory, award_factory):
 
 
 def test_awards_grid_partial_still_included():
-    with open('templates/team.html', encoding='utf-8') as fh:
-        source = fh.read()
-    assert source.count('awards_grid.html') == 1
+    with open('templates/partials/team/awards.html', encoding='utf-8') as fh:
+        assert fh.read().count('awards_grid.html') == 1
+    for layout in site_content.TEAM_LAYOUTS:
+        with open(f'templates/team_layouts/{layout}.html', encoding='utf-8') as fh:
+            assert fh.read().count('partials/team/awards.html') == 1, layout
 
 
 # --- honest empty states ---------------------------------------------------

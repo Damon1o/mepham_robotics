@@ -1129,6 +1129,20 @@ def donate():
                            givebutter_campaign_id=content.donate.givebutter_id,
                            contact_email=email, sponsors=load_sponsors())
 
+def team_layout(team):
+    """The layout this team season renders with: its own pick, else the site default.
+
+    Groups always use Classic until they get layouts of their own. A stored key that
+    is no longer offered falls back too, so removing a layout never breaks a page.
+    """
+    if is_group(team):
+        return site_content.DEFAULT_TEAM_LAYOUT
+    for key in (team.get('layout'), site().teams.layout):
+        if key in site_content.TEAM_LAYOUTS:
+            return key
+    return site_content.DEFAULT_TEAM_LAYOUT
+
+
 @app.route('/team/<team_number>')
 def team_page(team_number):
     docs = list(db['teams'].find({'team_number': team_number}))
@@ -1170,6 +1184,7 @@ def team_page(team_number):
         award['icon'] = award.get('icon') or AWARD_ICONS[0]
     return render_template('team.html', team=team, team_awards=team_awards,
                            event_photos=event_photos, robot_photos=robot_photos,
+                           layout=team_layout(team),
                            seasons=seasons, active_season=team.get('season'),
                            live_enabled=bool(os.environ.get('ROBOTEVENTS_TOKEN')) and not is_group(team),
                            active_page=team_number)
@@ -3087,6 +3102,7 @@ MEMBER_TEAM_FIELDS = {
     'specs.lift_system': ('Lift system', 120),
     'specs.intake': ('Intake', 120),
     'specs.auton_consistency': ('Auton consistency', 40),
+    'layout': ('Page layout', None),
 }
 # Editors and admins only. Blank values are removed rather than stored.
 ADMIN_TEAM_FIELDS = {
@@ -3100,7 +3116,7 @@ ADMIN_TEAM_FIELDS = {
     'title': ('Group name', GROUP_TITLE_MAX),
 }
 # Fields that only mean something for one kind of team.
-ROBOT_ONLY_FIELDS = {'nickname', 'notebook_link', 'division', 'robotevents_number', 'worlds_appearances',
+ROBOT_ONLY_FIELDS = {'nickname', 'notebook_link', 'division', 'robotevents_number', 'worlds_appearances', 'layout',
                      'specs.drive_train', 'specs.lift_system', 'specs.intake', 'specs.auton_consistency'}
 GROUP_ONLY_FIELDS = {'title'}
 MEMBER_CARD_FIELDS = {'name': ('Name', 100), 'role': ('Role', 100), 'roles': ('Roles', 200),
@@ -3259,7 +3275,7 @@ def manage_team(team_id):
                            cards=[_card(m) | {'roles': ', '.join(m.get('roles') or []),
                                               'since': m.get('since') or ''}
                                   for m in team.get('members', [])],
-                           subteams=SUBTEAMS, divisions=DIVISIONS,
+                           subteams=SUBTEAMS, divisions=DIVISIONS, team_layouts=site_content.TEAM_LAYOUTS,
                            seasons=season_options(d.get('season') for d in db['teams'].find({}, {'season': 1})),
                            years=year_options(), months=month_suggestions(),
                            role_suggestions=ROLE_SUGGESTIONS, goal_suggestions=GOAL_SUGGESTIONS,
@@ -3273,6 +3289,13 @@ def _clean_team_field(field, value, label, limit):
         return _clean_year(value, label)
     if field == 'hidden':
         return bool(value) or None
+    if field == 'layout':
+        # Blank means "use the site default", so it is removed rather than stored.
+        if not value:
+            return None
+        if value not in site_content.TEAM_LAYOUTS:
+            raise UserFacingError('Pick one of the listed layouts.')
+        return value
     text = _clean_text(value, limit, label, required=(field == 'team_number'))
     if field in ('team_number', 'robotevents_number'):
         text = text.upper()
@@ -3359,7 +3382,7 @@ def api_team_field(team_id):
             return _json_error(f'Another profile already uses {number} for {season or "no season"}.', 409)
 
     try:
-        if field in ADMIN_TEAM_FIELDS and value in (None, ''):
+        if value is None or (field in ADMIN_TEAM_FIELDS and value == ''):
             db['teams'].update_one({'_id': team['_id']}, {'$unset': {field: ''}})
         else:
             db['teams'].update_one({'_id': team['_id']}, {'$set': {field: value}})

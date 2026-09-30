@@ -1,0 +1,9 @@
+{#- Tiny wireframe of a team page layout for the layout pickers. Styled in team_editor.css.
+    Add a branch here with each new layout in site_content.TEAM_LAYOUTS. -#}
+{% macro layout_thumb(key) -%}
+<span class="layout-thumb layout-thumb--{{ key }}" aria-hidden="true">
+    {%- if key == 'classic' -%}
+    <i class="lt-hero"></i><i class="lt-stats"></i><i class="lt-awards"></i><i></i><i class="lt-cards"></i><i></i><i></i>
+    {%- endif -%}
+</span>
+{%- endmacro %}
