@@ -139,11 +139,13 @@ LEADERSHIP_KEYWORDS = ('captain', 'lead', 'president', 'mentor', 'director')
 
 @app.template_filter('member_roles')
 def member_roles(member):
-    """Every role a member holds. Falls back to the single legacy 'role' string."""
-    roles = member.get('roles') or []
-    roles = [r.strip() for r in roles if str(r).strip()]
-    if not roles and member.get('role'):
-        roles = [member['role'].strip()]
+    """Every role a member holds: the main 'role' first, then the other 'roles', no repeats."""
+    roles, seen = [], set()
+    for role in [member.get('role') or '', *(member.get('roles') or [])]:
+        role = str(role).strip()
+        if role and role.lower() not in seen:
+            seen.add(role.lower())
+            roles.append(role)
     return roles
 
 

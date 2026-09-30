@@ -553,40 +553,17 @@
     new MutationObserver(updateRosterCount).observe(document.getElementById('memberGrid'), { childList: true });
 
     // --- Roster as an animated list -------------------------------------------------------
-    // Adapted from React Bits' AnimatedList: rows scale and fade in once half of them is in
-    // view, the edge fades follow the scroll position, and Up/Down in a row's field moves to
-    // the same field one row over (unless a dropdown or suggestion list took the key).
+    // controls.js animates the rows and fades the edges (data-animated-list). Here: the top
+    // fade starts below the sticky header, and Up/Down in a row's field moves to the same
+    // field one row over (unless a dropdown or suggestion list took the key).
 
     const rosterViewport = document.getElementById('rosterViewport');
-    const rosterBox = rosterViewport?.parentElement;
     const rosterHead = grid.querySelector('.member-head');
 
-    function updateRosterFades() {
-        const { scrollTop, scrollHeight, clientHeight } = rosterViewport;
-        const bottom = scrollHeight <= clientHeight ? 0 : Math.min((scrollHeight - scrollTop - clientHeight) / 50, 1);
-        rosterBox.style.setProperty('--roster-head', `${rosterHead.offsetHeight}px`);
-        rosterBox.style.setProperty('--fade-top', Math.min(scrollTop / 50, 1));
-        rosterBox.style.setProperty('--fade-bottom', bottom);
-    }
-
     if (rosterViewport) {
-        const animate = 'IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const rowsInView = animate && new IntersectionObserver(entries => {
-            entries.forEach(entry => entry.target.classList.toggle('is-in', entry.intersectionRatio >= 0.5));
-        }, { root: rosterViewport, threshold: [0, 0.5] });
-        const watchRows = rows => rows.forEach(row => {
-            if (rowsInView && row.matches?.('.member-card')) rowsInView.observe(row);
-        });
-        if (animate) rosterBox.classList.add('is-animated');
-        watchRows(grid.querySelectorAll('.member-card'));
-
-        new MutationObserver(records => {
-            records.forEach(record => watchRows(record.addedNodes));
-            updateRosterFades();
-        }).observe(grid, { childList: true });
-        rosterViewport.addEventListener('scroll', updateRosterFades, { passive: true });
-        window.addEventListener('resize', updateRosterFades);
-        updateRosterFades();
+        const placeFade = () => rosterViewport.style.setProperty('--fade-start', `${rosterHead.offsetHeight}px`);
+        placeFade();
+        window.addEventListener('resize', placeFade);
 
         rosterViewport.addEventListener('keydown', e => {
             if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;

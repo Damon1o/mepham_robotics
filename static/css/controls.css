@@ -10,7 +10,8 @@
      7. File drop zones, drag highlighting and drop notes
      8. Checkboxes and radios
      9. Sliders, number fields, search fields
-    10. Reduced motion
+    10. Animated lists
+    11. Reduced motion
    The menus and pickers are placed on <body>, outside any page container, so
    they take their colours from the --ctl-* tokens below, not the page's.
    ========================================================================== */
@@ -954,8 +955,55 @@ input[type="search"]::-webkit-search-cancel-button {
     cursor: pointer;
 }
 
-/* 10. Reduced motion ================================================================== */
+/* 10. Animated lists ================================================================== */
+/* A scrolling list whose items ease in as they come into view and shrink away as they
+   leave, with the top and bottom edges fading out while there is more to scroll (after
+   React Bits' AnimatedList). Markup: data-animated-list="<item selector>" on the
+   scrolling box. controls.js adds .is-animated, puts .is-in on items at least half in
+   view, and sets --fade-top/--fade-bottom (0 to 1) from the scroll position. The fades
+   are a mask, so they work on any background. --fade-start moves the top fade down,
+   below a sticky header. */
+[data-animated-list] {
+    --fade-start: 0px;
+    --fade-top: 0;
+    --fade-bottom: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--ctl-border) transparent;
+    -webkit-mask-image: linear-gradient(to bottom,
+        #000 var(--fade-start),
+        rgb(0 0 0 / calc(1 - var(--fade-top))) var(--fade-start),
+        #000 calc(var(--fade-start) + 3rem),
+        #000 calc(100% - 5rem),
+        rgb(0 0 0 / calc(1 - var(--fade-bottom))) 100%);
+    mask-image: linear-gradient(to bottom,
+        #000 var(--fade-start),
+        rgb(0 0 0 / calc(1 - var(--fade-top))) var(--fade-start),
+        #000 calc(var(--fade-start) + 3rem),
+        #000 calc(100% - 5rem),
+        rgb(0 0 0 / calc(1 - var(--fade-bottom))) 100%);
+}
+
+[data-animated-list].is-animated .ctl-animated-item {
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s, background-color 0.15s ease;
+}
+
+/* An item being edited or dragged never shrinks away, even half scrolled out. */
+[data-animated-list].is-animated .ctl-animated-item:is(.is-in, :focus-within) {
+    opacity: 1;
+    transform: none;
+}
+
+/* 11. Reduced motion ================================================================== */
 @media (prefers-reduced-motion: reduce) {
+    [data-animated-list].is-animated .ctl-animated-item {
+        opacity: 1;
+        transform: none;
+    }
+
     .ctl-pop,
     :where(input[type="checkbox"], input[type="radio"]),
     :where(input[type="checkbox"], input[type="radio"])::before,

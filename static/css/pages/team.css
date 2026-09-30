@@ -176,11 +176,12 @@
     margin: 0;
     padding: 0;
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: 0.35rem;
 }
 
+/* One role per line, each as wide as the card. */
 .roster-role-chip {
     font-family: 'Space Mono', monospace;
     font-size: 0.7rem;
@@ -191,6 +192,43 @@
     border-radius: 999px;
     padding: 0.15rem 0.6rem;
     color: var(--text-dark);
+}
+
+/* The main role: gold, with a shine that sweeps across it now and then. */
+.roster-role-chip--main {
+    position: relative;
+    overflow: hidden;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    font-weight: 700;
+}
+
+.roster-role-chip--main::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.75) 50%, transparent 70%);
+    transform: translateX(-100%);
+    animation: role-shine 3.2s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes role-shine {
+    0%,
+    55% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .roster-role-chip--main::after {
+        animation: none;
+        display: none;
+    }
 }
 
 .roster-since {
@@ -225,6 +263,12 @@
     background: #2a2a2a;
     border-color: #444;
     color: #f1f1f1;
+}
+
+[data-theme="dark"] .roster-role-chip--main {
+    background: var(--accent-gold);
+    border-color: var(--accent-gold);
+    color: var(--ink-on-gold);
 }
 
 [data-theme="dark"] .roster-since,

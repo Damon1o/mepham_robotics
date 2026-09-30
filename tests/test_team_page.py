@@ -180,6 +180,15 @@ def test_member_roles_chips(client, team_factory):
     assert 'Programmer' in body
 
 
+def test_main_role_leads_the_chips_in_gold(client, team_factory):
+    team_factory(members=[{'name': 'Ada Lovelace', 'role': 'Driver', 'roles': ['Coder', 'driver']}])
+    body = html(client)[1]
+    assert 'roster-role-chip roster-role-chip--main">Driver<' in body
+    assert body.index('>Driver<') < body.index('>Coder<')
+    assert body.count('roster-role-chip--main') == 1
+    assert '>driver<' not in body
+
+
 def test_roster_grouped_by_subteam(client, team_factory):
     team_factory()
     body = html(client)[1]
