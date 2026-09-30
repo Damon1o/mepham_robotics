@@ -174,6 +174,39 @@ def test_spotlight_without_robot_media_falls_back_to_classic(client, db, setup):
     assert body.count('Competition Awards') == 1
 
 
+# --- 04 Meet the Team -------------------------------------------------------
+
+def meet_page(client, db, setup, **fields):
+    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'meet', **fields}})
+    return client.get('/team/77628L').data.decode()
+
+
+def test_meet_leads_with_the_people(client, db, setup, monkeypatch):
+    monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'x')
+    body = meet_page(client, db, setup, journey=[{'date': 'Sep 2025', 'title': 'Kickoff'}])
+    assert 'css/pages/team-layouts/meet.css' in body
+    assert 'class="crew-header"' in body and 'class="hero-image' not in body
+    order = [body.index(marker) for marker in
+             ('class="crew-header"', 'id="team"', 'teamcta-band', 'Kickoff', 'Competition Awards',
+              'id="skills-panel"', 'id="results-section"')]
+    assert order == sorted(order)
+    assert body.count('Competition Awards') == 1
+
+
+def test_meet_header_shows_faces_and_counts_the_rest(client, db, setup):
+    members = [{'member_id': f'm{i}', 'name': f'Pat Lee{i}'} for i in range(11)]
+    header = meet_page(client, db, setup, members=members)
+    header = header[header.index('class="crew-header"'):header.index('</header>')]
+    assert header.count('crew-face crew-face--initials') == 8
+    assert '+3' in header and 'Meet the 11' in header and 'href="#team"' in header
+
+
+def test_meet_without_members_falls_back_to_classic(client, db, setup):
+    body = meet_page(client, db, setup, members=[])
+    assert 'data-layout="meet"' in body
+    assert 'class="hero-image' in body and 'crew-header' not in body
+
+
 # --- saving -----------------------------------------------------------------
 
 def test_member_picks_layout_for_one_season_only(client, db, setup, monkeypatch):
