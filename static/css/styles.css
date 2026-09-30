@@ -845,9 +845,17 @@ footer::before {
     font-family: var(--font-display);
     position: relative;
     z-index: 2;
-    /* Clear the ×N badge pinned to the top-right corner. */
-    padding-right: 2.25rem;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    hyphens: auto;
+}
+
+/* Clear the ×N badge pinned to the top-right corner. Only the first line sits
+   beside it, so a float spacer keeps the lines below at full width. */
+.award-title::before {
+    content: '';
+    float: right;
+    width: var(--award-badge-room, 2.4rem);
+    height: 1.1em;
 }
 
 .award-count {
@@ -864,6 +872,30 @@ footer::before {
     border-radius: 12px;
     backdrop-filter: blur(4px);
     z-index: 5;
+}
+
+/* Four to a row a box is about 276px wide. Slimmer padding, a tighter badge and
+   a smaller title leave room beside the badge for the longest word, "Sportsmanship". */
+@media (min-width: 1025px) {
+    .award-box {
+        --award-badge-room: 2rem;
+        padding: 1rem 1.1rem;
+        gap: 12px;
+    }
+
+    .award-icon-container {
+        padding: 8px;
+    }
+
+    .award-count {
+        top: 12px;
+        right: 12px;
+        padding: 2px 8px;
+    }
+
+    .award-title {
+        font-size: 1.1rem;
+    }
 }
 
 /* Special Award Borders */
