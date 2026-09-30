@@ -85,6 +85,37 @@ def test_group_page_renders_classic(client, setup):
     assert 'data-layout="classic"' in body
 
 
+def test_classic_keeps_skills_out_of_the_hero(client, setup, monkeypatch):
+    monkeypatch.setenv('ROBOTEVENTS_TOKEN', 'x')
+    body = client.get('/team/77628L').data.decode()
+    hero = body[body.index('class="hero-image'):body.index('class="breadcrumb')]
+    assert 'skills-panel' not in hero
+    assert body.index('id="skills-panel"') < body.index('Competition Awards') < body.index('id="results-section"')
+
+
+# --- 02 Scoreboard ----------------------------------------------------------
+
+def test_scoreboard_puts_skills_in_the_hero_and_results_first(client, db, setup, monkeypatch):
+    monkeypatch.setenv('ROBOTEVENTS_TOKEN', 'x')
+    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'scoreboard'}})
+    body = client.get('/team/77628L').data.decode()
+    assert 'data-layout="scoreboard"' in body
+    assert 'css/pages/team-layouts/scoreboard.css' in body
+    hero = body[body.index('class="hero-image'):body.index('class="breadcrumb')]
+    assert 'id="skills-panel"' in hero and body.count('id="skills-panel"') == 1
+    order = [body.index(marker) for marker in
+             ('id="scoreboard-band"', 'id="results-section"', 'Competition Awards', 'id="team"')]
+    assert order == sorted(order)
+
+
+def test_scoreboard_without_live_data_keeps_a_plain_hero(client, db, setup, monkeypatch):
+    monkeypatch.delenv('ROBOTEVENTS_TOKEN', raising=False)
+    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'scoreboard'}})
+    body = client.get('/team/77628L').data.decode()
+    assert 'data-layout="scoreboard"' in body
+    assert 'skills-panel' not in body and 'Competition Awards' in body
+
+
 # --- saving -----------------------------------------------------------------
 
 def test_member_picks_layout_for_one_season_only(client, db, setup, monkeypatch):

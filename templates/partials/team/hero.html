@@ -15,6 +15,8 @@
         </ul>
         {% endif %}
     </div>
+    {#- A layout can set hero_aside to a partial shown beside the hero text. #}
+    {% if hero_aside is defined and hero_aside %}{% include hero_aside %}{% endif %}
     <div class="scroll-indicator"></div>
 </div>
 
