@@ -9,6 +9,7 @@
 
 {% from "partials/site_macros.html" import hero_attrs %}
 {% set page = site.achievements %}
+{% set show_history = page.show_history and past_events %}
 
 {% macro award_icon(award, size) -%}
 <img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}" alt="" width="{{ size }}" height="{{ size }}"
@@ -26,18 +27,19 @@
     <div class="hero-content">
         <h1>{{ page.hero_title }}</h1>
         {% if page.hero_tagline %}<p>{{ page.hero_tagline }}</p>{% endif %}
-        {% if total %}
+        {% if page.show_stats and total %}
         <ul class="ach-hero-stats" aria-label="Club record at a glance">
             <li class="ach-hero-stat is-gold"><b>{{ total }}</b> award{{ 's' if total != 1 }} won</li>
             <li class="ach-hero-stat"><b>{{ earned|length }}</b> award type{{ 's' if earned|length != 1 }}</li>
             {% if team_cards %}<li class="ach-hero-stat"><b>{{ team_cards|length }}</b> team{{ 's' if team_cards|length != 1 }}</li>{% endif %}
-            {% if past_events %}<li class="ach-hero-stat"><b>{{ past_events|length }}{% if past_events|length >= 12 %}+{% endif %}</b> event{{ 's' if past_events|length != 1 }}</li>{% endif %}
+            {% if past_events %}<li class="ach-hero-stat"><b>{{ past_events|length }}{{ '+' if more_events }}</b> event{{ 's' if past_events|length != 1 }}</li>{% endif %}
         </ul>
         {% endif %}
+        {% if show_history %}
         <div class="hero-cta">
-            <a href="#awards" class="cta-button cta-primary">View Awards</a>
-            {% if past_events %}<a href="#history" class="cta-button cta-secondary">Competition Log</a>{% endif %}
+            <a href="#history" class="cta-button cta-primary">Competition Log</a>
         </div>
+        {% endif %}
     </div>
     <div class="scroll-indicator"></div>
 </div>
@@ -48,7 +50,7 @@
     <span class="current">Achievements</span>
 </nav>
 
-{% if featured %}
+{% if page.show_featured and featured %}
 <section class="ach-section ach-featured fade-in-section" aria-labelledby="featured-heading">
     <header class="ach-head">
         <p class="ach-eyebrow">Trophy case</p>
@@ -93,7 +95,7 @@
     </ol>
     {% endif %}
 
-    {% if unearned %}
+    {% if page.show_unearned and unearned %}
     <div class="ach-chasing">
         <p class="ach-eyebrow">Still chasing</p>
         <ul>
@@ -109,7 +111,7 @@
     {% endif %}
 </section>
 
-{% if team_cards and total %}
+{% if page.show_teams and team_cards and total %}
 <section class="ach-section ach-teams fade-in-section" aria-labelledby="teams-heading">
     <header class="ach-head">
         <p class="ach-eyebrow">Across the club</p>
@@ -143,7 +145,7 @@
 </section>
 {% endif %}
 
-{% if past_events %}
+{% if show_history %}
 <section id="history" class="ach-section ach-history fade-in-section" aria-labelledby="history-heading">
     <header class="ach-head">
         <p class="ach-eyebrow">Where we've competed</p>
