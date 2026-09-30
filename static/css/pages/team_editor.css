@@ -87,6 +87,92 @@
     box-shadow: inset 3px 0 0 var(--admin-gold);
 }
 
+/* --- Roster as an animated list (after React Bits' AnimatedList) --------------------
+   The rows scroll inside a fixed-height box with a sticky header. Rows ease in as they
+   come into view and shrink away as they leave; fades at the top and bottom edge show
+   there is more to scroll. team-editor.js adds .is-animated, sets .is-in on each visible
+   row, and sets --fade-top/--fade-bottom (0 to 1) from the scroll position. */
+.roster-scroll {
+    position: relative;
+    margin-bottom: 0.75rem;
+}
+
+.roster-viewport {
+    max-height: min(34rem, 70vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--admin-line) transparent;
+}
+
+.roster-viewport::-webkit-scrollbar {
+    width: 8px;
+}
+
+.roster-viewport::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background: var(--admin-line);
+}
+
+.roster-viewport .member-list {
+    margin-bottom: 0;
+}
+
+.roster-viewport .member-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-top: 0.3rem;
+    background: var(--admin-card-bg);
+}
+
+.roster-fade {
+    position: absolute;
+    left: 0;
+    right: 8px;
+    z-index: 3;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.roster-fade--top {
+    top: var(--roster-head, 0);
+    height: 3rem;
+    background: linear-gradient(to bottom, var(--admin-card-bg), transparent);
+    opacity: var(--fade-top, 0);
+}
+
+.roster-fade--bottom {
+    bottom: 0;
+    height: 5rem;
+    background: linear-gradient(to top, var(--admin-card-bg), transparent);
+    opacity: var(--fade-bottom, 0);
+}
+
+.roster-scroll.is-animated .member-card {
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s, background-color var(--transition-fast);
+}
+
+/* The row being edited never shrinks away, even half scrolled out. */
+.roster-scroll.is-animated .member-card:is(.is-in, :focus-within) {
+    opacity: 1;
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .roster-scroll.is-animated .member-card {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Selected row: the one under the pointer or holding focus. */
+.member-card:focus-within {
+    background: var(--admin-surface-hover);
+}
+
 .member-photo {
     display: flex;
     align-items: center;
