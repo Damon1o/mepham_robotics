@@ -845,6 +845,9 @@ footer::before {
     font-family: var(--font-display);
     position: relative;
     z-index: 2;
+    /* Clear the ×N badge pinned to the top-right corner. */
+    padding-right: 2.25rem;
+    overflow-wrap: anywhere;
 }
 
 .award-count {
@@ -3419,12 +3422,14 @@ footer::before {
     background: #fdfdfd;
 }
 
-.team-awards .awards-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* Match achievements page for consistent ratio */
-    gap: 1.5rem;
-    max-width: 1200px;
-    margin: 2rem auto;
+/* The grid itself is .awards-grid above. A 4-column copy here used to come after
+   the responsive rules and win over them, squashing the boxes on phones. */
+
+/* A plain inline link: when it wrapped on a phone, each line got its own
+   border and shadow and the button drew twice. */
+.team-awards .cta-button {
+    display: inline-block;
+    max-width: 100%;
 }
 
 /* ============================================
