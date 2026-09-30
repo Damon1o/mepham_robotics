@@ -574,3 +574,25 @@ select[data-member-field] {
     flex-grow: 1.3;
     background: repeating-linear-gradient(90deg, var(--admin-line-strong) 0 30%, transparent 30% 35%);
 }
+
+/* Hero with the live skills tiles on its right. */
+.layout-thumb .lt-hero--tiles {
+    background:
+        repeating-linear-gradient(90deg, var(--admin-gold) 0 45%, transparent 45% 55%) right 4px center / 40% 34% no-repeat,
+        repeating-linear-gradient(90deg, var(--admin-gold) 0 45%, transparent 45% 55%) right 4px bottom 18% / 40% 34% no-repeat,
+        var(--maroon-dark);
+}
+
+.layout-thumb .lt-stats--strip {
+    flex-grow: 0.45;
+}
+
+.layout-thumb .lt-results {
+    flex-grow: 1.8;
+    background: repeating-linear-gradient(180deg, var(--admin-line-strong) 0 26%, transparent 26% 34%);
+}
+
+.layout-thumb .lt-cards--compact {
+    flex-grow: 0.8;
+    background: repeating-linear-gradient(90deg, var(--admin-line-strong) 0 22%, transparent 22% 26%);
+}

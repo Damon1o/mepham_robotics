@@ -45,6 +45,7 @@ COUNTDOWN_MODES = ('always', 'scheduled', 'never')
 # static/css/pages/team-layouts/<key>.css.
 TEAM_LAYOUTS = {
     'classic': 'Classic Stack',
+    'scoreboard': 'Scoreboard',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
 FUNDRAISERS_MAX = 20
