@@ -1,16 +1,21 @@
-{#- 02 Scoreboard: live skills sit inside the hero, the season numbers follow as a strip,
-    and event results lead the page. The roster is compact. Without live data the hero
-    falls back to the classic centred look. -#}
-{% set hero_aside = "partials/team/live_skills.html" %}
-{% include "partials/team/hero.html" %}
-{% include "partials/team/season_switcher.html" %}
+{#- 02 Scoreboard: the team's numbers first. A stadium-board header built from stored data
+    (awards, Worlds trips, members, seasons), then the awards grid as a trophy case and
+    event results. With RobotEvents live data, skills and season rows join the board. -#}
+{% include "partials/team/board.html" %}
+{% if live_enabled %}
+<div class="sb-live">
+{% include "partials/team/live_skills.html" %}
 {% include "partials/team/scoreboard.html" %}
-{% include "partials/team/results.html" %}
+</div>
+{% endif %}
+{% include "partials/team/breadcrumb.html" %}
+{% include "partials/team/season_switcher.html" %}
 {% include "partials/team/awards.html" %}
+{% include "partials/team/results.html" %}
 {% include "partials/team/roster.html" %}
+{% include "partials/team/goals.html" %}
 {% include "partials/team/robot.html" %}
 {% include "partials/team/specs.html" %}
 {% include "partials/team/notebook.html" %}
-{% include "partials/team/goals.html" %}
 {% include "partials/team/journey.html" %}
 {% include "partials/team/join_cta.html" %}

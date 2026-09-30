@@ -95,25 +95,47 @@ def test_classic_keeps_skills_out_of_the_hero(client, setup, monkeypatch):
 
 # --- 02 Scoreboard ----------------------------------------------------------
 
-def test_scoreboard_puts_skills_in_the_hero_and_results_first(client, db, setup, monkeypatch):
-    monkeypatch.setenv('ROBOTEVENTS_TOKEN', 'x')
-    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'scoreboard'}})
-    body = client.get('/team/77628L').data.decode()
-    assert 'data-layout="scoreboard"' in body
+def scoreboard_page(client, db, setup, **fields):
+    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'scoreboard', **fields}})
+    return client.get('/team/77628L').data.decode()
+
+
+def board_of(body):
+    return body[body.index('class="sb-board"'):body.index('</header>')]
+
+
+def test_scoreboard_board_needs_no_live_data(client, db, setup, monkeypatch):
+    # Production runs without a RobotEvents token; the board must still be full.
+    monkeypatch.delenv('ROBOTEVENTS_TOKEN', raising=False)
+    db['awards'].insert_many([
+        {'team_number': '77628L', 'title': 'Excellence Award', 'count': 2, 'sort': 1},
+        {'team_number': '77628L', 'title': 'Think Award', 'count': 1, 'sort': 2}])
+    body = scoreboard_page(client, db, setup, worlds_appearances=2, since=2019)
     assert 'css/pages/team-layouts/scoreboard.css' in body
-    hero = body[body.index('class="hero-image'):body.index('class="breadcrumb')]
-    assert 'id="skills-panel"' in hero and body.count('id="skills-panel"') == 1
-    order = [body.index(marker) for marker in
-             ('id="scoreboard-band"', 'id="results-section"', 'Competition Awards', 'id="team"')]
+    assert 'class="hero-image' not in body and 'skills-panel' not in body and 'sb-live' not in body
+    board = board_of(body)
+    for label, value in (('Awards', '3'), ('Worlds', '2&times;'), ('Members', '1'), ('Seasons', '2'),
+                         ('Since', '2019')):
+        assert f'>{label}</dt>' in board and f'>{value}</dd>' in board, label
+    assert 'Top honor' in board and 'Excellence Award &times;2' in board
+    order = [body.index(marker) for marker in ('class="sb-board"', 'Competition Awards', 'id="team"')]
     assert order == sorted(order)
 
 
-def test_scoreboard_without_live_data_keeps_a_plain_hero(client, db, setup, monkeypatch):
-    monkeypatch.delenv('ROBOTEVENTS_TOKEN', raising=False)
-    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'scoreboard'}})
-    body = client.get('/team/77628L').data.decode()
-    assert 'data-layout="scoreboard"' in body
-    assert 'skills-panel' not in body and 'Competition Awards' in body
+def test_scoreboard_board_skips_what_a_team_lacks(client, db, setup):
+    board = board_of(scoreboard_page(client, db, setup))
+    assert '>Awards</dt>' in board and '>0</dd>' in board  # a scoreboard shows zero
+    for missing in ('Worlds', 'Since', 'Top honor'):
+        assert missing not in board, missing
+
+
+def test_scoreboard_adds_live_rows_under_the_board(client, db, setup, monkeypatch):
+    monkeypatch.setenv('ROBOTEVENTS_TOKEN', 'x')
+    body = scoreboard_page(client, db, setup)
+    order = [body.index(marker) for marker in
+             ('class="sb-board"', 'class="sb-live"', 'id="skills-panel"', 'id="scoreboard-band"',
+              'Competition Awards', 'id="results-section"', 'id="team"')]
+    assert order == sorted(order)
 
 
 # --- 03 Robot Spotlight -----------------------------------------------------
