@@ -1,6 +1,6 @@
 """RobotEvents v2 client for the team page's live sections.
 
-Everything here is optional by design. With no ROBOTEVENTS_TOKEN, with the API
+Everything here is optional by design. With no ROBOTEVENTS_API_KEY, with the API
 down, or with a response we don't recognise, every public function returns None
 and the team page simply renders without its live sections.
 
@@ -11,7 +11,7 @@ say how old it is.
 
 ENDPOINT ASSUMPTIONS
 --------------------
-The official docs at https://www.robotevents.com/api/v2 require a token to read,
+The official docs at https://events.vex.com/api/v2 require a token to read,
 so the paths below follow the widely-used community wrappers rather than a doc
 page we could open. Every parser uses .get() and tolerates missing keys, and
 `python -m api.robotevents probe <team_number>` prints the real payload shapes
@@ -32,7 +32,10 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = 'https://www.robotevents.com/api/v2'
+# RobotEvents moved to events.vex.com in May 2026; every robotevents.com/api/v2
+# path now answers 404, even without a token. The API itself is unchanged.
+SITE_URL = 'https://events.vex.com'
+BASE_URL = SITE_URL + '/api/v2'
 PROGRAM_V5RC = 1
 REQUEST_TIMEOUT = 2.5
 
@@ -64,10 +67,20 @@ LEVEL_BUCKETS = {
 TRIPLE_CROWN_AWARDS = ('tournament champion', 'excellence award', 'robot skills champion')
 
 
+TOKEN_ENV_VARS = ('ROBOTEVENTS_API_KEY', 'ROBOTEVENTS_TOKEN')
+
+
 def get_token():
-    """The API token, or None when the deployment has not been given one."""
-    token = os.environ.get('ROBOTEVENTS_TOKEN')
-    return token.strip() or None if token else None
+    """The API token, or None when the deployment has not been given one.
+
+    ROBOTEVENTS_API_KEY is the name the deployment uses; ROBOTEVENTS_TOKEN is the
+    older name, still read so existing setups keep working.
+    """
+    for name in TOKEN_ENV_VARS:
+        token = (os.environ.get(name) or '').strip()
+        if token:
+            return token
+    return None
 
 
 def _now():
@@ -173,6 +186,23 @@ def get_team_id(db, team_number):
                                               'program[]': PROGRAM_V5RC})
     for row in _rows(payload):
         if str(row.get('number', '')).upper() == str(team_number).upper():
+            return row.get('id')
+    return None
+
+
+def season_id(db, label):
+    """The RobotEvents season id for a site season label such as '2025-26', or None.
+
+    RobotEvents names seasons like 'VEX V5 Robotics Competition 2025-2026: Push Back'.
+    """
+    try:
+        start = int(str(label)[:4])
+    except (TypeError, ValueError):
+        return None
+    payload, _, _ = get_cached(db, '/seasons', {'program[]': PROGRAM_V5RC})
+    needle = f'{start}-{start + 1}'
+    for row in _rows(payload):
+        if needle in str(row.get('name', '')):
             return row.get('id')
     return None
 
@@ -371,7 +401,7 @@ def team_summary(db, team_number, season_id=None):
         'awards': awards,
         'fetched_at': fetched_at.isoformat() if fetched_at else None,
         'stale': bool(skills_stale or events_stale or awards_stale),
-        'profile_url': f'https://www.robotevents.com/teams/V5RC/{team_number}',
+        'profile_url': f'{SITE_URL}/teams/V5RC/{team_number}',
     }
 
 
@@ -382,7 +412,7 @@ def _probe(team_number):  # pragma: no cover - operator tool, needs a real token
     """
     import json
     if not get_token():
-        print('ROBOTEVENTS_TOKEN is not set; nothing to probe.')
+        print('ROBOTEVENTS_API_KEY is not set; nothing to probe.')
         return
     teams = _fetch('/teams', {'number[]': team_number, 'program[]': PROGRAM_V5RC})
     print('TEAMS:', json.dumps(teams, indent=2)[:2000])
