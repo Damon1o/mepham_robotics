@@ -46,6 +46,7 @@ COUNTDOWN_MODES = ('always', 'scheduled', 'never')
 TEAM_LAYOUTS = {
     'classic': 'Classic Stack',
     'scoreboard': 'Scoreboard',
+    'spotlight': 'Robot Spotlight',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
 FUNDRAISERS_MAX = 20

@@ -575,21 +575,32 @@ select[data-member-field] {
     background: repeating-linear-gradient(90deg, var(--admin-line-strong) 0 30%, transparent 30% 35%);
 }
 
-/* Hero with the live skills tiles on its right. */
-.layout-thumb .lt-hero--tiles {
+/* Dark scoreboard header: name bar on top, a row of lit number cells below. */
+.layout-thumb .lt-board {
+    flex-grow: 2;
     background:
-        repeating-linear-gradient(90deg, var(--admin-gold) 0 45%, transparent 45% 55%) right 4px center / 40% 34% no-repeat,
-        repeating-linear-gradient(90deg, var(--admin-gold) 0 45%, transparent 45% 55%) right 4px bottom 18% / 40% 34% no-repeat,
-        var(--maroon-dark);
-}
-
-.layout-thumb .lt-stats--strip {
-    flex-grow: 0.45;
+        repeating-linear-gradient(90deg, var(--admin-gold) 0 21%, transparent 21% 26.3%) left 4px bottom 5px / calc(100% - 8px) 38% no-repeat,
+        linear-gradient(#fff, #fff) left 4px top 5px / 45% 14% no-repeat,
+        #121212;
 }
 
 .layout-thumb .lt-results {
     flex-grow: 1.8;
     background: repeating-linear-gradient(180deg, var(--admin-line-strong) 0 26%, transparent 26% 34%);
+}
+
+.layout-thumb .lt-bar {
+    flex-grow: 0.4;
+    background: var(--maroon-dark);
+}
+
+/* Big robot viewer with the spec cards stacked on its right. */
+.layout-thumb .lt-stage {
+    flex-grow: 3;
+    background:
+        repeating-linear-gradient(180deg, var(--admin-line-strong) 0 28%, transparent 28% 36%) right 3px top 4px / 30% calc(100% - 8px) no-repeat,
+        linear-gradient(var(--admin-gold), var(--admin-gold)) left 3px center / 62% calc(100% - 8px) no-repeat,
+        var(--text-dark, #1a1a1a);
 }
 
 .layout-thumb .lt-cards--compact {

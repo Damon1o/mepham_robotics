@@ -1,0 +1,11 @@
+{% if team.members or award_total or team.since or team.worlds_appearances or team.division %}
+<ul class="identity-bar">
+    {% if team.division %}<li class="identity-stat identity-division">{{ team.division }}</li>{% endif %}
+    {% if team.members %}<li class="identity-stat">{{ team.members|length }} Members</li>{% endif %}
+    {% if award_total %}<li class="identity-stat">{{ award_total }} Awards</li>{% endif %}
+    {% if team.since %}<li class="identity-stat">Since {{ team.since }}</li>{% endif %}
+    {% if team.worlds_appearances %}
+    <li class="identity-stat identity-worlds">{{ team.worlds_appearances }}&times; Worlds</li>
+    {% endif %}
+</ul>
+{% endif %}

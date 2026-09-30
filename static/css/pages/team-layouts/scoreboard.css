@@ -1,195 +1,254 @@
 /* Team page layout 02: Scoreboard. Loaded after team.css. */
 
-/* --- HERO WITH LIVE SKILLS --- */
+/* --- BOARD HEADER --- */
 
-/* The live skills panel sits inside the hero. While it exists (team.js removes it
-   when there is no live data) the hero splits: identity left, skills tiles right. */
-.team-layout--scoreboard .hero-image:has(> .skills-panel) {
-    display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-    align-items: center;
-    gap: var(--spacing-lg);
-    padding: var(--spacing-xl) max(var(--spacing-md), calc((100% - 1200px) / 2));
-    text-align: left;
-}
-
-.team-layout--scoreboard .hero-image:has(> .skills-panel) .hero-content {
-    max-width: none;
-    padding: 0;
-}
-
-.team-layout--scoreboard .hero-image:has(> .skills-panel) h1 {
-    font-size: clamp(2.8rem, 7vw, 5.5rem);
-}
-
-.team-layout--scoreboard .hero-image:has(> .skills-panel) .identity-bar {
-    justify-content: flex-start;
-}
-
-.team-layout--scoreboard .hero-image:has(> .skills-panel) .scroll-indicator {
-    display: none;
-}
-
-.team-layout--scoreboard .hero-image > .skills-panel {
-    position: relative;
-    z-index: 10;
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    padding: var(--spacing-md);
-    background: rgba(0, 0, 0, 0.3);
-    border: 3px solid var(--accent-gold);
-    border-radius: 20px;
-    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(6px);
-}
-
-/* Show the empty tiles while the numbers load instead of an empty column. */
-.team-layout--scoreboard .hero-image > .skills-panel[hidden] {
-    display: block;
-}
-
-.team-layout--scoreboard .hero-image > .skills-panel[aria-busy="true"] .skills-value {
-    opacity: 0.4;
-}
-
-.team-layout--scoreboard .hero-image .skills-panel h2 {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.85rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    text-align: left;
-    color: var(--accent-gold);
-    margin: 0 0 var(--spacing-sm);
-    animation: none;
-}
-
-/* Small label headings: no centred gold underline. */
-.team-layout--scoreboard .hero-image .skills-panel h2::after,
-.team-layout--scoreboard .scoreboard-band h2::after {
-    display: none;
-}
-
-.team-layout--scoreboard .hero-image .skills-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-sm);
-}
-
-.team-layout--scoreboard .hero-image .skills-tile {
-    text-align: left;
-    padding: var(--spacing-sm) var(--spacing-md);
-}
-
-.team-layout--scoreboard .hero-image .skills-value {
-    font-size: clamp(1.8rem, 3.2vw, 2.6rem);
-}
-
-/* .hero-image p styles the tagline; undo them for the panel's footer line. */
-.team-layout--scoreboard .hero-image .skills-meta {
-    justify-content: flex-start;
-    margin: var(--spacing-sm) 0 0;
-    font-size: 0.75rem;
-    letter-spacing: normal;
-    text-transform: none;
-    opacity: 1;
-    animation: none;
-    color: rgba(255, 255, 255, 0.75);
-}
-
-@media (max-width: 900px) {
-    .team-layout--scoreboard .hero-image:has(> .skills-panel) {
-        grid-template-columns: 1fr;
-        text-align: center;
-    }
-
-    .team-layout--scoreboard .hero-image:has(> .skills-panel) .identity-bar {
-        justify-content: center;
-    }
-}
-
-/* --- SCOREBOARD STRIP --- */
-
-/* A dark stadium-board strip under the hero instead of a full band of cards. */
-.team-layout--scoreboard .scoreboard-band {
-    background: var(--text-dark);
-    border-bottom: 4px solid var(--accent-gold);
-    padding: var(--spacing-md);
-}
-
-.team-layout--scoreboard .scoreboard-inner {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-lg);
-}
-
-.team-layout--scoreboard .scoreboard-band h2 {
-    flex: none;
-    width: auto;
-    margin: 0;
-    animation: none;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.85rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--accent-gold);
-}
-
-.team-layout--scoreboard .scoreboard-grid {
-    flex: 1;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 0;
-}
-
-.team-layout--scoreboard .scoreboard-stat {
-    background: transparent;
-    border: 0;
-    border-left: 2px solid rgba(255, 255, 255, 0.15);
-    border-radius: 0;
-    box-shadow: none;
-    padding: var(--spacing-xs) var(--spacing-md);
-    text-align: left;
-}
-
-.team-layout--scoreboard .scoreboard-value {
-    font-size: 2.2rem;
-    color: var(--accent-gold);
-}
-
-.team-layout--scoreboard .scoreboard-label {
+/* A dark stadium board in place of the hero: team name on top, then a panel of
+   lit-up numbers. Everything here comes from stored data. */
+.sb-board {
+    background:
+        radial-gradient(circle at 12% 0%, rgba(128, 0, 0, 0.6) 0%, transparent 55%),
+        radial-gradient(circle at 90% 100%, rgba(255, 215, 0, 0.08) 0%, transparent 45%),
+        #121212;
     color: #fff;
+    padding: 6rem var(--spacing-md) var(--spacing-lg);
+    border-bottom: 4px solid var(--accent-gold);
 }
 
-.team-layout--scoreboard .scoreboard-breakdown {
+.sb-board-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.sb-board-eyebrow {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    margin-bottom: 0.4rem;
+}
+
+.sb-board-title h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 6vw, 4.5rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -1px;
+    margin: 0;
+    background: linear-gradient(135deg, #fff 0%, #ffd700 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.sb-board-title p {
+    margin: 0.5rem 0 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* The number panel: one lit cell per stat, split by thin rules. */
+.sb-board-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    margin: 0;
+    background: #0a0a0a;
+    border: 3px solid #2e2e2e;
+    border-radius: 16px;
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+.sb-cell {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    padding: var(--spacing-md);
+    border-right: 1px solid #2e2e2e;
+}
+
+.sb-cell:last-child {
+    border-right: 0;
+}
+
+.sb-cell-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
     color: rgba(255, 255, 255, 0.6);
 }
 
-.team-layout--scoreboard .scoreboard-crown {
-    background: transparent;
-    border-left-color: var(--accent-gold);
+.sb-cell-value {
+    margin: 0;
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(2.2rem, 4vw, 3.2rem);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--accent-gold);
+    text-shadow: 0 0 18px rgba(255, 215, 0, 0.35);
+    font-variant-numeric: tabular-nums;
 }
 
-.team-layout--scoreboard .scoreboard-crown .scoreboard-value {
+.sb-cell--lead {
+    background: linear-gradient(180deg, rgba(128, 0, 0, 0.55), rgba(90, 0, 0, 0.35));
+}
+
+.sb-cell--lead .sb-cell-value {
+    color: #fff;
+    text-shadow: 0 0 18px rgba(255, 255, 255, 0.3);
+}
+
+.sb-cell--gold {
+    background: var(--accent-gold);
+}
+
+.sb-cell--gold .sb-cell-label {
+    color: var(--ink-on-gold);
+}
+
+.sb-cell--gold .sb-cell-value {
+    color: var(--ink-on-gold);
+    text-shadow: none;
+}
+
+.sb-board-honor {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.95rem;
     color: #fff;
 }
 
-[data-theme="dark"] .team-layout--scoreboard .scoreboard-band {
-    background: #0d0d0d;
+.sb-board-honor-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-on-gold);
+    background: var(--accent-gold);
+    border: 2px solid var(--text-dark);
+    border-radius: 999px;
+    padding: 0.15rem 0.7rem;
+}
+
+@media (max-width: 600px) {
+    .sb-board-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .sb-cell {
+        border-right: 0;
+        border-bottom: 1px solid #2e2e2e;
+    }
+
+    .sb-cell:nth-child(odd) {
+        border-right: 1px solid #2e2e2e;
+    }
+
+    /* An odd number of stats: the last one takes the full row, not half of it. */
+    .sb-cell:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+        border-right: 0;
+    }
+
+    .sb-cell:last-child {
+        border-bottom: 0;
+    }
+}
+
+/* --- LIVE ROWS --- */
+
+/* With RobotEvents data, skills and season numbers hang under the board as more
+   dark rows. team.js removes either one that has nothing to show. */
+.sb-board:has(+ .sb-live > section) {
+    border-bottom: 0;
+}
+
+.sb-live:has(> section) {
+    border-bottom: 4px solid var(--accent-gold);
+}
+
+.sb-live .skills-panel,
+.sb-live .scoreboard-band {
+    background: #121212;
+    padding: var(--spacing-md);
+    border-top: 1px solid #2e2e2e;
+}
+
+.sb-live h2 {
+    width: auto;
+    margin: 0 0 var(--spacing-sm);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--accent-gold);
+    animation: none;
+}
+
+.sb-live h2::after {
+    display: none;
+}
+
+/* styles.css caps .skills-grid at 900px and centres it; line it up with the board. */
+.sb-live .skills-grid {
+    max-width: none;
+    margin: 0;
+}
+
+.sb-live .skills-tile {
+    background: #0a0a0a;
+    border-color: #2e2e2e;
+    text-align: left;
+}
+
+.sb-live .skills-tile-primary {
+    border-color: var(--accent-gold);
+}
+
+.sb-live .skills-meta {
+    justify-content: flex-start;
+    margin-top: var(--spacing-sm);
+}
+
+.sb-live .scoreboard-stat {
+    background: #0a0a0a;
+    border: 1px solid #2e2e2e;
+    border-radius: 12px;
+    box-shadow: none;
+    text-align: left;
+}
+
+.sb-live .scoreboard-value {
+    color: var(--accent-gold);
+}
+
+.sb-live .scoreboard-label {
+    color: #fff;
+}
+
+.sb-live .scoreboard-breakdown {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.sb-live .scoreboard-crown {
+    border-color: var(--accent-gold);
 }
 
 @media (max-width: 700px) {
-    .team-layout--scoreboard .scoreboard-inner {
-        flex-direction: column;
-        align-items: stretch;
-        gap: var(--spacing-sm);
-    }
-
-    .team-layout--scoreboard .scoreboard-band h2 {
-        text-align: center;
-    }
-
-    .team-layout--scoreboard .scoreboard-stat {
-        border-left: 0;
-        border-top: 2px solid rgba(255, 255, 255, 0.15);
+    .sb-live .skills-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
