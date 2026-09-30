@@ -1185,6 +1185,7 @@ def team_page(team_number):
     return render_template('team.html', team=team, team_awards=team_awards,
                            event_photos=event_photos, robot_photos=robot_photos,
                            layout=team_layout(team),
+                           robotevents_url=None if is_group(team) else robotevents.team_url(team_number),
                            seasons=seasons, active_season=team.get('season'),
                            live_enabled=bool(robotevents.get_token()) and not is_group(team),
                            active_page=team_number)

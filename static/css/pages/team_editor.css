@@ -616,6 +616,16 @@ select[data-member-field] {
         var(--maroon-dark);
 }
 
+/* Narrow fact rail with gold rows on the left; awards and section blocks
+   stacked down the wider main column. */
+.layout-thumb .lt-dossier {
+    flex-grow: 6;
+    background:
+        repeating-linear-gradient(180deg, var(--admin-gold) 0 7%, var(--admin-line-strong) 7% 14%, transparent 14% 18%) left top / 30% 62% no-repeat,
+        repeating-linear-gradient(45deg, var(--admin-gold) 0 3px, var(--admin-line-strong) 3px 6px) right top / 66% 26% no-repeat,
+        repeating-linear-gradient(180deg, var(--admin-line-strong) 0 20%, transparent 20% 25%) right bottom / 66% 70% no-repeat;
+}
+
 /* Big member cards, three to a row, each with a portrait block on top. */
 .layout-thumb .lt-people {
     flex-grow: 1.7;

@@ -48,6 +48,7 @@ TEAM_LAYOUTS = {
     'scoreboard': 'Scoreboard',
     'spotlight': 'Robot Spotlight',
     'meet': 'Meet the Team',
+    'dossier': 'Dossier',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
 FUNDRAISERS_MAX = 20
