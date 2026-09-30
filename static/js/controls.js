@@ -15,6 +15,7 @@
 //   <input type="range">                      gets a filled track (--fill)
 //   [data-animated-list="<items>"]            a scrolling list whose items ease in
 //                                             and whose edges fade while it scrolls
+//                                             (data-animated-list-rows="N": N items tall)
 //
 // Every drop zone, including the editors' own and any [data-drop] card, takes
 // dragged or pasted files through one shared handler (see "Dropping and pasting").
@@ -1379,19 +1380,48 @@
             list.style.setProperty('--fade-bottom', bottom.toFixed(2));
         }
 
+        // data-animated-list-rows="N": the box is exactly N items tall, however tall they are.
+        function fit(list, selector) {
+            const rows = Number(list.dataset.animatedListRows);
+            if (!rows) return;
+            const items = list.querySelectorAll(selector);
+            const last = items[rows - 1];
+            if (items.length <= rows || !last) {
+                list.style.removeProperty('max-height');
+                return;
+            }
+            if (!last.offsetHeight) return; // hidden (a closed tab); measured again once shown
+            const style = getComputedStyle(list);
+            const px = name => parseFloat(style[name]) || 0;
+            // offsetTop counts from inside the border (the box is positioned, see controls.css).
+            const bottom = last.offsetTop + last.offsetHeight;
+            const height = style.boxSizing === 'border-box'
+                ? bottom + px('paddingBottom') + px('borderTopWidth') + px('borderBottomWidth')
+                : bottom - px('paddingTop');
+            list.style.maxHeight = `${Math.ceil(height)}px`;
+        }
+
         function enhance(list) {
             if (seen.has(list)) return;
             seen.add(list);
             const selector = list.dataset.animatedList || ':scope > *';
+            const update = () => {
+                fit(list, selector);
+                fades(list);
+            };
             const inView = 'IntersectionObserver' in window && !still.matches && new IntersectionObserver(entries => {
                 entries.forEach(entry => {
                     // An item moved to another list reports here once more; only its own list counts.
                     if (list.contains(entry.target)) entry.target.classList.toggle('is-in', entry.intersectionRatio >= 0.5);
                 });
             }, { root: list, threshold: [0, 0.5] });
+            // The box and, when it counts rows, its items: a closed tab opening or a card growing changes the fit.
+            const resized = 'ResizeObserver' in window && new ResizeObserver(update);
+            if (resized) resized.observe(list);
             const watch = () => list.querySelectorAll(selector).forEach(item => {
                 item.classList.add('ctl-animated-item');
                 if (inView) inView.observe(item);
+                if (resized && list.dataset.animatedListRows) resized.observe(item);
             });
             if (inView) list.classList.add('is-animated');
             watch();
@@ -1400,11 +1430,10 @@
                     if (node.nodeType === 1 && !list.contains(node)) inView.unobserve(node);
                 }));
                 watch();
-                fades(list);
+                update();
             }).observe(list, { childList: true, subtree: true });
             list.addEventListener('scroll', () => fades(list), { passive: true });
-            if ('ResizeObserver' in window) new ResizeObserver(() => fades(list)).observe(list);
-            fades(list);
+            update();
         }
 
         return { enhance };
