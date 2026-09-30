@@ -1055,11 +1055,59 @@ def index():
 def about():
     return render_template('about.html', active_page='about')
 
+PAST_EVENTS_SHOWN = 12
+
+
+def achievements_view():
+    """Everything the achievements page shows, built from award rows, teams and past events.
+
+    Club-wide category rows carry the headline counts; each team's own counters add the
+    per-team breakdown. Team rows made before categories were linked match by title.
+    """
+    rows = list(db['awards'].find().sort(AWARD_ORDER))
+    categories = [a for a in rows if 'team_number' not in a]
+    by_title = {a.get('title'): str(a['_id']) for a in categories}
+    teams = [t for t in listed_teams() if not is_group(t)]
+    team_rows = {t['team_number']: [] for t in teams}
+    winners = {}
+    for row in rows:
+        count = int(row.get('count') or 0)
+        if row.get('team_number') in team_rows and count > 0:
+            team_rows[row['team_number']].append(dict(row, count=count, icon=row.get('icon') or AWARD_ICONS[0]))
+            key = row.get('category_id') or by_title.get(row.get('title'))
+            winners.setdefault(key, []).append({'team_number': row['team_number'], 'count': count})
+
+    total = sum(int(a.get('count') or 0) for a in categories)
+    earned, unearned = [], []
+    for a in categories:
+        a['count'] = int(a.get('count') or 0)
+        a['icon'] = a.get('icon') or AWARD_ICONS[0]
+        a['featured'] = a.get('border') == 'gold' or bool(a.get('shimmer'))
+        a['share'] = round(100 * a['count'] / total) if total else 0
+        a['teams'] = sorted(winners.get(str(a['_id']), []), key=lambda w: -w['count'])
+        (earned if a['count'] else unearned).append(a)
+
+    team_cards = [{'number': t['team_number'], 'nickname': t.get('nickname') or '',
+                   'total': sum(r['count'] for r in team_rows[t['team_number']]),
+                   'awards': team_rows[t['team_number']]} for t in teams]
+    team_cards.sort(key=lambda c: -c['total'])
+
+    events = list(db['competitions'].find({'date': {'$lt': club_now()}}).sort('date', -1).limit(PAST_EVENTS_SHOWN))
+    for event in events:
+        # VEX seasons start in late spring: an April event belongs to the season that began last year.
+        start = event['date'].year - (event['date'].month < 5)
+        event['season'] = f'{start}–{str(start + 1)[-2:]}'
+    return {
+        'earned': earned, 'unearned': unearned, 'has_awards': bool(categories),
+        'featured': [a for a in earned if a['featured']],
+        'total': total, 'team_cards': team_cards, 'past_events': events,
+        'top_count': max((a['count'] for a in earned), default=0),
+    }
+
+
 @app.route('/achievements')
 def achievements():
-    global_awards = list(db['awards'].find({'team_number': {'$exists': False}}).sort(AWARD_ORDER))
-    return render_template('achievements.html', active_page='achievements',
-                           global_awards=global_awards,
+    return render_template('achievements.html', active_page='achievements', **achievements_view(),
                            live_results=bool(os.getenv('ROBOTEVENTS_API_KEY')) and site().achievements.show_live)
 
 @app.route('/contact')

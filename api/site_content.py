@@ -367,6 +367,11 @@ SECTIONS = (
         Field('hero_image', 'image', 'Background photo', None, group='Top of the page'),
         Field('awards_heading', 'text', 'Awards heading', 'All-Time VEX V5 Competition Awards', max=80,
               group='Awards', hint='The awards themselves are counted on the dashboard Awards tab.'),
+        Field('featured_heading', 'text', 'Headline awards heading', 'Headline Honors', max=60, group='Awards',
+              hint='Awards styled with a gold border or shimmer are featured here.'),
+        Field('teams_heading', 'text', 'Teams heading', 'Awards by Team', max=60, group='Awards'),
+        Field('history_heading', 'text', 'Competition history heading', 'Competition Log', max=60,
+              group='Competition history', hint='Lists past events from the dashboard Events tab.'),
         Field('show_live', 'toggle', 'Show live match results', True, group='Live results',
               hint='Needs the RobotEvents key; hidden automatically without it.'),
         Field('live_heading', 'text', 'Heading', 'Live Match Results', max=60, group='Live results'),
@@ -375,7 +380,7 @@ SECTIONS = (
         Field('meta_description', 'textarea', 'Search description',
               'Our history of excellence in VEX Robotics competitions, including awards and match results.',
               max=200, group='Search & sharing'),
-    ), page='achievements', blurb='Awards heading, live results'),
+    ), page='achievements', blurb='Headings, competition log, live results'),
 
     Section('teams', 'Team pages', 'bot', (
         Field('default_tagline', 'text', 'Shown when a team has no nickname', 'Build. Code. Compete.', max=60),

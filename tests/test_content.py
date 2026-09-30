@@ -33,6 +33,33 @@ def test_achievements_shows_an_empty_state(client):
     assert 'Award history is being added' in client.get('/achievements').get_data(as_text=True)
 
 
+def test_achievements_breaks_awards_down_by_team(client, db):
+    import datetime
+    cid = db['awards'].insert_one({'title': 'Excellence Award', 'icon': 'exellence_award.png', 'count': 3,
+                                   'border': 'gold'}).inserted_id
+    db['awards'].insert_one({'title': 'Think Award', 'icon': 'judges_award.png', 'count': 0})
+    db['teams'].insert_many([{'team_number': '77628A', 'nickname': 'Alpha'},
+                             {'team_number': '77628B'}, {'team_number': 'media', 'kind': 'group'}])
+    db['awards'].insert_many([
+        {'team_number': '77628A', 'title': 'Excellence Award', 'category_id': str(cid), 'count': 2},
+        # An older row without a category_id still matches by title.
+        {'team_number': '77628B', 'title': 'Excellence Award', 'count': 1},
+    ])
+    db['competitions'].insert_many([
+        {'name': 'Past Signature Event', 'location': 'Hauppauge, NY', 'date': datetime.datetime(2025, 3, 8)},
+        {'name': 'Future Qualifier', 'location': '', 'date': datetime.datetime(2099, 1, 1)},
+    ])
+    page = client.get('/achievements').get_data(as_text=True)
+    assert 'Headline Honors' in page                      # gold-bordered awards are featured
+    assert '/team/77628A' in page and '/team/77628B' in page
+    teams = page[page.index('ach-team-grid'):page.index('id="history"')]
+    assert '77628A' in teams and '/team/media' not in teams  # groups don't win robot awards
+    assert 'Still chasing' in page and 'Think Award' in page
+    assert 'Past Signature Event' in page and '2024–25 season' in page
+    assert 'Future Qualifier' not in page
+    assert '3</b> awards won' in page
+
+
 # --- Team page ---------------------------------------------------------------------
 
 def test_team_page_has_no_placeholder_viewer(client, db):
