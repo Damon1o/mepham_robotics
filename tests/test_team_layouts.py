@@ -299,6 +299,16 @@ def test_editor_shows_layout_picker(client, setup):
     assert 'Classic Stack' in body
 
 
+def test_editor_picker_loads_the_carousel(client, setup):
+    # The radios stay in the page as the form; the carousel only enhances them.
+    login(client, 'alice', 'alice-password')
+    body = client.get(f"/manage/team/{setup['new']}").data.decode()
+    assert 'class="layout-picker" role="radiogroup"' in body and 'data-carousel' in body
+    for asset in ('css/circular-carousel.css', 'js/circular-carousel.js', 'js/layout-carousel.js'):
+        assert asset in body, asset
+    assert body.index('js/circular-carousel.js') < body.index('js/layout-carousel.js')
+
+
 def test_group_editor_has_no_layout_picker(client, setup):
     login(client, 'alice', 'alice-password')
     body = client.get(f"/manage/team/{setup['group']}").data.decode()

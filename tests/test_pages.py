@@ -134,7 +134,8 @@ def test_missing_static_file_still_builds_a_url(client):
 JS_BUNDLES_UNDER_STRICT_CSP = ['static/js/script.js', 'static/js/login.js',
                                'static/js/theme.js', 'static/js/admin.js',
                                'static/js/team.js', 'static/js/team-editor.js',
-                               'static/js/site-editor.js', 'static/js/controls.js']
+                               'static/js/site-editor.js', 'static/js/controls.js',
+                               'static/js/circular-carousel.js', 'static/js/layout-carousel.js']
 
 
 @pytest.mark.parametrize('bundle', JS_BUNDLES_UNDER_STRICT_CSP)

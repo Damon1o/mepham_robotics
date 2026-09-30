@@ -6,6 +6,7 @@
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/circular-carousel.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team_editor.css') }}">
 {% endblock %}
 
@@ -112,7 +113,7 @@
                 {% set default_layout = site.teams.layout if site.teams.layout in team_layouts else 'classic' %}
                 {% set own_layout = team.layout if team.layout in team_layouts else '' %}
                 {% call row('Page layout', hint='Saved for the ' ~ (team.season ~ ' season' if team.season else 'this season') ~ ' only') %}
-                <div class="layout-picker" role="radiogroup" aria-labelledby="lbl-page-layout">
+                <div class="layout-picker" role="radiogroup" aria-labelledby="lbl-page-layout" data-carousel>
                     <label class="layout-option">
                         <input type="radio" name="layout" value="" data-autosave="layout" {% if not own_layout %}checked{% endif %}>
                         {{ layout_thumb(default_layout) }}
@@ -401,4 +402,6 @@
 
 {% block page_scripts %}
 <script src="{{ url_for('static', filename='js/team-editor.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/circular-carousel.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/layout-carousel.js') }}" defer></script>
 {% endblock %}
