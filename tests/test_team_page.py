@@ -296,10 +296,17 @@ def test_live_sections_present_with_token(client, team_factory, monkeypatch):
     assert 'aria-busy="true"' in body
 
 
+def test_live_sections_use_the_api_key(client, team_factory, monkeypatch):
+    # The deployment's variable is ROBOTEVENTS_API_KEY; it alone must turn the panels on.
+    monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'test-key')
+    team_factory()
+    assert 'id="skills-panel"' in html(client)[1]
+
+
 def test_live_panels_point_at_the_json_route(client, team_factory, monkeypatch):
     monkeypatch.setenv('ROBOTEVENTS_TOKEN', 'test-token')
     team_factory()
-    assert 'data-live-url="/api/team/77628A/live"' in html(client)[1]
+    assert 'data-live-url="/api/team/77628A/live' in html(client)[1]
 
 
 def test_team_js_always_loaded(client, team_factory):

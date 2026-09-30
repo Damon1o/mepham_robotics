@@ -1108,7 +1108,7 @@ def achievements_view():
 @app.route('/achievements')
 def achievements():
     return render_template('achievements.html', active_page='achievements', **achievements_view(),
-                           live_results=bool(os.getenv('ROBOTEVENTS_API_KEY')) and site().achievements.show_live)
+                           live_results=bool(robotevents.get_token()) and site().achievements.show_live)
 
 @app.route('/contact')
 def contact():
@@ -1186,23 +1186,32 @@ def team_page(team_number):
                            event_photos=event_photos, robot_photos=robot_photos,
                            layout=team_layout(team),
                            seasons=seasons, active_season=team.get('season'),
-                           live_enabled=bool(os.environ.get('ROBOTEVENTS_TOKEN')) and not is_group(team),
+                           live_enabled=bool(robotevents.get_token()) and not is_group(team),
                            active_page=team_number)
 
 @app.route('/api/team/<team_number>/live')
 def team_live_data(team_number):
     """Live RobotEvents data for the team page's skills, scoreboard and results panels.
 
-    204 when there is no token, no matching RobotEvents team, or nothing to show.
-    The page renders without these panels in that case, so this never fails hard.
+    Scoped to one season (?season=, else the team's newest), so "This Season"
+    never shows a team's whole history. 204 when there is no token, no matching
+    RobotEvents team or season, or nothing to show. The page renders without
+    these panels in that case, so this never fails hard.
     """
-    team = db['teams'].find_one({'team_number': team_number})
-    if not team or is_group(team):
+    docs = list(db['teams'].find({'team_number': team_number}))
+    if not docs or is_group(docs[0]):
+        return Response(status=204)
+    label = request.args.get('season') or max((d['season'] for d in docs if d.get('season')), default=None)
+    team = next((d for d in docs if d.get('season') == label), docs[0])
+    if not label or not robotevents.get_token():
         return Response(status=204)
 
     lookup_number = team.get('robotevents_number') or team_number
     try:
-        summary = robotevents.team_summary(db, lookup_number)
+        season = robotevents.season_id(db, label)
+        if not season:
+            return Response(status=204)
+        summary = robotevents.team_summary(db, lookup_number, season_id=season)
     except Exception:
         app.logger.exception('Live team data failed for %s', team_number)
         return Response(status=204)
@@ -3601,7 +3610,7 @@ def api_matches():
 
 
 def _fetch_matches():
-    api_key = os.getenv('ROBOTEVENTS_API_KEY')
+    api_key = robotevents.get_token()
     if not api_key:
         return {'matches': []}
 
@@ -3609,7 +3618,7 @@ def _fetch_matches():
 
     def fetch(endpoint):
         try:
-            resp = requests.get(f'https://www.robotevents.com/api/v2/{endpoint}', headers=headers, timeout=8)
+            resp = requests.get(f'{robotevents.BASE_URL}/{endpoint}', headers=headers, timeout=8)
             resp.raise_for_status()
             return resp.json()
         except Exception:

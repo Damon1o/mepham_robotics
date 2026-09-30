@@ -46,7 +46,18 @@ def test_no_token_returns_none(no_token, db):
 
 def test_blank_token_treated_as_absent(monkeypatch):
     monkeypatch.setenv('ROBOTEVENTS_TOKEN', '   ')
+    monkeypatch.setenv('ROBOTEVENTS_API_KEY', '')
     assert re.get_token() is None
+
+
+def test_api_key_is_read_and_wins_over_the_old_name(monkeypatch):
+    # Production sets ROBOTEVENTS_API_KEY; the team page used to read only ROBOTEVENTS_TOKEN.
+    monkeypatch.setenv('ROBOTEVENTS_API_KEY', ' api-key ')
+    assert re.get_token() == 'api-key'
+    monkeypatch.setenv('ROBOTEVENTS_TOKEN', 'old-token')
+    assert re.get_token() == 'api-key'
+    monkeypatch.delenv('ROBOTEVENTS_API_KEY')
+    assert re.get_token() == 'old-token'
 
 
 # --- caching ---------------------------------------------------------------
