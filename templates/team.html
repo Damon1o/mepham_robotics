@@ -161,7 +161,7 @@ members, competition results, and season goals.{% endif %}{% endblock %}
                 {% if roles %}
                 <ul class="roster-roles">
                     {% for role in roles %}
-                    <li class="roster-role-chip">{{ role }}</li>
+                    <li class="roster-role-chip{% if loop.first and member.role %} roster-role-chip--main{% endif %}">{{ role }}</li>
                     {% endfor %}
                 </ul>
                 {% endif %}

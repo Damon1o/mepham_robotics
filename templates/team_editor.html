@@ -186,8 +186,7 @@
                     {% for r in role_suggestions %}<option value="{{ r }}"></option>{% endfor %}
                 </datalist>
                 <datalist id="dl-extra-roles" data-roles="{{ role_suggestions|join('|') }}"></datalist>
-                <div class="roster-scroll">
-                <div class="roster-viewport" id="rosterViewport">
+                <div class="roster-viewport" id="rosterViewport" data-animated-list=".member-card">
                 <div class="member-list" id="memberGrid" role="list"
                     {%- if can_admin %} data-drop="event" data-drop-multiple
                     data-drop-accept="image/png,image/jpeg,image/gif,image/webp,.csv,.txt"
@@ -239,9 +238,6 @@
                     <p class="form-hint" id="rosterEmpty">No one on the roster yet.</p>
                     {% endfor %}
                 </div>
-                </div>
-                <div class="roster-fade roster-fade--top" aria-hidden="true"></div>
-                <div class="roster-fade roster-fade--bottom" aria-hidden="true"></div>
                 </div>
                 {% if can_admin %}
                 <p class="form-hint drop-hint"><i data-lucide="image-up" aria-hidden="true"></i> Drop a photo on someone’s row,

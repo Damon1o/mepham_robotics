@@ -13,6 +13,8 @@
 //   <input list="…">                          shows its <datalist> as a styled list
 //   <input type="file">                       (visible ones) becomes a drop zone
 //   <input type="range">                      gets a filled track (--fill)
+//   [data-animated-list="<items>"]            a scrolling list whose items ease in
+//                                             and whose edges fade while it scrolls
 //
 // Every drop zone, including the editors' own and any [data-drop] card, takes
 // dragged or pasted files through one shared handler (see "Dropping and pasting").
@@ -1362,6 +1364,52 @@
         if (e.target instanceof HTMLInputElement && e.target.type === 'range') paintRange(e.target);
     });
 
+    // --- Animated lists ---------------------------------------------------------------------------------
+    // data-animated-list="<item selector>" on a scrolling box: items ease in once half of them
+    // is in view, and the edges fade while there is more to scroll (controls.css, section 10).
+
+    const AnimatedList = (function () {
+        const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const seen = new WeakSet();
+
+        function fades(list) {
+            const { scrollTop, scrollHeight, clientHeight } = list;
+            const bottom = scrollHeight <= clientHeight ? 0 : Math.min((scrollHeight - scrollTop - clientHeight) / 50, 1);
+            list.style.setProperty('--fade-top', Math.min(scrollTop / 50, 1).toFixed(2));
+            list.style.setProperty('--fade-bottom', bottom.toFixed(2));
+        }
+
+        function enhance(list) {
+            if (seen.has(list)) return;
+            seen.add(list);
+            const selector = list.dataset.animatedList || ':scope > *';
+            const inView = 'IntersectionObserver' in window && !still.matches && new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    // An item moved to another list reports here once more; only its own list counts.
+                    if (list.contains(entry.target)) entry.target.classList.toggle('is-in', entry.intersectionRatio >= 0.5);
+                });
+            }, { root: list, threshold: [0, 0.5] });
+            const watch = () => list.querySelectorAll(selector).forEach(item => {
+                item.classList.add('ctl-animated-item');
+                if (inView) inView.observe(item);
+            });
+            if (inView) list.classList.add('is-animated');
+            watch();
+            new MutationObserver(records => {
+                if (inView) records.forEach(record => record.removedNodes.forEach(node => {
+                    if (node.nodeType === 1 && !list.contains(node)) inView.unobserve(node);
+                }));
+                watch();
+                fades(list);
+            }).observe(list, { childList: true, subtree: true });
+            list.addEventListener('scroll', () => fades(list), { passive: true });
+            if ('ResizeObserver' in window) new ResizeObserver(() => fades(list)).observe(list);
+            fades(list);
+        }
+
+        return { enhance };
+    })();
+
     // --- Wiring -------------------------------------------------------------------------------------------
 
     const TARGETS = 'select, input[type="date"], input[type="time"], input[type="datetime-local"], input[list], input[type="file"], input[type="range"]';
@@ -1378,6 +1426,8 @@
         if (root.nodeType !== 1) return;
         if (root.matches(TARGETS)) enhance(root);
         root.querySelectorAll(TARGETS).forEach(enhance);
+        if (root.matches('[data-animated-list]')) AnimatedList.enhance(root);
+        root.querySelectorAll('[data-animated-list]').forEach(AnimatedList.enhance);
     }
 
     // A control removed on its own leaves its button behind; take that too.
