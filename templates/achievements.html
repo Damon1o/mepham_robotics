@@ -8,15 +8,35 @@
 {% endblock %}
 
 {% from "partials/site_macros.html" import hero_attrs %}
-{% set achievements = site.achievements %}
+{% set page = site.achievements %}
+
+{% macro award_icon(award, size) -%}
+<img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}" alt="" width="{{ size }}" height="{{ size }}"
+    loading="lazy" decoding="async">
+{%- endmacro %}
+
+{% macro team_chip(team_number, count) -%}
+<a class="ach-team-chip" href="{{ url_for('team_page', team_number=team_number) }}">
+    <span>{{ team_number }}</span>{% if count > 1 %}<b>×{{ count }}</b>{% endif %}
+</a>
+{%- endmacro %}
+
 {% block content %}
-<div {{ hero_attrs(achievements.hero_image) }}>
+<div {{ hero_attrs(page.hero_image) }}>
     <div class="hero-content">
-        <h1>{{ achievements.hero_title }}</h1>
-        {% if achievements.hero_tagline %}<p>{{ achievements.hero_tagline }}</p>{% endif %}
+        <h1>{{ page.hero_title }}</h1>
+        {% if page.hero_tagline %}<p>{{ page.hero_tagline }}</p>{% endif %}
+        {% if total %}
+        <ul class="ach-hero-stats" aria-label="Club record at a glance">
+            <li class="ach-hero-stat is-gold"><b>{{ total }}</b> award{{ 's' if total != 1 }} won</li>
+            <li class="ach-hero-stat"><b>{{ earned|length }}</b> award type{{ 's' if earned|length != 1 }}</li>
+            {% if team_cards %}<li class="ach-hero-stat"><b>{{ team_cards|length }}</b> team{{ 's' if team_cards|length != 1 }}</li>{% endif %}
+            {% if past_events %}<li class="ach-hero-stat"><b>{{ past_events|length }}{% if past_events|length >= 12 %}+{% endif %}</b> event{{ 's' if past_events|length != 1 }}</li>{% endif %}
+        </ul>
+        {% endif %}
         <div class="hero-cta">
-            <a href="{{ url_for('index') }}" class="cta-button cta-primary">Back Home</a>
-            <a href="#awards" class="cta-button cta-secondary">View Awards</a>
+            <a href="#awards" class="cta-button cta-primary">View Awards</a>
+            {% if past_events %}<a href="#history" class="cta-button cta-secondary">Competition Log</a>{% endif %}
         </div>
     </div>
     <div class="scroll-indicator"></div>
@@ -28,39 +48,137 @@
     <span class="current">Achievements</span>
 </nav>
 
-<section id="awards" class="award-container fade-in-section">
-    <div class="text-center">
-        <h2 class="ripple">{{ achievements.awards_heading }}</h2>
-    </div>
-
-    <div class="awards-grid">
-        {% for award in global_awards %}
-        <div
-            class="award-box {{ award.layout }} {{ 'border-' + award.border if award.border else '' }} {{ 'bg-shimmer' if award.shimmer else '' }}">
-            <div class="award-count">×{{ award.count }}</div>
-            <div class="award-icon-container">
-                {% if award.icon %}
-                <img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}" alt="{{ award.title }}"
-                    class="award-icon" width="128" height="128" loading="lazy" decoding="async">
-                {% endif %}
-            </div>
-            <div class="award-title">{{ award.title }}</div>
-        </div>
+{% if featured %}
+<section class="ach-section ach-featured fade-in-section" aria-labelledby="featured-heading">
+    <header class="ach-head">
+        <p class="ach-eyebrow">Trophy case</p>
+        <h2 id="featured-heading">{{ page.featured_heading }}</h2>
+    </header>
+    <div class="ach-trophies">
+        {% for award in featured %}
+        <article class="ach-trophy{{ ' bg-shimmer' if award.shimmer }}">
+            <div class="ach-trophy-icon">{{ award_icon(award, 96) }}</div>
+            <p class="ach-trophy-count"><span class="visually-hidden">Won </span>×{{ award.count }}</p>
+            <h3>{{ award.title }}</h3>
+            {% if award.teams %}
+            <div class="ach-team-chips">{% for w in award.teams %}{{ team_chip(w.team_number, w.count) }}{% endfor %}</div>
+            {% endif %}
+        </article>
         {% endfor %}
-        {% if not global_awards %}
-        <p class="awards-empty">Award history is being added. Check back after our next competition!</p>
-        {% endif %}
     </div>
 </section>
+{% endif %}
+
+<section id="awards" class="ach-section ach-honors fade-in-section" aria-labelledby="awards-heading">
+    <header class="ach-head">
+        <p class="ach-eyebrow">Honor roll</p>
+        <h2 id="awards-heading">{{ page.awards_heading }}</h2>
+    </header>
+
+    {% if earned %}
+    <ol class="ach-roll">
+        {% for award in earned %}
+        <li class="ach-roll-row{{ ' accent-' + award.border if award.border }}">
+            <div class="ach-roll-icon">{{ award_icon(award, 56) }}</div>
+            <div class="ach-roll-body">
+                <h3>{{ award.title }}</h3>
+                <progress class="ach-roll-bar" value="{{ award.count }}" max="{{ top_count }}" aria-hidden="true"></progress>
+                {% if award.teams %}
+                <div class="ach-team-chips">{% for w in award.teams %}{{ team_chip(w.team_number, w.count) }}{% endfor %}</div>
+                {% endif %}
+            </div>
+            <p class="ach-roll-count"><b>{{ award.count }}</b><span>{{ award.share }}% of all</span></p>
+        </li>
+        {% endfor %}
+    </ol>
+    {% endif %}
+
+    {% if unearned %}
+    <div class="ach-chasing">
+        <p class="ach-eyebrow">Still chasing</p>
+        <ul>
+            {% for award in unearned %}
+            <li>{{ award_icon(award, 28) }}<span>{{ award.title }}</span></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if not has_awards %}
+    <p class="ach-empty">Award history is being added. Check back after our next competition!</p>
+    {% endif %}
+</section>
+
+{% if team_cards and total %}
+<section class="ach-section ach-teams fade-in-section" aria-labelledby="teams-heading">
+    <header class="ach-head">
+        <p class="ach-eyebrow">Across the club</p>
+        <h2 id="teams-heading">{{ page.teams_heading }}</h2>
+    </header>
+    <div class="ach-team-grid">
+        {% for card in team_cards %}
+        <a class="ach-team-card" href="{{ url_for('team_page', team_number=card.number) }}">
+            <div class="ach-team-id">
+                <span class="ach-team-number">{{ card.number }}</span>
+                {% if card.nickname %}<span class="ach-team-nick">{{ card.nickname }}</span>{% endif %}
+            </div>
+            <p class="ach-team-total"><b>{{ card.total }}</b> award{{ 's' if card.total != 1 }}</p>
+            {% if card.awards %}
+            <ul class="ach-team-icons">
+                {% for award in card.awards %}
+                <li title="{{ award.title }}{{ ' ×' ~ award.count if award.count > 1 }}">
+                    <img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}"
+                        alt="{{ award.title }}" width="32" height="32" loading="lazy" decoding="async">
+                    {% if award.count > 1 %}<span>{{ award.count }}</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="ach-team-none">First trophy is still out there.</p>
+            {% endif %}
+            <span class="ach-team-link">Team page <i data-lucide="arrow-right" aria-hidden="true"></i></span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if past_events %}
+<section id="history" class="ach-section ach-history fade-in-section" aria-labelledby="history-heading">
+    <header class="ach-head">
+        <p class="ach-eyebrow">Where we've competed</p>
+        <h2 id="history-heading">{{ page.history_heading }}</h2>
+    </header>
+    {% for season in past_events|groupby('season')|reverse %}
+    <div class="ach-season">
+        <h3 class="ach-season-label">{{ season.grouper }} season</h3>
+        <ol class="ach-timeline">
+            {% for event in season.list %}
+            <li class="ach-event">
+                <time class="ach-event-date" datetime="{{ event.date.strftime('%Y-%m-%d') }}">
+                    <span>{{ event.date.strftime('%b') }}</span><b>{{ event.date.day }}</b>
+                </time>
+                <div class="ach-event-body">
+                    <h4>{% if event.link %}<a href="{{ event.link }}" target="_blank" rel="noopener">{{ event.name }} <i data-lucide="external-link" aria-hidden="true"></i></a>{% else %}{{ event.name }}{% endif %}</h4>
+                    {% if event.location %}<p><i data-lucide="map-pin" aria-hidden="true"></i>{{ event.location }}</p>{% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ol>
+    </div>
+    {% endfor %}
+</section>
+{% endif %}
 
 {% if live_results %}
-<section class="live-results-section fade-in-section">
-    <div class="text-center">
-        <h2 class="ripple results-heading">{{ achievements.live_heading }}</h2>
-        <p class="results-lede">{{ achievements.live_lede }}</p>
-    </div>
+<section class="ach-section ach-live fade-in-section" aria-labelledby="live-heading">
+    <header class="ach-head">
+        <p class="ach-eyebrow"><span class="ach-live-dot" aria-hidden="true"></span>Live from RobotEvents</p>
+        <h2 id="live-heading">{{ page.live_heading }}</h2>
+        {% if page.live_lede %}<p class="ach-lede">{{ page.live_lede }}</p>{% endif %}
+    </header>
 
-    <div class="results-table-container">
+    <div class="results-table-container ach-results">
         <table class="results-table">
             <thead>
                 <tr>
@@ -77,9 +195,7 @@
             </tbody>
         </table>
     </div>
-    <div class="text-center results-credit">
-        <small>Data provided by RobotEvents API</small>
-    </div>
+    <p class="ach-credit">Data provided by RobotEvents API</p>
 </section>
 {% endif %}
 {% endblock %}
