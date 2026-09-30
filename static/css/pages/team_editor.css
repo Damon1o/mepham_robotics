@@ -592,6 +592,20 @@ select[data-member-field] {
     background: repeating-linear-gradient(180deg, var(--admin-line-strong) 0 26%, transparent 26% 34%);
 }
 
+.layout-thumb .lt-bar {
+    flex-grow: 0.4;
+    background: var(--maroon-dark);
+}
+
+/* Big robot viewer with the spec cards stacked on its right. */
+.layout-thumb .lt-stage {
+    flex-grow: 3;
+    background:
+        repeating-linear-gradient(180deg, var(--admin-line-strong) 0 28%, transparent 28% 36%) right 3px top 4px / 30% calc(100% - 8px) no-repeat,
+        linear-gradient(var(--admin-gold), var(--admin-gold)) left 3px center / 62% calc(100% - 8px) no-repeat,
+        var(--text-dark, #1a1a1a);
+}
+
 .layout-thumb .lt-cards--compact {
     flex-grow: 0.8;
     background: repeating-linear-gradient(90deg, var(--admin-line-strong) 0 22%, transparent 22% 26%);

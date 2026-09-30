@@ -116,6 +116,42 @@ def test_scoreboard_without_live_data_keeps_a_plain_hero(client, db, setup, monk
     assert 'skills-panel' not in body and 'Competition Awards' in body
 
 
+# --- 03 Robot Spotlight -----------------------------------------------------
+
+def spotlight(db, setup, **fields):
+    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'spotlight', **fields}})
+
+
+def test_spotlight_leads_with_the_robot(client, db, setup):
+    spotlight(db, setup, stl_path='https://blob.example/robot.stl', specs={'intake': 'Flex Wheel'},
+              events=[{'name': 'States', 'photos': ['static/a.png', 'static/b.png']}])
+    body = client.get('/team/77628L').data.decode()
+    assert 'css/pages/team-layouts/spotlight.css' in body
+    assert 'team-titlebar' in body and 'class="hero-image' not in body
+    order = [body.index(marker) for marker in
+             ('team-titlebar', 'id="robot-viewer"', 'Technical Specifications', 'robot-photos-strip',
+              'Competition Awards', 'id="team"')]
+    assert order == sorted(order)
+    stage = body[body.index('class="spotlight-stage"'):body.index('robot-photos-strip')]
+    assert 'id="robot-viewer"' in stage and 'Flex Wheel' in stage
+    assert body.count('robot-photos-item') == 2 and 'viewer-gallery' not in body  # strip only, no second gallery
+
+
+def test_spotlight_uses_photos_when_there_is_no_model(client, db, setup):
+    spotlight(db, setup, events=[{'name': 'States', 'photos': ['static/a.png']}])
+    body = client.get('/team/77628L').data.decode()
+    assert 'team-titlebar' in body and 'viewer-gallery' in body
+    assert 'robot-photos-strip' not in body
+
+
+def test_spotlight_without_robot_media_falls_back_to_classic(client, db, setup):
+    spotlight(db, setup)
+    body = client.get('/team/77628L').data.decode()
+    assert 'data-layout="spotlight"' in body
+    assert 'class="hero-image' in body and 'team-titlebar' not in body and 'spotlight-stage' not in body
+    assert body.count('Competition Awards') == 1
+
+
 # --- saving -----------------------------------------------------------------
 
 def test_member_picks_layout_for_one_season_only(client, db, setup, monkeypatch):
