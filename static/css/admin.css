@@ -1878,6 +1878,13 @@ body:has(.admin-container) #custom-chatbot-container {
     list-style: none;
 }
 
+/* Three cards show before the list scrolls (data-animated-list-rows); short fades keep
+   the third one readable. */
+.roster-board .roster-drop {
+    --fade-top-size: 1.25rem;
+    --fade-bottom-size: 1.5rem;
+}
+
 /* The card being dragged stays see-through inside an animated list (controls.css, 10). */
 .roster-board .roster-drop.is-animated .roster-card.is-dragging {
     opacity: 0.5;

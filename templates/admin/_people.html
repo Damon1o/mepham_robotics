@@ -89,7 +89,7 @@
                         {% if col.hidden %}<small class="hidden-chip">hidden from menu</small>{% endif %}</span>
                     <span class="roster-count">{{ col.cards|length }}</span>
                 </header>
-                <ul class="roster-drop" role="list" data-animated-list=".roster-card">
+                <ul class="roster-drop" role="list" data-animated-list=".roster-card" data-animated-list-rows="3">
                     {% for c in col.cards %}
                     <li class="roster-card" draggable="true" data-member-id="{{ c.member_id }}"{% if c.user_id %} data-user-id="{{ c.user_id }}"{% endif %} data-name="{{ c.name }}">
                         <span class="roster-avatar" aria-hidden="true">
@@ -123,7 +123,7 @@
                     <span class="roster-col-title"><strong>Unassigned</strong><small>Accounts not on any roster</small></span>
                     <span class="roster-count">{{ unassigned|length }}</span>
                 </header>
-                <ul class="roster-drop" role="list" data-animated-list=".roster-card">
+                <ul class="roster-drop" role="list" data-animated-list=".roster-card" data-animated-list-rows="3">
                     {% for u in unassigned %}
                     <li class="roster-card" draggable="true" data-user-id="{{ u._id }}" data-name="{{ u.full_name or u.username }}">
                         <span class="roster-avatar" aria-hidden="true">{{ (u.full_name or u.username)|initials }}</span>

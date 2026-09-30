@@ -962,9 +962,12 @@ input[type="search"]::-webkit-search-cancel-button {
    scrolling box. controls.js adds .is-animated, puts .is-in on items at least half in
    view, and sets --fade-top/--fade-bottom (0 to 1) from the scroll position. The fades
    are a mask, so they work on any background. --fade-start moves the top fade down,
-   below a sticky header. */
+   below a sticky header; --fade-top-size/--fade-bottom-size set how far they reach. data-animated-list-rows="N" makes the box exactly N items tall. */
 [data-animated-list] {
+    position: relative;
     --fade-start: 0px;
+    --fade-top-size: 3rem;
+    --fade-bottom-size: 5rem;
     --fade-top: 0;
     --fade-bottom: 0;
     overflow-y: auto;
@@ -974,14 +977,14 @@ input[type="search"]::-webkit-search-cancel-button {
     -webkit-mask-image: linear-gradient(to bottom,
         #000 var(--fade-start),
         rgb(0 0 0 / calc(1 - var(--fade-top))) var(--fade-start),
-        #000 calc(var(--fade-start) + 3rem),
-        #000 calc(100% - 5rem),
+        #000 calc(var(--fade-start) + var(--fade-top-size)),
+        #000 calc(100% - var(--fade-bottom-size)),
         rgb(0 0 0 / calc(1 - var(--fade-bottom))) 100%);
     mask-image: linear-gradient(to bottom,
         #000 var(--fade-start),
         rgb(0 0 0 / calc(1 - var(--fade-top))) var(--fade-start),
-        #000 calc(var(--fade-start) + 3rem),
-        #000 calc(100% - 5rem),
+        #000 calc(var(--fade-start) + var(--fade-top-size)),
+        #000 calc(100% - var(--fade-bottom-size)),
         rgb(0 0 0 / calc(1 - var(--fade-bottom))) 100%);
 }
 
