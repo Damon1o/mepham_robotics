@@ -384,6 +384,7 @@
 .ach-chasing {
     margin-top: var(--spacing-lg);
     padding: var(--spacing-md);
+    text-align: center;
     border: 3px dashed var(--ach-line);
     border-radius: 16px;
 }
@@ -394,6 +395,7 @@
     padding: 0;
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 0.5rem;
 }
 
@@ -426,13 +428,16 @@
 
 /* --- AWARDS BY TEAM --- */
 
+/* Flex rather than grid so a short last row (or a club with two teams) stays centered. */
 .ach-team-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: var(--spacing-md);
 }
 
 .ach-team-card {
+    flex: 0 1 240px;
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
@@ -558,13 +563,20 @@
 
 /* --- COMPETITION LOG --- */
 
+/* The log reads as one centered column under the heading. */
+.ach-season {
+    max-width: 640px;
+    margin: 0 auto;
+}
+
 .ach-season + .ach-season {
     margin-top: var(--spacing-lg);
 }
 
 .ach-season-label {
-    display: inline-block;
-    margin: 0 0 var(--spacing-sm);
+    display: block;
+    width: fit-content;
+    margin: 0 auto var(--spacing-md);
     padding: 0.3rem 0.9rem;
     font-family: 'Space Mono', monospace;
     font-size: 0.8rem;
@@ -684,7 +696,9 @@
     100% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
 }
 
+/* Same width as the other sections instead of the shared 800px table. */
 .ach-results {
+    max-width: none;
     border: 3px solid var(--ach-line);
     border-radius: 16px;
     box-shadow: var(--ach-shadow);
@@ -702,7 +716,8 @@
 }
 
 .ach-credit {
-    margin: var(--spacing-sm) 0 0;
+    margin: var(--spacing-md) 0 0;
+    text-align: center;
     font-family: 'Space Mono', monospace;
     font-size: 0.75rem;
     color: var(--ach-muted);
@@ -732,6 +747,19 @@
 
     .ach-roll-count b {
         font-size: 1.8rem;
+    }
+
+    .ach-team-card {
+        flex-basis: 100%;
+    }
+
+    .ach-results .results-table {
+        font-size: 0.75rem;
+    }
+
+    .ach-results .results-table th,
+    .ach-results .results-table td {
+        padding: 0.6rem 0.4rem;
     }
 
     .ach-roll-count span {

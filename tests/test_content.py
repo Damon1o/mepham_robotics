@@ -58,6 +58,30 @@ def test_achievements_breaks_awards_down_by_team(client, db):
     assert 'Past Signature Event' in page and '2024–25 season' in page
     assert 'Future Qualifier' not in page
     assert '3</b> awards won' in page
+    assert 'View Awards' not in page
+
+
+def test_achievements_sections_follow_site_settings(client, db):
+    import datetime
+    from api.index import SITE_CONTENT_ID
+    db['awards'].insert_one({'title': 'Excellence Award', 'icon': 'exellence_award.png', 'count': 2,
+                             'border': 'gold'})
+    db['awards'].insert_one({'title': 'Think Award', 'icon': 'judges_award.png', 'count': 0})
+    db['teams'].insert_one({'team_number': '77628A'})
+    db['awards'].insert_one({'team_number': '77628A', 'title': 'Excellence Award', 'count': 2})
+    for day in (1, 2, 3):
+        db['competitions'].insert_one({'name': f'Old Event {day}', 'date': datetime.datetime(2025, 2, day)})
+    settings = {'show_stats': False, 'show_featured': False, 'show_unearned': False,
+                'show_teams': False, 'history_limit': 2}
+    db['site_metadata'].insert_one({'_id': SITE_CONTENT_ID, 'values': {'achievements': settings}})
+    page = client.get('/achievements').get_data(as_text=True)
+    for gone in ('awards won', 'Headline Honors', 'Still chasing', 'ach-team-grid', 'Old Event 1'):
+        assert gone not in page, gone
+    assert 'Old Event 3' in page and 'Old Event 2' in page
+
+    db['site_metadata'].update_one({'_id': SITE_CONTENT_ID}, {'$set': {'values.achievements.show_history': False}})
+    page = client.get('/achievements').get_data(as_text=True)
+    assert 'Old Event 3' not in page and 'Competition Log' not in page
 
 
 # --- Team page ---------------------------------------------------------------------

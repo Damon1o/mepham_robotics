@@ -1055,9 +1055,6 @@ def index():
 def about():
     return render_template('about.html', active_page='about')
 
-PAST_EVENTS_SHOWN = 12
-
-
 def achievements_view():
     """Everything the achievements page shows, built from award rows, teams and past events.
 
@@ -1092,7 +1089,10 @@ def achievements_view():
                    'awards': team_rows[t['team_number']]} for t in teams]
     team_cards.sort(key=lambda c: -c['total'])
 
-    events = list(db['competitions'].find({'date': {'$lt': club_now()}}).sort('date', -1).limit(PAST_EVENTS_SHOWN))
+    limit = site().achievements.history_limit or 12
+    events = list(db['competitions'].find({'date': {'$lt': club_now()}}).sort('date', -1).limit(limit + 1))
+    more_events = len(events) > limit
+    events = events[:limit]
     for event in events:
         # VEX seasons start in late spring: an April event belongs to the season that began last year.
         start = event['date'].year - (event['date'].month < 5)
@@ -1100,7 +1100,7 @@ def achievements_view():
     return {
         'earned': earned, 'unearned': unearned, 'has_awards': bool(categories),
         'featured': [a for a in earned if a['featured']],
-        'total': total, 'team_cards': team_cards, 'past_events': events,
+        'total': total, 'team_cards': team_cards, 'past_events': events, 'more_events': more_events,
         'top_count': max((a['count'] for a in earned), default=0),
     }
 
