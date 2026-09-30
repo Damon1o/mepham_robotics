@@ -428,20 +428,18 @@
 
 /* --- AWARDS BY TEAM --- */
 
-/* Flex rather than grid so a short last row (or a club with two teams) stays centered. */
+/* One full-width row per team, stacked: name | total | award icons | link. */
 .ach-team-grid {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: var(--spacing-md);
+    display: grid;
+    gap: var(--spacing-sm);
 }
 
 .ach-team-card {
-    flex: 0 1 240px;
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    padding: var(--spacing-md);
+    display: grid;
+    grid-template-columns: minmax(180px, 1.2fr) 7rem 2fr auto;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
     text-decoration: none;
     color: var(--ach-ink);
     background: var(--ach-surface);
@@ -539,7 +537,8 @@
 }
 
 .ach-team-link {
-    margin-top: auto;
+    justify-self: end;
+    white-space: nowrap;
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
@@ -749,8 +748,14 @@
         font-size: 1.8rem;
     }
 
+    /* Phones: name and total on top, icons and link below. */
     .ach-team-card {
-        flex-basis: 100%;
+        grid-template-columns: 1fr auto;
+        gap: 0.6rem var(--spacing-sm);
+    }
+
+    .ach-team-total {
+        text-align: right;
     }
 
     .ach-results .results-table {
