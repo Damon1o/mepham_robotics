@@ -1,0 +1,39 @@
+<!-- ROSTER -->
+<section id="team" class="roster-section fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">Meet the {{ 'Group' if is_group else 'Team' }}</h2>
+    </div>
+
+    {% if groups %}
+    {% for subteam, members in groups %}
+    <div class="roster-group">
+        {% if subteam %}<h3 class="roster-group-title">{{ subteam }}</h3>{% endif %}
+        <div class="roster-grid">
+            {% for member in members %}
+            <article class="roster-card">
+                {% set photo = member.photo|real_photo %}
+                {% if photo %}
+                <img src="{{ get_image_url(photo) }}" alt="{{ member.name }}" class="roster-photo"
+                    loading="lazy">
+                {% else %}
+                <span class="roster-initials" aria-hidden="true">{{ member.name|initials }}</span>
+                {% endif %}
+                <h4 class="roster-name">{{ member.name }}</h4>
+                {% set roles = member|member_roles %}
+                {% if roles %}
+                <ul class="roster-roles">
+                    {% for role in roles %}
+                    <li class="roster-role-chip{% if loop.first and member.role %} roster-role-chip--main{% endif %}">{{ role }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if member.since %}<p class="roster-since">Since {{ member.since }}</p>{% endif %}
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="roster-empty">Roster coming soon for this {{ 'group' if is_group else 'team' }}.</p>
+    {% endif %}
+</section>

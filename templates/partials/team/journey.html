@@ -1,0 +1,19 @@
+{% if team.journey %}
+<!-- TEAM JOURNEY -->
+<section class="journey-section fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">{{ 'Our' if is_group else 'Team' }} Journey</h2>
+    </div>
+    <ol class="journey-list">
+        {% for milestone in team.journey %}
+        <li class="journey-item">
+            <span class="journey-date">{{ milestone.date }}</span>
+            <div class="journey-body">
+                <h3 class="journey-title">{{ milestone.title }}</h3>
+                {% if milestone.description %}<p>{{ milestone.description }}</p>{% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ol>
+</section>
+{% endif %}

@@ -152,7 +152,7 @@ def test_error_pages_have_a_heading_and_the_theme(client):
 # Dynamic values passed as custom properties are the documented exception, and
 # the awards grid partial is protected from edits.
 STYLE_ALLOWED = {
-    'team.html': ['--team-hero-image'],
+    'hero.html': ['--team-hero-image'],  # partials/team/hero.html
     'site_macros.html': ['--hero-image'],
     'awards_grid.html': ['grid-column: 1 / -1'],
 }

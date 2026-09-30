@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% set is_group = team is group %}
+{% from "partials/team/layout_thumb.html" import layout_thumb %}
 {% block title %}Edit {{ team.title or team.team_number if is_group else team.team_number }} | Mepham Robotics{% endblock %}
 
 {% block page_styles %}
@@ -108,6 +109,25 @@
                     data-autosave="tagline" placeholder="{{ 'Telling the club’s story.' if is_group else 'Precision. Power. Performance.' }}">
                 {% endcall %}
                 {% if not is_group %}
+                {% set default_layout = site.teams.layout if site.teams.layout in team_layouts else 'classic' %}
+                {% set own_layout = team.layout if team.layout in team_layouts else '' %}
+                {% call row('Page layout', hint='Saved for the ' ~ (team.season ~ ' season' if team.season else 'this season') ~ ' only') %}
+                <div class="layout-picker" role="radiogroup" aria-labelledby="lbl-page-layout">
+                    <label class="layout-option">
+                        <input type="radio" name="layout" value="" data-autosave="layout" {% if not own_layout %}checked{% endif %}>
+                        {{ layout_thumb(default_layout) }}
+                        <span class="layout-option-name">Site default</span>
+                        <small class="layout-option-note">{{ team_layouts[default_layout] }}</small>
+                    </label>
+                    {% for key, name in team_layouts.items() %}
+                    <label class="layout-option">
+                        <input type="radio" name="layout" value="{{ key }}" data-autosave="layout" {% if own_layout == key %}checked{% endif %}>
+                        {{ layout_thumb(key) }}
+                        <span class="layout-option-name">{{ name }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% endcall %}
                 {% call row('Notebook link', 'f-notebook', 'Google Drive or Docs share link') %}
                 <input id="f-notebook" type="url" maxlength="500"
                     value="{{ team.notebook_link if team.notebook_link and team.notebook_link != '#' else '' }}"

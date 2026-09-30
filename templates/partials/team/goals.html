@@ -1,0 +1,24 @@
+{% if team.goals %}
+<!-- SEASON GOALS -->
+<section class="goals-section fade-in-section">
+    <h2 class="ripple">Season Goals</h2>
+    <div class="goals-container">
+        {% for goal in team.goals %}
+        {% set progress = [[goal.progress|default(0, true)|int, 0]|max, 100]|min %}
+        <div class="goal-item {{ 'goal-complete' if progress == 100 }}">
+            <div class="goal-header">
+                <span class="goal-name">
+                    {% if progress == 100 %}<i data-lucide="check" class="goal-check"></i>{% endif %}
+                    {{ goal.name }}
+                </span>
+                <span class="goal-percent">{{ progress }}%</span>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-label="{{ goal.name }}"
+                aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-fill" data-progress="{{ progress }}"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}

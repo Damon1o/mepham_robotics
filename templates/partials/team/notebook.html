@@ -1,0 +1,8 @@
+{% if has_notebook and not is_group %}
+<div class="text-center specs-cta">
+    <a href="{{ team.notebook_link }}" class="download-btn" target="_blank" rel="noopener">
+        <i data-lucide="book" class="download-icon" aria-hidden="true"></i>
+        Engineering Notebook
+    </a>
+</div>
+{% endif %}

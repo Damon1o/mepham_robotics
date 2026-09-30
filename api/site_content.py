@@ -40,6 +40,13 @@ SOCIAL_PLATFORMS = {
 TIER_COLOURS = ('bronze', 'silver', 'gold', 'platinum')
 TONES = ('info', 'celebrate', 'alert')
 COUNTDOWN_MODES = ('always', 'scheduled', 'never')
+# Team page layouts: key -> name shown in the pickers. Each key has a template at
+# templates/team_layouts/<key>.html; any key but 'classic' also loads
+# static/css/pages/team-layouts/<key>.css.
+TEAM_LAYOUTS = {
+    'classic': 'Classic Stack',
+}
+DEFAULT_TEAM_LAYOUT = 'classic'
 FUNDRAISERS_MAX = 20
 MONEY_MAX = 1_000_000
 
@@ -393,6 +400,8 @@ SECTIONS = (
     ), page='achievements', blurb='Sections, headings, competition log, live results'),
 
     Section('teams', 'Team pages', 'bot', (
+        Field('layout', 'choice', 'Default layout', DEFAULT_TEAM_LAYOUT, choices=TEAM_LAYOUTS,
+              hint='Used by every team that has not picked its own layout for the season.'),
         Field('default_tagline', 'text', 'Shown when a team has no nickname', 'Build. Code. Compete.', max=60),
         Field('cta_show', 'toggle', 'Show the "Interested?" band', True),
         Field('cta_heading', 'text', 'Band heading', 'Interested?', max=60),

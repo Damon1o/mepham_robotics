@@ -1,0 +1,11 @@
+{% if site.teams.cta_show %}
+<!-- JOIN CTA -->
+<section class="teamcta-band fade-in-section">
+    <h2 class="ripple">{{ site.teams.cta_heading }}</h2>
+    {% if site.teams.cta_body %}<p class="teamcta-copy">{{ site.teams.cta_body }}</p>{% endif %}
+    <div class="teamcta-actions">
+        <a href="{{ url_for('contact') }}" class="cta-button cta-primary">{{ site.teams.cta_button }}</a>
+        <a href="{{ url_for('achievements') }}" class="cta-button">All Achievements</a>
+    </div>
+</section>
+{% endif %}

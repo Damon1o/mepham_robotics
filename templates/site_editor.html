@@ -40,14 +40,14 @@
 <div class="segmented" role="radiogroup" aria-labelledby="{{ id }}-label">
     {% for choice in field.choices %}
     <label class="segment"><input type="radio" name="{{ id }}" value="{{ choice }}" data-value
-        {%- if value == choice %} checked{% endif %}><span>{{ choice|replace('_', ' ')|capitalize }}</span></label>
+        {%- if value == choice %} checked{% endif %}><span>{{ field.choices[choice] if field.choices is mapping else choice|replace('_', ' ')|capitalize }}</span></label>
     {% endfor %}
 </div>
 {%- elif kind == 'choice' -%}
 <select id="{{ id }}"{% if in_list %} data-item="{{ field.key }}" aria-label="{{ field.label }}"{% else %} data-value{% endif %}
     {%- if field.key == 'icon' %} data-icon-select{% endif %}>
     {% for choice in field.choices %}
-    <option value="{{ choice }}"{% if field.key == 'icon' %} data-icon="{{ choice }}"{% endif %}{% if value == choice %} selected{% endif %}>{{ platforms[choice][0] if field.key == 'platform' else choice|replace('-', ' ')|capitalize }}</option>
+    <option value="{{ choice }}"{% if field.key == 'icon' %} data-icon="{{ choice }}"{% endif %}{% if value == choice %} selected{% endif %}>{{ platforms[choice][0] if field.key == 'platform' else field.choices[choice] if field.choices is mapping else choice|replace('-', ' ')|capitalize }}</option>
     {% endfor %}
 </select>
 {%- if field.key == 'icon' %}<i class="icon-preview" data-lucide="{{ value }}" aria-hidden="true"></i>{% endif -%}
