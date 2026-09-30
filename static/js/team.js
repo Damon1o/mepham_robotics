@@ -449,7 +449,104 @@
         window.addEventListener('resize', place);
     }
 
+    // --- tabbed hub -------------------------------------------------------
+
+    // The Tabbed Hub layout shows one panel at a time. Tabs follow the ARIA tabs
+    // pattern (arrow keys, Home, End), and every tab but the first deep-links as
+    // #<key>. A panel whose content goes away (Results, when RobotEvents has
+    // nothing) takes its tab with it. The CAD viewer waits on an
+    // IntersectionObserver, so it only loads once the Robot panel is shown.
+    function initHub() {
+        const hub = document.querySelector('[data-hub]');
+        if (!hub) return;
+        const tabs = Array.from(hub.querySelectorAll('[data-hub-tab]'));
+        const panelOf = tab => document.getElementById(tab.getAttribute('aria-controls'));
+        const shown = () => tabs.filter(tab => !tab.hidden);
+        const byKey = key => shown().find(tab => tab.dataset.hubTab === key);
+
+        // On a phone the tab row scrolls sideways; keep the open tab in sight.
+        function centerTab(tab) {
+            const bar = tab.parentElement;
+            bar.scrollLeft = tab.offsetLeft - bar.offsetLeft - (bar.clientWidth - tab.offsetWidth) / 2;
+        }
+        // Tab widths settle once the web fonts load, so centre the open tab again then.
+        window.addEventListener('load', function () {
+            const open = tabs.find(tab => tab.getAttribute('aria-selected') === 'true');
+            if (open) centerTab(open);
+        });
+
+        function select(key, opts) {
+            const tab = byKey(key) || shown()[0];
+            tabs.forEach(function (other) {
+                const on = other === tab;
+                other.setAttribute('aria-selected', on ? 'true' : 'false');
+                other.tabIndex = on ? 0 : -1;
+                const panel = panelOf(other);
+                if (panel) panel.hidden = !on;
+            });
+            if (opts.focus) tab.focus();
+            centerTab(tab);
+            if (opts.hash) {
+                const first = tab === shown()[0];
+                history.replaceState(null, '', first ? location.pathname + location.search : '#' + tab.dataset.hubTab);
+            }
+            // A switch from far down a long panel lands at the top of the new one.
+            if (opts.scroll && hub.getBoundingClientRect().top < 0) hub.scrollIntoView({ block: 'start' });
+        }
+
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                select(tab.dataset.hubTab, { hash: true, scroll: true });
+            });
+        });
+
+        hub.querySelector('[role="tablist"]').addEventListener('keydown', function (event) {
+            const list = shown();
+            const at = list.indexOf(document.activeElement);
+            if (at < 0) return;
+            let next;
+            if (event.key === 'ArrowRight') next = list[(at + 1) % list.length];
+            else if (event.key === 'ArrowLeft') next = list[(at - 1 + list.length) % list.length];
+            else if (event.key === 'Home') next = list[0];
+            else if (event.key === 'End') next = list[list.length - 1];
+            else return;
+            event.preventDefault();
+            select(next.dataset.hubTab, { hash: true, focus: true });
+        });
+
+        // Overview tiles (and any other [data-hub-open] link) open their tab.
+        hub.addEventListener('click', function (event) {
+            const opener = event.target.closest('[data-hub-open]');
+            if (!opener || !byKey(opener.dataset.hubOpen)) return;
+            event.preventDefault();
+            select(opener.dataset.hubOpen, { hash: true, scroll: true, focus: true });
+        });
+
+        function fromHash(scroll) {
+            const key = decodeURIComponent(location.hash.slice(1));
+            if (byKey(key)) {
+                select(key, {});
+                if (scroll) hub.scrollIntoView({ block: 'start' });
+            }
+        }
+        window.addEventListener('hashchange', function () { fromHash(true); });
+        fromHash(true);
+
+        tabs.forEach(function (tab) {
+            const panel = panelOf(tab);
+            if (!panel) return;
+            new MutationObserver(function () {
+                if (panel.children.length) return;
+                const wasOpen = tab.getAttribute('aria-selected') === 'true';
+                tab.hidden = true;
+                hub.querySelectorAll('[data-hub-open="' + tab.dataset.hubTab + '"]').forEach(drop);
+                if (wasOpen) select(shown()[0].dataset.hubTab, { hash: true });
+            }).observe(panel, { childList: true });
+        });
+    }
+
     function boot() {
+        initHub();
         loadLiveData();
         initViewer();
         initDossierRail();

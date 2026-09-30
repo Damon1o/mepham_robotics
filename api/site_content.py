@@ -49,6 +49,7 @@ TEAM_LAYOUTS = {
     'spotlight': 'Robot Spotlight',
     'meet': 'Meet the Team',
     'dossier': 'Dossier',
+    'tabs': 'Tabbed Hub',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
 FUNDRAISERS_MAX = 20

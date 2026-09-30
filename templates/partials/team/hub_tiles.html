@@ -1,0 +1,36 @@
+{#- Tabbed Hub overview: one tile per other tab, each a stored-data summary that opens
+    its tab. Expects `hub_tabs` from team_layouts/tabs.html. -#}
+{% set hub_keys = hub_tabs|map(attribute='0')|list %}
+{% set members = team.members|length %}
+{% set subteams = groups|selectattr('0')|list|length %}
+<nav class="hub-tiles" aria-label="Explore this team">
+    {% if 'team' in hub_keys %}
+    <a class="hub-tile" href="#team" data-hub-open="team">
+        <span class="hub-tile-label">Team</span>
+        <span class="hub-tile-value">{{ members }}</span>
+        <span class="hub-tile-note">{{ 'member' if members == 1 else 'members' }}{% if subteams > 1 %} · {{ subteams }} sub-teams{% endif %}</span>
+    </a>
+    {% endif %}
+    {% if 'robot' in hub_keys %}
+    <a class="hub-tile" href="#robot" data-hub-open="robot">
+        <span class="hub-tile-label">Robot</span>
+        <span class="hub-tile-value">{{ team.nickname or ('3D model' if team.stl_path else 'Specs') }}</span>
+        <span class="hub-tile-note">{% if specs %}{{ specs[0][1] }}{% elif team.stl_path %}Interactive CAD{% else %}Photos{% endif %}</span>
+    </a>
+    {% endif %}
+    {% if 'journey' in hub_keys %}
+    {% set done = team.goals|selectattr('progress', 'equalto', 100)|list|length %}
+    <a class="hub-tile" href="#journey" data-hub-open="journey">
+        <span class="hub-tile-label">Journey</span>
+        <span class="hub-tile-value">{% if team.goals %}{{ done }}/{{ team.goals|length }}{% else %}{{ team.journey|length }}{% endif %}</span>
+        <span class="hub-tile-note">{% if team.goals %}goals met{% if team.journey %} · {{ team.journey|length }} milestones{% endif %}{% else %}{{ 'milestone' if team.journey|length == 1 else 'milestones' }}{% endif %}</span>
+    </a>
+    {% endif %}
+    {% if 'results' in hub_keys %}
+    <a class="hub-tile" href="#results" data-hub-open="results">
+        <span class="hub-tile-label">Results</span>
+        <span class="hub-tile-value">Live</span>
+        <span class="hub-tile-note">Event by event, from RobotEvents</span>
+    </a>
+    {% endif %}
+</nav>
