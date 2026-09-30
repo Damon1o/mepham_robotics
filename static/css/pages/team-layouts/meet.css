@@ -1,0 +1,267 @@
+/* Team page layout 04: Meet the Team. Loaded after team.css. */
+
+/* --- CREW HEADER --- */
+
+/* Shorter than the Classic hero: the roster right under it is the main event. */
+.crew-header {
+    background: linear-gradient(135deg, rgba(148, 69, 71, 0.88) 0%, rgba(90, 0, 0, 0.94) 100%),
+        var(--team-hero-image) center/cover;
+    color: #fff;
+    padding: 6.5rem var(--spacing-md) var(--spacing-lg);
+    border-bottom: 4px solid var(--accent-gold);
+    text-align: center;
+}
+
+.crew-header-inner {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+.crew-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+}
+
+.crew-header h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -1px;
+    margin: 0.4rem 0 0;
+    background: linear-gradient(135deg, #fff 0%, #ffd700 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.crew-tagline {
+    margin: 0.5rem 0 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* The faces overlap like a team photo; the whole row links down to the roster. */
+.crew-faces {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: var(--spacing-xs);
+    margin-top: var(--spacing-md);
+    padding: 0.4rem 1.1rem 0.4rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    color: #fff;
+    text-decoration: none;
+    transition: var(--transition-base);
+}
+
+.crew-faces:hover,
+.crew-faces:focus-visible {
+    background: rgba(0, 0, 0, 0.45);
+    border-color: var(--accent-gold);
+}
+
+.crew-face {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    object-fit: cover;
+    background: var(--maroon-dark);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    transition: transform 0.2s ease;
+}
+
+.crew-face + .crew-face {
+    margin-left: -14px;
+}
+
+.crew-faces:hover .crew-face {
+    transform: translateY(-3px);
+}
+
+.crew-face--initials {
+    color: var(--accent-gold);
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.crew-face--more {
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.crew-faces-label {
+    margin-left: var(--spacing-sm);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.crew-faces-label::after {
+    content: ' \2193';
+    color: var(--accent-gold);
+}
+
+/* --- ROSTER: large cards --- */
+
+.team-layout--meet .roster-section {
+    padding-top: var(--spacing-xl);
+}
+
+.team-layout--meet .roster-group-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.3rem, 2.6vw, 1.7rem);
+    letter-spacing: 0.04em;
+    padding-bottom: 0.4rem;
+}
+
+.team-layout--meet .roster-grid {
+    /* auto-fit counts columns by the track's max, so the cap goes on the grid:
+       four 260px cards on desktop, three on a tablet. */
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--spacing-lg) var(--spacing-md);
+    max-width: calc(4 * 260px + 3 * var(--spacing-md));
+    margin: 0 auto;
+}
+
+.team-layout--meet .roster-card {
+    position: relative;
+    max-width: 300px;
+    padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-md);
+}
+
+/* Portrait fills the top of the card, like a trading card. */
+.team-layout--meet .roster-photo,
+.team-layout--meet .roster-initials {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: 12px;
+    border-width: 3px;
+    margin-bottom: var(--spacing-sm);
+}
+
+.team-layout--meet .roster-initials {
+    font-size: clamp(3rem, 7vw, 4.5rem);
+    background: linear-gradient(135deg, var(--maroon-light) 0%, var(--maroon-dark) 100%);
+}
+
+.team-layout--meet .roster-name {
+    font-size: 1.25rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.team-layout--meet .roster-roles {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.team-layout--meet .roster-role-chip {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.75rem;
+}
+
+/* Tenure rides on the portrait's corner. */
+.team-layout--meet .roster-since {
+    position: absolute;
+    top: calc(var(--spacing-sm) + 10px);
+    right: calc(var(--spacing-sm) + 10px);
+    margin: 0;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(26, 26, 26, 0.82);
+    color: #fff;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+}
+
+[data-theme="dark"] .team-layout--meet .roster-since {
+    color: #fff;
+    background: rgba(0, 0, 0, 0.75);
+}
+
+@media (max-width: 700px) {
+    .crew-header {
+        padding-top: 5.5rem;
+    }
+
+    .crew-face {
+        width: 36px;
+        height: 36px;
+        border-width: 2px;
+    }
+
+    .crew-face + .crew-face {
+        margin-left: -8px;
+    }
+
+    .crew-face--initials,
+    .crew-face--more {
+        font-size: 0.72rem;
+    }
+
+    /* Nine faces fill a phone row, so the label takes its own line. */
+    .crew-faces {
+        padding: 0.4rem 0.6rem;
+        border-radius: 24px;
+    }
+
+    .crew-faces-label {
+        flex-basis: 100%;
+        margin: 0.2rem 0 0;
+        text-align: center;
+    }
+}
+
+/* Two smaller cards a row on phones, so one portrait never fills the screen. */
+@media (max-width: 480px) {
+    .team-layout--meet .roster-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--spacing-sm);
+    }
+
+    .team-layout--meet .roster-card {
+        padding: 0.5rem 0.5rem var(--spacing-sm);
+        box-shadow: 5px 5px 0px rgba(148, 69, 71, 0.2);
+    }
+
+    .team-layout--meet .roster-initials {
+        font-size: 2.4rem;
+    }
+
+    .team-layout--meet .roster-name {
+        font-size: 0.95rem;
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .team-layout--meet .roster-role-chip {
+        font-size: 0.62rem;
+        padding: 0.1rem 0.5rem;
+    }
+
+    .team-layout--meet .roster-since {
+        top: 0.9rem;
+        right: 0.9rem;
+        font-size: 0.6rem;
+    }
+}

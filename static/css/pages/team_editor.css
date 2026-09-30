@@ -607,3 +607,19 @@ select[data-member-field] {
     flex-grow: 0.8;
     background: repeating-linear-gradient(90deg, var(--admin-line-strong) 0 22%, transparent 22% 26%);
 }
+
+/* Short maroon header with a row of gold faces along its bottom. */
+.layout-thumb .lt-crew {
+    flex-grow: 1.1;
+    background:
+        radial-gradient(circle, var(--admin-gold) 0 3px, transparent 3.5px) center bottom 4px / 9px 9px repeat-x,
+        var(--maroon-dark);
+}
+
+/* Big member cards, three to a row, each with a portrait block on top. */
+.layout-thumb .lt-people {
+    flex-grow: 1.7;
+    background:
+        repeating-linear-gradient(90deg, transparent 0 30%, var(--admin-bg) 30% 35%),
+        linear-gradient(180deg, var(--maroon-light, #944547) 0 60%, var(--admin-line-strong) 60%);
+}

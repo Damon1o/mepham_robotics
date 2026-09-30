@@ -1,0 +1,29 @@
+{#- Meet the Team header: a short banner that already shows the people, as a row of
+    faces (photo or initials) under the team name. Clicking the row jumps to the roster. -#}
+{% set crew = team.members[:8] %}
+<header class="crew-header" style="--team-hero-image: url('{{ get_image_url(team.hero_image) }}')">
+    <div class="crew-header-inner">
+        <span class="crew-eyebrow">{{ team.division or 'VEX Robotics' }}{% if active_season %} · {{ active_season }} season{% endif %}</span>
+        <h1>{{ team_name }}</h1>
+        <p class="crew-tagline">{{ team.nickname or site.teams.default_tagline }}</p>
+
+        <a class="crew-faces" href="#team" aria-label="Meet all {{ team.members|length }} members">
+            {% for member in crew %}
+            {% set photo = member.photo|real_photo %}
+            {% if photo %}
+            <img src="{{ get_image_url(photo) }}" alt="" class="crew-face" loading="lazy">
+            {% else %}
+            <span class="crew-face crew-face--initials" aria-hidden="true">{{ member.name|initials }}</span>
+            {% endif %}
+            {% endfor %}
+            {% if team.members|length > crew|length %}
+            <span class="crew-face crew-face--more" aria-hidden="true">+{{ team.members|length - crew|length }}</span>
+            {% endif %}
+            <span class="crew-faces-label">Meet the {{ team.members|length }}</span>
+        </a>
+
+        {% include "partials/team/identity_bar.html" %}
+    </div>
+</header>
+
+{% include "partials/team/breadcrumb.html" %}

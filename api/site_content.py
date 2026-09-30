@@ -47,6 +47,7 @@ TEAM_LAYOUTS = {
     'classic': 'Classic Stack',
     'scoreboard': 'Scoreboard',
     'spotlight': 'Robot Spotlight',
+    'meet': 'Meet the Team',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
 FUNDRAISERS_MAX = 20
