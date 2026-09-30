@@ -186,3 +186,19 @@ def test_light_is_the_default_theme():
 def test_footer_toggle_starts_on_light(client):
     page = client.get('/').get_data(as_text=True)
     assert '<span data-theme-label>Light theme</span>' in page
+
+
+def test_donate_levels_link_to_the_inquiry_form(client):
+    page = client.get('/donate').get_data(as_text=True)
+    options = re.findall(r'<option>([^<]+)</option>', page)
+    picks = re.findall(r'class="dn-tier-pick" data-tier="([^"]+)"', page)
+    assert picks and all(p in options for p in picks)
+    assert 'id="sponsor"' in page and 'js/donate.js' in page
+
+
+def test_donate_sponsor_wall_and_empty_state(client, db):
+    empty = client.get('/donate').get_data(as_text=True)
+    assert 'dn-sponsors-empty' in empty
+    db['sponsors'].insert_one({'name': 'Acme Machining', 'level': 'Gold'})
+    page = client.get('/donate').get_data(as_text=True)
+    assert 'dn-sponsor level-gold' in page and 'dn-sponsors-empty' not in page

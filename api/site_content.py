@@ -249,6 +249,7 @@ SECTIONS = (
     Section('donate', 'Donate page', 'heart-handshake', (
         Field('hero_title', 'text', 'Big title', 'Support Us', max=40, required=True, group='Top of the page'),
         Field('hero_tagline', 'text', 'Tagline', 'Help Build The Future', max=80, group='Top of the page'),
+        Field('hero_image', 'image', 'Background photo', None, group='Top of the page'),
         Field('givebutter_id', 'text', 'Givebutter campaign ID', os.getenv('GIVEBUTTER_CAMPAIGN_ID', ''), max=40,
               group='Online donations', pattern=r'[A-Za-z0-9_-]+',
               hint='The code at the end of your Givebutter campaign link. Leave empty to show the email fallback.'),
