@@ -1,0 +1,24 @@
+{#- 09 Bento Dashboard: a slim title bar, then a grid of mixed-size tiles that sums up
+    the season at a glance (robot photo, awards, people, goal rings, milestones), with
+    live skills and the latest result added when RobotEvents has them. Full sections
+    follow. A season with fewer than three stored tiles is too thin for a dashboard,
+    so it gets the Classic page instead. -#}
+{% set bento_stored = [award_total, team.members, team.goals, team.journey, team.worlds_appearances,
+team.since, specs, team.events]|select|list|length %}
+{% if not is_group and bento_stored >= 3 %}
+{% include "partials/team/title_bar.html" %}
+{% include "partials/team/season_switcher.html" %}
+{% include "partials/team/bento.html" %}
+{% include "partials/team/awards.html" %}
+{% include "partials/team/results.html" %}
+{% include "partials/team/roster.html" %}
+{% include "partials/team/robot.html" %}
+{% include "partials/team/specs.html" %}
+{% include "partials/team/notebook.html" %}
+{#- The rings above show four goals; a longer list gets the full bars too. -#}
+{% if team.goals|length > 4 %}{% include "partials/team/goals.html" %}{% endif %}
+{% include "partials/team/journey.html" %}
+{% include "partials/team/join_cta.html" %}
+{% else %}
+{% include "team_layouts/classic.html" %}
+{% endif %}

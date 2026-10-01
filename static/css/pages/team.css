@@ -44,6 +44,55 @@
     font-weight: 700;
 }
 
+/* --- TITLE BAR --- */
+
+/* A slim header in place of the full hero (partials/team/title_bar.html), used by the
+   Robot Spotlight and Bento layouts. */
+.team-titlebar {
+    background: linear-gradient(135deg, rgba(90, 0, 0, 0.92) 0%, rgba(128, 0, 0, 0.86) 100%),
+        var(--team-hero-image) center/cover;
+    color: #fff;
+    padding: 6rem var(--spacing-md) var(--spacing-md);
+    border-bottom: 4px solid var(--accent-gold);
+}
+
+.team-titlebar-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+}
+
+.team-titlebar h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -1px;
+    margin: 0;
+    background: linear-gradient(135deg, #fff 0%, #ffd700 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.team-titlebar p {
+    margin: 0.5rem 0 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.team-titlebar .identity-bar {
+    margin: 0;
+    justify-content: flex-end;
+}
+
 /* --- SEASON SWITCHER --- */
 
 .season-switcher {

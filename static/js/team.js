@@ -46,6 +46,7 @@
     // --- live panels -------------------------------------------------------
 
     function fillSkills(panel, data) {
+        if (!panel) return;
         const skills = data.skills;
         if (!skills) {
             drop(panel);
@@ -199,6 +200,29 @@
             list.appendChild(buildResultRow(event, photosByEvent[event.name]));
         });
         section.removeAttribute('hidden');
+    }
+
+    // --- bento tiles -------------------------------------------------------
+
+    // The Bento layout's two live tiles; each one is dropped when its data is missing
+    // and the tiles around it grow into the space.
+    function fillBentoTile(tile, data) {
+        if (tile.dataset.bentoLive === 'skills') {
+            const skills = data.skills;
+            if (!skills) return drop(tile);
+            setText(tile, 'combined', skills.combined);
+            setText(tile, 'rank', skills.rank ? 'Rank #' + skills.rank + ' · ' + trendText(data.trend) : 'Combined score');
+        } else {
+            const events = (data.events || []).slice().sort(function (a, b) {
+                return (b.start || '').localeCompare(a.start || '');
+            });
+            const latest = events[0];
+            if (!latest) return drop(tile);
+            setText(tile, 'event', latest.name || 'Competition');
+            const parts = [recordLine(latest.record)].concat(latest.awards || []).filter(Boolean);
+            setText(tile, 'record', parts.join(' · ') || shortDate(latest.start));
+        }
+        tile.removeAttribute('hidden');
     }
 
     // --- season timeline ---------------------------------------------------
@@ -380,11 +404,15 @@
         const panel = document.getElementById('skills-panel');
         const band = document.getElementById('scoreboard-band');
         const results = document.getElementById('results-section');
-        if (!panel && !band && !results) return;
+        const tiles = Array.from(document.querySelectorAll('[data-bento-live]'));
+        const live = [panel, band, results].concat(tiles);
+        if (!panel && !band && !results && !tiles.length) return;
 
-        const url = panel && panel.dataset.liveUrl;
+        // The skills panel carries the URL; the Bento layout has a skills tile instead.
+        const source = document.querySelector('[data-live-url]');
+        const url = source && source.dataset.liveUrl;
         if (!url) {
-            [panel, band, results].forEach(drop);
+            live.forEach(drop);
             return;
         }
 
@@ -405,17 +433,18 @@
             })
             .then(function (data) {
                 if (!data) {
-                    [panel, band, results].forEach(drop);
+                    live.forEach(drop);
                     return;
                 }
                 fillSkills(panel, data);
                 fillScoreboard(band, data);
                 fillResults(results, data, photosByEvent);
                 fillTimeline(document.querySelector('[data-timeline]'), data);
+                tiles.forEach(function (tile) { fillBentoTile(tile, data); });
             })
             .catch(function () {
                 // An unreachable endpoint must leave no empty frames behind.
-                [panel, band, results].forEach(drop);
+                live.forEach(drop);
             });
     }
 
