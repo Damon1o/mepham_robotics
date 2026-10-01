@@ -39,6 +39,11 @@ BASE_URL = SITE_URL + '/api/v2'
 PROGRAM_V5RC = 1
 REQUEST_TIMEOUT = 2.5
 
+
+def team_url(team_number):
+    """The team's public profile page. Needs no API key."""
+    return f'{SITE_URL}/teams/V5RC/{team_number}'
+
 # How long a cached payload counts as fresh.
 FRESHNESS = {
     'skills': datetime.timedelta(minutes=30),
@@ -401,7 +406,7 @@ def team_summary(db, team_number, season_id=None):
         'awards': awards,
         'fetched_at': fetched_at.isoformat() if fetched_at else None,
         'stale': bool(skills_stale or events_stale or awards_stale),
-        'profile_url': f'{SITE_URL}/teams/V5RC/{team_number}',
+        'profile_url': team_url(team_number),
     }
 
 

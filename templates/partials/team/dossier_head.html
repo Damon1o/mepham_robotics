@@ -1,0 +1,10 @@
+{#- Dossier header: a slim file cover with the team's number as the file name. -#}
+<header class="dossier-head" style="--team-hero-image: url('{{ get_image_url(team.hero_image) }}')">
+    <div class="dossier-head-inner">
+        <span class="dossier-file">Team file{% if active_season %} · {{ active_season }}{% endif %}</span>
+        <h1>{{ team_name }}</h1>
+        <p>{{ team.nickname or site.teams.default_tagline }}</p>
+    </div>
+</header>
+
+{% include "partials/team/breadcrumb.html" %}

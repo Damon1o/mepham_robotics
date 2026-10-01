@@ -155,6 +155,7 @@ STYLE_ALLOWED = {
     'hero.html': ['--team-hero-image'],  # partials/team/hero.html
     'title_bar.html': ['--team-hero-image'],  # partials/team/title_bar.html
     'crew_header.html': ['--team-hero-image'],  # partials/team/crew_header.html
+    'dossier_head.html': ['--team-hero-image'],  # partials/team/dossier_head.html
     'site_macros.html': ['--hero-image'],
     'awards_grid.html': ['grid-column: 1 / -1'],
 }

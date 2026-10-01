@@ -1,0 +1,51 @@
+{#- Dossier rail: the quick facts a judge or scout looks for, all from stored data.
+    Each block hides itself when the team has nothing for it. -#}
+{% set top_award = team_awards|first if team_awards else none %}
+<div class="dossier-card">
+    <h2 class="dossier-card-title">Profile</h2>
+    <dl class="dossier-facts dossier-facts--profile">
+        {% if team.division %}<div><dt>Division</dt><dd>{{ team.division }}</dd></div>{% endif %}
+        {% if active_season %}<div><dt>Season</dt><dd>{{ active_season }}</dd></div>{% endif %}
+        <div><dt>Members</dt><dd>{{ team.members|length }}</dd></div>
+        <div><dt>Awards</dt><dd>{{ award_total }}</dd></div>
+        {% if team.worlds_appearances %}<div class="dossier-fact--gold"><dt>Worlds</dt><dd>{{ team.worlds_appearances }}&times;</dd></div>{% endif %}
+        {% if team.since %}<div><dt>Since</dt><dd>{{ team.since }}</dd></div>{% endif %}
+    </dl>
+    {% if top_award %}
+    <p class="dossier-honor">
+        <span class="dossier-honor-label">Top honor</span>
+        {{ top_award.title }}{% if top_award.count and top_award.count > 1 %} &times;{{ top_award.count }}{% endif %}
+    </p>
+    {% endif %}
+</div>
+
+{% if specs %}
+<div class="dossier-card">
+    <h2 class="dossier-card-title">Robot{% if team.nickname %} · {{ team.nickname }}{% endif %}</h2>
+    <dl class="dossier-facts dossier-facts--specs">
+        {% for label, value in specs %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}
+    </dl>
+</div>
+{% endif %}
+
+{% if seasons|length > 1 %}
+<div class="dossier-card">
+    {% include "partials/team/season_switcher.html" %}
+</div>
+{% endif %}
+
+<div class="dossier-card dossier-links">
+    {% if has_notebook %}
+    <a href="{{ team.notebook_link }}" class="dossier-link" target="_blank" rel="noopener">
+        <i data-lucide="book" aria-hidden="true"></i>Engineering Notebook
+    </a>
+    {% endif %}
+    {% if robotevents_url %}
+    <a href="{{ robotevents_url }}" class="dossier-link" target="_blank" rel="noopener">
+        <i data-lucide="external-link" aria-hidden="true"></i>RobotEvents profile
+    </a>
+    {% endif %}
+    <a href="{{ url_for('contact') }}" class="dossier-link">
+        <i data-lucide="mail" aria-hidden="true"></i>Contact the team
+    </a>
+</div>

@@ -430,9 +430,29 @@
         observer.observe(host);
     }
 
+    // --- dossier rail ------------------------------------------------------
+
+    // The Dossier layout's fact rail sticks below the menu button. A rail taller
+    // than the screen gets a negative offset instead, so it scrolls with the page
+    // until its bottom edge is in view and sticks from there: nothing is cut off.
+    const RAIL_TOP = 96;
+    const RAIL_GAP = 16;
+
+    function initDossierRail() {
+        const rail = document.querySelector('.dossier-rail');
+        if (!rail || !('ResizeObserver' in window)) return;
+        function place() {
+            const top = Math.min(RAIL_TOP, window.innerHeight - rail.offsetHeight - RAIL_GAP);
+            rail.style.setProperty('--rail-top', top + 'px');
+        }
+        new ResizeObserver(place).observe(rail);
+        window.addEventListener('resize', place);
+    }
+
     function boot() {
         loadLiveData();
         initViewer();
+        initDossierRail();
     }
 
     if (document.readyState === 'loading') {

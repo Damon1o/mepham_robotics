@@ -207,6 +207,51 @@ def test_meet_without_members_falls_back_to_classic(client, db, setup):
     assert 'class="hero-image' in body and 'crew-header' not in body
 
 
+# --- 05 Dossier -------------------------------------------------------------
+
+def dossier_page(client, db, setup, **fields):
+    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'dossier', **fields}})
+    return client.get('/team/77628L').data.decode()
+
+
+def rail_of(body):
+    return body[body.index('class="dossier-rail"'):body.index('class="dossier-main"')]
+
+
+def test_dossier_rail_holds_the_quick_facts(client, db, setup):
+    db['awards'].insert_one({'team_number': '77628L', 'title': 'Design Award', 'count': 2, 'sort': 1})
+    body = dossier_page(client, db, setup, division='High School', since=2020, worlds_appearances=1,
+                        specs={'drive_train': 'X-Drive'}, notebook_link='https://example.com/nb')
+    assert 'css/pages/team-layouts/dossier.css' in body
+    assert 'class="dossier-head"' in body and 'class="hero-image' not in body
+    rail = rail_of(body)
+    for fact in ('High School', '2025-26', '>2</dd>', '1&times;', '2020', 'Design Award &times;2', 'X-Drive',
+                 'season-switcher', 'https://example.com/nb', 'https://events.vex.com/teams/V5RC/77628L'):
+        assert fact in rail, fact
+    # Specs, seasons and the notebook live in the rail only, not a second time below.
+    assert 'Technical Specifications' not in body and body.count('season-switcher"') == 1
+    assert body.count('Engineering Notebook') == 1
+
+
+def test_dossier_main_column_order(client, db, setup, monkeypatch):
+    monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'x')
+    body = dossier_page(client, db, setup, journey=[{'date': 'Sep 2025', 'title': 'Kickoff'}])
+    assert 'id="skills-panel"' in rail_of(body)
+    main = body[body.index('class="dossier-main"'):]
+    order = [main.index(marker) for marker in
+             ('Competition Awards', 'id="scoreboard-band"', 'id="results-section"', 'id="team"',
+              'robot-showcase', 'Kickoff', 'teamcta-band')]
+    assert order == sorted(order)
+    assert body.count('Competition Awards') == 1
+
+
+def test_dossier_rail_skips_what_a_team_lacks(client, db, setup):
+    rail = rail_of(dossier_page(client, db, setup))
+    for missing in ('Division', 'Worlds', 'Since', 'Top honor', 'title">Robot', 'Engineering Notebook'):
+        assert missing not in rail, missing
+    assert '>Members</dt>' in rail and 'RobotEvents profile' in rail
+
+
 # --- saving -----------------------------------------------------------------
 
 def test_member_picks_layout_for_one_season_only(client, db, setup, monkeypatch):
