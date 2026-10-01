@@ -432,6 +432,33 @@
     color: #bbb;
 }
 
+/* --- AWARDS --- */
+
+.awards-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-light);
+    padding: 2rem;
+}
+
+/* Every award category shows on the team page; ones still at ×0 sit greyed out,
+   with no lift, tilt or shimmer, as spots left to earn. */
+.team-awards .award-box.is-zero {
+    filter: grayscale(1);
+    opacity: 0.45;
+    box-shadow: none;
+}
+
+.team-awards .award-box.is-zero:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.team-awards .award-box.is-zero::after,
+.team-awards .award-box.is-zero:hover::before {
+    display: none;
+}
+
 /* --- RESPONSIVE --- */
 
 @media (max-width: 700px) {

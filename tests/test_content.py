@@ -149,15 +149,13 @@ def test_error_pages_have_a_heading_and_the_theme(client):
 
 # --- Inline CSS and dead JS ---------------------------------------------------------------
 
-# Dynamic values passed as custom properties are the documented exception, and
-# the awards grid partial is protected from edits.
+# Dynamic values passed as custom properties are the documented exception.
 STYLE_ALLOWED = {
     'hero.html': ['--team-hero-image'],  # partials/team/hero.html
     'title_bar.html': ['--team-hero-image'],  # partials/team/title_bar.html
     'crew_header.html': ['--team-hero-image'],  # partials/team/crew_header.html
     'dossier_head.html': ['--team-hero-image'],  # partials/team/dossier_head.html
     'site_macros.html': ['--hero-image'],
-    'awards_grid.html': ['grid-column: 1 / -1'],
 }
 
 
