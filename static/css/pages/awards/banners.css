@@ -1,0 +1,211 @@
+/* Competition Awards design: Rafter Banners (Scoreboard, Season Timeline). Championship
+   banners hanging from the gym rafters. Every banner is the same height, so the rafter
+   beams are drawn once as a repeating background on the grid and span the full width
+   above every row. The gym is dark in both themes. Loaded after team.css. */
+
+.team-awards--banners {
+    container-type: inline-size;
+}
+
+.rafters {
+    --gym-ceiling: #141414;
+    --gym-ceiling-light: #2c2c2c;
+    --beam: #555;
+    --beam-light: #8a8a8a;
+    --banner-cloth: #6a0000;
+    --banner-cloth-dark: #4a0000;
+    --banner-trim: #ffd700;
+    --banner-width: 150px;
+    --banner-height: 300px;
+    --beam-height: 8px;
+    --row-gap: 34px;
+    position: relative;
+    max-width: 1200px;
+    margin: 2rem auto 0;
+    padding: 20px clamp(12px, 3vw, 32px) 34px;
+    background: linear-gradient(to bottom, var(--gym-ceiling) 0%, var(--gym-ceiling-light) 100%);
+    border: 3px solid #1a1a1a;
+    border-radius: 18px;
+    box-shadow: inset 0 18px 40px rgba(0, 0, 0, 0.6), 10px 10px 0px rgba(148, 69, 71, 0.2);
+    overflow: hidden;
+}
+
+.banner-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, var(--banner-width));
+    grid-auto-rows: var(--banner-height);
+    justify-content: center;
+    column-gap: 22px;
+    row-gap: var(--row-gap);
+    background: repeating-linear-gradient(to bottom,
+            var(--beam-light) 0 2px,
+            var(--beam) 2px var(--beam-height),
+            transparent var(--beam-height) calc(var(--banner-height) + var(--row-gap)));
+}
+
+/* Balanced rows once five banners fit side by side. */
+@container (min-width: 880px) {
+    .banner-rows {
+        grid-template-columns: repeat(var(--banner-cols, 5), var(--banner-width));
+        column-gap: 32px;
+    }
+}
+
+/* --- BANNER --- */
+
+.banner {
+    --banner-edge: var(--banner-trim);
+    position: relative;
+    margin-top: calc(var(--beam-height) + 10px);
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    justify-items: center;
+    align-content: start;
+    gap: 6px;
+    padding: 22px 12px 54px;
+    background:
+        linear-gradient(90deg, var(--banner-edge) 0 5px, transparent 5px calc(100% - 5px), var(--banner-edge) calc(100% - 5px)),
+        linear-gradient(to bottom, var(--banner-cloth), var(--banner-cloth-dark));
+    clip-path: polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%);
+    text-align: center;
+    transform-origin: top center;
+    animation: banner-sway 6s ease-in-out infinite alternate;
+    filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.5));
+}
+
+.banner:nth-child(even) {
+    animation-duration: 7.5s;
+    animation-direction: alternate-reverse;
+}
+
+/* The two wires the banner hangs from. */
+.banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 18%;
+    right: 18%;
+    height: 6px;
+    background: var(--banner-trim);
+}
+
+/* The gold stripe across the foot of the banner. */
+.banner::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    right: 5px;
+    bottom: calc(14% + 12px);
+    height: 5px;
+    background: var(--banner-trim);
+}
+
+.banner-icon {
+    width: 58px;
+    height: 58px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}
+
+.banner-count {
+    color: var(--banner-trim);
+    font-family: 'Space Mono', monospace;
+    font-size: 3.6rem;
+    font-weight: 700;
+    line-height: 1;
+    text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+}
+
+.banner-title {
+    align-self: start;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    overflow-wrap: break-word;
+    hyphens: auto;
+}
+
+/* The award's border color runs down both edges of the banner. */
+.banner--gold { --banner-edge: #ffd700; }
+.banner--purple { --banner-edge: #a855f7; }
+.banner--red { --banner-edge: #ef4444; }
+.banner--green { --banner-edge: #22c55e; }
+.banner--blue { --banner-edge: #3b82f6; }
+.banner--yellow { --banner-edge: #eab308; }
+.banner--grey { --banner-edge: #94a3b8; }
+
+/* Shimmer awards: a gold thread that catches the light. */
+.banner--shimmer .banner-count {
+    background: linear-gradient(110deg, var(--banner-trim) 35%, #fff6c4 50%, var(--banner-trim) 65%);
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* A text-shadow would show through the clipped fill; shadow the glyphs instead. */
+    text-shadow: none;
+    filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.45));
+    animation: banner-thread 3.5s linear infinite;
+}
+
+/* Not won yet: a faded grey banner still waiting for its year. */
+.banner.is-zero {
+    filter: grayscale(1);
+    opacity: 0.4;
+    animation: none;
+}
+
+@keyframes banner-sway {
+    from { transform: rotate(-1.2deg); }
+    to { transform: rotate(1.2deg); }
+}
+
+@keyframes banner-thread {
+    from { background-position: 120% 0; }
+    to { background-position: -20% 0; }
+}
+
+/* --- NARROW --- */
+
+/* Two banners a row on phones. */
+@container (max-width: 420px) {
+    .rafters {
+        --banner-width: 132px;
+        --banner-height: 270px;
+    }
+
+    .banner-rows {
+        column-gap: 16px;
+    }
+
+    .banner-icon {
+        width: 48px;
+        height: 48px;
+    }
+
+    .banner-count {
+        font-size: 3rem;
+    }
+
+    .banner-title {
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .banner,
+    .banner--shimmer .banner-count {
+        animation: none;
+    }
+}

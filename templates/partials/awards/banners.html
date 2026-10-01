@@ -1,0 +1,36 @@
+{#- Rafter Banners: championship banners hanging from the gym rafters. Each award is a
+    tall maroon pennant trimmed in gold, its icon on top, the count set huge and the
+    title across the bottom; the award's border color runs down the banner's edges.
+    Shimmer awards get a gold thread that catches the light. Awards not won yet hang
+    at the end as faded grey banners. -#}
+{% set earned = team_awards|selectattr('count')|list %}
+{#- Banners spread evenly across the rafters: at most five a row, as few rows as that
+    allows (8 awards make two rows of 4, not 5 and 3). -#}
+{% set rows = ((team_awards|length + 4) // 5) or 1 %}
+{% set per_row = (team_awards|length + rows - 1) // rows %}
+<section class="award-container team-awards team-awards--banners fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">Competition Awards</h2>
+    </div>
+
+    {% if team_awards %}
+    <div class="rafters">
+        <ul class="banner-rows" style="--banner-cols: {{ per_row or 1 }}">
+            {% for award in earned + team_awards|rejectattr('count')|list %}
+            <li class="banner {{ 'banner--' + award.border if award.border else '' }} {{ 'banner--shimmer' if award.shimmer and award.count else '' }} {{ 'is-zero' if not award.count else '' }}">
+                <img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}" alt=""
+                    class="banner-icon" loading="lazy">
+                <span class="banner-count" aria-label="won {{ award.count }} {{ 'time' if award.count == 1 else 'times' }}">{{ award.count if award.count else '&mdash;'|safe }}</span>
+                <span class="banner-title">{{ award.title }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <p class="awards-empty">No awards recorded for this team yet. Check back after our next competition!</p>
+    {% endif %}
+
+    <div class="text-center mt-lg">
+        <a href="{{ url_for('achievements') }}" class="cta-button cta-primary">View All Achievements</a>
+    </div>
+</section>
