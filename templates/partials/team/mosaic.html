@@ -1,0 +1,19 @@
+{#- Magazine photo mosaic from team_mosaic() in api/index.py: 4, 5, 7 or 9 event photos,
+    each sized so the grid fills without holes. Photos open in team.js's lightbox. -#}
+{% if mosaic %}
+<section class="mag-mosaic-section fade-in-section" aria-labelledby="mosaic-title">
+    <div class="text-center">
+        <h2 id="mosaic-title" class="ripple">From the Field</h2>
+    </div>
+    <div class="mag-mosaic mag-mosaic--{{ mosaic|length }}">
+        {% for photo, event in mosaic %}
+        <button type="button" class="mag-tile" data-lightbox="{{ get_image_url(photo) }}"
+            aria-label="Open photo from {{ event }}">
+            <img src="{{ get_image_url(photo) }}" alt="" loading="lazy">
+            <span class="mag-tile-caption">{{ event }}</span>
+            {% if loop.last and mosaic_more %}<span class="mag-more">+{{ mosaic_more }}</span>{% endif %}
+        </button>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}

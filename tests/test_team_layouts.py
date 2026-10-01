@@ -354,6 +354,47 @@ def test_timeline_without_a_story_falls_back_to_classic(client, db, setup):
     assert body.count('Competition Awards') == 1
 
 
+# --- 08 Magazine ------------------------------------------------------------
+
+def magazine_page(client, db, setup, **fields):
+    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'magazine', **fields}})
+    return client.get('/team/77628L').data.decode()
+
+
+def test_mosaic_takes_events_in_turn_and_trims_to_a_full_grid():
+    team = {'events': [{'name': 'A', 'photos': ['a1', 'a2', 'a3', 'a4', 'a5']},
+                       {'name': 'B', 'photos': ['b1', 'b2']},
+                       {'name': '', 'photos': ['x']},  # nameless galleries are skipped
+                       {'name': 'C', 'photos': ['c1']}]}
+    photos, more = app_module.team_mosaic(team)
+    assert [p for p, _ in photos] == ['a1', 'b1', 'c1', 'a2', 'b2', 'a3', 'a4']
+    assert photos[2] == ('c1', 'C') and more == 1
+    for count, shown in ((3, 0), (4, 4), (6, 5), (8, 7), (12, 9)):
+        photos, more = app_module.team_mosaic({'events': [{'name': 'E', 'photos': ['p'] * count}]})
+        assert (len(photos), more) == (shown, count - shown if shown else 0), count
+
+
+def test_magazine_reads_like_a_feature(client, db, setup):
+    body = magazine_page(client, db, setup, nickname='Gearheads', tagline='Built in the basement',
+                         events=[{'name': 'States', 'photos': ['static/a.png'] * 6}])
+    assert 'css/pages/team-layouts/magazine.css' in body
+    assert 'class="mag-head"' in body and 'class="hero-image' not in body
+    order = [body.index(marker) for marker in
+             ('class="mag-head"', 'class="mag-quote', 'mag-mosaic--5', 'Competition Awards', 'id="team"',
+              'teamcta-band')]
+    assert order == sorted(order)
+    quote = body[body.index('class="mag-quote'):body.index('</figure>', body.index('class="mag-quote'))]
+    assert 'Built in the basement' in quote and 'Gearheads' in quote
+    assert body.count('class="mag-tile"') == 5 and '>+1<' in body
+    assert body.count('Competition Awards') == 1
+
+
+def test_magazine_skips_the_mosaic_under_four_photos(client, db, setup):
+    body = magazine_page(client, db, setup, events=[{'name': 'States', 'photos': ['static/a.png'] * 3}])
+    assert 'class="mag-head"' in body and 'mag-mosaic' not in body
+    assert 'Build. Code. Compete.' in body  # the quote falls back to the site tagline
+
+
 # --- saving -----------------------------------------------------------------
 
 def test_member_picks_layout_for_one_season_only(client, db, setup, monkeypatch):
