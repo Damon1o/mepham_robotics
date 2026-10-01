@@ -156,6 +156,7 @@ STYLE_ALLOWED = {
     'crew_header.html': ['--team-hero-image'],  # partials/team/crew_header.html
     'dossier_head.html': ['--team-hero-image'],  # partials/team/dossier_head.html
     'site_macros.html': ['--hero-image'],
+    'shelf.html': ['--trophy-cols'],  # partials/awards/shelf.html
 }
 
 

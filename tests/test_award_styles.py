@@ -29,7 +29,7 @@ def page(client, db, layout):
 
 def boxes(body):
     """(classes, title) for each award box, in page order."""
-    return re.findall(r'class="(?:award-box|plaque-line) ([^"]*)">.*?class="(?:award-title|plaque-title)">([^<]+)<',
+    return re.findall(r'class="(?:award-box|plaque-line|trophy) ([^"]*)">.*?class="(?:award-title|plaque-title|trophy-title)">([^<]+)<',
                       body, re.S)
 
 
@@ -134,3 +134,29 @@ def test_plaque_shimmer_only_on_won_awards(client, db, team):
     lines = dict((title, classes.split()) for classes, title in boxes(page(client, db, 'dossier')))
     assert 'plaque-line--shimmer' in lines['Excellence Award']
     assert 'plaque-line--shimmer' not in lines['Judges Award']
+
+
+# --- Trophy Shelf -------------------------------------------------------------
+
+@pytest.mark.parametrize('layout', ['spotlight', 'magazine'])
+def test_shelf_puts_trophies_on_shelves(client, db, team, layout):
+    body = page(client, db, layout)
+    assert 'css/pages/awards/shelf.css' in body and 'class="trophy-case"' in body
+    assert 'awards-grid' not in body
+    assert [title for _, title in boxes(body)] == ['Think Award', 'Design Award', 'Excellence Award', 'Judges Award']
+    plates = re.findall(r'class="trophy-plate" aria-label="([^"]+)">([^<]+)<', body)
+    assert plates == [('won 1 time', '×1'), ('won 2 times', '×2'), ('won 3 times', '×3'),
+                      ('won 0 times', '&mdash;')]
+
+
+def test_shelf_spotlight_only_on_won_awards(client, db, team):
+    db['awards'].update_many({}, {'$set': {'shimmer': True, 'border': 'gold'}})
+    trophies = {title: classes.split() for classes, title in boxes(page(client, db, 'magazine'))}
+    assert 'trophy--spotlit' in trophies['Excellence Award'] and 'trophy--gold' in trophies['Excellence Award']
+    assert 'trophy--spotlit' not in trophies['Judges Award']
+
+
+def test_shelf_with_no_awards(client, db, team):
+    db['awards'].delete_many({})
+    body = page(client, db, 'magazine')
+    assert 'No awards recorded for this team yet' in body and 'class="trophy-case"' not in body
