@@ -1,0 +1,34 @@
+{#- 10 Compact Card: everything important in about one screen. The title bar, then one
+    card holding the awards, the roster as name chips and link buttons for results,
+    the notebook and other seasons. No live panels and no 3D viewer, so the page makes
+    no RobotEvents requests at all. -#}
+{% set other_seasons = seasons|reject('equalto', active_season)|list %}
+{% include "partials/team/title_bar.html" %}
+<article class="cc-card fade-in-section">
+    {% include "partials/team/awards.html" %}
+    {% include "partials/team/roster_chips.html" %}
+    {% if robotevents_url or has_notebook or other_seasons %}
+    <nav class="cc-links" aria-label="More about this team">
+        {% if robotevents_url %}
+        <a class="cc-link" href="{{ robotevents_url }}" target="_blank" rel="noopener">
+            <i data-lucide="trophy" aria-hidden="true"></i>Results on RobotEvents</a>
+        {% endif %}
+        {% if has_notebook %}
+        <a class="cc-link" href="{{ team.notebook_link }}" target="_blank" rel="noopener">
+            <i data-lucide="book" aria-hidden="true"></i>Engineering Notebook</a>
+        {% endif %}
+        {% for season in other_seasons %}
+        <a class="cc-link cc-link--season" href="{{ url_for('team_page', team_number=team.team_number, season=season) }}">
+            <i data-lucide="calendar" aria-hidden="true"></i>{{ season }} season</a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+    {% if specs %}
+    <dl class="cc-specs">
+        {% for label, value in specs %}
+        <div class="cc-spec"><dt>{{ label }}</dt><dd>{{ value }}</dd></div>
+        {% endfor %}
+    </dl>
+    {% endif %}
+</article>
+{% include "partials/team/join_cta.html" %}

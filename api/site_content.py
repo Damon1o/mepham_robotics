@@ -53,6 +53,7 @@ TEAM_LAYOUTS = {
     'timeline': 'Season Timeline',
     'magazine': 'Magazine',
     'bento': 'Bento Dashboard',
+    'compact': 'Compact Card',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
 FUNDRAISERS_MAX = 20
