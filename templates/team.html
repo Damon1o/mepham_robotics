@@ -16,6 +16,9 @@ members, competition results, and season goals.{% endif %}{% endblock %}
 {% if award_style != 'classic' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/awards/' ~ award_style ~ '.css') }}">
 {% endif %}
+{% if award_style == 'plaque' %}
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap">
+{% endif %}
 {% endblock %}
 
 {% block page_scripts %}

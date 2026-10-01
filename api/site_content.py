@@ -63,6 +63,8 @@ LAYOUT_AWARD_STYLES = {
     'meet': 'mosaic',
     'tabs': 'mosaic',
     'bento': 'mosaic',
+    'dossier': 'plaque',
+    'compact': 'plaque',
 }
 FUNDRAISERS_MAX = 20
 MONEY_MAX = 1_000_000

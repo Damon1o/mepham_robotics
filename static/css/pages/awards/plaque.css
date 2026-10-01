@@ -1,0 +1,236 @@
+/* Competition Awards design: Honor Plaque (Dossier, Compact Card). A brass plate on a
+   walnut board. The plaque is a physical object, so it keeps its brass and wood in
+   dark mode too. Loaded after team.css. */
+
+.team-awards--plaque {
+    --plaque-wood: #4a2412;
+    --plaque-wood-light: #6b3a1f;
+    --plaque-brass: #e3bc5c;
+    --plaque-brass-dark: #a8781f;
+    --plaque-brass-light: #f6dc92;
+    --plaque-engrave: #3d2706;
+    --plaque-leader: rgba(61, 39, 6, 0.45);
+    --plaque-font: 'Cinzel', Georgia, 'Times New Roman', serif;
+}
+
+.plaque {
+    position: relative;
+    max-width: 760px;
+    margin: 2rem auto 0;
+    padding: clamp(14px, 3vw, 26px);
+    background:
+        repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.07) 0 2px, transparent 2px 9px),
+        linear-gradient(135deg, var(--plaque-wood-light), var(--plaque-wood));
+    border: 3px solid var(--text-dark);
+    border-radius: 18px;
+    box-shadow: 10px 10px 0px rgba(148, 69, 71, 0.2);
+}
+
+.plaque-plate {
+    position: relative;
+    padding: clamp(18px, 4vw, 34px) clamp(16px, 4vw, 40px);
+    background: linear-gradient(160deg, var(--plaque-brass-light) 0%, var(--plaque-brass) 30%,
+            var(--plaque-brass-dark) 70%, var(--plaque-brass) 100%);
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 2px rgba(61, 39, 6, 0.35), inset 0 0 0 7px rgba(255, 255, 255, 0.18),
+        0 3px 6px rgba(0, 0, 0, 0.45);
+    color: var(--plaque-engrave);
+    overflow: hidden;
+}
+
+/* Screw heads in the plate's corners. */
+.plaque-plate::before,
+.plaque-plate::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, var(--plaque-brass-light), var(--plaque-brass-dark));
+    box-shadow: inset 0 0 0 1px rgba(61, 39, 6, 0.5);
+}
+
+.plaque-plate::before {
+    left: 10px;
+}
+
+.plaque-plate::after {
+    right: 10px;
+}
+
+/* --- HEADING --- */
+
+.plaque-head {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    margin: 0 0 1rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 2px solid var(--plaque-leader);
+    font-family: var(--plaque-font);
+    text-align: center;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.plaque-kicker {
+    font-size: 0.8rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.plaque-name {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* --- LINES --- */
+
+.plaque-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.55rem;
+}
+
+.plaque-line {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.8rem;
+    font-family: var(--plaque-font);
+    font-weight: 700;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+/* An enamel ring around the icon, in the award's border color. */
+.plaque-medallion {
+    --plaque-enamel: var(--maroon-dark);
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff8e1 55%, transparent 57%), var(--plaque-enamel);
+    box-shadow: 0 0 0 2px var(--plaque-engrave), 0 2px 3px rgba(0, 0, 0, 0.35);
+}
+
+.plaque-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+}
+
+.plaque-line--gold .plaque-medallion { --plaque-enamel: #d4a800; }
+.plaque-line--purple .plaque-medallion { --plaque-enamel: #8e44ad; }
+.plaque-line--red .plaque-medallion { --plaque-enamel: #c0392b; }
+.plaque-line--green .plaque-medallion { --plaque-enamel: #1e8449; }
+.plaque-line--blue .plaque-medallion { --plaque-enamel: #2e86de; }
+.plaque-line--yellow .plaque-medallion { --plaque-enamel: #d4ac0d; }
+.plaque-line--grey .plaque-medallion { --plaque-enamel: #7f8c8d; }
+
+/* Title, then a dotted leader running to the count. */
+.plaque-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 1.05rem;
+    line-height: 1.25;
+    letter-spacing: 0.04em;
+    overflow-wrap: anywhere;
+}
+
+.plaque-title::after {
+    content: '';
+    flex: 1 0 1.5rem;
+    border-bottom: 2px dotted var(--plaque-leader);
+}
+
+.plaque-count {
+    min-width: 2.5ch;
+    font-size: 1.25rem;
+    letter-spacing: 0.08em;
+    text-align: right;
+}
+
+.plaque-total {
+    margin: 1rem 0 0;
+    padding-top: 0.8rem;
+    border-top: 2px solid var(--plaque-leader);
+    font-family: var(--plaque-font);
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+/* Shimmer awards catch the light as you pass over them. */
+.plaque-line--shimmer::after {
+    content: '';
+    position: absolute;
+    inset: -4px -10px;
+    background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
+    background-size: 250% 100%;
+    background-position: 120% 0;
+    pointer-events: none;
+    transition: background-position 0.9s ease;
+}
+
+.plaque-line--shimmer:hover::after {
+    background-position: -20% 0;
+}
+
+/* Not won yet: engraved but unpolished. */
+.plaque-line.is-zero {
+    opacity: 0.45;
+    filter: grayscale(1);
+}
+
+/* --- PLACEMENT --- */
+
+/* Inside the Dossier column and the Compact card the plaque fills the width. */
+.dossier-main .plaque,
+.cc-card .plaque {
+    max-width: none;
+    margin-top: var(--spacing-md);
+}
+
+@media (max-width: 480px) {
+    .plaque-medallion {
+        width: 36px;
+        height: 36px;
+    }
+
+    .plaque-icon {
+        width: 22px;
+        height: 22px;
+    }
+
+    .plaque-line {
+        gap: 0.55rem;
+    }
+
+    .plaque-title {
+        font-size: 0.92rem;
+        letter-spacing: 0.02em;
+    }
+
+    .plaque-title::after {
+        flex-basis: 0.6rem;
+    }
+
+    .plaque-count {
+        font-size: 1.05rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .plaque-line--shimmer::after {
+        transition: none;
+    }
+}
