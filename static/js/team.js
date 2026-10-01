@@ -201,6 +201,126 @@
         section.removeAttribute('hidden');
     }
 
+    // --- season timeline ---------------------------------------------------
+
+    function shortDate(iso) {
+        const parts = (iso || '').slice(0, 10).split('-').map(Number);
+        if (parts.length !== 3 || !parts[0]) return '';
+        return new Date(parts[0], parts[1] - 1, parts[2])
+            .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function timelineItem(event) {
+        const item = document.createElement('li');
+        item.className = 'tl-item tl-item--event';
+        item.dataset.kind = 'event';
+        item.dataset.name = event.name || 'Competition';
+        item.dataset.when = '';
+
+        const dot = document.createElement('span');
+        dot.className = 'tl-dot';
+        dot.setAttribute('aria-hidden', 'true');
+
+        const card = document.createElement('article');
+        card.className = 'tl-card';
+        const meta = document.createElement('p');
+        meta.className = 'tl-meta';
+        const kind = document.createElement('span');
+        kind.className = 'tl-kind';
+        kind.textContent = 'Competition';
+        meta.appendChild(kind);
+        const title = document.createElement('h3');
+        title.className = 'tl-title';
+        title.textContent = item.dataset.name;
+        const live = document.createElement('div');
+        live.className = 'tl-live';
+        live.dataset.field = 'live';
+
+        card.append(meta, title, live);
+        item.append(dot, card);
+        return item;
+    }
+
+    // Before the first dated entry that comes later; an undated entry goes
+    // before the undated events that close the list.
+    function placeInTimeline(list, item) {
+        const when = item.dataset.when;
+        const next = Array.from(list.children).find(function (other) {
+            if (other === item) return false;
+            if (!when) return !other.dataset.when && other.dataset.kind === 'event';
+            return other.dataset.when ? other.dataset.when > when : other.dataset.kind === 'event';
+        });
+        list.insertBefore(item, next || null);
+    }
+
+    function setTimelineDate(item, iso) {
+        item.dataset.when = iso;
+        const meta = item.querySelector('.tl-meta');
+        let date = meta.querySelector('.tl-date');
+        if (!date) {
+            date = document.createElement('span');
+            date.className = 'tl-date';
+            meta.insertBefore(date, meta.firstChild);
+        }
+        date.textContent = shortDate(iso);
+    }
+
+    // RobotEvents results join the stored timeline: a competition the team already
+    // has a gallery for gains its record and awards; any other one is slotted in by date.
+    function fillTimeline(list, data) {
+        if (!list) return;
+        (data.events || []).forEach(function (event) {
+            const name = (event.name || '').trim().toLowerCase();
+            const when = (event.start || '').slice(0, 10);
+            let item = Array.from(list.children).find(function (other) {
+                return other.dataset.kind === 'event' && other.dataset.name.trim().toLowerCase() === name;
+            });
+            if (!item) {
+                item = timelineItem(event);
+                if (when) setTimelineDate(item, when);
+                placeInTimeline(list, item);
+            } else if (!item.dataset.when && when) {
+                setTimelineDate(item, when);
+                placeInTimeline(list, item);
+            }
+
+            const live = field(item, 'live');
+            if (!live) return;
+            live.textContent = '';
+            if (event.level) {
+                const level = document.createElement('span');
+                level.className = 'tl-level';
+                level.textContent = event.level;
+                live.appendChild(level);
+            }
+            const record = recordLine(event.record);
+            if (record) {
+                const line = document.createElement('span');
+                line.className = 'tl-record';
+                line.textContent = record;
+                live.appendChild(line);
+            }
+            (event.awards || []).forEach(function (title) {
+                const award = document.createElement('span');
+                award.className = 'tl-award';
+                award.textContent = title;
+                live.appendChild(award);
+            });
+            if (live.children.length) live.removeAttribute('hidden');
+            item.classList.add('tl-item--live');
+        });
+    }
+
+    // Server-rendered photo buttons (the timeline's event galleries) open the lightbox too.
+    function initPhotoButtons() {
+        document.addEventListener('click', function (event) {
+            const button = event.target.closest('[data-lightbox]');
+            if (!button) return;
+            const img = button.querySelector('img');
+            openLightbox(button.dataset.lightbox, button.getAttribute('aria-label') || (img && img.alt), button);
+        });
+    }
+
     // --- lightbox ----------------------------------------------------------
 
     let lightbox = null;
@@ -291,6 +411,7 @@
                 fillSkills(panel, data);
                 fillScoreboard(band, data);
                 fillResults(results, data, photosByEvent);
+                fillTimeline(document.querySelector('[data-timeline]'), data);
             })
             .catch(function () {
                 // An unreachable endpoint must leave no empty frames behind.
@@ -547,6 +668,7 @@
 
     function boot() {
         initHub();
+        initPhotoButtons();
         loadLiveData();
         initViewer();
         initDossierRail();

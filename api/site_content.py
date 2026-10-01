@@ -50,6 +50,7 @@ TEAM_LAYOUTS = {
     'meet': 'Meet the Team',
     'dossier': 'Dossier',
     'tabs': 'Tabbed Hub',
+    'timeline': 'Season Timeline',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
 FUNDRAISERS_MAX = 20

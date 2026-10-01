@@ -1,0 +1,39 @@
+{#- Season Timeline spine: journey milestones and the team's events in date order, from
+    team_timeline() in api/index.py. With a RobotEvents key, team.js adds each event's
+    record and awards, and slots in events that have no gallery of their own. -#}
+{% if timeline %}
+<section class="season-timeline fade-in-section" aria-labelledby="timeline-title">
+    <div class="text-center">
+        <h2 id="timeline-title" class="ripple">{{ 'The ' ~ active_season ~ ' Season' if active_season else 'Our Season' }}</h2>
+    </div>
+    <ol class="tl" data-timeline>
+        {% for item in timeline %}
+        <li class="tl-item tl-item--{{ item.kind }}" data-kind="{{ item.kind }}"
+            data-when="{{ item.when.strftime('%Y-%m-%d') if item.when else '' }}" data-name="{{ item.title }}">
+            <span class="tl-dot" aria-hidden="true"></span>
+            <article class="tl-card">
+                <p class="tl-meta">
+                    {% if item.label %}<span class="tl-date">{{ item.label }}</span>{% endif %}
+                    <span class="tl-kind">{{ 'Competition' if item.kind == 'event' else 'Milestone' }}</span>
+                </p>
+                <h3 class="tl-title">{{ item.title }}</h3>
+                {% if item.where %}<p class="tl-where">{{ item.where }}</p>{% endif %}
+                {% if item.text %}<p class="tl-text">{{ item.text }}</p>{% endif %}
+                {% if item.kind == 'event' %}<div class="tl-live" data-field="live" hidden></div>{% endif %}
+                {% if item.photos %}
+                <div class="tl-photos">
+                    {% for photo in item.photos[:4] %}
+                    <button type="button" class="tl-photo" data-lightbox="{{ get_image_url(photo) }}"
+                        aria-label="Open photo {{ loop.index }} from {{ item.title }}">
+                        <img src="{{ get_image_url(photo) }}" alt="" loading="lazy">
+                        {% if loop.last and item.photos|length > 4 %}<span class="tl-more">+{{ item.photos|length - 4 }}</span>{% endif %}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </article>
+        </li>
+        {% endfor %}
+    </ol>
+</section>
+{% endif %}
