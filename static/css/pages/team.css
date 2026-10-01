@@ -997,6 +997,84 @@ body.has-lightbox {
     font-style: italic;
 }
 
+/* With specs, the card and a spec sheet sit side by side as one centred pair;
+   on narrow screens the sheet drops under the card at the same width. */
+.cad-stage--specs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: stretch;
+    gap: var(--spacing-md);
+    max-width: 820px;
+    margin: 0 auto;
+}
+
+.cad-stage--specs .cad-card {
+    margin: 0;
+}
+
+.cad-specs {
+    flex: 0 1 280px;
+    min-width: min(100%, 240px);
+    display: flex;
+    flex-direction: column;
+    padding: 1.1rem 1.2rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 2px solid rgba(255, 255, 255, 0.14);
+    border-radius: 20px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    text-align: left;
+}
+
+.cad-specs-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    margin: 0 0 0.6rem;
+}
+
+.cad-specs dl {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    justify-content: center;
+    margin: 0;
+}
+
+.cad-spec {
+    padding: 0.7rem 0 0.7rem 0.85rem;
+    border-left: 3px solid var(--accent-gold);
+}
+
+.cad-spec + .cad-spec {
+    margin-top: 0.5rem;
+}
+
+.cad-spec dt {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #bbb;
+}
+
+.cad-spec dd {
+    margin: 0.15rem 0 0;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+@media (max-width: 860px) {
+    .cad-specs {
+        flex-basis: min(100%, 480px);
+    }
+}
+
 .viewer-empty {
     text-align: center;
     font-family: 'Space Mono', monospace;

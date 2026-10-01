@@ -233,6 +233,12 @@ def test_dossier_rail_holds_the_quick_facts(client, db, setup):
     assert body.count('Engineering Notebook') == 1
 
 
+def test_dossier_cad_card_leaves_specs_in_the_rail(client, db, setup):
+    body = dossier_page(client, db, setup, stl_path='https://blob.example/robot.stl', specs={'drive_train': 'X-Drive'})
+    assert 'id="robot-viewer"' in body and 'cad-specs' not in body
+    assert body.count('X-Drive') == 1 and 'X-Drive' in rail_of(body)
+
+
 def test_dossier_main_column_order(client, db, setup, monkeypatch):
     monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'x')
     body = dossier_page(client, db, setup, journey=[{'date': 'Sep 2025', 'title': 'Kickoff'}])

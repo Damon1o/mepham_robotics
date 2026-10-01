@@ -4,6 +4,9 @@
     <h2 class="ripple">Our Robot{% if team.nickname %}: "{{ team.nickname }}"{% endif %}</h2>
 
     {% if team.stl_path %}
+    {#- Specs sit beside the model, unless the layout already shows them elsewhere (Dossier's rail). #}
+    {% set specs_here = specs and not specs_in_rail %}
+    <div class="cad-stage{% if specs_here %} cad-stage--specs{% endif %}">
     <figure class="cad-card">
         <div class="viewer-shell">
             <div id="robot-viewer" class="viewer-canvas" data-stl="{{ get_image_url(team.stl_path) }}" role="img"
@@ -25,6 +28,20 @@
             <span class="robot-tagline">"{{ team.tagline or 'Precision. Power. Performance.' }}"</span>
         </figcaption>
     </figure>
+    {% if specs_here %}
+    <div class="cad-specs">
+        <h3 class="cad-specs-title">Technical Specifications</h3>
+        <dl>
+            {% for label, value in specs %}
+            <div class="cad-spec">
+                <dt>{{ label }}</dt>
+                <dd>{{ value }}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </div>
+    {% endif %}
+    </div>
     {% else %}
     {% if robot_photos %}
     <div class="viewer-gallery">
