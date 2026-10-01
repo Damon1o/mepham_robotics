@@ -395,6 +395,58 @@ def test_magazine_skips_the_mosaic_under_four_photos(client, db, setup):
     assert 'Build. Code. Compete.' in body  # the quote falls back to the site tagline
 
 
+# --- 09 Bento Dashboard -----------------------------------------------------
+
+def bento_page(client, db, setup, **fields):
+    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'bento', **fields}})
+    return client.get('/team/77628L').data.decode()
+
+
+def bento_of(body):
+    return body[body.index('<section class="bento'):body.index('</section>', body.index('<section class="bento'))]
+
+
+def test_bento_sums_up_the_season_from_stored_data(client, db, setup, monkeypatch):
+    monkeypatch.delenv('ROBOTEVENTS_API_KEY', raising=False)
+    monkeypatch.delenv('ROBOTEVENTS_TOKEN', raising=False)
+    db['awards'].insert_many([
+        {'team_number': '77628L', 'title': 'Excellence Award', 'count': 2, 'sort': 1},
+        {'team_number': '77628L', 'title': 'Think Award', 'count': 1, 'sort': 2}])
+    body = bento_page(client, db, setup, since=2019, worlds_appearances=2,
+                      goals=[{'name': 'Win States', 'progress': 100}, {'name': 'Notebook', 'progress': 40}],
+                      journey=[{'date': 'Sep', 'title': 'Kickoff'}, {'date': 'Jan', 'title': 'First win'}],
+                      events=[{'name': 'States', 'photos': ['static/a.png']}])
+    assert 'css/pages/team-layouts/bento.css' in body
+    assert 'team-titlebar' in body and 'class="hero-image' not in body
+    bento = bento_of(body)
+    assert 'bento-feature--photo' in bento  # the robot photo leads; awards move into the cluster
+    assert '>3</span>' in bento and 'Excellence Award &times;2' in bento
+    assert 'stroke-dasharray="100 100"' in bento and 'stroke-dasharray="40 100"' in bento
+    assert 'First win' in bento and 'Kickoff' not in bento  # only the latest milestone
+    assert '2&times;' in bento and '2019' in bento
+    assert 'data-bento-live' not in bento  # no RobotEvents key, no live tiles
+    assert 'Season Goals</h2>' not in body  # the rings stand in for the bars
+    order = [body.index(marker) for marker in ('<section class="bento', 'Competition Awards', 'id="team"')]
+    assert order == sorted(order)
+    assert body.count('Competition Awards') == 1
+
+
+def test_bento_live_tiles_carry_the_live_url(client, db, setup, monkeypatch):
+    monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'x')
+    db['awards'].insert_one({'team_number': '77628L', 'title': 'Think Award', 'count': 1, 'sort': 1})
+    bento = bento_of(bento_page(client, db, setup, since=2019))
+    assert 'bento-feature--awards' in bento  # no photo: the awards count is the feature
+    assert 'data-bento-live="skills"' in bento and 'data-live-url="/api/team/77628L/live' in bento
+    assert 'data-bento-live="latest"' in bento
+
+
+def test_thin_bento_falls_back_to_classic(client, db, setup):
+    body = bento_page(client, db, setup, since=2019)  # members + since: two tiles
+    assert 'data-layout="bento"' in body
+    assert 'class="hero-image' in body and 'class="bento' not in body
+    assert body.count('Competition Awards') == 1
+
+
 # --- saving -----------------------------------------------------------------
 
 def test_member_picks_layout_for_one_season_only(client, db, setup, monkeypatch):

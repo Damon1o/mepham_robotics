@@ -52,6 +52,7 @@ TEAM_LAYOUTS = {
     'tabs': 'Tabbed Hub',
     'timeline': 'Season Timeline',
     'magazine': 'Magazine',
+    'bento': 'Bento Dashboard',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
 FUNDRAISERS_MAX = 20

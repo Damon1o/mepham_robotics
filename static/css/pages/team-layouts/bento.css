@@ -1,0 +1,315 @@
+/* Team page layout 09: Bento Dashboard. Loaded after team.css (which styles the title bar). */
+
+/* --- GRID --- */
+
+/* The feature tile spans the cluster's full height; cluster tiles grow to fill each
+   row, so whichever tiles a team has, there are no holes. */
+.bento {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: var(--spacing-sm);
+    padding-top: var(--spacing-md);
+}
+
+.bento--flat {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.bento-cluster {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    align-content: stretch;
+}
+
+.bento-feature,
+.bento-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.35rem;
+    min-width: 0;
+    padding: var(--spacing-sm) 1.1rem;
+    border: 3px solid var(--text-dark);
+    border-radius: 18px;
+    background: #fff;
+    color: var(--text-dark);
+    box-shadow: 6px 6px 0px rgba(148, 69, 71, 0.2);
+    text-decoration: none;
+    transition: var(--transition-base);
+}
+
+.bento-tile {
+    flex: 1 1 150px;
+    min-height: 140px;
+}
+
+.bento-tile--wide {
+    flex-basis: 300px;
+}
+
+a.bento-tile:hover,
+a.bento-tile:focus-visible {
+    transform: translate(-3px, -3px);
+    box-shadow: 9px 9px 0px rgba(148, 69, 71, 0.25);
+}
+
+.bento-tile--gold {
+    background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
+    color: var(--ink-on-gold);
+}
+
+.bento-tile--maroon,
+.bento-feature--awards {
+    background: linear-gradient(135deg, var(--maroon-light) 0%, var(--maroon-dark) 100%);
+    color: #fff;
+}
+
+.bento-tile--dark {
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    color: #fff;
+}
+
+.bento-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.8;
+}
+
+.bento-value,
+.bento-big {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 700;
+    line-height: 1;
+}
+
+.bento-big {
+    font-size: clamp(4rem, 10vw, 7.5rem);
+    color: var(--accent-gold);
+}
+
+.bento-latest {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.bento-note {
+    font-size: 0.9rem;
+    line-height: 1.35;
+    opacity: 0.85;
+}
+
+/* --- FEATURE --- */
+
+.bento-feature {
+    min-height: 300px;
+    overflow: hidden;
+    padding: 0;
+}
+
+.bento-feature--awards {
+    padding: var(--spacing-md);
+    justify-content: flex-end;
+}
+
+.bento-feature--photo {
+    margin: 0;
+}
+
+.bento-feature--photo img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.bento-feature--photo figcaption {
+    position: relative;
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    padding: 3rem var(--spacing-md) var(--spacing-md);
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+    color: #fff;
+}
+
+.bento-feature-name {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 700;
+    line-height: 1.05;
+}
+
+.bento-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+/* --- PEOPLE --- */
+
+.bento-faces {
+    display: flex;
+    align-items: center;
+}
+
+.bento-face {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    object-fit: cover;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--maroon-dark);
+    color: var(--accent-gold);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.bento-face + .bento-face {
+    margin-left: -12px;
+}
+
+.bento-face--more {
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+/* --- GOAL RINGS --- */
+
+.bento-rings {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.bento-ring-item {
+    flex: 1 1 70px;
+    max-width: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    text-align: center;
+}
+
+.bento-ring {
+    width: 64px;
+    height: 64px;
+    transform: rotate(-90deg);
+}
+
+.bento-ring circle {
+    fill: none;
+    stroke-width: 3.6;
+}
+
+.bento-ring-track {
+    stroke: rgba(148, 69, 71, 0.18);
+}
+
+.bento-ring-fill {
+    stroke: var(--maroon-dark);
+    stroke-linecap: round;
+}
+
+.is-done .bento-ring-fill {
+    stroke: #2e7d32;
+}
+
+/* The ring is turned so it starts at 12 o'clock; the number turns back. */
+.bento-ring text {
+    transform: rotate(90deg);
+    transform-origin: 18px 18px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    fill: currentColor;
+}
+
+.bento-ring-name {
+    font-size: 0.78rem;
+    line-height: 1.2;
+}
+
+/* --- DARK THEME --- */
+
+[data-theme='dark'] .bento-tile:not(.bento-tile--gold):not(.bento-tile--maroon):not(.bento-tile--dark) {
+    background: #1e1e1e;
+    color: #f1f1f1;
+}
+
+[data-theme='dark'] .bento-feature,
+[data-theme='dark'] .bento-tile {
+    border-color: #444;
+}
+
+[data-theme='dark'] .bento-tile--gold {
+    color: var(--ink-on-gold);
+}
+
+[data-theme='dark'] .bento-ring-track {
+    stroke: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme='dark'] .bento-ring-fill {
+    stroke: #d4a0a1;
+}
+
+[data-theme='dark'] .is-done .bento-ring-fill {
+    stroke: #66bb6a;
+}
+
+/* --- NARROW SCREENS --- */
+
+@media (max-width: 860px) {
+    .bento {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .bento-feature {
+        min-height: 0;
+        aspect-ratio: 16 / 10;
+    }
+
+    .bento-feature--awards {
+        aspect-ratio: auto;
+    }
+
+    .team-titlebar .identity-bar {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    .bento-tile {
+        flex-basis: 130px;
+        min-height: 120px;
+    }
+
+    .bento-tile--wide {
+        flex-basis: 100%;
+    }
+}

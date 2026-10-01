@@ -725,6 +725,18 @@ select[data-member-field] {
         transparent;
 }
 
+/* A tall feature tile on the left, a cluster of mixed tiles on the right. */
+.layout-thumb .lt-bento {
+    flex-grow: 3.4;
+    background:
+        linear-gradient(var(--maroon-light, #944547), var(--maroon-light, #944547)) left top / 32% 100% no-repeat,
+        linear-gradient(var(--admin-gold), var(--admin-gold)) right 37% top / 28% 31% no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) right top / 34% 31% no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) right center / 64% 31% no-repeat,
+        linear-gradient(var(--maroon-dark), var(--maroon-dark)) right 46% bottom / 18% 31% no-repeat,
+        linear-gradient(var(--admin-gold), var(--admin-gold)) right bottom / 44% 31% no-repeat;
+}
+
 /* Big member cards, three to a row, each with a portrait block on top. */
 .layout-thumb .lt-people {
     flex-grow: 1.7;
