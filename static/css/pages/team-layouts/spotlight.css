@@ -38,26 +38,21 @@
     transform: none;
 }
 
-.spotlight-stage .viewer-shell {
-    max-width: none;
+/* The CAD card sits centred in its column, so its heading centres over it. */
+.spotlight-stage .robot-showcase:has(.cad-card) h2 {
+    text-align: center;
 }
 
-.spotlight-stage .viewer-canvas {
-    aspect-ratio: 16 / 10;
-    max-height: 62vh;
-    border-color: var(--accent-gold);
-    box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.45);
-}
-
-.spotlight-stage .viewer-controls {
-    justify-content: flex-start;
+.spotlight-stage .robot-showcase:has(.cad-card) h2::after {
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .spotlight-stage .viewer-empty {
     text-align: left;
 }
 
-.spotlight-stage .robot-tagline {
+.spotlight-stage .robot-showcase > .robot-tagline {
     margin: var(--spacing-md) 0 0;
     font-style: italic;
 }

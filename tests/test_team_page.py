@@ -330,7 +330,8 @@ def test_viewer_rendered_when_stl_present(client, team_factory):
     body = html(client)[1]
     assert 'id="robot-viewer"' in body
     assert 'data-stl="https://blob.example.com/robot.stl"' in body
-    assert 'Reset View' in body
+    assert 'Reset view' in body
+    assert 'class="cad-card"' in body
 
 
 def test_no_viewer_and_no_dead_button_without_stl(client, team_factory):
@@ -347,6 +348,23 @@ def test_photo_gallery_replaces_viewer_when_photos_exist(client, team_factory):
     body = html(client)[1]
     assert 'viewer-gallery' in body
     assert 'CAD model not published' not in body
+
+
+def test_hidden_cad_drops_the_viewer_and_showcase(client, team_factory):
+    team_factory(hide_cad=True)
+    body = html(client)[1]
+    assert 'robot-viewer' not in body
+    assert 'robot.stl' not in body
+    assert 'robot-showcase' not in body
+    assert 'CAD model not published' not in body
+
+
+def test_hidden_cad_falls_back_to_photos(client, team_factory):
+    team_factory(hide_cad=True, events=[{'name': 'States',
+                                         'photos': ['static/assets/photos/hero.png']}])
+    body = html(client)[1]
+    assert 'robot-viewer' not in body
+    assert 'viewer-gallery' in body
 
 
 def test_missing_team_redirects(client):
