@@ -1189,6 +1189,28 @@ def team_timeline(team):
     return sorted(items, key=key)
 
 
+MOSAIC_SIZES = (9, 7, 5, 4)
+
+
+def team_mosaic(team):
+    """Photos for the Magazine layout's mosaic, as (path, event name) pairs, plus how many
+    more the team has.
+
+    Taken one event at a time in turn, so the mosaic is not nine shots of one day. The
+    count is trimmed to a size the mosaic's grid fills with no holes (9, 7, 5 or 4); a
+    team with fewer than 4 photos gets no mosaic.
+    """
+    queues = [[(p, e['name']) for p in e.get('photos') or []]
+              for e in team.get('events') or [] if e.get('name') and e.get('photos')]
+    photos = []
+    while any(queues):
+        for queue in queues:
+            if queue:
+                photos.append(queue.pop(0))
+    size = next((n for n in MOSAIC_SIZES if len(photos) >= n), 0)
+    return photos[:size], len(photos) - size if size else 0
+
+
 def team_layout(team):
     """The layout this team season renders with: its own pick, else the site default.
 
@@ -1243,9 +1265,11 @@ def team_page(team_number):
         # The awards grid builds the icon path from this; a row missing it used to 500 the page.
         award['icon'] = award.get('icon') or AWARD_ICONS[0]
     layout = team_layout(team)
+    mosaic, mosaic_more = team_mosaic(team) if layout == 'magazine' else ([], 0)
     return render_template('team.html', team=team, team_awards=team_awards,
                            event_photos=event_photos, robot_photos=robot_photos,
                            layout=layout, timeline=team_timeline(team) if layout == 'timeline' else [],
+                           mosaic=mosaic, mosaic_more=mosaic_more,
                            robotevents_url=None if is_group(team) else robotevents.team_url(team_number),
                            seasons=seasons, active_season=team.get('season'),
                            live_enabled=bool(robotevents.get_token()) and not is_group(team),

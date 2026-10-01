@@ -1,0 +1,23 @@
+{#- 08 Magazine: a feature story. A split cover (team photo beside the masthead), the
+    tagline pulled out as a big quote, then a photo mosaic from the team's event
+    galleries (hidden under 4 photos). Awards, people, the robot and the journey follow. -#}
+{% include "partials/team/magazine_head.html" %}
+{% include "partials/team/season_switcher.html" %}
+<figure class="mag-quote fade-in-section">
+    <blockquote><p>{{ team.tagline or site.teams.default_tagline }}</p></blockquote>
+    <figcaption>{{ team.nickname or team_name }}</figcaption>
+</figure>
+{% include "partials/team/mosaic.html" %}
+{#- The robot section's photo fallback is the same event photos; the mosaic already has them. -#}
+{% set robot_photos = [] if mosaic else robot_photos %}
+{% include "partials/team/live_skills.html" %}
+{% include "partials/team/scoreboard.html" %}
+{% include "partials/team/awards.html" %}
+{% include "partials/team/results.html" %}
+{% include "partials/team/roster.html" %}
+{% include "partials/team/robot.html" %}
+{% include "partials/team/specs.html" %}
+{% include "partials/team/notebook.html" %}
+{% include "partials/team/goals.html" %}
+{% include "partials/team/journey.html" %}
+{% include "partials/team/join_cta.html" %}

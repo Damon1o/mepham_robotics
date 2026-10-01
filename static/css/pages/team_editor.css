@@ -695,6 +695,36 @@ select[data-member-field] {
         repeating-linear-gradient(180deg, transparent 0 25%, var(--admin-gold) 25% 43%, transparent 43% 50%) right top / 44% 100% no-repeat;
 }
 
+/* Photo on the left half, masthead lines on a maroon right half. */
+.layout-thumb .lt-split {
+    flex-grow: 2.4;
+    background:
+        linear-gradient(#fff, #fff) right 8% bottom 34% / 34% 9% no-repeat,
+        linear-gradient(var(--admin-gold), var(--admin-gold)) right 16% bottom 18% / 26% 7% no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) left / 54% 100% no-repeat,
+        var(--maroon-dark);
+}
+
+/* A short centred quote line between two rules. */
+.layout-thumb .lt-quote {
+    flex-grow: 0.6;
+    background:
+        linear-gradient(var(--maroon-dark), var(--maroon-dark)) center / 60% 34% no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) top / 100% 2px no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) bottom / 100% 2px no-repeat,
+        transparent;
+}
+
+/* One big photo and four small ones. */
+.layout-thumb .lt-mosaic {
+    flex-grow: 2;
+    background:
+        linear-gradient(var(--maroon-light, #944547), var(--maroon-light, #944547)) left / 48% 100% no-repeat,
+        repeating-linear-gradient(90deg, var(--admin-line-strong) 0 46%, transparent 46% 54%) right top / 48% 46% no-repeat,
+        repeating-linear-gradient(90deg, var(--admin-line-strong) 0 46%, transparent 46% 54%) right bottom / 48% 46% no-repeat,
+        transparent;
+}
+
 /* Big member cards, three to a row, each with a portrait block on top. */
 .layout-thumb .lt-people {
     flex-grow: 1.7;

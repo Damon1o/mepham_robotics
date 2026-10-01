@@ -1,0 +1,20 @@
+<!-- MAGAZINE COVER: the team photo on one side, the masthead on the other. Without a
+     hero photo the first event photo stands in; with neither, a maroon cover panel. -->
+{% set cover = team.hero_image|real_photo or (robot_photos[0] if robot_photos else '') %}
+<header class="mag-head">
+    <figure class="mag-cover{{ '' if cover else ' mag-cover--plain' }}">
+        {% if cover %}
+        <img src="{{ get_image_url(cover) }}" alt="{{ team_name }}" class="mag-cover-img">
+        {% else %}
+        <span class="mag-cover-mark" aria-hidden="true">{{ team.team_number }}</span>
+        {% endif %}
+    </figure>
+    <div class="mag-masthead">
+        <p class="mag-kicker">Mepham Robotics{% if active_season %} · {{ active_season }} Season{% endif %}</p>
+        <h1>{{ team_name }}</h1>
+        <p class="mag-dek">{{ team.nickname or site.teams.default_tagline }}</p>
+        {% include "partials/team/identity_bar.html" %}
+    </div>
+</header>
+
+{% include "partials/team/breadcrumb.html" %}

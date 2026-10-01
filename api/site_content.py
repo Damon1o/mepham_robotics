@@ -51,6 +51,7 @@ TEAM_LAYOUTS = {
     'dossier': 'Dossier',
     'tabs': 'Tabbed Hub',
     'timeline': 'Season Timeline',
+    'magazine': 'Magazine',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
 FUNDRAISERS_MAX = 20
