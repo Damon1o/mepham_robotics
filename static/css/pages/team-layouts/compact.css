@@ -1,0 +1,253 @@
+/* Team page layout 10: Compact Card. Loaded after team.css (which styles the title bar). */
+
+/* --- CARD --- */
+
+.cc-card {
+    width: min(1200px, calc(100% - 2 * var(--spacing-md)));
+    margin: var(--spacing-md) auto var(--spacing-lg);
+    padding: var(--spacing-md) clamp(var(--spacing-sm), 3vw, var(--spacing-lg)) var(--spacing-lg);
+    background: #fff;
+    border: 3px solid var(--text-dark);
+    border-radius: 24px;
+    box-shadow: 10px 10px 0px rgba(148, 69, 71, 0.2);
+}
+
+/* Sections inside the card drop their own page padding. */
+.cc-card > section {
+    padding: 0;
+    max-width: none;
+}
+
+/* The card is narrower than the page, so columns are counted from a 270px floor,
+   the narrowest box an award title fits without breaking mid-word. */
+.cc-card .awards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+    margin: var(--spacing-md) 0 0;
+}
+
+.cc-card .team-awards {
+    background: none;
+}
+
+/* Section headings inside the card are card headings: smaller, left, no underline. */
+.cc-card .team-awards .text-center {
+    text-align: left;
+}
+
+.cc-card .team-awards h2,
+.cc-heading {
+    margin: var(--spacing-lg) 0 var(--spacing-sm);
+    font-size: clamp(1.4rem, 3vw, 1.8rem);
+    text-align: left;
+}
+
+.cc-card .team-awards h2 {
+    margin-top: 0;
+}
+
+.cc-card .team-awards h2::after,
+.cc-heading::after {
+    display: none;
+}
+
+.cc-count {
+    display: inline-block;
+    min-width: 1.8em;
+    padding: 0.05em 0.5em;
+    border-radius: 999px;
+    background: var(--maroon-dark);
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6em;
+    vertical-align: middle;
+    text-align: center;
+}
+
+/* --- ROSTER CHIPS --- */
+
+.cc-chips {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.cc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.9rem 0.25rem 0.25rem;
+    border: 2px solid var(--text-dark);
+    border-radius: 999px;
+    background: var(--accent-light);
+    font-size: 0.95rem;
+}
+
+.cc-chip-face {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: 0 0 auto;
+}
+
+.cc-chip-face--initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--maroon-dark);
+    color: var(--accent-gold);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.cc-chip-name {
+    font-weight: 700;
+}
+
+.cc-chip-role {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.cc-empty {
+    margin: 0;
+    color: var(--text-light);
+}
+
+/* --- LINKS --- */
+
+.cc-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-md);
+    border-top: 2px dashed rgba(148, 69, 71, 0.35);
+}
+
+.cc-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 1.1rem;
+    border: 3px solid var(--text-dark);
+    border-radius: 12px;
+    background: var(--maroon-dark);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 4px 4px 0px var(--text-dark);
+    transition: var(--transition-base);
+}
+
+.cc-link svg {
+    width: 18px;
+    height: 18px;
+}
+
+.cc-link:hover,
+.cc-link:focus-visible {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px var(--text-dark);
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+.cc-link--season {
+    background: #fff;
+    color: var(--text-dark);
+}
+
+/* --- SPECS --- */
+
+.cc-specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs) var(--spacing-md);
+    margin: var(--spacing-md) 0 0;
+}
+
+.cc-spec {
+    display: flex;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.cc-spec dt {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    align-self: center;
+}
+
+.cc-spec dd {
+    margin: 0;
+    font-weight: 700;
+}
+
+/* --- DARK THEME --- */
+
+[data-theme='dark'] .cc-card {
+    background: #1a1a1a;
+    border-color: #444;
+}
+
+[data-theme='dark'] .cc-chip {
+    background: #262021;
+    border-color: #555;
+    color: #f1f1f1;
+}
+
+[data-theme='dark'] .cc-chip-role {
+    color: #d4a0a1;
+}
+
+[data-theme='dark'] .cc-link {
+    border-color: #555;
+    box-shadow: 4px 4px 0px #000;
+}
+
+[data-theme='dark'] .cc-link--season {
+    background: #262021;
+    color: #f1f1f1;
+}
+
+[data-theme='dark'] .cc-link:hover,
+[data-theme='dark'] .cc-link:focus-visible {
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+[data-theme='dark'] .cc-spec dd {
+    color: #f1f1f1;
+}
+
+/* --- NARROW SCREENS --- */
+
+@media (max-width: 860px) {
+    .team-titlebar .identity-bar {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 600px) {
+    .cc-card {
+        width: calc(100% - 2 * var(--spacing-sm));
+        border-radius: 18px;
+        box-shadow: 6px 6px 0px rgba(148, 69, 71, 0.2);
+    }
+
+    .cc-link {
+        flex: 1 1 100%;
+        justify-content: center;
+    }
+}

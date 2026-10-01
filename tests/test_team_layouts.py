@@ -447,6 +447,41 @@ def test_thin_bento_falls_back_to_classic(client, db, setup):
     assert body.count('Competition Awards') == 1
 
 
+# --- 10 Compact Card --------------------------------------------------------
+
+def compact_page(client, db, setup, **fields):
+    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'compact', **fields}})
+    return client.get('/team/77628L').data.decode()
+
+
+def test_compact_fits_the_team_on_one_card(client, db, setup, monkeypatch):
+    monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'x')
+    body = compact_page(client, db, setup, notebook_link='https://example.com/nb',
+                        specs={'drive_train': 'X-Drive'}, stl_path='https://blob.example/robot.stl',
+                        events=[{'name': 'States', 'photos': ['static/a.png']}],
+                        members=[{'member_id': 'm2', 'name': 'Alice Ng', 'role': 'Captain'}])
+    assert 'css/pages/team-layouts/compact.css' in body
+    card = body[body.index('class="cc-card'):body.index('</article>')]
+    order = [card.index(marker) for marker in ('Competition Awards', 'id="team"', 'class="cc-links"', 'X-Drive')]
+    assert order == sorted(order)
+    assert 'class="cc-chip"' in card and 'Alice Ng' in card and 'Captain' in card
+    assert '/teams/V5RC/77628L' in card and 'https://example.com/nb' in card
+    assert '?season=2024-25' in card and '?season=2025-26' not in card  # only the other seasons
+    # Nothing live and no 3D viewer, even with a RobotEvents key and a model.
+    for absent in ('data-live-url', 'id="results-section"', 'robot-viewer', 'team_event_photos', 'class="hero-image'):
+        assert absent not in body, absent
+    assert body.count('Competition Awards') == 1
+
+
+def test_compact_single_season_team_links_only_to_robotevents(client, db, setup):
+    db['teams'].delete_one({'_id': ObjectId(setup['old'])})
+    card = compact_page(client, db, setup)
+    card = card[card.index('class="cc-card'):card.index('</article>')]
+    links = card[card.index('class="cc-links"'):card.index('</nav>')]
+    assert links.count('<a ') == 1 and '/teams/V5RC/77628L' in links
+    assert 'cc-specs' not in card
+
+
 # --- saving -----------------------------------------------------------------
 
 def test_member_picks_layout_for_one_season_only(client, db, setup, monkeypatch):
