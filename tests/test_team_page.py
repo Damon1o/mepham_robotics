@@ -367,6 +367,29 @@ def test_hidden_cad_falls_back_to_photos(client, team_factory):
     assert 'viewer-gallery' in body
 
 
+def test_specs_sit_beside_the_cad_model(client, team_factory):
+    team_factory()
+    body = html(client)[1]
+    stage = body[body.index('class="cad-stage'):body.index('</section>', body.index('class="cad-stage'))]
+    assert 'cad-stage--specs' in stage and 'class="cad-specs"' in stage
+    assert 'X-Drive' in stage and 'Flex Wheel' in stage
+    assert 'class="robot-specs' not in body  # not a second time below
+    assert body.count('Technical Specifications') == 1
+
+
+def test_specs_keep_their_own_section_without_a_model(client, team_factory):
+    team_factory(stl_path='')
+    body = html(client)[1]
+    assert 'class="robot-specs' in body and 'cad-specs' not in body
+    assert 'X-Drive' in body
+
+
+def test_hidden_cad_puts_specs_back_in_their_section(client, team_factory):
+    team_factory(hide_cad=True)
+    body = html(client)[1]
+    assert 'class="robot-specs' in body and 'cad-specs' not in body
+
+
 def test_missing_team_redirects(client):
     resp = client.get('/team/nope')
     assert resp.status_code == 302
