@@ -157,6 +157,7 @@ STYLE_ALLOWED = {
     'dossier_head.html': ['--team-hero-image'],  # partials/team/dossier_head.html
     'site_macros.html': ['--hero-image'],
     'shelf.html': ['--trophy-cols'],  # partials/awards/shelf.html
+    'banners.html': ['--banner-cols'],  # partials/awards/banners.html
 }
 
 

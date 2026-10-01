@@ -67,6 +67,8 @@ LAYOUT_AWARD_STYLES = {
     'compact': 'plaque',
     'spotlight': 'shelf',
     'magazine': 'shelf',
+    'scoreboard': 'banners',
+    'timeline': 'banners',
 }
 FUNDRAISERS_MAX = 20
 MONEY_MAX = 1_000_000

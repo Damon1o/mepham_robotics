@@ -29,7 +29,7 @@ def page(client, db, layout):
 
 def boxes(body):
     """(classes, title) for each award box, in page order."""
-    return re.findall(r'class="(?:award-box|plaque-line|trophy) ([^"]*)">.*?class="(?:award-title|plaque-title|trophy-title)">([^<]+)<',
+    return re.findall(r'class="(?:award-box|plaque-line|trophy|banner) ([^"]*)">.*?class="(?:award-title|plaque-title|trophy-title|banner-title)">([^<]+)<',
                       body, re.S)
 
 
@@ -160,3 +160,37 @@ def test_shelf_with_no_awards(client, db, team):
     db['awards'].delete_many({})
     body = page(client, db, 'magazine')
     assert 'No awards recorded for this team yet' in body and 'class="trophy-case"' not in body
+
+
+# --- Rafter Banners -----------------------------------------------------------
+
+@pytest.mark.parametrize('layout', ['scoreboard', 'timeline'])
+def test_banners_hang_every_award(client, db, team, layout):
+    body = page(client, db, layout)
+    assert 'css/pages/awards/banners.css' in body and 'class="rafters"' in body
+    assert 'awards-grid' not in body
+    assert [title for _, title in boxes(body)] == ['Think Award', 'Design Award', 'Excellence Award', 'Judges Award']
+    counts = re.findall(r'class="banner-count" aria-label="([^"]+)">([^<]+)<', body)
+    assert counts == [('won 1 time', '1'), ('won 2 times', '2'), ('won 3 times', '3'), ('won 0 times', '&mdash;')]
+    assert '--banner-cols: 4' in body  # four awards fit one row
+
+
+@pytest.mark.parametrize('awards, cols', [(1, 1), (5, 5), (6, 3), (8, 4), (11, 4), (12, 4)])
+def test_banners_balance_rows(client, db, team, awards, cols):
+    db['awards'].delete_many({})
+    db['awards'].insert_many([{'team_number': '77628L', 'title': f'Award {n}', 'icon': 'judges_award.png',
+                               'count': 1, 'sort': n} for n in range(awards)])
+    assert f'--banner-cols: {cols}"' in page(client, db, 'scoreboard')
+
+
+def test_banners_shimmer_only_on_won_awards(client, db, team):
+    db['awards'].update_many({}, {'$set': {'shimmer': True, 'border': 'blue'}})
+    banners = {title: classes.split() for classes, title in boxes(page(client, db, 'timeline'))}
+    assert 'banner--shimmer' in banners['Excellence Award'] and 'banner--blue' in banners['Excellence Award']
+    assert 'banner--shimmer' not in banners['Judges Award']
+
+
+def test_banners_with_no_awards(client, db, team):
+    db['awards'].delete_many({})
+    body = page(client, db, 'scoreboard')
+    assert 'No awards recorded for this team yet' in body and 'class="rafters"' not in body
