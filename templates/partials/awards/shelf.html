@@ -1,0 +1,35 @@
+{#- Trophy Shelf: a lit trophy case. Each award stands on a wooden shelf as a large
+    trophy over a brass plate engraved with its count, its title underneath. Shimmer
+    awards get a spotlight from above. Awards not won yet follow at the end as faded
+    silhouettes: empty spots in the case left to fill. -#}
+{% set earned = team_awards|selectattr('count')|list %}
+{#- Columns that fill every shelf evenly: at most five a shelf, as few shelves as that
+    allows (8 awards make two shelves of 4, not 5 and 3). -#}
+{% set shelves = ((team_awards|length + 4) // 5) or 1 %}
+{% set per_shelf = (team_awards|length + shelves - 1) // shelves %}
+<section class="award-container team-awards team-awards--shelf fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">Competition Awards</h2>
+    </div>
+
+    {% if team_awards %}
+    <div class="trophy-case">
+        <ul class="trophy-shelves" style="--trophy-cols: {{ per_shelf or 1 }}">
+            {% for award in earned + team_awards|rejectattr('count')|list %}
+            <li class="trophy {{ 'trophy--' + award.border if award.border else '' }} {{ 'trophy--spotlit' if award.shimmer and award.count else '' }} {{ 'is-zero' if not award.count else '' }}">
+                <img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}" alt=""
+                    class="trophy-icon" loading="lazy">
+                <span class="trophy-plate" aria-label="won {{ award.count }} {{ 'time' if award.count == 1 else 'times' }}">{{ '×' ~ award.count if award.count else '&mdash;'|safe }}</span>
+                <span class="trophy-title">{{ award.title }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <p class="awards-empty">No awards recorded for this team yet. Check back after our next competition!</p>
+    {% endif %}
+
+    <div class="text-center mt-lg">
+        <a href="{{ url_for('achievements') }}" class="cta-button cta-primary">View All Achievements</a>
+    </div>
+</section>

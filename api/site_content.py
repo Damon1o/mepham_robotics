@@ -65,6 +65,8 @@ LAYOUT_AWARD_STYLES = {
     'bento': 'mosaic',
     'dossier': 'plaque',
     'compact': 'plaque',
+    'spotlight': 'shelf',
+    'magazine': 'shelf',
 }
 FUNDRAISERS_MAX = 20
 MONEY_MAX = 1_000_000
