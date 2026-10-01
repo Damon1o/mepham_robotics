@@ -56,6 +56,14 @@ TEAM_LAYOUTS = {
     'compact': 'Compact Card',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
+# The Competition Awards design each layout shows: templates/partials/awards/<style>.html,
+# plus static/css/pages/awards/<style>.css for any style but 'classic'. Layouts not
+# listed keep the classic tile grid.
+LAYOUT_AWARD_STYLES = {
+    'meet': 'mosaic',
+    'tabs': 'mosaic',
+    'bento': 'mosaic',
+}
 FUNDRAISERS_MAX = 20
 MONEY_MAX = 1_000_000
 

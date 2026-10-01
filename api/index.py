@@ -1268,7 +1268,8 @@ def team_page(team_number):
     mosaic, mosaic_more = team_mosaic(team) if layout == 'magazine' else ([], 0)
     return render_template('team.html', team=team, team_awards=team_awards,
                            event_photos=event_photos, robot_photos=robot_photos,
-                           layout=layout, timeline=team_timeline(team) if layout == 'timeline' else [],
+                           layout=layout, award_style=site_content.LAYOUT_AWARD_STYLES.get(layout, 'classic'),
+                           timeline=team_timeline(team) if layout == 'timeline' else [],
                            mosaic=mosaic, mosaic_more=mosaic_more,
                            robotevents_url=None if is_group(team) else robotevents.team_url(team_number),
                            seasons=seasons, active_season=team.get('season'),

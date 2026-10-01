@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- ENHANCED AWARD CARD INTERACTIONS ---
-    const awardBoxes = document.querySelectorAll('.award-box');
+    const awardBoxes = document.querySelectorAll('.award-box:not(.is-zero)');
 
     awardBoxes.forEach(box => {
         box.addEventListener('mouseenter', function (e) {
