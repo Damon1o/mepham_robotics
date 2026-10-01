@@ -536,6 +536,43 @@ select[data-member-field] {
     font-size: 0.76rem;
 }
 
+/* With JavaScript the options show as a 3D ring (js/layout-carousel.js); the
+   radio cards above stay in the page as the form's source of truth. */
+.layout-picker.has-carousel {
+    display: block;
+}
+
+.layout-picker.has-carousel .layout-option {
+    display: none;
+}
+
+.layout-carousel {
+    --cc-fade: var(--admin-surface);
+    height: 370px;
+    color: var(--admin-text);
+    border-radius: var(--admin-radius-sm);
+}
+
+.layout-carousel .circular-carousel__title {
+    font-weight: 700;
+}
+
+.layout-carousel .circular-carousel__card[data-selected] .layout-thumb {
+    outline: 3px solid var(--admin-accent);
+    outline-offset: -3px;
+}
+
+.layout-carousel-status {
+    margin: 0.25rem 0 0;
+    color: var(--admin-muted);
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+.layout-carousel-status strong {
+    color: var(--admin-text);
+}
+
 /* Wireframe thumbnails (partials/team/layout_thumb.html) */
 .layout-thumb {
     display: flex;
