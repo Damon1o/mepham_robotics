@@ -663,6 +663,29 @@ select[data-member-field] {
         repeating-linear-gradient(180deg, var(--admin-line-strong) 0 20%, transparent 20% 25%) right bottom / 66% 70% no-repeat;
 }
 
+.layout-thumb .lt-hero--short {
+    flex-grow: 1.4;
+}
+
+/* A row of pill tabs, the first one lit. */
+.layout-thumb .lt-tabs {
+    flex-grow: 0.45;
+    background:
+        linear-gradient(var(--maroon-dark), var(--maroon-dark)) left top / 18% 100% no-repeat,
+        repeating-linear-gradient(90deg, var(--admin-line-strong) 0 18%, transparent 18% 21%);
+}
+
+/* One framed panel holding the open tab: stats, awards, a section. */
+.layout-thumb .lt-panel {
+    flex-grow: 5;
+    border: 2px solid var(--admin-line-strong);
+    background:
+        repeating-linear-gradient(90deg, var(--admin-gold) 0 30%, transparent 30% 35%) center top 5px / calc(100% - 10px) 16% no-repeat,
+        repeating-linear-gradient(45deg, var(--admin-gold) 0 3px, var(--admin-line-strong) 3px 6px) center top 28% / calc(100% - 10px) 30% no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) center bottom 5px / calc(100% - 10px) 28% no-repeat,
+        transparent;
+}
+
 /* Big member cards, three to a row, each with a portrait block on top. */
 .layout-thumb .lt-people {
     flex-grow: 1.7;

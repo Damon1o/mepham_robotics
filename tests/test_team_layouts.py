@@ -252,6 +252,56 @@ def test_dossier_rail_skips_what_a_team_lacks(client, db, setup):
     assert '>Members</dt>' in rail and 'RobotEvents profile' in rail
 
 
+# --- 06 Tabbed Hub ----------------------------------------------------------
+
+def tabs_page(client, db, setup, **fields):
+    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'tabs', **fields}})
+    return client.get('/team/77628L').data.decode()
+
+
+def tab_keys(body):
+    import re
+    return re.findall(r'data-hub-tab="([a-z]+)"', body)
+
+
+def test_tabs_split_the_page_into_panels(client, db, setup, monkeypatch):
+    monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'x')
+    body = tabs_page(client, db, setup, specs={'drive_train': 'X-Drive'}, goals=[{'name': 'Win', 'progress': 100}],
+                     journey=[{'date': 'Sep 2025', 'title': 'Kickoff'}])
+    assert 'css/pages/team-layouts/tabs.css' in body and 'class="hero-image' in body
+    assert tab_keys(body) == ['overview', 'results', 'robot', 'team', 'journey']
+    # Only Overview is open; the rest start hidden.
+    assert 'id="hub-overview" class="hub-panel" role="tabpanel" aria-labelledby="hub-tab-overview" data-hub-panel="overview">' in body
+    for key in ('results', 'robot', 'team', 'journey'):
+        assert f'data-hub-panel="{key}" hidden>' in body, key
+
+    def panel(key):
+        start = body.index(f'id="hub-{key}"')
+        end = body.find('role="tabpanel"', body.index('role="tabpanel"', start) + 1)
+        return body[start:end if end > 0 else len(body)]
+    overview = panel('overview')
+    assert 'Competition Awards' in overview and 'id="skills-panel"' in overview and 'class="hub-tiles"' in overview
+    assert 'id="results-section"' in panel('results')
+    assert 'X-Drive' in panel('robot') and 'id="team"' in panel('team') and 'Kickoff' in panel('journey')
+    assert body.count('Competition Awards') == 1
+
+
+def test_tabs_skip_topics_a_team_lacks(client, db, setup):
+    body = tabs_page(client, db, setup)
+    assert tab_keys(body) == ['overview', 'team']
+    tiles = body[body.index('class="hub-tiles"'):body.index('</nav>', body.index('class="hub-tiles"'))]
+    assert 'data-hub-open="team"' in tiles and 'data-hub-open="robot"' not in tiles
+
+
+def test_tabs_overview_tiles_summarise_stored_data(client, db, setup):
+    body = tabs_page(client, db, setup, nickname='Hydra', specs={'drive_train': 'X-Drive'},
+                     goals=[{'name': 'A', 'progress': 100}, {'name': 'B', 'progress': 40}],
+                     journey=[{'date': '2025', 'title': 'Kickoff'}])
+    tiles = body[body.index('class="hub-tiles"'):body.index('</nav>', body.index('class="hub-tiles"'))]
+    for text in ('>1</span>', 'member', 'Hydra', 'X-Drive', '1/2', 'goals met', '1 milestones'):
+        assert text in tiles, text
+
+
 # --- saving -----------------------------------------------------------------
 
 def test_member_picks_layout_for_one_season_only(client, db, setup, monkeypatch):
