@@ -1262,6 +1262,10 @@ def team_page(team_number):
     # straight into them, and a missing one turned the page into a 500.
     # setdefault leaves an explicit null in place, so normalise with `or`.
     team['specs'] = team.get('specs') or {}
+    # A hidden CAD model is left out entirely: every layout then treats the
+    # robot as having no model (photos fill in, or the showcase is skipped).
+    if team.get('hide_cad'):
+        team.pop('stl_path', None)
     for key in ('members', 'goals', 'journey', 'events'):
         team[key] = team.get(key) or []
 
@@ -2918,7 +2922,7 @@ def admin_quick_group():
 
 
 CARRIED_TEAM_FIELDS = ('kind', 'title', 'team_number', 'nickname', 'tagline', 'division', 'since', 'worlds_appearances',
-                       'robotevents_number', 'notebook_link', 'hero_image')
+                       'robotevents_number', 'notebook_link', 'hero_image', 'hide_cad')
 
 
 @app.route('/admin/api/teams/<id>/new-season', methods=['POST'])
@@ -3226,10 +3230,11 @@ ADMIN_TEAM_FIELDS = {
     'since': ('Competing since', None),
     'worlds_appearances': ('Worlds appearances', None),
     'hidden': ('Hidden from the site menu', None),
+    'hide_cad': ('CAD model hidden', None),
     'title': ('Group name', GROUP_TITLE_MAX),
 }
 # Fields that only mean something for one kind of team.
-ROBOT_ONLY_FIELDS = {'nickname', 'notebook_link', 'division', 'robotevents_number', 'worlds_appearances', 'layout',
+ROBOT_ONLY_FIELDS = {'nickname', 'notebook_link', 'hide_cad', 'division', 'robotevents_number', 'worlds_appearances', 'layout',
                      'specs.drive_train', 'specs.lift_system', 'specs.intake', 'specs.auton_consistency'}
 GROUP_ONLY_FIELDS = {'title'}
 MEMBER_CARD_FIELDS = {'name': ('Name', 100), 'role': ('Role', 100), 'roles': ('Roles', 200),
@@ -3400,7 +3405,7 @@ def _clean_team_field(field, value, label, limit):
         return _clean_url(value, label)
     if field in ('since', 'worlds_appearances'):
         return _clean_year(value, label)
-    if field == 'hidden':
+    if field in ('hidden', 'hide_cad'):
         return bool(value) or None
     if field == 'layout':
         # Blank means "use the site default", so it is removed rather than stored.

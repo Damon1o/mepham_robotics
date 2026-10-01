@@ -342,6 +342,13 @@
                         data-kind="stl_file"{% if not team.stl_path %} hidden{% endif %}>Remove</button>
                 </div>
                 {% endcall %}
+                {% call row('CAD on page', hint='Keeps the model on file but leaves the 3D viewer off the team page') %}
+                <label class="switch">
+                    <input type="checkbox" data-autosave="hide_cad" {% if team.hide_cad %}checked{% endif %}>
+                    <span class="switch-track" aria-hidden="true"></span>
+                    <span class="switch-text">Don't show the CAD model</span>
+                </label>
+                {% endcall %}
                 {% endif %}
                 {% call row('Site menu', hint='Retired ' ~ ('groups' if is_group else 'teams') ~ ' can stay on record without a menu link') %}
                 <label class="switch">

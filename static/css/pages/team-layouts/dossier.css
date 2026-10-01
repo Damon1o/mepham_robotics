@@ -390,8 +390,14 @@
     max-width: none;
 }
 
-.dossier-main .robot-showcase .viewer-controls {
-    justify-content: flex-start;
+/* The CAD card sits centred in the stage, so its heading centres over it. */
+.dossier-main .robot-showcase:has(.cad-card) h2 {
+    text-align: center;
+}
+
+.dossier-main .robot-showcase:has(.cad-card) h2::after {
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .dossier-main .robot-showcase .viewer-empty {
