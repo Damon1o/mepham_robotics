@@ -1129,6 +1129,66 @@ def donate():
                            givebutter_campaign_id=content.donate.givebutter_id,
                            contact_email=email, sponsors=load_sponsors())
 
+# Journey dates are free text; these are the shapes people type into that box.
+LOOSE_DATE_FORMATS = ('%Y-%m-%d', '%m/%d/%Y', '%b %d, %Y', '%B %d, %Y', '%b %d %Y', '%B %d %Y',
+                      '%b %Y', '%B %Y', '%Y')
+
+
+def parse_loose_date(text):
+    """A journey date like 'Sep 2025', 'January 12, 2026' or '2024' as a datetime, else None."""
+    text = re.sub(r'\bSept\b', 'Sep', ' '.join(str(text or '').replace('.', '').split()), flags=re.I)
+    for fmt in LOOSE_DATE_FORMATS:
+        try:
+            return datetime.datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def team_timeline(team):
+    """Journey milestones and the team's own events as one dated list (Season Timeline layout).
+
+    Milestones keep the order they were written in: one whose date does not parse
+    takes the date of the milestone before it. Events are the team's photo galleries,
+    dated (and placed) by the club competition of the same name in that season.
+    Events with no matching competition close the list. Built from stored data
+    only; team.js adds RobotEvents results to it when a key is configured.
+    """
+    season = str(team.get('season') or '')
+    start_year = int(season[:4]) if season[:4].isdigit() else None
+    competitions = {}
+    for comp in db['competitions'].find({}, {'name': 1, 'date': 1, 'location': 1}).sort('date', 1):
+        when = comp.get('date')
+        if not comp.get('name') or not isinstance(when, datetime.datetime):
+            continue
+        # VEX seasons start in late spring, as on the achievements page.
+        if start_year is not None and when.year - (when.month < 5) != start_year:
+            continue
+        competitions.setdefault(comp['name'].strip().lower(), comp)
+
+    items, last = [], None
+    for order, milestone in enumerate(team.get('journey') or []):
+        last = parse_loose_date(milestone.get('date')) or last
+        items.append({'kind': 'milestone', 'when': last, 'order': order, 'label': milestone.get('date') or '',
+                      'title': milestone.get('title') or '', 'text': milestone.get('description') or ''})
+    for order, event in enumerate(team.get('events') or []):
+        name = (event.get('name') or '').strip()
+        if not name:
+            continue
+        comp = competitions.get(name.lower())
+        when = comp['date'].replace(tzinfo=None) if comp else None
+        items.append({'kind': 'event', 'when': when, 'order': 10_000 + order, 'title': name,
+                      'label': f'{when:%b} {when.day}, {when.year}' if when else '',
+                      'where': (comp or {}).get('location') or '', 'photos': event.get('photos') or []})
+
+    def key(item):
+        if item['when'] is not None:
+            return (1, item['when'], item['order'])
+        # Undated milestones before any dated one open the list; undated events close it.
+        return (0 if item['kind'] == 'milestone' else 2, datetime.datetime.min, item['order'])
+    return sorted(items, key=key)
+
+
 def team_layout(team):
     """The layout this team season renders with: its own pick, else the site default.
 
@@ -1182,9 +1242,10 @@ def team_page(team_number):
     for award in team_awards:
         # The awards grid builds the icon path from this; a row missing it used to 500 the page.
         award['icon'] = award.get('icon') or AWARD_ICONS[0]
+    layout = team_layout(team)
     return render_template('team.html', team=team, team_awards=team_awards,
                            event_photos=event_photos, robot_photos=robot_photos,
-                           layout=team_layout(team),
+                           layout=layout, timeline=team_timeline(team) if layout == 'timeline' else [],
                            robotevents_url=None if is_group(team) else robotevents.team_url(team_number),
                            seasons=seasons, active_season=team.get('season'),
                            live_enabled=bool(robotevents.get_token()) and not is_group(team),

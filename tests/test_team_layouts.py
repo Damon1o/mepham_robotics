@@ -302,6 +302,58 @@ def test_tabs_overview_tiles_summarise_stored_data(client, db, setup):
         assert text in tiles, text
 
 
+# --- 07 Season Timeline -----------------------------------------------------
+
+def timeline_page(client, db, setup, **fields):
+    db['teams'].update_one({'_id': ObjectId(setup['new'])}, {'$set': {'layout': 'timeline', **fields}})
+    return client.get('/team/77628L').data.decode()
+
+
+def test_loose_dates_parse():
+    parse = app_module.parse_loose_date
+    assert parse('Sep 2025').month == 9 and parse('Sept 2025').month == 9
+    assert parse('January 12, 2026').day == 12 and parse('Jan. 12, 2026').day == 12
+    assert parse('2026-03-01').month == 3 and parse('03/01/2026').day == 1 and parse('2024').year == 2024
+    assert parse('Early season') is None and parse('') is None
+
+
+def test_timeline_merges_milestones_and_events_by_date(client, db, setup):
+    import datetime
+    db['competitions'].insert_many([
+        # Same name a season earlier: must not be picked for 2025-26.
+        {'name': 'LI Qualifier', 'date': datetime.datetime(2025, 1, 10), 'location': 'Old Gym'},
+        {'name': 'LI Qualifier', 'date': datetime.datetime(2026, 1, 17, 9), 'location': 'Mepham HS'}])
+    body = timeline_page(client, db, setup, journey=[
+        {'date': 'Build week', 'title': 'Build starts'},  # no date: stays first
+        {'date': 'Sep 2025', 'title': 'Kickoff'},
+        {'date': 'Feb 2026', 'title': 'Rebuild'}],
+        events=[{'name': 'Scrimmage', 'photos': ['static/a.png']},  # no competition: closes the list
+                {'name': 'LI Qualifier', 'photos': ['static/b.png'] * 6}])
+    assert 'css/pages/team-layouts/timeline.css' in body and 'data-timeline' in body
+    spine = body[body.index('data-timeline'):body.index('</ol>', body.index('data-timeline'))]
+    order = [spine.index(f'data-name="{name}"') for name in
+             ('Build starts', 'Kickoff', 'LI Qualifier', 'Rebuild', 'Scrimmage')]
+    assert order == sorted(order)
+    assert 'data-when="2026-01-17"' in spine and 'Jan 17, 2026' in spine and 'Mepham HS' in spine
+    assert 'Old Gym' not in spine
+    assert spine.count('class="tl-photo"') == 5 and '+2' in spine  # four shown, the rest counted
+    order = [body.index(marker) for marker in ('class="hero-image', 'data-timeline', 'Competition Awards', 'id="team"')]
+    assert order == sorted(order)
+
+
+def test_timeline_puts_goals_above_the_spine(client, db, setup):
+    body = timeline_page(client, db, setup, goals=[{'name': 'Win States', 'progress': 50}],
+                         journey=[{'date': '2025', 'title': 'Kickoff'}])
+    assert body.index('Season Goals') < body.index('data-timeline') < body.index('Competition Awards')
+
+
+def test_timeline_without_a_story_falls_back_to_classic(client, db, setup):
+    body = timeline_page(client, db, setup)
+    assert 'data-layout="timeline"' in body
+    assert 'data-timeline' not in body and 'class="hero-image' in body
+    assert body.count('Competition Awards') == 1
+
+
 # --- saving -----------------------------------------------------------------
 
 def test_member_picks_layout_for_one_season_only(client, db, setup, monkeypatch):

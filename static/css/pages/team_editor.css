@@ -686,6 +686,15 @@ select[data-member-field] {
         transparent;
 }
 
+/* A maroon spine down the middle with entries alternating either side. */
+.layout-thumb .lt-spine {
+    flex-grow: 5;
+    background:
+        linear-gradient(var(--maroon-dark), var(--maroon-dark)) center / 3px 100% no-repeat,
+        repeating-linear-gradient(180deg, var(--admin-line-strong) 0 18%, transparent 18% 50%) left top / 44% 100% no-repeat,
+        repeating-linear-gradient(180deg, transparent 0 25%, var(--admin-gold) 25% 43%, transparent 43% 50%) right top / 44% 100% no-repeat;
+}
+
 /* Big member cards, three to a row, each with a portrait block on top. */
 .layout-thumb .lt-people {
     flex-grow: 1.7;
