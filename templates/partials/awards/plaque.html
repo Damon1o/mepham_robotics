@@ -1,0 +1,42 @@
+{#- Honor Plaque: a brass plate on a walnut board, like a school hallway plaque. Each
+    award is an engraved line with its icon in an enamel ring (the award's border
+    color), a dotted leader and the count in Roman numerals. Awards not won yet follow
+    at the end, greyed out. Narrow enough for the Dossier column and the Compact card. -#}
+{% set earned = team_awards|selectattr('count')|list %}
+<section class="award-container team-awards team-awards--plaque fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">Competition Awards</h2>
+    </div>
+
+    {% if team_awards %}
+    <div class="plaque">
+        <div class="plaque-plate">
+            <p class="plaque-head">
+                <span class="plaque-kicker">Team {{ team.team_number }}{% if team.season %} &middot; {{ team.season }}{% endif %}</span>
+                <span class="plaque-name">Honor Roll</span>
+            </p>
+            <ol class="plaque-list">
+                {% for award in earned + team_awards|rejectattr('count')|list %}
+                <li class="plaque-line {{ 'plaque-line--' + award.border if award.border else '' }} {{ 'plaque-line--shimmer' if award.shimmer and award.count else '' }} {{ 'is-zero' if not award.count else '' }}">
+                    <span class="plaque-medallion">
+                        <img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}" alt=""
+                            class="plaque-icon" loading="lazy">
+                    </span>
+                    <span class="plaque-title">{{ award.title }}</span>
+                    <span class="plaque-count" aria-label="won {{ award.count }} {{ 'time' if award.count == 1 else 'times' }}">{{ award.count|roman if award.count else '&mdash;'|safe }}</span>
+                </li>
+                {% endfor %}
+            </ol>
+            {% if earned %}
+            <p class="plaque-total">{{ earned|sum(attribute='count') }} {{ 'award' if earned|sum(attribute='count') == 1 else 'awards' }} won</p>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <p class="awards-empty">No awards recorded for this team yet. Check back after our next competition!</p>
+    {% endif %}
+
+    <div class="text-center mt-lg">
+        <a href="{{ url_for('achievements') }}" class="cta-button cta-primary">View All Achievements</a>
+    </div>
+</section>

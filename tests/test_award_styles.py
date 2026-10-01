@@ -4,6 +4,8 @@ import re
 
 import pytest
 
+import api.index as app_module
+
 from api import site_content
 
 
@@ -27,7 +29,8 @@ def page(client, db, layout):
 
 def boxes(body):
     """(classes, title) for each award box, in page order."""
-    return re.findall(r'class="award-box ([^"]*)">.*?class="award-title">([^<]+)<', body, re.S)
+    return re.findall(r'class="(?:award-box|plaque-line) ([^"]*)">.*?class="(?:award-title|plaque-title)">([^<]+)<',
+                      body, re.S)
 
 
 def test_every_paired_style_has_a_template_and_stylesheet():
@@ -96,3 +99,38 @@ def test_groups_get_no_awards_section(client, db):
                             'members': [{'member_id': 'm1', 'name': 'Alice'}]})
     body = client.get('/team/media').data.decode()
     assert 'Competition Awards' not in body
+
+
+# --- Honor Plaque -------------------------------------------------------------
+
+@pytest.mark.parametrize('number, numeral', [(1, 'I'), (3, 'III'), (4, 'IV'), (9, 'IX'), (14, 'XIV'), (19, 'XIX'),
+                                             (20, 'XX'), (21, '21'), (0, '0'), (None, '0')])
+def test_roman(number, numeral):
+    assert app_module.roman(number) == numeral
+
+
+@pytest.mark.parametrize('layout', ['dossier', 'compact'])
+def test_plaque_engraves_counts(client, db, team, layout):
+    body = page(client, db, layout)
+    assert 'css/pages/awards/plaque.css' in body and 'family=Cinzel' in body
+    assert 'awards-grid' not in body
+    lines = boxes(body)
+    assert [title for _, title in lines] == ['Think Award', 'Design Award', 'Excellence Award', 'Judges Award']
+    counts = re.findall(r'class="plaque-count" aria-label="([^"]+)">([^<]+)<', body)
+    assert counts == [('won 1 time', 'I'), ('won 2 times', 'II'), ('won 3 times', 'III'),
+                      ('won 0 times', '&mdash;')]
+    assert 'Team 77628L &middot; 2025-26' in body
+    assert '6 awards won' in body
+
+
+def test_plaque_with_no_awards(client, db, team):
+    db['awards'].delete_many({})
+    body = page(client, db, 'dossier')
+    assert 'No awards recorded for this team yet' in body and 'class="plaque"' not in body
+
+
+def test_plaque_shimmer_only_on_won_awards(client, db, team):
+    db['awards'].update_many({}, {'$set': {'shimmer': True}})
+    lines = dict((title, classes.split()) for classes, title in boxes(page(client, db, 'dossier')))
+    assert 'plaque-line--shimmer' in lines['Excellence Award']
+    assert 'plaque-line--shimmer' not in lines['Judges Award']

@@ -195,6 +195,23 @@ def initials(name):
     return (parts[0][0] + (parts[-1][0] if len(parts) > 1 else '')).upper()
 
 
+ROMAN_NUMERALS = ((10, 'X'), (9, 'IX'), (5, 'V'), (4, 'IV'), (1, 'I'))
+
+
+@app.template_filter('roman')
+def roman(number):
+    """An award count as the Honor Plaque engraves it: I to XX, then plain digits."""
+    number = int(number or 0)
+    if not 0 < number <= 20:
+        return str(number)
+    out = ''
+    for value, letters in ROMAN_NUMERALS:
+        while number >= value:
+            out += letters
+            number -= value
+    return out
+
+
 def file_extension(filename):
     """Lowercase extension without the dot, or '' when there isn't one."""
     return filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
