@@ -81,12 +81,16 @@ class Field:
           number | datetime | image | list
     rich text allows **bold**, [label](link) and blank-line paragraphs; nothing else.
     `items` describes a list row as a tuple of Fields (kind list only).
+    Text may use placeholders like {room} or {tagline}; see TOKENS.
     """
 
     def __init__(self, key, kind, label, default, *, max=None, required=False, hint='', choices=None,
-                 items=None, max_items=None, min_value=None, max_value=None, group=None, pattern=None):
+                 items=None, max_items=None, min_value=None, max_value=None, group=None, pattern=None,
+                 hint_link=None):
         self.key, self.kind, self.label, self.default = key, kind, label, default
         self.max, self.required, self.hint, self.pattern = max, required, hint, pattern
+        # (label, dashboard tab): a link to where the hint says the thing really lives.
+        self.hint_link = hint_link
         self.choices, self.items, self.max_items = choices, items, max_items
         self.min_value, self.max_value, self.group = min_value, max_value, group
 
@@ -157,7 +161,8 @@ SECTIONS = (
 
     Section('home', 'Homepage', 'house', (
         Field('hero_title', 'text', 'Big title', 'Mepham Robotics', max=40, required=True, group='Top of the page'),
-        Field('hero_tagline', 'text', 'Tagline', 'Build. Code. Compete.', max=80, group='Top of the page'),
+        Field('hero_tagline', 'text', 'Tagline', '{tagline}', max=80, group='Top of the page',
+              hint='{tagline} uses the club tagline from Club details.'),
         Field('hero_image', 'image', 'Background photo', None, group='Top of the page',
               hint='Wide photos work best. Leave empty for the standard photo.'),
         Field('cta_primary_label', 'text', 'First button', 'Learn More', max=24, group='Top of the page'),
@@ -172,7 +177,7 @@ SECTIONS = (
         Field('events_empty', 'text', 'When there are no events',
               'No upcoming events scheduled at this time. Check back soon!', max=160, group='Countdown & events'),
         Field('show_stats', 'toggle', 'Show the club numbers', True, group='Sections',
-              hint='The numbers themselves are set on the dashboard Overview.'),
+              hint='The numbers themselves are set on the dashboard.', hint_link=('Overview', 'overview')),
         Field('show_gallery', 'toggle', 'Show the photo gallery', True, group='Sections'),
         Field('gallery_heading', 'text', 'Gallery heading', 'Team Gallery', max=60, group='Sections'),
         Field('show_donate', 'toggle', 'Show the donation band', True, group='Sections'),
@@ -297,10 +302,10 @@ SECTIONS = (
         Field('tiers', 'list', 'Levels', [
             {'name': 'Bronze Sponsor', 'amount': '$50+', 'colour': 'bronze',
              'benefits': 'Name on website\nThank you email\nTeam updates newsletter'},
-            {'name': 'Gold Sponsor', 'amount': '$500+', 'colour': 'gold',
-             'benefits': 'All Silver benefits\nLogo on robot\nFeatured sponsor banner\nTeam presentation'},
             {'name': 'Silver Sponsor', 'amount': '$150+', 'colour': 'silver',
              'benefits': 'All Bronze benefits\nLogo on team shirts\nSocial media shoutout\nInvite to competitions'},
+            {'name': 'Gold Sponsor', 'amount': '$500+', 'colour': 'gold',
+             'benefits': 'All Silver benefits\nLogo on robot\nFeatured sponsor banner\nTeam presentation'},
         ], items=(Field('name', 'text', 'Name', '', max=40, required=True),
                   Field('amount', 'text', 'Amount', '', max=20),
                   Field('colour', 'choice', 'Colour', 'bronze', choices=TIER_COLOURS),
@@ -353,11 +358,10 @@ SECTIONS = (
               'Press, outreach invites, event requests, or anything that does not fit a box. Include dates and a '
               'location if you are inviting us somewhere.', max=240, group='"Everyone else" option'),
         Field('general_label', 'text', 'Message label', 'How can we help?', max=60, group='"Everyone else" option'),
-        Field('findus_heading', 'text', 'Heading', 'Room LL01, after the last bell.', max=80, group='Find us'),
+        Field('findus_heading', 'text', 'Heading', '{room}, after the last bell.', max=80, group='Find us'),
         Field('findus_body', 'textarea', 'Text',
-              "We're in the tech wing at Wellington C. Mepham High School in North Bellmore. Walk in during any "
-              'Tuesday or Friday meeting — no appointment, no experience, nothing to bring.', max=500,
-              group='Find us'),
+              "We're in the tech wing at {school} in North Bellmore. Walk in during any {days_or} meeting — no "
+              'appointment, no experience, nothing to bring.', max=500, group='Find us'),
         Field('faq', 'list', 'Questions', [
             {'q': 'How do I join the robotics club?',
              'a': 'Just show up to any of our meetings. We welcome students of all skill levels. You can also email '
@@ -378,8 +382,7 @@ SECTIONS = (
              'a': 'Competition registration, V5 parts and spares, tools, travel to events, and the materials '
                   'students use to prototype. Parts and machining time are just as welcome as money.'},
             {'q': 'When and where do you meet?',
-             'a': 'We meet every Tuesday and Friday from 3:00 PM to 5:00 PM in Room LL01 at Wellington C. Mepham '
-                  'High School.'},
+             'a': 'We meet every {days} from {time} in {room} at {school}.'},
             {'q': 'Can the team come to our event?',
              'a': 'Often, yes. We bring robots to school and community events when the schedule allows. Send the '
                   "date, location, and rough audience size and we'll tell you quickly."},
@@ -399,16 +402,17 @@ SECTIONS = (
         Field('show_stats', 'toggle', 'Show the club record', True, group='Top of the page',
               hint='Awards won, award types, teams and events, counted automatically.'),
         Field('show_featured', 'toggle', 'Show headline honors', True, group='Headline honors',
-              hint='Awards styled with a gold border or shimmer on the dashboard Awards tab.'),
+              hint='Awards styled with a gold border or shimmer on the dashboard.', hint_link=('Awards', 'awards')),
         Field('featured_heading', 'text', 'Heading', 'Headline Honors', max=60, group='Headline honors'),
         Field('awards_heading', 'text', 'Heading', 'All-Time VEX V5 Competition Awards', max=80,
-              group='Honor roll', hint='The awards themselves are counted on the dashboard Awards tab.'),
+              group='Honor roll', hint='The awards themselves are counted on the dashboard.',
+              hint_link=('Awards', 'awards')),
         Field('show_unearned', 'toggle', 'List awards not won yet', True, group='Honor roll'),
         Field('show_teams', 'toggle', 'Show awards by team', True, group='Awards by team',
               hint='One card per robot team with its own award counts.'),
         Field('teams_heading', 'text', 'Heading', 'Awards by Team', max=60, group='Awards by team'),
         Field('show_history', 'toggle', 'Show the competition log', True, group='Competition log',
-              hint='Past events from the dashboard Events tab, grouped by season.'),
+              hint='Past events from the dashboard, grouped by season.', hint_link=('Events', 'events')),
         Field('history_heading', 'text', 'Heading', 'Competition Log', max=60, group='Competition log'),
         Field('history_limit', 'number', 'How many events to list', 12, min_value=1, max_value=50,
               group='Competition log'),
@@ -425,7 +429,8 @@ SECTIONS = (
     Section('teams', 'Team pages', 'bot', (
         Field('layout', 'choice', 'Default layout', DEFAULT_TEAM_LAYOUT, choices=TEAM_LAYOUTS,
               hint='Used by every team that has not picked its own layout for the season.'),
-        Field('default_tagline', 'text', 'Shown when a team has no nickname', 'Build. Code. Compete.', max=60),
+        Field('default_tagline', 'text', 'Shown when a team has no nickname', '{tagline}', max=60,
+              hint='{tagline} uses the club tagline from Club details.'),
         Field('cta_show', 'toggle', 'Show the "Interested?" band', True),
         Field('cta_heading', 'text', 'Band heading', 'Interested?', max=60),
         Field('cta_body', 'textarea', 'Band text',
@@ -590,6 +595,8 @@ def clean_value(field, value):
                 cleaned = {item.key: clean_value(item, row.get(item.key, item.default)) for item in field.items}
             except ContentError as e:
                 raise ContentError(f'Entry {n}: {e}') from None
+            if cleaned.get('starts') and cleaned.get('ends') and cleaned['ends'] < cleaned['starts']:
+                raise ContentError(f'Entry {n}: the end must come after the start.')
             rows.append(cleaned)
         if field.key == 'links':
             for n, row in enumerate(rows, 1):
@@ -612,6 +619,80 @@ def merged(overrides):
         stored = overrides.get(section.key) if isinstance(overrides.get(section.key), dict) else {}
         out[section.key] = {f.key: stored.get(f.key, f.default) for f in section.fields}
     return out
+
+
+def warnings(section_key, values, now):
+    """Things about a saved section that are allowed but probably not meant.
+
+    These never block a save: times are often changed one at a time, so a
+    start can sit after its end for a moment while the admin is mid-edit.
+    """
+    out = []
+    if section_key == 'announcement':
+        starts, ends = values.get('starts'), values.get('ends')
+        if starts and ends and ends <= starts:
+            out.append('"Hide after" is before "Show from", so the announcement will never show.')
+        elif values.get('enabled') and _moment(ends) and _moment(ends) < now:
+            out.append('"Hide after" has already passed, so the announcement is not showing.')
+        elif values.get('enabled') and not (values.get('text') or '').strip():
+            out.append('The announcement is on but has no message, so it is not showing.')
+    if section_key == 'meeting' and values.get('end', '') <= values.get('start', ''):
+        out.append('Meetings end before they start. Set the end time after the start time.')
+    return out
+
+
+# --- Placeholders ------------------------------------------------------------------
+
+# {name}: what it fills in, as the editor lists it. Values come from Club details and
+# Meetings, so a room or day change reaches every sentence that names it.
+TOKENS = {
+    'tagline': 'club tagline',
+    'club_name': 'club name',
+    'short_name': 'short name',
+    'room': 'meeting room',
+    'school': 'school',
+    'school_short': 'school (short)',
+    'days': 'meeting days, like "Tuesday & Friday"',
+    'days_or': 'meeting days, like "Tuesday or Friday"',
+    'time': 'meeting time, like "3:00–5:00 PM"',
+    'schedule': 'days and time together',
+}
+_TOKEN_RE = re.compile(r'\{(' + '|'.join(TOKENS) + r')\}')
+
+
+def token_values(values):
+    """What each placeholder stands for, from merged (unfilled) values."""
+    general, meeting = values['general'], values['meeting']
+    days = [DAY_NAMES[d] for d in sorted(meeting['days'])]
+    start, end = fmt_time(meeting['start']), fmt_time(meeting['end'])
+    if start[-2:] == end[-2:]:
+        start = start[:-3]
+    return {
+        'tagline': general['tagline'], 'club_name': general['club_name'], 'short_name': general['short_name'],
+        'room': meeting['room'], 'school': meeting['school'], 'school_short': meeting['school_short'],
+        'days': fmt_days(meeting['days']),
+        'days_or': ' or '.join(days) if len(days) <= 2 else ', '.join(days[:-1]) + ' or ' + days[-1],
+        'time': f'{start}–{end}', 'schedule': fmt_schedule(meeting),
+    }
+
+
+def fill(value, tokens):
+    """Placeholders filled in, inside strings, lists and dicts. Unknown {words} stay as typed."""
+    if isinstance(value, str):
+        return _TOKEN_RE.sub(lambda m: tokens[m.group(1)], value) if '{' in value else value
+    if isinstance(value, list):
+        return [fill(v, tokens) for v in value]
+    if isinstance(value, dict):
+        return {k: fill(v, tokens) for k, v in value.items()}
+    return value
+
+
+def filled(values):
+    """Merged values with placeholders filled in. Club details and Meetings are where
+    the placeholders come from, so they stay as typed."""
+    tokens = token_values(values)
+    return {key: section if key in ('general', 'meeting') else fill(section, tokens)
+            for key, section in values.items()}
 
 
 class SectionValues(dict):
@@ -644,7 +725,13 @@ class SiteContent:
                 if self._on_error:
                     self._on_error()
                 self._overrides = {}
-            self._values = {k: SectionValues(v) for k, v in merged(self._overrides).items()}
+            values = merged(self._overrides)
+            try:
+                values = filled(values)
+            except Exception:
+                if self._on_error:
+                    self._on_error()
+            self._values = {k: SectionValues(v) for k, v in values.items()}
         return self._values
 
     def __getattr__(self, name):

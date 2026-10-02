@@ -1,0 +1,8 @@
+{#- Shown to an admin in draft mode on every page but the editor: what they see includes unpublished changes. -#}
+{% if site_draft_mode() and request.endpoint != 'admin_site' %}
+<div class="draft-preview" role="status">
+    <i data-lucide="eye" aria-hidden="true"></i>
+    <span><strong>Previewing your draft.</strong> Visitors still see the published site.</span>
+    <a href="{{ url_for('admin_site') }}">Back to the editor</a>
+</div>
+{% endif %}

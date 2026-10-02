@@ -5,6 +5,11 @@
 // moment after the last edit; images upload as soon as they are picked, then
 // save like any other value. The server validates everything and answers with
 // the stored value and whether it now differs from the original.
+//
+// A list with an unfinished entry (a required field still empty) waits until
+// it is finished instead of failing. Each row has at most one save in flight;
+// an edit made meanwhile is sent when it returns, so saves never land out of
+// order. In draft mode the same saves go to the draft (see api/index.py).
 
 (function () {
     const root = document.getElementById('siteEditor');
@@ -12,8 +17,10 @@
 
     const status = document.getElementById('saveStatus');
     const listTimers = new Map();
+    const busy = new Set();
     let inFlight = 0;
     let failed = false;
+    let leaving = false;
 
     // --- Status and toasts ----------------------------------------------------------
 
@@ -21,6 +28,9 @@
         if (inFlight > 0) {
             status.textContent = 'Saving…';
             status.dataset.state = 'saving';
+        } else if (root.querySelector('.list-row.is-incomplete')) {
+            status.textContent = 'Finish the marked entry to save it';
+            status.dataset.state = 'waiting';
         } else if (failed) {
             status.textContent = 'Some changes did not save';
             status.dataset.state = 'error';
@@ -53,7 +63,7 @@
         let response;
         try {
             // A fuse committed as the page closes must outlive it (fuse.js).
-            const keepalive = Boolean(window.Fuse?.leaving);
+            const keepalive = leaving || Boolean(window.Fuse?.leaving);
             response = await fetch(url, Object.assign({ credentials: 'same-origin', keepalive }, options));
         } catch (err) {
             throw new Error('Could not reach the server. Check your connection.');
@@ -123,8 +133,53 @@
 
     function afterSave(row, data) {
         row.querySelector('.custom-chip').hidden = !data.custom;
-        row.querySelector('.reset-btn').hidden = !data.custom;
+        const reset = row.querySelector('.reset-btn');
+        reset.hidden = !data.custom || 'locked' in reset.dataset;
+        const chip = row.querySelector('.draft-chip');
+        if (chip && 'drafted' in data) chip.hidden = !data.drafted;
+        if ('draft_count' in data) showDraftCount(data.draft_count);
         row.dataset.saved = JSON.stringify(data.value);
+        if (data.warning) toast(data.warning, 'warning');
+    }
+
+    // Puts a value the server sent back into a row's controls. Lists, photos and days
+    // are simplest to redraw from the server, so those reload the page at this section.
+    function applyValue(row, data) {
+        const kind = row.dataset.kind;
+        if (kind === 'list' || kind === 'image' || kind === 'days') {
+            location.hash = row.closest('.settings-section').id;
+            location.reload();
+            return false;
+        }
+        const radio = row.querySelector(`input[type="radio"][value="${CSS.escape(String(data.value))}"]`);
+        if (radio) radio.checked = true;
+        const input = row.querySelector('[data-value]:not([type="radio"])');
+        if (input && input.type === 'checkbox') input.checked = Boolean(data.value);
+        else if (input) input.value = data.value ?? '';
+        afterSave(row, data);
+        return true;
+    }
+
+    // An entry is unfinished while any field marked * is empty. It is outlined and
+    // the list is not sent: the server would only refuse it.
+    function cellEmpty(cell) {
+        const image = cell.querySelector('.site-image');
+        if (image) return JSON.parse(image.dataset.image || 'null') === null;
+        const control = cell.querySelector('[data-item]');
+        return !control || String(itemValue(control) ?? '').trim() === '';
+    }
+
+    function listComplete(row) {
+        let complete = true;
+        row.querySelectorAll('[data-row]').forEach(item => {
+            const unfinished = Array.from(item.querySelectorAll('[data-required]')).some(cellEmpty);
+            item.classList.toggle('is-incomplete', unfinished);
+            const note = item.querySelector('[data-incomplete-note]');
+            if (note) note.hidden = !unfinished;
+            if (unfinished) complete = false;
+        });
+        setStatus();
+        return complete;
     }
 
     // The element that shows the saving/saved/error state for a row.
@@ -133,13 +188,28 @@
     }
 
     function save(row) {
-        // A photo still uploading has no stored image yet; its upload saves the list when done.
-        if (row.dataset.kind === 'list' && row.querySelector('.site-image.is-saving')) return;
+        if (row.dataset.kind === 'list') {
+            // A photo still uploading has no stored image yet; its upload saves the list when done.
+            if (row.querySelector('.site-image.is-saving')) return;
+            if (!listComplete(row)) return;
+        }
+        if (busy.has(row)) {
+            row.dataset.pending = '';
+            return;
+        }
         const value = row.dataset.kind === 'list' ? listValue(row) : scalarValue(row);
         if (JSON.stringify(value) === row.dataset.saved) return;
+        busy.add(row);
         track(target(row), post('/admin/api/site', { key: row.dataset.key, value }))
             .then(data => afterSave(row, data))
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => {
+                busy.delete(row);
+                if ('pending' in row.dataset) {
+                    delete row.dataset.pending;
+                    save(row);
+                }
+            });
     }
 
     function scheduleList(row, delay = 900) {
@@ -180,7 +250,7 @@
     });
 
     root.addEventListener('input', e => {
-        if (e.target.type === 'file') return;
+        if (e.target.type === 'file' || e.target.id === 'settingsSearch') return;
         const counter = e.target.closest('.text-with-count')?.querySelector('.char-count');
         if (counter) counter.textContent = `${e.target.value.length} / ${e.target.maxLength}`;
         const row = e.target.closest('.setting-row');
@@ -246,6 +316,20 @@
             scheduleList(row, 300);
         } else if (action === 'reset') {
             Fuse.arm(button, { label: 'Putting back the original', run: () => resetRow(row) });
+        } else if (action === 'history') {
+            toggleHistory(row, button);
+        } else if (action === 'history-restore') {
+            restore(row, button);
+        } else if (action === 'draft-publish') {
+            publishDraft(button);
+        } else if (action === 'draft-discard') {
+            Fuse.arm(button, {
+                label: 'Throwing away the draft',
+                detail: 'The published site stays as it is',
+                run: () => post('/admin/api/site/draft', { action: 'discard' })
+                    .then(() => location.reload())
+                    .catch(err => toast(err.message, 'error')),
+            });
         } else if (action === 'clear-value') {
             Fuse.arm(button, {
                 label: 'Clearing this field',
@@ -269,23 +353,133 @@
     function resetRow(row) {
         track(target(row), post('/admin/api/site/reset', { key: row.dataset.key }))
             .then(data => {
-                const kind = row.dataset.kind;
-                // Lists and images are simplest to redraw from the server.
-                if (kind === 'list' || kind === 'image' || kind === 'days') {
-                    location.hash = row.closest('.settings-section').id;
-                    location.reload();
-                    return;
-                }
-                const radio = row.querySelector(`input[type="radio"][value="${CSS.escape(String(data.value))}"]`);
-                if (radio) radio.checked = true;
-                const input = row.querySelector('[data-value]:not([type="radio"])');
-                if (input && input.type === 'checkbox') input.checked = Boolean(data.value);
-                else if (input) input.value = data.value ?? '';
-                afterSave(row, data);
-                toast('Put back to the original.', 'success');
+                if (applyValue(row, data)) toast('Put back to the original.', 'success');
             })
             .catch(() => {});
     }
+
+    // --- Earlier versions ----------------------------------------------------------------
+
+    let openHistory = null;
+
+    function closeHistory() {
+        if (!openHistory) return;
+        openHistory.pop.remove();
+        openHistory.button.setAttribute('aria-expanded', 'false');
+        openHistory = null;
+    }
+
+    function historyItem(item, index) {
+        const li = document.createElement('li');
+        const text = document.createElement('div');
+        text.className = 'history-text';
+        const preview = document.createElement('span');
+        preview.className = 'history-preview';
+        preview.textContent = item.original ? `Original: ${item.preview}` : item.preview;
+        const meta = document.createElement('small');
+        meta.textContent = `Until ${item.at}` + (item.by ? ` · changed by ${item.by}` : '');
+        text.append(preview, meta);
+        const restoreBtn = document.createElement('button');
+        restoreBtn.type = 'button';
+        restoreBtn.className = 'admin-btn admin-btn-secondary admin-btn-small';
+        restoreBtn.dataset.action = 'history-restore';
+        restoreBtn.dataset.index = String(index);
+        restoreBtn.textContent = 'Use this';
+        li.append(text, restoreBtn);
+        return li;
+    }
+
+    async function toggleHistory(row, button) {
+        const wasOpen = openHistory?.button === button;
+        closeHistory();
+        if (wasOpen) return;
+        const pop = document.createElement('div');
+        pop.className = 'history-pop';
+        pop.setAttribute('role', 'dialog');
+        pop.setAttribute('aria-label', button.getAttribute('aria-label'));
+        pop.innerHTML = '<p class="history-empty">Loading…</p>';
+        button.after(pop);
+        button.setAttribute('aria-expanded', 'true');
+        openHistory = { pop, button, items: [] };
+        let items;
+        try {
+            items = (await send(`/admin/api/site/history?key=${encodeURIComponent(row.dataset.key)}`)).items;
+        } catch (err) {
+            pop.querySelector('.history-empty').textContent = err.message;
+            return;
+        }
+        if (openHistory?.pop !== pop) return;
+        openHistory.items = items;
+        pop.replaceChildren();
+        if (!items.length) {
+            const empty = document.createElement('p');
+            empty.className = 'history-empty';
+            empty.textContent = 'No earlier versions yet. Each change you make from now on is kept here.';
+            pop.append(empty);
+            return;
+        }
+        const list = document.createElement('ol');
+        items.forEach((item, i) => list.append(historyItem(item, i)));
+        pop.append(list);
+        list.querySelector('button')?.focus();
+    }
+
+    function restore(row, button) {
+        const item = openHistory?.items[Number(button.dataset.index)];
+        if (!item) return;
+        closeHistory();
+        clearTimeout(listTimers.get(row));
+        listTimers.delete(row);
+        track(target(row), post('/admin/api/site', { key: row.dataset.key, value: item.value }))
+            .then(data => {
+                if (applyValue(row, data)) toast('Earlier version put back.', 'success');
+            })
+            .catch(() => {});
+    }
+
+    document.addEventListener('click', e => {
+        if (openHistory && !openHistory.pop.contains(e.target) && !openHistory.button.contains(e.target)) closeHistory();
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Escape' || !openHistory) return;
+        const { button } = openHistory;
+        closeHistory();
+        button.focus();
+    });
+
+    // --- Draft mode ------------------------------------------------------------------------
+
+    function showDraftCount(count) {
+        root.querySelectorAll('[data-draft-count]').forEach(node => { node.textContent = String(count); });
+        root.querySelectorAll('[data-action="draft-publish"], [data-action="draft-discard"]').forEach(node => {
+            node.disabled = count === 0;
+        });
+    }
+
+    function publishDraft(button) {
+        button.disabled = true;
+        post('/admin/api/site/draft', { action: 'publish' })
+            .then(data => {
+                toast(`Published ${data.published} change${data.published === 1 ? '' : 's'}.`, 'success');
+                setTimeout(() => location.reload(), 600);
+            })
+            .catch(err => {
+                button.disabled = false;
+                toast(err.message, 'error');
+            });
+    }
+
+    root.querySelector('[data-draft-toggle]')?.addEventListener('change', e => {
+        const toggle = e.target;
+        toggle.disabled = true;
+        post('/admin/api/site/draft', { action: toggle.checked ? 'on' : 'off' })
+            .then(() => location.reload())
+            .catch(err => {
+                toggle.checked = !toggle.checked;
+                toggle.disabled = false;
+                toast(err.message, 'error');
+            });
+    });
 
     // --- Images ---------------------------------------------------------------------------
 
@@ -432,10 +626,78 @@
         root.querySelectorAll('.settings-section').forEach(section => observer.observe(section));
     }
 
+    // --- Finding a setting ------------------------------------------------------------------
+
+    const search = document.getElementById('settingsSearch');
+    const searchEmpty = root.querySelector('[data-search-empty]');
+
+    // A row matches on its own label and hint, its group heading and its section title.
+    function filterSettings() {
+        const words = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        let any = false;
+        root.querySelectorAll('.settings-section').forEach(section => {
+            const sectionTitle = section.querySelector('h2').textContent;
+            let shown = 0;
+            let title = null;
+            let titleShown = false;
+            Array.from(section.children).forEach(node => {
+                if (node.matches('.settings-group-title')) {
+                    if (title) title.hidden = !titleShown;
+                    title = node;
+                    titleShown = false;
+                } else if (node.matches('.setting-row')) {
+                    if (!node.dataset.search) {
+                        // The placeholder help lists the same words on many rows, so it is left out.
+                        const label = node.querySelector('.setting-label').cloneNode(true);
+                        label.querySelector('.token-help')?.remove();
+                        node.dataset.search = [sectionTitle, title?.textContent || '', label.textContent]
+                            .join(' ').replace(/\s+/g, ' ').toLowerCase();
+                    }
+                    const match = words.every(word => node.dataset.search.includes(word));
+                    node.hidden = !match;
+                    if (match) {
+                        shown++;
+                        titleShown = true;
+                    }
+                }
+            });
+            if (title) title.hidden = !titleShown;
+            section.hidden = shown === 0;
+            const link = root.querySelector(`.settings-nav a[href="#${CSS.escape(section.id)}"]`);
+            if (link) link.classList.toggle('is-empty', shown === 0);
+            if (shown) any = true;
+        });
+        if (searchEmpty) searchEmpty.hidden = any;
+    }
+
+    search?.addEventListener('input', filterSettings);
+    search?.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && search.value) {
+            search.value = '';
+            filterSettings();
+        }
+    });
+
     root.querySelectorAll('.setting-row[data-kind="list"]').forEach(refreshListButtons);
 
+    // Text saves when its field loses focus; closing the tab does not always do that.
+    function focusedUnsaved() {
+        const row = document.activeElement?.closest?.('.setting-row');
+        if (!row || row.dataset.kind === 'list') return null;
+        return JSON.stringify(scalarValue(row)) !== row.dataset.saved ? row : null;
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'hidden') return;
+        const row = focusedUnsaved();
+        if (!row) return;
+        leaving = true;
+        save(row);
+        leaving = false;
+    });
+
     window.addEventListener('beforeunload', e => {
-        if (inFlight > 0 || listTimers.size > 0) {
+        if (inFlight > 0 || listTimers.size > 0 || focusedUnsaved() || root.querySelector('.list-row.is-incomplete')) {
             e.preventDefault();
             e.returnValue = '';
         }
