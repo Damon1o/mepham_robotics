@@ -11,15 +11,15 @@
 {% from "admin/_macros.html" import stepper, card_head, empty %}
 
 {% set tabs = [
-    ('overview', 'layout-dashboard', 'Overview', attention|length if attention else 0, 'to do'),
-    ('users', 'users', 'People', pending_users|length, 'waiting'),
-    ('teams', 'bot', 'Teams', 0, ''),
-    ('events', 'calendar-days', 'Events', 0, ''),
-    ('awards', 'trophy', 'Awards', 0, ''),
-    ('sponsors', 'handshake', 'Sponsors', 0, ''),
-    ('messages', 'mail', 'Messages', message_counts.new, 'unread'),
-    ('site', 'panels-top-left', 'Site', 0, ''),
-    ('activity', 'history', 'Activity', 0, ''),
+('overview', 'layout-dashboard', 'Overview', attention|length if attention else 0, 'to do'),
+('users', 'users', 'People', pending_users|length, 'waiting'),
+('teams', 'bot', 'Teams', 0, ''),
+('events', 'calendar-days', 'Events', 0, ''),
+('awards', 'trophy', 'Awards', 0, ''),
+('sponsors', 'handshake', 'Sponsors', 0, ''),
+('messages', 'mail', 'Messages', message_counts.new, 'unread'),
+('site', 'panels-top-left', 'Site', 0, ''),
+('activity', 'history', 'Activity', 0, ''),
 ] %}
 
 {% block content %}
@@ -59,7 +59,8 @@
         <a href="#{{ key }}" role="tab" id="tab-{{ key }}" aria-controls="panel-{{ key }}"
             aria-selected="{{ 'true' if loop.first else 'false' }}" data-tab="{{ key }}"
             tabindex="{{ 0 if loop.first else -1 }}"><i data-lucide="{{ icon }}" aria-hidden="true"></i>
-            <span>{{ label }}</span>{% if badge %}<span class="tab-badge{% if key != 'overview' %} tab-badge--alert{% endif %}"
+            <span>{{ label }}</span>{% if badge %}<span
+                class="tab-badge{% if key != 'overview' %} tab-badge--alert{% endif %}"
                 aria-label="{{ badge }} {{ badge_label }}">{{ badge }}</span>{% endif %}</a>
         {% endfor %}
     </nav>

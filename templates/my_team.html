@@ -25,10 +25,10 @@
             <span class="team-picker-number">{{ t.number }}</span>
             {% endif %}
             <span class="team-picker-text">
-                <span class="team-picker-name"><strong>{{ t.number if t.group else t.nickname or 'No nickname yet' }}</strong>
-                    {%- if t.own %}<span class="team-picker-own">{{ 'Your group' if t.group else 'Your team' }}</span>{% endif %}</span>
+                <strong class="team-picker-name">{{ t.number if t.group else t.nickname or 'No nickname yet' }}</strong>
                 <small>{% if t.group %}Group · {% endif %}{% if t.season %}{{ t.season }} · {% endif %}{{ t.members }} member{{ 's' if t.members != 1 }}</small>
             </span>
+            {%- if t.own %}<span class="team-picker-own">{{ 'Your group' if t.group else 'Your team' }}</span>{% endif %}
         </a></li>
         {% endfor %}
     </ul>

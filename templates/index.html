@@ -13,18 +13,27 @@
 {% block content %}
 <!-- HERO SECTION -->
 <div {{ hero_attrs(home.hero_image) }}>
-    {{ picture('photos/carousel2', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--l1', decorative=True) }}
-    {{ picture('photos/carousel1', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--l2', decorative=True) }}
-    {{ picture('photos/carousel3', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--l3', decorative=True) }}
-    {{ picture('photos/carousel7', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--l4', decorative=True) }}
-    {{ picture('photos/carousel9', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--r1', decorative=True) }}
-    {{ picture('photos/carousel4', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--r2', decorative=True) }}
-    {{ picture('photos/carousel10', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--r3', decorative=True) }}
-    {{ picture('photos/carousel5', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--r4', decorative=True) }}
+    {{ picture('photos/carousel2', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--l1',
+    decorative=True) }}
+    {{ picture('photos/carousel1', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--l2',
+    decorative=True) }}
+    {{ picture('photos/carousel3', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--l3',
+    decorative=True) }}
+    {{ picture('photos/carousel7', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--l4',
+    decorative=True) }}
+    {{ picture('photos/carousel9', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--r1',
+    decorative=True) }}
+    {{ picture('photos/carousel4', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--r2',
+    decorative=True) }}
+    {{ picture('photos/carousel10', '', '342px', class_='hero-side-photo hero-side-photo--landscape
+    hero-side-photo--r3', decorative=True) }}
+    {{ picture('photos/carousel5', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--r4',
+    decorative=True) }}
     <div class="hero-content">
         <h1>{{ home.hero_title }}</h1>
         {% if home.hero_tagline %}<p>{{ home.hero_tagline }}</p>{% endif %}
-        {% if (home.cta_primary_label and home.cta_primary_url) or (home.cta_secondary_label and home.cta_secondary_url) %}
+        {% if (home.cta_primary_label and home.cta_primary_url) or (home.cta_secondary_label and home.cta_secondary_url)
+        %}
         <div class="hero-cta">
             {% if home.cta_primary_label and home.cta_primary_url %}
             <a href="{{ home.cta_primary_url }}" class="cta-button cta-primary">{{ home.cta_primary_label }}</a>
@@ -76,7 +85,8 @@
         <div class="timeline-card">
             <div class="date-pill">{{ event.month }} {{ event.day }}</div>
             <div class="timeline-content">
-                <h3>{% if event.link %}<a class="timeline-link" href="{{ event.link }}" target="_blank" rel="noopener">{{ event.name }}</a>{% else %}{{ event.name }}{% endif %}</h3>
+                <h3>{% if event.link %}<a class="timeline-link" href="{{ event.link }}" target="_blank"
+                        rel="noopener">{{ event.name }}</a>{% else %}{{ event.name }}{% endif %}</h3>
                 <div class="info-row">
                     <p class="location">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"

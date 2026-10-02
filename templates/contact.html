@@ -54,10 +54,12 @@
         <fieldset class="channel-switch">
             <legend>Who are you writing as?</legend>
             <div class="channel-options" role="radiogroup">
-                {% for topic, icon in [('join', 'user-plus'), ('sponsor', 'handshake'), ('general', 'message-circle')] %}
+                {% for topic, icon in [('join', 'user-plus'), ('sponsor', 'handshake'), ('general', 'message-circle')]
+                %}
                 <label class="channel-option">
-                    <input type="radio" name="topic" value="{{ topic }}" form="contact-form"{% if loop.first %} checked{% endif %}
-                        data-lede="{{ contact[topic ~ '_lede'] }}" data-label="{{ contact[topic ~ '_label'] }}">
+                    <input type="radio" name="topic" value="{{ topic }}" form="contact-form" {% if loop.first %}
+                        checked{% endif %} data-lede="{{ contact[topic ~ '_lede'] }}"
+                        data-label="{{ contact[topic ~ '_label'] }}">
                     <span>
                         <i data-lucide="{{ icon }}"></i>
                         <strong>{{ contact[topic ~ '_title'] }}</strong>
@@ -73,8 +75,8 @@
         <form id="contact-form" novalidate>
             <div class="field-row">
                 <div class="field">
-                    <input type="text" id="contact-name" name="name" placeholder=" " maxlength="100"
-                        autocomplete="name" aria-describedby="error-name" required>
+                    <input type="text" id="contact-name" name="name" placeholder=" " maxlength="100" autocomplete="name"
+                        aria-describedby="error-name" required>
                     <label for="contact-name">Your name</label>
                     <p class="field-error" id="error-name" data-error-for="name"></p>
                 </div>
@@ -167,8 +169,9 @@
             <p class="section-kicker">Find us</p>
             <h2>{{ contact.findus_heading }}</h2>
             <p>{{ contact.findus_body }}</p>
-            <a class="find-us-link" href="https://www.google.com/maps/search/?api=1&query={{ meeting.map_query|urlencode }}"
-                target="_blank" rel="noopener">
+            <a class="find-us-link"
+                href="https://www.google.com/maps/search/?api=1&query={{ meeting.map_query|urlencode }}" target="_blank"
+                rel="noopener">
                 Open in Google Maps <i data-lucide="external-link"></i>
             </a>
         </div>
