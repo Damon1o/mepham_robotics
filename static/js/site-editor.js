@@ -52,7 +52,9 @@
     async function send(url, options) {
         let response;
         try {
-            response = await fetch(url, Object.assign({ credentials: 'same-origin' }, options));
+            // A fuse committed as the page closes must outlive it (fuse.js).
+            const keepalive = Boolean(window.Fuse?.leaving);
+            response = await fetch(url, Object.assign({ credentials: 'same-origin', keepalive }, options));
         } catch (err) {
             throw new Error('Could not reach the server. Check your connection.');
         }
@@ -223,9 +225,16 @@
             addRow(row).querySelector('input:not([type="file"]), textarea, select')?.focus();
             // Saved once something is typed; an empty new row would fail validation.
         } else if (action === 'row-remove') {
-            button.closest('[data-row]').remove();
-            refreshListButtons(row);
-            scheduleList(row, 100);
+            Fuse.arm(button, {
+                label: 'Removing this entry',
+                run: () => {
+                    button.closest('[data-row]').remove();
+                    refreshListButtons(row);
+                    // Leaving the page: save now, a timer would never fire.
+                    if (Fuse.leaving) save(row);
+                    else scheduleList(row, 100);
+                },
+            });
         } else if (action === 'row-up' || action === 'row-down') {
             const item = button.closest('[data-row]');
             const sibling = action === 'row-up' ? item.previousElementSibling : item.nextElementSibling;
@@ -236,33 +245,47 @@
             button.focus();
             scheduleList(row, 300);
         } else if (action === 'reset') {
-            track(target(row), post('/admin/api/site/reset', { key: row.dataset.key }))
-                .then(data => {
-                    const kind = row.dataset.kind;
-                    // Lists and images are simplest to redraw from the server.
-                    if (kind === 'list' || kind === 'image' || kind === 'days') {
-                        location.hash = row.closest('.settings-section').id;
-                        location.reload();
-                        return;
-                    }
-                    const radio = row.querySelector(`input[type="radio"][value="${CSS.escape(String(data.value))}"]`);
-                    if (radio) radio.checked = true;
-                    const input = row.querySelector('[data-value]:not([type="radio"])');
-                    if (input && input.type === 'checkbox') input.checked = Boolean(data.value);
-                    else if (input) input.value = data.value ?? '';
-                    afterSave(row, data);
-                    toast('Put back to the original.', 'success');
-                })
-                .catch(() => {});
+            Fuse.arm(button, { label: 'Putting back the original', run: () => resetRow(row) });
         } else if (action === 'clear-value') {
-            row.querySelector('[data-value]').value = '';
-            button.hidden = true;
-            save(row);
+            Fuse.arm(button, {
+                label: 'Clearing this field',
+                run: () => {
+                    row.querySelector('[data-value]').value = '';
+                    button.hidden = true;
+                    save(row);
+                },
+            });
         } else if (action === 'clear-image') {
-            setImage(row.querySelector('.site-image'), null);
-            save(row);
+            Fuse.arm(button, {
+                label: 'Removing this image',
+                run: () => {
+                    setImage(row.querySelector('.site-image'), null);
+                    save(row);
+                },
+            });
         }
     });
+
+    function resetRow(row) {
+        track(target(row), post('/admin/api/site/reset', { key: row.dataset.key }))
+            .then(data => {
+                const kind = row.dataset.kind;
+                // Lists and images are simplest to redraw from the server.
+                if (kind === 'list' || kind === 'image' || kind === 'days') {
+                    location.hash = row.closest('.settings-section').id;
+                    location.reload();
+                    return;
+                }
+                const radio = row.querySelector(`input[type="radio"][value="${CSS.escape(String(data.value))}"]`);
+                if (radio) radio.checked = true;
+                const input = row.querySelector('[data-value]:not([type="radio"])');
+                if (input && input.type === 'checkbox') input.checked = Boolean(data.value);
+                else if (input) input.value = data.value ?? '';
+                afterSave(row, data);
+                toast('Put back to the original.', 'success');
+            })
+            .catch(() => {});
+    }
 
     // --- Images ---------------------------------------------------------------------------
 

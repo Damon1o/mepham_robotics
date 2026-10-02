@@ -491,8 +491,7 @@ body:has(.admin-container) #custom-chatbot-container {
     background: var(--admin-card-bg);
 }
 
-.icon-btn--danger:hover,
-.icon-btn.is-confirming {
+.icon-btn--danger:hover {
     background: var(--admin-danger-soft);
     color: var(--admin-danger);
 }
