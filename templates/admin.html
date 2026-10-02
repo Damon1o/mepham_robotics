@@ -3,7 +3,9 @@
 {% block title %}Command Center | {{ site.general.short_name }}{% endblock %}
 
 {% block page_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/swipe-row.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<script src="{{ url_for('static', filename='js/swipe-row.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/admin.js') }}" defer></script>
 <script id="team_awards_data" type="application/json">{{ team_awards|tojson }}</script>
 {% endblock %}

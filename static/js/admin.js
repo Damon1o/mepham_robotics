@@ -1306,16 +1306,42 @@ const Messages = (function () {
         if (old !== newStatus) adjustCount(old, newStatus);
     }
 
-    function act(item, action, button) {
-        const run = () => api(`/admin/api/messages/${item.dataset.messageId}`, { action })
+    // Resolves true once the change is saved, false (already reported) if not.
+    function send(item, action) {
+        return api(`/admin/api/messages/${item.dataset.messageId}`, { action })
             .then(data => {
                 applyStatus(item, data.status);
                 applyFilters();
                 Admin.notify(data.status === 'deleted' ? 'Message deleted.' : `Marked ${data.status}.`, 'success');
+                return true;
             })
-            .catch(err => Admin.notify(err.message, 'error'));
+            .catch(err => {
+                Admin.notify(err.message, 'error');
+                return false;
+            });
+    }
+
+    function act(item, action, button) {
+        const run = () => send(item, action);
         if (action !== 'delete') return run();
         return Fuse.arm(button, { label: 'Deleting this message', run });
+    }
+
+    // Drag a message left: Delete (full swipe, with the fuse), Archive, Read/Unread.
+    function swipe(item) {
+        const status = () => item.dataset.status;
+        SwipeRow.attach(item.querySelector('.message-summary'), {
+            label: `Message from ${item.querySelector('.message-from').textContent.trim()}`,
+            fold: item,
+            actions: [
+                { id: 'delete', label: 'Delete', icon: 'trash-2', fuse: 'Deleting this message' },
+                { id: 'archive', label: 'Archive', icon: 'archive', hidden: () => status() === 'archived' },
+                { id: 'read', label: 'Read', icon: 'mail-open', hidden: () => status() !== 'new' },
+                { id: 'new', label: 'Unread', icon: 'mail', hidden: () => status() === 'new' },
+            ],
+            onAction: action => { if (action.id !== 'delete') send(item, action.id); },
+            onCommit: (action, row) => send(item, 'delete').then(ok => { if (!ok) row.reset(); }),
+        });
     }
 
     function bulk(action, button) {
@@ -1351,6 +1377,10 @@ const Messages = (function () {
     function init() {
         panel = document.getElementById('panel-messages');
         if (!panel) return;
+        if (window.SwipeRow) {
+            items().forEach(swipe);
+            panel.querySelectorAll('.subscriber-item').forEach(swipeSubscriber);
+        }
         panel.querySelectorAll('.message-filter').forEach(button => {
             button.addEventListener('click', () => {
                 panel.querySelectorAll('.message-filter').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
@@ -1379,19 +1409,38 @@ const Messages = (function () {
     return { init };
 })();
 
+// Resolves true once the address is gone, false (already reported) if not.
+function dropSubscriber(item) {
+    const email = item.querySelector('[data-email]').dataset.email;
+    return api(`/admin/api/subscribers/${item.dataset.subscriberId}`, {}, 'DELETE')
+        .then(() => {
+            item.remove();
+            const chip = document.querySelector('#newsletterCard .count-chip');
+            if (chip) chip.textContent = String(Math.max(0, parseInt(chip.textContent, 10) - 1));
+            Admin.notify(`Removed ${email}.`, 'success');
+            return true;
+        })
+        .catch(err => {
+            Admin.notify(err.message, 'error');
+            return false;
+        });
+}
+
 function removeSubscriber(button) {
-    const email = button.dataset.email;
-    const item = button.closest('[data-subscriber-id]');
     Fuse.arm(button, {
-        label: `Removing ${email} from the newsletter`,
-        run: () => api(`/admin/api/subscribers/${item.dataset.subscriberId}`, {}, 'DELETE')
-            .then(() => {
-                item.remove();
-                const chip = document.querySelector('#newsletterCard .count-chip');
-                if (chip) chip.textContent = String(Math.max(0, parseInt(chip.textContent, 10) - 1));
-                Admin.notify(`Removed ${email}.`, 'success');
-            })
-            .catch(err => Admin.notify(err.message, 'error')),
+        label: `Removing ${button.dataset.email} from the newsletter`,
+        run: () => dropSubscriber(button.closest('[data-subscriber-id]')),
+    });
+}
+
+// Drag a subscriber left past the drawer to remove them, with the same fuse.
+function swipeSubscriber(item) {
+    const email = item.querySelector('[data-email]').dataset.email;
+    SwipeRow.attach(item.querySelector('.subscriber-row'), {
+        label: email,
+        fold: item,
+        actions: [{ id: 'remove', label: 'Remove', icon: 'user-minus', fuse: `Removing ${email} from the newsletter` }],
+        onCommit: (action, row) => dropSubscriber(item).then(ok => { if (!ok) row.reset(); }),
     });
 }
 

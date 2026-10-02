@@ -91,10 +91,12 @@
             <ul class="subscriber-list">
                 {% for sub in subscribers %}
                 <li class="subscriber-item" data-subscriber-id="{{ sub._id }}">
-                    <span class="subscriber-email">{{ sub.email }}</span>
-                    <small>{{ sub.created_at.strftime('%b %d, %Y') if sub.created_at else '' }}</small>
-                    <button type="button" class="icon-btn icon-btn--danger" data-action="remove-subscriber"
-                        data-email="{{ sub.email }}" aria-label="Remove {{ sub.email }}"><i data-lucide="user-minus" aria-hidden="true"></i></button>
+                    <div class="subscriber-row">
+                        <span class="subscriber-email">{{ sub.email }}</span>
+                        <small>{{ sub.created_at.strftime('%b %d, %Y') if sub.created_at else '' }}</small>
+                        <button type="button" class="icon-btn icon-btn--danger" data-action="remove-subscriber"
+                            data-email="{{ sub.email }}" aria-label="Remove {{ sub.email }}"><i data-lucide="user-minus" aria-hidden="true"></i></button>
+                    </div>
                 </li>
                 {% endfor %}
             </ul>
