@@ -2379,6 +2379,7 @@ body:has(.admin-container) #custom-chatbot-container {
     align-items: stretch;
     gap: 0;
     padding: 0;
+    overflow: hidden;
 }
 
 .message-item[data-status="new"] {
@@ -2497,11 +2498,27 @@ body:has(.admin-container) #custom-chatbot-container {
 }
 
 .subscriber-item {
+    border-top: 1px solid var(--admin-line);
+}
+
+.subscriber-row {
     display: flex;
     align-items: center;
     gap: 0.6rem;
     padding: 0.3rem 0.2rem;
-    border-top: 1px solid var(--admin-line);
+}
+
+/* Swipe rows (swipe-row.js): messages and subscribers drag left for their actions. */
+#panel-messages .swipe-row {
+    --sr-row: var(--admin-surface);
+    --sr-drawer: var(--admin-muted);
+    --sr-on-drawer: var(--admin-card-bg);
+    --sr-action: var(--admin-danger);
+    --sr-on-action: var(--admin-card-bg);
+}
+
+#panel-messages .subscriber-item .swipe-row {
+    --sr-row: var(--admin-card-bg);
 }
 
 .subscriber-email {
