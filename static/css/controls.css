@@ -7,10 +7,11 @@
      4. Popover frame and bottom sheet
      5. Suggestion lists
      6. Date and time pickers
-     7. File drop zone
+     7. File drop zones, drag highlighting and drop notes
      8. Checkboxes and radios
      9. Sliders, number fields, search fields
-    10. Reduced motion
+    10. Animated lists
+    11. Reduced motion
    The menus and pickers are placed on <body>, outside any page container, so
    they take their colours from the --ctl-* tokens below, not the page's.
    ========================================================================== */
@@ -34,6 +35,9 @@
     --ctl-shadow: 0 14px 34px rgba(50, 15, 15, 0.16), 0 2px 6px rgba(50, 15, 15, 0.08);
     --ctl-radius: 12px;
     --ctl-radius-sm: 8px;
+    --ctl-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ctl-drop-line: #9a6f00;
+    --ctl-drop-veil: rgba(255, 244, 194, 0.7);
 }
 
 [data-theme="dark"] {
@@ -50,6 +54,8 @@
     --ctl-gold-soft: #3a3310;
     --ctl-danger: #ff9b91;
     --ctl-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --ctl-drop-line: #ffd700;
+    --ctl-drop-veil: rgba(46, 40, 10, 0.75);
 }
 
 /* 2. The native element behind a custom control ============================== */
@@ -104,6 +110,19 @@ select:not([multiple]):disabled {
 
 select.cs-select[aria-expanded="true"] {
     border-color: var(--ctl-accent);
+    background-image: var(--cs-chevron-open) !important;
+}
+
+/* A label picked with the pointer settles in out of a soft blur. */
+select.cs-select.cs-swap {
+    animation: cs-swap 0.16s ease;
+}
+
+@keyframes cs-swap {
+    from {
+        color: transparent;
+        text-shadow: 0 0 3px var(--cs-ink, currentColor);
+    }
 }
 
 /* The open menu */
@@ -142,6 +161,39 @@ select.cs-select[aria-expanded="true"] {
     background: var(--ctl-hover);
 }
 
+/* Dropdown lists draw the highlight once, as a pill that glides between rows
+   (controls.js moves it); the rows sit above it. */
+.cs-pill {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    border-radius: var(--ctl-radius-sm);
+    background: var(--ctl-hover);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        transform 0.22s var(--ctl-ease-out),
+        height 0.22s var(--ctl-ease-out),
+        opacity 0.15s ease;
+}
+
+.cs-pill.is-on {
+    opacity: 1;
+}
+
+.cs-pill.is-instant {
+    transition: opacity 0.15s ease;
+}
+
+.cs-glide .cs-option {
+    position: relative;
+}
+
+.cs-glide .cs-option.is-active {
+    background: none;
+}
+
 .cs-option[aria-selected="true"] {
     color: var(--ctl-accent-ink);
     font-weight: 700;
@@ -163,6 +215,14 @@ select.cs-select[aria-expanded="true"] {
     flex: 1;
     min-width: 0;
     overflow-wrap: anywhere;
+}
+
+.cs-tag {
+    flex: none;
+    color: var(--ctl-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
 }
 
 .cs-check {
@@ -255,13 +315,21 @@ select.cs-select[aria-expanded="true"] {
     color: var(--ctl-text);
     font-family: var(--font-body, inherit);
     opacity: 0;
-    transform: translateY(-4px);
-    transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+    /* Grows out of the corner it shares with its anchor (controls.js sets the origin). */
+    transform: scale(0.95);
+    transform-origin: top left;
+    transition: opacity 0.18s var(--ctl-ease-out), transform 0.18s var(--ctl-ease-out);
 }
 
 .ctl-pop.is-open {
     opacity: 1;
     transform: none;
+}
+
+/* Dismissed, it shrinks back in two thirds of the time. */
+.ctl-pop.is-leaving {
+    transition-duration: 0.12s;
+    pointer-events: none;
 }
 
 /* Phones: dock to the bottom edge, full width, with a grab bar. */
@@ -654,7 +722,7 @@ select.cs-select[aria-expanded="true"] {
     height: 2.6rem;
 }
 
-/* 7. File drop zone ================================================================ */
+/* 7. File drop zones ============================================================== */
 .file-drop {
     display: flex;
     flex-wrap: wrap;
@@ -703,6 +771,94 @@ select.cs-select[aria-expanded="true"] {
 
 .file-drop[hidden] {
     display: none;
+}
+
+/* While files are dragged over the page, everything that takes them lights up:
+   upload boxes get a gold border, bigger targets (whole cards and rows) a dashed
+   gold outline. The one under the pointer gets a solid ring and its label. */
+[data-drop] {
+    position: relative;
+}
+
+html.ctl-dragging :is(.drop-zone, .file-drop) {
+    border-color: var(--ctl-drop-line);
+}
+
+/* Round photo zones keep their dark fill, so the initials stay readable. */
+html.ctl-dragging :is(.drop-zone, .file-drop):not(.drop-zone--round) {
+    background: var(--ctl-gold-soft);
+}
+
+html.ctl-dragging [data-drop]:not(.drop-zone, .file-drop) {
+    outline: 2px dashed var(--ctl-drop-line);
+    outline-offset: -2px;
+}
+
+html.ctl-dragging :is(.drop-zone, .file-drop, [data-drop]).is-over {
+    outline: 3px solid var(--ctl-drop-line);
+    outline-offset: 1px;
+}
+
+/* The zone under the pointer: a gold veil, and its label in a pill that follows
+   the pointer up and down (--drop-y), so it stays in view on a long roster. */
+[data-drop-now]::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    border-radius: inherit;
+    background: var(--ctl-drop-veil);
+    pointer-events: none;
+}
+
+[data-drop-now]::after {
+    content: attr(data-drop-now);
+    position: absolute;
+    top: var(--drop-y, 50%);
+    left: 50%;
+    z-index: 6;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: calc(100% - 1rem);
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    background: var(--ctl-accent);
+    color: var(--ctl-on-accent);
+    box-shadow: var(--ctl-shadow);
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1.3;
+    text-align: center;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+/* A short note beside a zone: wrong kind of file, or extra files left out. */
+.drop-note {
+    position: fixed;
+    z-index: 10060;
+    max-width: min(22rem, calc(100vw - 16px));
+    padding: 0.45rem 0.7rem;
+    border-radius: var(--ctl-radius-sm);
+    background: var(--ctl-text);
+    color: var(--ctl-bg);
+    box-shadow: var(--ctl-shadow);
+    font-size: 0.85rem;
+    line-height: 1.35;
+    pointer-events: none;
+    animation: drop-note-in 0.15s ease-out;
+    transition: opacity 0.2s;
+}
+
+.drop-note.is-leaving {
+    opacity: 0;
+}
+
+@keyframes drop-note-in {
+    from {
+        opacity: 0;
+        transform: translateY(-3px);
+    }
 }
 
 /* 8. Checkboxes and radios ======================================================== */
@@ -862,12 +1018,66 @@ input[type="search"]::-webkit-search-cancel-button {
     cursor: pointer;
 }
 
-/* 10. Reduced motion ================================================================== */
+/* 10. Animated lists ================================================================== */
+/* A scrolling list whose items ease in as they come into view and shrink away as they
+   leave, with the top and bottom edges fading out while there is more to scroll (after
+   React Bits' AnimatedList). Markup: data-animated-list="<item selector>" on the
+   scrolling box. controls.js adds .is-animated, puts .is-in on items at least half in
+   view, and sets --fade-top/--fade-bottom (0 to 1) from the scroll position. The fades
+   are a mask, so they work on any background. --fade-start moves the top fade down,
+   below a sticky header; --fade-top-size/--fade-bottom-size set how far they reach. data-animated-list-rows="N" makes the box exactly N items tall. */
+[data-animated-list] {
+    position: relative;
+    --fade-start: 0px;
+    --fade-top-size: 3rem;
+    --fade-bottom-size: 5rem;
+    --fade-top: 0;
+    --fade-bottom: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--ctl-border) transparent;
+    -webkit-mask-image: linear-gradient(to bottom,
+        #000 var(--fade-start),
+        rgb(0 0 0 / calc(1 - var(--fade-top))) var(--fade-start),
+        #000 calc(var(--fade-start) + var(--fade-top-size)),
+        #000 calc(100% - var(--fade-bottom-size)),
+        rgb(0 0 0 / calc(1 - var(--fade-bottom))) 100%);
+    mask-image: linear-gradient(to bottom,
+        #000 var(--fade-start),
+        rgb(0 0 0 / calc(1 - var(--fade-top))) var(--fade-start),
+        #000 calc(var(--fade-start) + var(--fade-top-size)),
+        #000 calc(100% - var(--fade-bottom-size)),
+        rgb(0 0 0 / calc(1 - var(--fade-bottom))) 100%);
+}
+
+[data-animated-list].is-animated .ctl-animated-item {
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s, background-color 0.15s ease;
+}
+
+/* An item being edited or dragged never shrinks away, even half scrolled out. */
+[data-animated-list].is-animated .ctl-animated-item:is(.is-in, :focus-within) {
+    opacity: 1;
+    transform: none;
+}
+
+/* 11. Reduced motion ================================================================== */
 @media (prefers-reduced-motion: reduce) {
+    [data-animated-list].is-animated .ctl-animated-item {
+        opacity: 1;
+        transform: none;
+    }
+
     .ctl-pop,
+    .cs-pill,
+    select.cs-select.cs-swap,
     :where(input[type="checkbox"], input[type="radio"]),
     :where(input[type="checkbox"], input[type="radio"])::before,
-    .file-drop {
+    .file-drop,
+    .drop-note {
+        animation: none;
         transition: none;
     }
 }

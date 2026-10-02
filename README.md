@@ -57,8 +57,7 @@ Python 3.12 is the target (`.python-version`); Vercel deploys with the Flask fra
 | `SECRET_KEY` | yes in production | Signs the session cookie. Startup fails on Vercel without it. |
 | `BLOB_READ_WRITE_TOKEN` | for uploads | Vercel Blob token |
 | `PUBLIC_BASE_URL` | optional | Base URL used when building password-reset links |
-| `ROBOTEVENTS_API_KEY` | optional | Enables `/api/matches`; results are cached for 5 minutes |
-| `ROBOTEVENTS_TOKEN` | optional | Enables the live panels on team pages; check it with `python -m api.robotevents probe 77628A` |
+| `ROBOTEVENTS_API_KEY` | optional | RobotEvents v2 token. Enables `/api/matches` (cached for 5 minutes) and the live panels on team pages; check it with `python -m api.robotevents probe 77628A`. The older name `ROBOTEVENTS_TOKEN` is still read as a fallback. |
 | `CHATBOT_API_KEY` | optional | Enables the on-site assistant; without it the widget reports it is offline |
 | `CHATBOT_API_URL`, `CHATBOT_MODEL` | optional | Override the assistant's upstream and model |
 | `GIVEBUTTER_CAMPAIGN_ID` | optional | Renders the donation embed; without it the page shows an email fallback |

@@ -1,14 +1,471 @@
-/* Page styles: donate */
+/* Page styles: donate
+   Give online (pitch, impact ladder, Givebutter form), sponsorship levels,
+   corporate inquiry band and the sponsor wall. */
 
 .hero-image {
-    background: var(--maroon-dark);
-    border-bottom: 4px solid var(--text-dark);
+    /* Fallback for browsers without image-set(type()); the rule below wins elsewhere. */
+    background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%), url('../../assets/photos/carousel4.jpg') center 35%/cover;
+    background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
+    image-set(url('../../assets/photos/carousel4-1200.webp') type('image/webp'), url('../../assets/photos/carousel4.jpg') type('image/jpeg')) center 35%/cover;
     min-height: 60vh;
 }
 
-/* Sponsor inquiry form — moved out of donate.html so no styles live in markup. */
-.sponsor-inquiry-title {
+:root {
+    --dn-surface: #fff;
+    --dn-ink: #1a1a1a;
+    --dn-muted: #5c5c5c;
+    --dn-line: #1a1a1a;
+    --dn-soft: #faf6f0;
+    --dn-heading: var(--maroon-dark);
+    --dn-shadow: 8px 8px 0px var(--dn-line);
+    --dn-bronze: #cd7f32;
+    --dn-silver: #b8bcc4;
+    --dn-gold: var(--accent-gold);
+    --dn-platinum: #9fd8e6;
+}
+
+[data-theme="dark"] {
+    --dn-surface: #1e1e1e;
+    --dn-ink: #f1f1f1;
+    --dn-muted: #bbb;
+    --dn-line: #444;
+    --dn-soft: #262626;
+    --dn-heading: #e8b4b5;
+    --dn-shadow: 8px 8px 0px rgba(0, 0, 0, 0.55);
+}
+
+/* --- SECTION SHELL --- */
+
+.dn-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--spacing-xl) var(--spacing-md) 0;
+}
+
+.dn-section:last-child {
+    padding-bottom: var(--spacing-xl);
+}
+
+.dn-head {
+    margin-bottom: var(--spacing-lg);
     text-align: center;
+}
+
+.dn-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.4rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dn-heading);
+}
+
+.dn-eyebrow::before {
+    content: '';
+    width: 1.75rem;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--accent-gold);
+    box-shadow: 0 0 0 2px var(--dn-line);
+}
+
+.dn-section h2,
+.dn-band h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 4vw, 2.6rem);
+    line-height: 1.15;
+    color: var(--dn-ink);
+}
+
+/* Headings beside a form read left-aligned, without the centred gold underline. */
+.dn-give-copy h2,
+.dn-band h2 {
+    text-align: left;
+}
+
+.dn-give-copy h2::after,
+.dn-band h2::after {
+    display: none;
+}
+
+/* --- GIVE ONLINE --- */
+
+.dn-give {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: var(--spacing-lg);
+    align-items: start;
+}
+
+.dn-give-sub {
+    margin: 0.6rem 0 0;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--dn-heading);
+}
+
+.dn-give-body {
+    margin: 1rem 0 0;
+    color: var(--dn-muted);
+    line-height: 1.7;
+}
+
+.dn-impact {
+    margin-top: var(--spacing-md);
+}
+
+.dn-impact h3 {
+    margin: 0 0 0.75rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dn-ink);
+}
+
+.dn-impact-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.6rem;
+}
+
+.dn-impact-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.55rem 0.9rem 0.55rem 0.55rem;
+    background: var(--dn-surface);
+    border: 2px solid var(--dn-line);
+    border-radius: 12px;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.dn-impact-list li:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0px var(--dn-line);
+}
+
+.dn-impact-amount {
+    flex: none;
+    min-width: 4.5rem;
+    padding: 0.35rem 0.6rem;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: var(--ink-on-gold);
+    background: var(--accent-gold);
+    border: 2px solid var(--ink-on-gold);
+    border-radius: 8px;
+}
+
+.dn-impact-text {
+    color: var(--dn-ink);
+}
+
+.dn-note {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    margin: var(--spacing-md) 0 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--dn-muted);
+}
+
+.dn-note svg {
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: 0.15rem;
+    color: var(--dn-heading);
+}
+
+/* The Givebutter form sits in a framed card so it reads as part of the page. */
+.dn-embed {
+    background: var(--dn-surface);
+    border: 3px solid var(--dn-line);
+    border-radius: 20px;
+    box-shadow: var(--dn-shadow);
+    overflow: hidden;
+}
+
+.dn-embed-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.1rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--maroon-dark);
+    border-bottom: 3px solid var(--dn-line);
+}
+
+.dn-embed-bar svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    color: var(--accent-gold);
+}
+
+.dn-embed-via {
+    margin-left: auto;
+    opacity: 0.75;
+}
+
+.dn-embed iframe {
+    display: block;
+    border: 0;
+}
+
+.dn-embed-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: var(--spacing-lg) var(--spacing-md);
+    text-align: center;
+    line-height: 1.7;
+    color: var(--dn-ink);
+}
+
+.dn-embed-fallback p {
+    margin: 0;
+    max-width: 38ch;
+}
+
+.dn-embed-email {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--dn-heading);
+    overflow-wrap: anywhere;
+}
+
+svg.dn-embed-fallback-icon {
+    width: 3rem;
+    height: 3rem;
+    padding: 0.7rem;
+    color: var(--ink-on-gold);
+    background: var(--accent-gold);
+    border: 2px solid var(--dn-line);
+    border-radius: 50%;
+}
+
+/* --- SPONSORSHIP LEVELS --- */
+
+.dn-tiers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.dn-tier {
+    --tier: var(--dn-bronze);
+    display: flex;
+    flex-direction: column;
+    background: var(--dn-surface);
+    border: 3px solid var(--dn-line);
+    border-radius: 20px;
+    box-shadow: var(--dn-shadow);
+    overflow: hidden;
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.dn-tier:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 11px 11px 0px var(--dn-line);
+}
+
+.dn-tier.tier-silver { --tier: var(--dn-silver); }
+.dn-tier.tier-gold { --tier: var(--dn-gold); }
+.dn-tier.tier-platinum { --tier: var(--dn-platinum); }
+
+.dn-tier-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: var(--spacing-md) var(--spacing-md) 1.25rem;
+    text-align: center;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.45) 0%, transparent 65%),
+        var(--tier);
+    border-bottom: 3px solid var(--dn-line);
+    color: var(--ink-on-gold);
+}
+
+svg.dn-tier-icon {
+    width: 2.6rem;
+    height: 2.6rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.55);
+    border: 2px solid var(--ink-on-gold);
+    border-radius: 50%;
+}
+
+.dn-tier h3 {
+    margin: 0.25rem 0 0;
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    color: var(--ink-on-gold);
+}
+
+.dn-tier-amount {
+    margin: 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.dn-tier-benefits {
+    list-style: none;
+    margin: 0;
+    padding: 1.25rem var(--spacing-md);
+    display: grid;
+    gap: 0.6rem;
+    flex: 1;
+    align-content: start;
+}
+
+.dn-tier-benefits li {
+    display: flex;
+    gap: 0.55rem;
+    align-items: flex-start;
+    color: var(--dn-ink);
+    line-height: 1.45;
+}
+
+.dn-tier-benefits svg {
+    flex: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.15rem;
+    padding: 0.1rem;
+    color: #fff;
+    background: var(--maroon-dark);
+    border-radius: 50%;
+}
+
+.dn-tier-pick {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin: 0 var(--spacing-md) var(--spacing-md);
+    padding: 0.7rem 1rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--dn-ink);
+    background: var(--dn-soft);
+    border: 2px solid var(--dn-line);
+    border-radius: 12px;
+    transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.dn-tier-pick svg {
+    width: 1rem;
+    height: 1rem;
+    transition: transform var(--transition-fast);
+}
+
+.dn-tier-pick:hover,
+.dn-tier-pick:focus-visible {
+    background: var(--maroon-dark);
+    color: #fff;
+}
+
+.dn-tier-pick:hover svg,
+.dn-tier-pick:focus-visible svg {
+    transform: translateX(3px);
+}
+
+/* --- CORPORATE INQUIRY BAND --- */
+
+/* A full-width colour band, so it opts out of the global section width. */
+.dn-band {
+    max-width: none;
+    margin: var(--spacing-xl) 0 0;
+    padding: var(--spacing-xl) var(--spacing-md);
+    background:
+        radial-gradient(circle at 15% 20%, rgba(255, 215, 0, 0.14) 0%, transparent 45%),
+        linear-gradient(160deg, #800000 0%, #4a0000 100%);
+    border-top: 4px solid var(--dn-line);
+    border-bottom: 4px solid var(--dn-line);
+}
+
+.dn-band-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: var(--spacing-lg);
+    align-items: center;
+}
+
+.dn-band .dn-eyebrow,
+.dn-band h2 {
+    color: #fff;
+}
+
+.dn-band .dn-eyebrow::before {
+    box-shadow: none;
+}
+
+.dn-band-copy > p:not(.dn-eyebrow) {
+    margin: 1rem 0 0;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.7;
+}
+
+.dn-steps {
+    list-style: none;
+    margin: var(--spacing-md) 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.dn-steps li {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    color: #fff;
+    font-weight: 600;
+}
+
+.dn-steps span {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: var(--ink-on-gold);
+    background: var(--accent-gold);
+    border: 2px solid var(--ink-on-gold);
+    border-radius: 50%;
+}
+
+.sponsor-form.dn-form {
+    max-width: none;
+    margin: 0;
+    box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.35);
+}
+
+.dn-form .form-group {
+    margin-bottom: 1.4rem;
 }
 
 .sponsor-submit {
@@ -22,23 +479,160 @@
     text-align: center;
 }
 
-.donate-embed-fallback {
-    padding: 2rem;
+/* --- SPONSOR WALL --- */
+
+.dn-sponsor-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.dn-sponsor {
+    --tier: var(--dn-line);
+}
+
+.dn-sponsor.level-bronze { --tier: var(--dn-bronze); }
+.dn-sponsor.level-silver { --tier: var(--dn-silver); }
+.dn-sponsor.level-gold { --tier: var(--dn-gold); }
+.dn-sponsor.level-platinum { --tier: var(--dn-platinum); }
+
+.dn-sponsor-link {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: var(--spacing-md);
     text-align: center;
-    line-height: 1.7;
+    text-decoration: none;
+    color: var(--dn-ink);
+    background: var(--dn-surface);
+    border: 3px solid var(--dn-line);
+    border-top: 8px solid var(--tier);
+    border-radius: 16px;
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
 }
 
-/* Moved out of inline style attributes in the templates. */
-
-.text-center.donate-note {
-    margin-top: 2rem;
+a.dn-sponsor-link:hover,
+a.dn-sponsor-link:focus-visible {
+    transform: translate(-3px, -3px);
+    box-shadow: 6px 6px 0px var(--dn-line);
 }
 
-.donate-note-text {
-    font-size: 0.95rem;
-    color: #6f6f6f;
+.dn-sponsor-logo {
+    width: 100%;
+    height: 96px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 0.4rem;
 }
 
-.ripple.impact-heading {
-    color: white;
+.dn-sponsor-logo img {
+    max-width: 100%;
+    max-height: 96px;
+    object-fit: contain;
+}
+
+[data-theme="dark"] .dn-sponsor-logo img {
+    padding: 0.4rem;
+    background: #fff;
+    border-radius: 8px;
+}
+
+.dn-sponsor-initial {
+    width: 80px;
+    height: 80px;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--maroon-dark);
+    border: 3px solid var(--dn-line);
+    border-radius: 50%;
+}
+
+.dn-sponsor-name {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.dn-sponsor-level {
+    margin: 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dn-muted);
+}
+
+.dn-sponsors-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: var(--spacing-lg) var(--spacing-md);
+    text-align: center;
+    background: var(--dn-soft);
+    border: 3px dashed var(--dn-line);
+    border-radius: 20px;
+}
+
+.dn-sponsors-empty p {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--dn-ink);
+}
+
+/* --- SMALL SCREENS --- */
+
+@media (max-width: 860px) {
+    .dn-give,
+    .dn-band-inner {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .dn-section {
+        padding-left: var(--spacing-sm);
+        padding-right: var(--spacing-sm);
+    }
+
+    .dn-band {
+        padding-left: var(--spacing-sm);
+        padding-right: var(--spacing-sm);
+    }
+
+    .sponsor-form.dn-form {
+        padding: 1.5rem;
+    }
+
+    .dn-sponsor-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--spacing-sm);
+    }
+
+    .dn-sponsor-link {
+        padding: var(--spacing-sm);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dn-tier,
+    .dn-impact-list li,
+    .dn-sponsor-link,
+    .dn-tier-pick svg {
+        transition: none;
+    }
 }

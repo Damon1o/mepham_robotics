@@ -17,7 +17,7 @@ from functools import wraps
 from bson import ObjectId
 import bcrypt
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort, g
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort, g, send_from_directory
 from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 from pymongo import MongoClient
@@ -139,11 +139,13 @@ LEADERSHIP_KEYWORDS = ('captain', 'lead', 'president', 'mentor', 'director')
 
 @app.template_filter('member_roles')
 def member_roles(member):
-    """Every role a member holds. Falls back to the single legacy 'role' string."""
-    roles = member.get('roles') or []
-    roles = [r.strip() for r in roles if str(r).strip()]
-    if not roles and member.get('role'):
-        roles = [member['role'].strip()]
+    """Every role a member holds: the main 'role' first, then the other 'roles', no repeats."""
+    roles, seen = [], set()
+    for role in [member.get('role') or '', *(member.get('roles') or [])]:
+        role = str(role).strip()
+        if role and role.lower() not in seen:
+            seen.add(role.lower())
+            roles.append(role)
     return roles
 
 
@@ -191,6 +193,23 @@ def initials(name):
     if not parts:
         return '?'
     return (parts[0][0] + (parts[-1][0] if len(parts) > 1 else '')).upper()
+
+
+ROMAN_NUMERALS = ((10, 'X'), (9, 'IX'), (5, 'V'), (4, 'IV'), (1, 'I'))
+
+
+@app.template_filter('roman')
+def roman(number):
+    """An award count as the Honor Plaque engraves it: I to XX, then plain digits."""
+    number = int(number or 0)
+    if not 0 < number <= 20:
+        return str(number)
+    out = ''
+    for value, letters in ROMAN_NUMERALS:
+        while number >= value:
+            out += letters
+            number -= value
+    return out
 
 
 def file_extension(filename):
@@ -338,6 +357,7 @@ ACTIVITY_TYPES = {
     'subscriber_remove': ('📭', 'Subscriber removed', 'messages'),
     'subscribers_export': ('📤', 'Subscriber list exported', 'messages'),
     'site_edit': ('🖊️', 'Site content edited', 'site'),
+    'fundraiser_edit': ('💰', 'Fundraisers edited', 'events'),
 }
 ACTIVITY_GROUPS = (('people', 'People'), ('teams', 'Teams'), ('events', 'Events'), ('awards', 'Awards'),
                    ('sponsors', 'Sponsors'), ('messages', 'Messages'), ('site', 'Site'))
@@ -1042,19 +1062,70 @@ def index():
         event['day'] = event['date'].strftime('%d')
         event['time'] = event['date'].strftime('%I:%M %p')
     competition = upcoming_events[0] if upcoming_events else None
+    settings = site().fundraisers
+    fundraisers = (site_content.fundraiser_cards(settings.entries, club_now(), settings.max_shown)
+                   if settings.mode != 'never' else [])
     return render_template('index.html', active_page='index', stats=stats,
-                           competition=competition, upcoming_events=upcoming_events)
+                           competition=competition, upcoming_events=upcoming_events, fundraisers=fundraisers)
 
 @app.route('/about')
 def about():
     return render_template('about.html', active_page='about')
 
+def achievements_view():
+    """Everything the achievements page shows, built from award rows, teams and past events.
+
+    Club-wide category rows carry the headline counts; each team's own counters add the
+    per-team breakdown. Team rows made before categories were linked match by title.
+    """
+    rows = list(db['awards'].find().sort(AWARD_ORDER))
+    categories = [a for a in rows if 'team_number' not in a]
+    by_title = {a.get('title'): str(a['_id']) for a in categories}
+    teams = [t for t in listed_teams() if not is_group(t)]
+    team_rows = {t['team_number']: [] for t in teams}
+    winners = {}
+    for row in rows:
+        count = int(row.get('count') or 0)
+        if row.get('team_number') in team_rows and count > 0:
+            team_rows[row['team_number']].append(dict(row, count=count, icon=row.get('icon') or AWARD_ICONS[0]))
+            key = row.get('category_id') or by_title.get(row.get('title'))
+            winners.setdefault(key, []).append({'team_number': row['team_number'], 'count': count})
+
+    total = sum(int(a.get('count') or 0) for a in categories)
+    earned, unearned = [], []
+    for a in categories:
+        a['count'] = int(a.get('count') or 0)
+        a['icon'] = a.get('icon') or AWARD_ICONS[0]
+        a['featured'] = a.get('border') == 'gold' or bool(a.get('shimmer'))
+        a['share'] = round(100 * a['count'] / total) if total else 0
+        a['teams'] = sorted(winners.get(str(a['_id']), []), key=lambda w: -w['count'])
+        (earned if a['count'] else unearned).append(a)
+
+    team_cards = [{'number': t['team_number'], 'nickname': t.get('nickname') or '',
+                   'total': sum(r['count'] for r in team_rows[t['team_number']]),
+                   'awards': team_rows[t['team_number']]} for t in teams]
+    team_cards.sort(key=lambda c: -c['total'])
+
+    limit = site().achievements.history_limit or 12
+    events = list(db['competitions'].find({'date': {'$lt': club_now()}}).sort('date', -1).limit(limit + 1))
+    more_events = len(events) > limit
+    events = events[:limit]
+    for event in events:
+        # VEX seasons start in late spring: an April event belongs to the season that began last year.
+        start = event['date'].year - (event['date'].month < 5)
+        event['season'] = f'{start}–{str(start + 1)[-2:]}'
+    return {
+        'earned': earned, 'unearned': unearned, 'has_awards': bool(categories),
+        'featured': [a for a in earned if a['featured']],
+        'total': total, 'team_cards': team_cards, 'past_events': events, 'more_events': more_events,
+        'top_count': max((a['count'] for a in earned), default=0),
+    }
+
+
 @app.route('/achievements')
 def achievements():
-    global_awards = list(db['awards'].find({'team_number': {'$exists': False}}).sort(AWARD_ORDER))
-    return render_template('achievements.html', active_page='achievements',
-                           global_awards=global_awards,
-                           live_results=bool(os.getenv('ROBOTEVENTS_API_KEY')) and site().achievements.show_live)
+    return render_template('achievements.html', active_page='achievements', **achievements_view(),
+                           live_results=bool(robotevents.get_token()) and site().achievements.show_live)
 
 @app.route('/contact')
 def contact():
@@ -1074,6 +1145,102 @@ def donate():
     return render_template('donate.html', active_page='donate',
                            givebutter_campaign_id=content.donate.givebutter_id,
                            contact_email=email, sponsors=load_sponsors())
+
+# Journey dates are free text; these are the shapes people type into that box.
+LOOSE_DATE_FORMATS = ('%Y-%m-%d', '%m/%d/%Y', '%b %d, %Y', '%B %d, %Y', '%b %d %Y', '%B %d %Y',
+                      '%b %Y', '%B %Y', '%Y')
+
+
+def parse_loose_date(text):
+    """A journey date like 'Sep 2025', 'January 12, 2026' or '2024' as a datetime, else None."""
+    text = re.sub(r'\bSept\b', 'Sep', ' '.join(str(text or '').replace('.', '').split()), flags=re.I)
+    for fmt in LOOSE_DATE_FORMATS:
+        try:
+            return datetime.datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def team_timeline(team):
+    """Journey milestones and the team's own events as one dated list (Season Timeline layout).
+
+    Milestones keep the order they were written in: one whose date does not parse
+    takes the date of the milestone before it. Events are the team's photo galleries,
+    dated (and placed) by the club competition of the same name in that season.
+    Events with no matching competition close the list. Built from stored data
+    only; team.js adds RobotEvents results to it when a key is configured.
+    """
+    season = str(team.get('season') or '')
+    start_year = int(season[:4]) if season[:4].isdigit() else None
+    competitions = {}
+    for comp in db['competitions'].find({}, {'name': 1, 'date': 1, 'location': 1}).sort('date', 1):
+        when = comp.get('date')
+        if not comp.get('name') or not isinstance(when, datetime.datetime):
+            continue
+        # VEX seasons start in late spring, as on the achievements page.
+        if start_year is not None and when.year - (when.month < 5) != start_year:
+            continue
+        competitions.setdefault(comp['name'].strip().lower(), comp)
+
+    items, last = [], None
+    for order, milestone in enumerate(team.get('journey') or []):
+        last = parse_loose_date(milestone.get('date')) or last
+        items.append({'kind': 'milestone', 'when': last, 'order': order, 'label': milestone.get('date') or '',
+                      'title': milestone.get('title') or '', 'text': milestone.get('description') or ''})
+    for order, event in enumerate(team.get('events') or []):
+        name = (event.get('name') or '').strip()
+        if not name:
+            continue
+        comp = competitions.get(name.lower())
+        when = comp['date'].replace(tzinfo=None) if comp else None
+        items.append({'kind': 'event', 'when': when, 'order': 10_000 + order, 'title': name,
+                      'label': f'{when:%b} {when.day}, {when.year}' if when else '',
+                      'where': (comp or {}).get('location') or '', 'photos': event.get('photos') or []})
+
+    def key(item):
+        if item['when'] is not None:
+            return (1, item['when'], item['order'])
+        # Undated milestones before any dated one open the list; undated events close it.
+        return (0 if item['kind'] == 'milestone' else 2, datetime.datetime.min, item['order'])
+    return sorted(items, key=key)
+
+
+MOSAIC_SIZES = (9, 7, 5, 4)
+
+
+def team_mosaic(team):
+    """Photos for the Magazine layout's mosaic, as (path, event name) pairs, plus how many
+    more the team has.
+
+    Taken one event at a time in turn, so the mosaic is not nine shots of one day. The
+    count is trimmed to a size the mosaic's grid fills with no holes (9, 7, 5 or 4); a
+    team with fewer than 4 photos gets no mosaic.
+    """
+    queues = [[(p, e['name']) for p in e.get('photos') or []]
+              for e in team.get('events') or [] if e.get('name') and e.get('photos')]
+    photos = []
+    while any(queues):
+        for queue in queues:
+            if queue:
+                photos.append(queue.pop(0))
+    size = next((n for n in MOSAIC_SIZES if len(photos) >= n), 0)
+    return photos[:size], len(photos) - size if size else 0
+
+
+def team_layout(team):
+    """The layout this team season renders with: its own pick, else the site default.
+
+    Groups always use Classic until they get layouts of their own. A stored key that
+    is no longer offered falls back too, so removing a layout never breaks a page.
+    """
+    if is_group(team):
+        return site_content.DEFAULT_TEAM_LAYOUT
+    for key in (team.get('layout'), site().teams.layout):
+        if key in site_content.TEAM_LAYOUTS:
+            return key
+    return site_content.DEFAULT_TEAM_LAYOUT
+
 
 @app.route('/team/<team_number>')
 def team_page(team_number):
@@ -1095,6 +1262,10 @@ def team_page(team_number):
     # straight into them, and a missing one turned the page into a 500.
     # setdefault leaves an explicit null in place, so normalise with `or`.
     team['specs'] = team.get('specs') or {}
+    # A hidden CAD model is left out entirely: every layout then treats the
+    # robot as having no model (photos fill in, or the showcase is skipped).
+    if team.get('hide_cad'):
+        team.pop('stl_path', None)
     for key in ('members', 'goals', 'journey', 'events'):
         team[key] = team.get(key) or []
 
@@ -1114,26 +1285,41 @@ def team_page(team_number):
     for award in team_awards:
         # The awards grid builds the icon path from this; a row missing it used to 500 the page.
         award['icon'] = award.get('icon') or AWARD_ICONS[0]
+    layout = team_layout(team)
+    mosaic, mosaic_more = team_mosaic(team) if layout == 'magazine' else ([], 0)
     return render_template('team.html', team=team, team_awards=team_awards,
                            event_photos=event_photos, robot_photos=robot_photos,
+                           layout=layout, award_style=site_content.LAYOUT_AWARD_STYLES.get(layout, 'classic'),
+                           timeline=team_timeline(team) if layout == 'timeline' else [],
+                           mosaic=mosaic, mosaic_more=mosaic_more,
+                           robotevents_url=None if is_group(team) else robotevents.team_url(team_number),
                            seasons=seasons, active_season=team.get('season'),
-                           live_enabled=bool(os.environ.get('ROBOTEVENTS_TOKEN')) and not is_group(team),
+                           live_enabled=bool(robotevents.get_token()) and not is_group(team),
                            active_page=team_number)
 
 @app.route('/api/team/<team_number>/live')
 def team_live_data(team_number):
     """Live RobotEvents data for the team page's skills, scoreboard and results panels.
 
-    204 when there is no token, no matching RobotEvents team, or nothing to show.
-    The page renders without these panels in that case, so this never fails hard.
+    Scoped to one season (?season=, else the team's newest), so "This Season"
+    never shows a team's whole history. 204 when there is no token, no matching
+    RobotEvents team or season, or nothing to show. The page renders without
+    these panels in that case, so this never fails hard.
     """
-    team = db['teams'].find_one({'team_number': team_number})
-    if not team or is_group(team):
+    docs = list(db['teams'].find({'team_number': team_number}))
+    if not docs or is_group(docs[0]):
+        return Response(status=204)
+    label = request.args.get('season') or max((d['season'] for d in docs if d.get('season')), default=None)
+    team = next((d for d in docs if d.get('season') == label), docs[0])
+    if not label or not robotevents.get_token():
         return Response(status=204)
 
     lookup_number = team.get('robotevents_number') or team_number
     try:
-        summary = robotevents.team_summary(db, lookup_number)
+        season = robotevents.season_id(db, label)
+        if not season:
+            return Response(status=204)
+        summary = robotevents.team_summary(db, lookup_number, season_id=season)
     except Exception:
         app.logger.exception('Live team data failed for %s', team_number)
         return Response(status=204)
@@ -1993,6 +2179,35 @@ def admin_delete_sponsor(id):
                  details={'name': sponsor.get('name', 'Unknown'), 'level': sponsor.get('level', 'Unknown')})
     return _admin_redirect('sponsors')
 
+
+@app.route('/admin/api/sponsor/<id>/logo', methods=['POST'])
+@role_required('admin')
+def admin_api_sponsor_logo(id):
+    """Replace one sponsor's logo: a file dropped or pasted on its row in the list."""
+    sponsor = _find_by_id('sponsors', id)
+    if not sponsor:
+        return _json_error('That sponsor no longer exists. Reload the page and try again.', 404)
+    logo = request.files.get('logo')
+    if not logo or not logo.filename:
+        return _json_error('Choose a logo to upload.')
+    name = sponsor.get('name') or 'sponsor'
+    try:
+        url = checked_upload(logo, 'sponsors', allowed=IMAGE_EXTENSIONS, stem=name)
+    except UserFacingError as e:
+        return _json_error(str(e))
+    except Exception:
+        logger.exception('Sponsor logo upload failed')
+        return _json_error('Upload failed. Try again in a moment.', 502)
+    db['sponsors'].update_one({'_id': sponsor['_id']}, {'$set': {'logo': url}})
+    old = sponsor.get('logo')
+    if isinstance(old, str) and old.startswith('http') and old != url:
+        try:
+            delete_from_vercel_blob(old)
+        except Exception:
+            logger.exception('Error deleting old sponsor logo')
+    log_activity('sponsor_update', f'Updated logo for sponsor: {name}', details={'name': name, 'level': sponsor.get('level')})
+    return jsonify({'ok': True, 'url': get_image_url(url)})
+
 # --- People, roster board, inline admin edits, and the shared team editor ---
 # Everything here speaks JSON to static/js/admin.js and static/js/team-editor.js.
 # The CSRF hook covers these routes like any other POST; the browser sends the
@@ -2707,7 +2922,7 @@ def admin_quick_group():
 
 
 CARRIED_TEAM_FIELDS = ('kind', 'title', 'team_number', 'nickname', 'tagline', 'division', 'since', 'worlds_appearances',
-                       'robotevents_number', 'notebook_link', 'hero_image')
+                       'robotevents_number', 'notebook_link', 'hero_image', 'hide_cad')
 
 
 @app.route('/admin/api/teams/<id>/new-season', methods=['POST'])
@@ -2855,7 +3070,7 @@ def admin_site():
                            values=values, overrides=overrides, icons=site_content.ICONS,
                            platforms=site_content.SOCIAL_PLATFORMS, day_names=site_content.DAY_NAMES,
                            gallery_keys=sorted(k for k in image_manifest if k.startswith('photos/carousel')),
-                           club_timezone=CLUB_TIMEZONE)
+                           club_timezone=CLUB_TIMEZONE, group_choices=_group_choices(), can_pick_group=True)
 
 
 def _site_field(key):
@@ -2865,16 +3080,44 @@ def _site_field(key):
     return section, field
 
 
+class SiteAccessError(UserFacingError):
+    status = 403
+
+
+def _is_admin(user):
+    return bool(user) and role_at_least(user.get('role', 'member'), 'admin')
+
+
+def _check_site_access(section, field):
+    """Admins edit everything. The fundraising group edits its own section, but only
+    editors and admins choose which group that is."""
+    user = _session_user()
+    if _is_admin(user):
+        return
+    if section.role == 'fundraisers' and can_manage_fundraisers(user):
+        if field.key == 'owner_group' and not role_at_least(user.get('role', 'member'), 'editor'):
+            raise SiteAccessError('Only editors and admins can change the fundraising group.')
+        return
+    raise SiteAccessError('You do not have permission to do that.')
+
+
+def _site_log_type(section):
+    return 'fundraiser_edit' if section.key == 'fundraisers' else 'site_edit'
+
+
 @app.route('/admin/api/site', methods=['POST'])
-@role_required('admin')
+@login_required
 def admin_api_site():
     body = _json_body()
     key = str(body.get('key') or '')
     try:
         section, field = _site_field(key)
+        _check_site_access(section, field)
         value = site_content.clean_value(field, body.get('value'))
     except (UserFacingError, site_content.ContentError) as e:
-        return _json_error(str(e))
+        return _json_error(str(e), getattr(e, 'status', 400))
+    if key == 'fundraisers.owner_group' and value not in _group_slugs():
+        return _json_error('Pick one of the groups.')
     stored = _site_overrides()
     old = (stored.get(section.key) or {}).get(field.key, field.default)
     path = f'values.{section.key}.{field.key}'
@@ -2887,19 +3130,20 @@ def admin_api_site():
     gone = set(_blob_srcs(old)) - set(_blob_srcs(value))
     _delete_site_blobs(gone)
     if old != value:
-        log_activity('site_edit', f'Changed "{field.label}" on {section.title}',
+        log_activity(_site_log_type(section), f'Changed "{field.label}" on {section.title}',
                      details={'key': key, 'from': _loggable(old), 'to': _loggable(value)})
     return jsonify({'ok': True, 'value': value, 'custom': value != field.default})
 
 
 @app.route('/admin/api/site/reset', methods=['POST'])
-@role_required('admin')
+@login_required
 def admin_api_site_reset():
     key = str(_json_body().get('key') or '')
     try:
         section, field = _site_field(key)
+        _check_site_access(section, field)
     except UserFacingError as e:
-        return _json_error(str(e))
+        return _json_error(str(e), getattr(e, 'status', 400))
     old = (_site_overrides().get(section.key) or {}).get(field.key, field.default)
     db['site_metadata'].update_one({'_id': SITE_CONTENT_ID},
                                    {'$unset': {f'values.{section.key}.{field.key}': ''},
@@ -2907,7 +3151,7 @@ def admin_api_site_reset():
                                    upsert=True)
     _delete_site_blobs(set(_blob_srcs(old)))
     if old != field.default:
-        log_activity('site_edit', f'Reset "{field.label}" on {section.title} to the original',
+        log_activity(_site_log_type(section), f'Reset "{field.label}" on {section.title} to the original',
                      details={'key': key, 'from': _loggable(old)})
     return jsonify({'ok': True, 'value': field.default, 'custom': False})
 
@@ -2927,10 +3171,13 @@ def _delete_site_blobs(urls):
 
 
 @app.route('/admin/api/site/image', methods=['POST'])
-@role_required('admin')
+@login_required
 def admin_api_site_image():
     """Store an image for a site setting. The browser sends its pixel size, since
     production has no image library to measure it."""
+    user = _session_user()
+    if not (_is_admin(user) or can_manage_fundraisers(user)):
+        return _json_error('You do not have permission to do that.', 403)
     file = request.files.get('file')
     if not file or not file.filename:
         return _json_error('Choose an image to upload.')
@@ -2972,6 +3219,7 @@ MEMBER_TEAM_FIELDS = {
     'specs.lift_system': ('Lift system', 120),
     'specs.intake': ('Intake', 120),
     'specs.auton_consistency': ('Auton consistency', 40),
+    'layout': ('Page layout', None),
 }
 # Editors and admins only. Blank values are removed rather than stored.
 ADMIN_TEAM_FIELDS = {
@@ -2982,10 +3230,11 @@ ADMIN_TEAM_FIELDS = {
     'since': ('Competing since', None),
     'worlds_appearances': ('Worlds appearances', None),
     'hidden': ('Hidden from the site menu', None),
+    'hide_cad': ('CAD model hidden', None),
     'title': ('Group name', GROUP_TITLE_MAX),
 }
 # Fields that only mean something for one kind of team.
-ROBOT_ONLY_FIELDS = {'nickname', 'notebook_link', 'division', 'robotevents_number', 'worlds_appearances',
+ROBOT_ONLY_FIELDS = {'nickname', 'notebook_link', 'hide_cad', 'division', 'robotevents_number', 'worlds_appearances', 'layout',
                      'specs.drive_train', 'specs.lift_system', 'specs.intake', 'specs.auton_consistency'}
 GROUP_ONLY_FIELDS = {'title'}
 MEMBER_CARD_FIELDS = {'name': ('Name', 100), 'role': ('Role', 100), 'roles': ('Roles', 200),
@@ -3051,6 +3300,54 @@ def my_team_url():
 app.jinja_env.globals['my_team_url'] = my_team_url
 
 
+def _group_choices():
+    """(slug, title) for every group, for the fundraising-group picker."""
+    groups = sorted(_newest_season_docs({'kind': GROUP_KIND}).values(), key=team_sort_key)
+    return [(g['team_number'], g.get('title') or g['team_number']) for g in groups]
+
+
+def _group_slugs():
+    return {slug for slug, _ in _group_choices()}
+
+
+def fundraising_group():
+    """The current-season group whose members run the fundraisers, or None."""
+    slug = site().fundraisers.owner_group
+    return _newest_season_docs({'kind': GROUP_KIND, 'team_number': slug}).get(slug)
+
+
+def can_manage_fundraisers(user=None):
+    """Editors and admins, plus everyone on the fundraising group's current roster."""
+    user = user if user is not None else _session_user()
+    if not user:
+        return False
+    if role_at_least(user.get('role', 'member'), 'editor'):
+        return True
+    group = fundraising_group()
+    uid = str(user['_id'])
+    return bool(group) and any(str(m.get('user_id') or '') == uid for m in group.get('members') or [])
+
+
+app.jinja_env.globals['can_manage_fundraisers'] = can_manage_fundraisers
+
+
+@app.route('/manage/fundraisers')
+@login_required
+def manage_fundraisers():
+    user = _session_user()
+    if not can_manage_fundraisers(user):
+        flash('Only the fundraising group can edit fundraisers.', 'error')
+        return redirect(url_for('my_team'))
+    section = site_content.SECTION_MAP['fundraisers']
+    overrides = _site_overrides()
+    return render_template('site_editor.html', active_page='my_team', sections=(section,),
+                           values=site_content.merged(overrides), overrides=overrides, icons=site_content.ICONS,
+                           platforms=site_content.SOCIAL_PLATFORMS, day_names=site_content.DAY_NAMES,
+                           gallery_keys=[], club_timezone=CLUB_TIMEZONE, fundraiser_editor=True,
+                           group_choices=_group_choices(),
+                           can_pick_group=role_at_least(user.get('role', 'member'), 'editor'))
+
+
 @app.route('/my-team')
 @login_required
 def my_team():
@@ -3096,7 +3393,7 @@ def manage_team(team_id):
                            cards=[_card(m) | {'roles': ', '.join(m.get('roles') or []),
                                               'since': m.get('since') or ''}
                                   for m in team.get('members', [])],
-                           subteams=SUBTEAMS, divisions=DIVISIONS,
+                           subteams=SUBTEAMS, divisions=DIVISIONS, team_layouts=site_content.TEAM_LAYOUTS,
                            seasons=season_options(d.get('season') for d in db['teams'].find({}, {'season': 1})),
                            years=year_options(), months=month_suggestions(),
                            role_suggestions=ROLE_SUGGESTIONS, goal_suggestions=GOAL_SUGGESTIONS,
@@ -3108,8 +3405,15 @@ def _clean_team_field(field, value, label, limit):
         return _clean_url(value, label)
     if field in ('since', 'worlds_appearances'):
         return _clean_year(value, label)
-    if field == 'hidden':
+    if field in ('hidden', 'hide_cad'):
         return bool(value) or None
+    if field == 'layout':
+        # Blank means "use the site default", so it is removed rather than stored.
+        if not value:
+            return None
+        if value not in site_content.TEAM_LAYOUTS:
+            raise UserFacingError('Pick one of the listed layouts.')
+        return value
     text = _clean_text(value, limit, label, required=(field == 'team_number'))
     if field in ('team_number', 'robotevents_number'):
         text = text.upper()
@@ -3196,7 +3500,7 @@ def api_team_field(team_id):
             return _json_error(f'Another profile already uses {number} for {season or "no season"}.', 409)
 
     try:
-        if field in ADMIN_TEAM_FIELDS and value in (None, ''):
+        if value is None or (field in ADMIN_TEAM_FIELDS and value == ''):
             db['teams'].update_one({'_id': team['_id']}, {'$unset': {field: ''}})
         else:
             db['teams'].update_one({'_id': team['_id']}, {'$set': {field: value}})
@@ -3205,6 +3509,9 @@ def api_team_field(team_id):
 
     if field == 'team_number' and value != old and not is_group(team):
         _move_team_awards(old, value)
+    if field == 'team_number' and value != old and is_group(team) and site().fundraisers.owner_group == old:
+        db['site_metadata'].update_one({'_id': SITE_CONTENT_ID},
+                                       {'$set': {'values.fundraisers.owner_group': value}}, upsert=True)
     if field in ('team_number', 'hidden'):
         refresh_auto_stats()
     _team_edit_log(team, user, label.lower(), old, value)
@@ -3412,7 +3719,7 @@ def api_matches():
 
 
 def _fetch_matches():
-    api_key = os.getenv('ROBOTEVENTS_API_KEY')
+    api_key = robotevents.get_token()
     if not api_key:
         return {'matches': []}
 
@@ -3420,7 +3727,7 @@ def _fetch_matches():
 
     def fetch(endpoint):
         try:
-            resp = requests.get(f'https://www.robotevents.com/api/v2/{endpoint}', headers=headers, timeout=8)
+            resp = requests.get(f'{robotevents.BASE_URL}/{endpoint}', headers=headers, timeout=8)
             resp.raise_for_status()
             return resp.json()
         except Exception:
@@ -3660,6 +3967,15 @@ STATIC_PUBLIC_PAGES = [
     ('privacy', 0.3, 'yearly'),
     ('credits_page', 0.3, 'yearly'),
 ]
+
+GOOGLE_SITE_VERIFICATION = 'googleb1225e3231cfbee0.html'
+
+
+@app.route(f'/{GOOGLE_SITE_VERIFICATION}')
+def google_site_verification():
+    # Google Search Console fetches this file from the site root to prove ownership.
+    return send_from_directory(_root, GOOGLE_SITE_VERIFICATION, mimetype='text/html')
+
 
 @app.route('/robots.txt')
 def robots_txt():

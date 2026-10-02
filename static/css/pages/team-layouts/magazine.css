@@ -1,0 +1,300 @@
+/* Team page layout 08: Magazine. Loaded after team.css. */
+
+/* --- COVER: photo beside the masthead --- */
+
+.mag-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    min-height: min(78vh, 720px);
+    border-bottom: 4px solid var(--accent-gold);
+    background: linear-gradient(160deg, var(--maroon-dark) 0%, #4a0000 100%);
+    color: #fff;
+}
+
+.mag-cover {
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.mag-cover-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* No photo yet: a blueprint-grid cover with the team number set huge. */
+.mag-cover--plain {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        linear-gradient(rgba(255, 215, 0, 0.12) 1px, transparent 1px) 0 0 / 32px 32px,
+        linear-gradient(90deg, rgba(255, 215, 0, 0.12) 1px, transparent 1px) 0 0 / 32px 32px,
+        linear-gradient(135deg, #2a0000 0%, var(--maroon-light) 100%);
+}
+
+.mag-cover-mark {
+    font-family: var(--font-display);
+    font-size: clamp(3rem, 9vw, 8rem);
+    font-weight: 700;
+    letter-spacing: -2px;
+    color: transparent;
+    -webkit-text-stroke: 2px rgba(255, 215, 0, 0.75);
+    transform: rotate(-8deg);
+}
+
+/* A gold edge where the photo meets the masthead, like a cover fold. */
+.mag-cover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 6px;
+    background: var(--accent-gold);
+}
+
+.mag-masthead {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 7rem clamp(var(--spacing-md), 4vw, var(--spacing-xl)) var(--spacing-lg);
+}
+
+.mag-kicker {
+    margin: 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+}
+
+.mag-masthead h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 6vw, 5rem);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -1px;
+    margin: 0.6rem 0 0;
+    background: linear-gradient(135deg, #fff 0%, #ffd700 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.mag-dek {
+    margin: var(--spacing-sm) 0 0;
+    padding-top: var(--spacing-sm);
+    border-top: 2px solid rgba(255, 255, 255, 0.3);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.95rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.mag-masthead .identity-bar {
+    justify-content: flex-start;
+}
+
+/* --- PULL QUOTE --- */
+
+.mag-quote {
+    max-width: 920px;
+    margin: var(--spacing-lg) auto;
+    padding: var(--spacing-lg) var(--spacing-md);
+    text-align: center;
+    border-top: 3px solid var(--text-dark);
+    border-bottom: 3px solid var(--text-dark);
+    position: relative;
+}
+
+.mag-quote::before {
+    content: '\201C';
+    position: absolute;
+    top: -0.55em;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0 0.15em;
+    background: var(--bg-light);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 5rem;
+    line-height: 1;
+    color: var(--maroon-dark);
+}
+
+.mag-quote blockquote {
+    margin: 0;
+}
+
+.mag-quote blockquote p {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 4.5vw, 3.2rem);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    color: var(--text-dark);
+}
+
+.mag-quote figcaption {
+    margin-top: var(--spacing-sm);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.mag-quote figcaption::before {
+    content: '\2014\00a0';
+}
+
+/* The quote above already carries the tagline. */
+.team-layout--magazine .robot-tagline {
+    display: none;
+}
+
+/* --- PHOTO MOSAIC --- */
+
+/* One big photo, then singles; the 4- and 7-photo sets widen their last tiles
+   so every size fills whole rows. */
+.mag-mosaic {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: clamp(120px, 14vw, 190px);
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-md);
+}
+
+.mag-tile {
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+    border: 3px solid var(--text-dark);
+    border-radius: 12px;
+    background: var(--maroon-dark);
+    cursor: zoom-in;
+}
+
+.mag-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+}
+
+.mag-tile:hover img,
+.mag-tile:focus-visible img {
+    transform: scale(1.05);
+}
+
+.mag-tile:focus-visible {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 2px;
+}
+
+.mag-tile:first-child {
+    grid-column: span 2;
+    grid-row: span 2;
+}
+
+.mag-mosaic--4 .mag-tile:nth-child(4),
+.mag-mosaic--7 .mag-tile:nth-child(n + 6) {
+    grid-column: span 2;
+}
+
+.mag-tile-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 1.4rem 0.7rem 0.5rem;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.75) 100%);
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mag-more {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(90, 0, 0, 0.7);
+    color: var(--accent-gold);
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 700;
+}
+
+/* --- DARK THEME --- */
+
+[data-theme='dark'] .mag-quote {
+    border-color: #444;
+}
+
+[data-theme='dark'] .mag-quote::before {
+    color: #d4a0a1;
+}
+
+[data-theme='dark'] .mag-quote blockquote p {
+    color: #f1f1f1;
+}
+
+[data-theme='dark'] .mag-quote figcaption {
+    color: #d4a0a1;
+}
+
+[data-theme='dark'] .mag-tile {
+    border-color: #444;
+}
+
+/* --- NARROW SCREENS --- */
+
+/* The photo goes on top as a wide band, the masthead under it. */
+@media (max-width: 860px) {
+    .mag-head {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
+
+    .mag-cover {
+        aspect-ratio: 16 / 10;
+        margin-top: 4.5rem;
+    }
+
+    .mag-cover::after {
+        top: auto;
+        width: auto;
+        left: 0;
+        height: 6px;
+    }
+
+    .mag-masthead {
+        padding-top: var(--spacing-md);
+    }
+}
+
+@media (max-width: 600px) {
+    .mag-mosaic {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-auto-rows: 130px;
+    }
+
+    .mag-quote::before {
+        font-size: 4rem;
+    }
+}

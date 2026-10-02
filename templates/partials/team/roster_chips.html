@@ -1,0 +1,20 @@
+<!-- ROSTER as name chips: a small face, the name and the main role -->
+<section id="team" class="cc-roster" aria-labelledby="cc-roster-title">
+    <h2 id="cc-roster-title" class="cc-heading">The Team{% if team.members %} <span class="cc-count">{{ team.members|length }}</span>{% endif %}</h2>
+    {% if team.members %}
+    <ul class="cc-chips">
+        {% for member in team.members %}
+        {% set photo = member.photo|real_photo %}
+        {% set roles = member|member_roles %}
+        <li class="cc-chip">
+            {% if photo %}<img class="cc-chip-face" src="{{ get_image_url(photo) }}" alt="" loading="lazy">
+            {% else %}<span class="cc-chip-face cc-chip-face--initials" aria-hidden="true">{{ member.name|initials }}</span>{% endif %}
+            <span class="cc-chip-name">{{ member.name }}</span>
+            {% if roles %}<span class="cc-chip-role">{{ roles[0] }}</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="cc-empty">Roster coming soon for this team.</p>
+    {% endif %}
+</section>

@@ -120,6 +120,24 @@ def test_editor_can_change_team_number(client, db, setup, make_user):
     assert team(db, setup['team'])['team_number'] == '99999A'
 
 
+def test_editor_toggles_hide_cad(client, db, setup, make_user):
+    make_user(username='ed', password='editor-password', email='ed@example.com', role='editor')
+    login(client, 'ed', 'editor-password')
+    assert 'data-autosave="hide_cad"' in client.get(f"/manage/team/{setup['team']}").get_data(as_text=True)
+    url = f"/api/team/{setup['team']}/field"
+    assert client.post(url, json={'field': 'hide_cad', 'value': True}).status_code == 200
+    assert team(db, setup['team'])['hide_cad'] is True
+    client.post(url, json={'field': 'hide_cad', 'value': False})
+    assert 'hide_cad' not in team(db, setup['team'])
+
+
+def test_member_cannot_hide_cad(client, db, setup):
+    login(client, 'alice', 'alice-password')
+    resp = client.post(f"/api/team/{setup['team']}/field", json={'field': 'hide_cad', 'value': True})
+    assert resp.status_code == 403
+    assert 'hide_cad' not in team(db, setup['team'])
+
+
 def test_unknown_field_is_rejected_even_for_admin(client, db, setup, make_user):
     make_user(username='root', password='root-password', email='r@example.com', role='admin')
     login(client, 'root', 'root-password')

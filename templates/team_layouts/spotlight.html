@@ -1,0 +1,23 @@
+{#- 03 Robot Spotlight: a slim title bar, then the robot fills the top of the page with its
+    specs beside it and photos underneath. A team with no CAD model and no robot photos
+    has nothing to spotlight, so it gets the Classic page instead. -#}
+{% if not is_group and (team.stl_path or robot_photos) %}
+{% include "partials/team/title_bar.html" %}
+{% include "partials/team/season_switcher.html" %}
+<div class="spotlight-stage">
+{% include "partials/team/robot.html" %}
+{% include "partials/team/specs.html" %}
+</div>
+{% include "partials/team/robot_photos.html" %}
+{% include "partials/team/live_skills.html" %}
+{% include "partials/team/scoreboard.html" %}
+{% include "partials/team/awards.html" %}
+{% include "partials/team/results.html" %}
+{% include "partials/team/roster.html" %}
+{% include "partials/team/goals.html" %}
+{% include "partials/team/journey.html" %}
+{% include "partials/team/notebook.html" %}
+{% include "partials/team/join_cta.html" %}
+{% else %}
+{% include "team_layouts/classic.html" %}
+{% endif %}

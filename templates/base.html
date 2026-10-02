@@ -15,10 +15,8 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.url }}">
     <meta property="og:title" content="{% block og_title %}{{ self.title()|collapse_ws }}{% endblock %}">
-    <meta property="og:description"
-        content="{% block og_description %}{{ self.meta_description()|collapse_ws }}{% endblock %}">
-    <meta property="og:image"
-        content="{% block og_image %}{{ url_for('static', filename='assets/photos/hero.jpg', _external=True) }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ self.meta_description()|collapse_ws }}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='assets/photos/hero.jpg', _external=True) }}{% endblock %}">
     <meta property="og:image:width" content="1276">
     <meta property="og:image:height" content="957">
     <meta name="twitter:card" content="summary_large_image">
@@ -35,9 +33,9 @@
     {% endblock %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/controls.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fuse.css') }}">
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
-    <link rel="icon" type="image/png" sizes="32x32"
-        href="{{ url_for('static', filename='assets/icons/favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='assets/icons/favicon-32.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='assets/icons/apple-touch-icon.png') }}">
     {% block head_scripts %}{% endblock %}
     {% block page_styles %}{% endblock %}
@@ -86,8 +84,7 @@
             <a href="{{ team_link }}" {% if active_page=='my_team' %} class="active" {% endif %}>My Team</a>
             {% endif %}
             {% endif %}
-            <a href="{{ url_for('resources') }}" {% if active_page in ('resources', 'glossary' , 'standards'
-                , 'branding' , 'notebook' ) %} class="active" {% endif %}>Resources</a>
+            <a href="{{ url_for('resources') }}" {% if active_page in ('resources', 'glossary', 'standards', 'branding', 'notebook') %} class="active" {% endif %}>Resources</a>
             {% endif %}
 
             {% if 'user' in session and session.get('role') == 'admin' %}
@@ -114,8 +111,8 @@
             <div class="search-input-wrapper">
                 <span class="search-icon"><i data-lucide="search"></i></span>
                 <label class="visually-hidden" for="site-search">Search pages</label>
-                <input type="text" id="site-search" placeholder="Search pages... (Ctrl+K)" autocomplete="off"
-                    role="combobox" aria-expanded="false" aria-controls="search-results">
+                <input type="text" id="site-search" placeholder="Search pages... (Ctrl+K)"
+                    autocomplete="off" role="combobox" aria-expanded="false" aria-controls="search-results">
             </div>
             <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
         </div>
@@ -135,8 +132,7 @@
                 {% if socials %}
                 <div class="footer-socials">
                     {% for label, icon, url in socials %}
-                    <a href="{{ url }}" target="_blank" rel="noopener" title="{{ label }}" aria-label="{{ label }}"><i
-                            data-lucide="{{ icon }}" aria-hidden="true"></i></a>
+                    <a href="{{ url }}" target="_blank" rel="noopener" title="{{ label }}" aria-label="{{ label }}"><i data-lucide="{{ icon }}" aria-hidden="true"></i></a>
                     {% endfor %}
                 </div>
                 {% endif %}
@@ -174,8 +170,7 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <p class="footer-copyright">&copy; {{ club_now().year }} {{ site.general.club_name }} | {{
-                site.general.tagline }}</p>
+            <p class="footer-copyright">&copy; {{ club_now().year }} {{ site.general.club_name }} | {{ site.general.tagline }}</p>
             <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch colour theme">
                 <i data-lucide="sun-moon" aria-hidden="true"></i><span data-theme-label>Light theme</span>
             </button>
@@ -225,10 +220,11 @@
 
     <script type="application/json" id="search-pages">{{ search_index(nav_teams)|tojson }}</script>
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"
-        integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM" crossorigin="anonymous"
-        defer></script>
+        integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
+        crossorigin="anonymous" defer></script>
     <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/controls.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/fuse.js') }}" defer></script>
     {% block page_scripts %}{% endblock %}
     </body>
 

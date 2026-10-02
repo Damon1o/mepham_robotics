@@ -224,3 +224,12 @@ def test_search_index_comes_from_the_server(client, db):
     assert '/team/1A' in index and 'Hydra' in index
     assert '77628D' not in index
     assert 'Glossary' not in index          # member pages only for signed-in visitors
+
+
+def test_achievements_settings_cover_every_section(admin):
+    page = admin.get('/admin/site').get_data(as_text=True)
+    for label in ('Show the club record', 'Show headline honors', 'List awards not won yet',
+                  'Show awards by team', 'Show the competition log', 'How many events to list'):
+        assert label in page, label
+    assert save(admin, 'achievements.history_limit', 5).status_code == 200
+    assert save(admin, 'achievements.history_limit', 500).status_code == 400

@@ -87,6 +87,31 @@
     box-shadow: inset 3px 0 0 var(--admin-gold);
 }
 
+/* --- Roster as an animated list (data-animated-list, see controls.css) --------------
+   The rows scroll inside a fixed-height box under a sticky header; the top fade starts
+   below the header (team-editor.js sets --fade-start to its height). */
+.roster-viewport {
+    max-height: min(34rem, 70vh);
+    margin-bottom: 0.75rem;
+}
+
+.roster-viewport .member-list {
+    margin-bottom: 0;
+}
+
+.roster-viewport .member-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-top: 0.3rem;
+    background: var(--admin-card-bg);
+}
+
+/* Selected row: the one under the pointer or holding focus. */
+.member-card:focus-within {
+    background: var(--admin-surface-hover);
+}
+
 .member-photo {
     display: flex;
     align-items: center;
@@ -176,6 +201,63 @@
 
 .inline-add .admin-btn {
     width: auto;
+}
+
+/* --- Dropping files on the roster ------------------------------------------------ */
+.drop-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+}
+
+.drop-hint svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.1rem;
+}
+
+/* The check shown before a dropped list of names is added. */
+.roster-import {
+    margin: 0 0 0.75rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--admin-gold);
+    border-radius: var(--admin-radius-sm);
+    background: var(--admin-surface);
+}
+
+.roster-import-title {
+    margin: 0 0 0.5rem;
+    color: var(--admin-muted);
+    font-size: 0.9rem;
+}
+
+.roster-import-title strong {
+    color: var(--admin-text);
+}
+
+.roster-import-names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    max-height: 9rem;
+    margin: 0 0 0.6rem;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.roster-import-names li {
+    padding: 0.1rem 0.55rem;
+    border: 1px solid var(--admin-line);
+    border-radius: 999px;
+    background: var(--admin-card-bg);
+    font-size: 0.85rem;
+}
+
+.roster-import-actions {
+    display: flex;
+    gap: 0.4rem;
 }
 
 /* --- /my-team: no team yet, someone else's team, or an editor's team list ------------ */
@@ -375,4 +457,307 @@ select[data-member-field] {
 
 [data-theme="dark"] .team-picker-list a.is-own {
     border-color: var(--accent-gold);
+}
+
+/* Link to /manage/fundraisers under the picker, for the fundraising group and editors. */
+.team-picker-extra {
+    margin-top: 1.5rem;
+}
+
+.team-picker-extra .cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* --- Page layout picker ------------------------------------------------------------ */
+.layout-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.25rem;
+    border: 1px solid transparent;
+    border-radius: var(--admin-radius-sm);
+    transition: border-color var(--transition-fast);
+}
+
+.layout-picker.is-saved {
+    border-color: var(--admin-success);
+}
+
+.layout-picker.is-error {
+    border-color: var(--admin-danger);
+}
+
+.layout-option {
+    position: relative;
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.5rem;
+    border: 2px solid var(--admin-line);
+    border-radius: var(--admin-radius-sm);
+    background: var(--admin-surface);
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.layout-option:hover {
+    background: var(--admin-surface-hover);
+}
+
+.layout-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.layout-option:has(input:checked) {
+    border-color: var(--admin-accent);
+    background: var(--admin-accent-soft);
+}
+
+.layout-option:has(input:focus-visible) {
+    outline: 3px solid var(--admin-gold);
+    outline-offset: 1px;
+}
+
+.layout-option-name {
+    color: var(--admin-text);
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.layout-option-note {
+    margin-top: -0.25rem;
+    color: var(--admin-muted);
+    font-size: 0.76rem;
+}
+
+/* With JavaScript the options show as a 3D ring (js/layout-carousel.js); the
+   radio cards above stay in the page as the form's source of truth. */
+.layout-picker.has-carousel {
+    display: block;
+}
+
+.layout-picker.has-carousel .layout-option {
+    display: none;
+}
+
+.layout-carousel {
+    --cc-fade: var(--admin-surface);
+    height: 370px;
+    color: var(--admin-text);
+    border-radius: var(--admin-radius-sm);
+}
+
+.layout-carousel .circular-carousel__title {
+    font-weight: 700;
+}
+
+.layout-carousel .circular-carousel__card[data-selected] .layout-thumb {
+    outline: 3px solid var(--admin-accent);
+    outline-offset: -3px;
+}
+
+.layout-carousel-status {
+    margin: 0.25rem 0 0;
+    color: var(--admin-muted);
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+.layout-carousel-status strong {
+    color: var(--admin-text);
+}
+
+/* Wireframe thumbnails (partials/team/layout_thumb.html) */
+.layout-thumb {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+    aspect-ratio: 5 / 6;
+    padding: 5px;
+    border-radius: 4px;
+    background: var(--admin-bg);
+}
+
+.layout-thumb i {
+    flex: 1 1 0;
+    min-height: 4px;
+    border-radius: 2px;
+    background: var(--admin-line-strong);
+}
+
+.layout-thumb .lt-hero {
+    flex-grow: 2.2;
+    background: var(--maroon-dark);
+}
+
+.layout-thumb .lt-stats {
+    flex-grow: 0.7;
+    background: var(--admin-gold);
+}
+
+.layout-thumb .lt-awards {
+    flex-grow: 1.4;
+    background: repeating-linear-gradient(45deg, var(--admin-gold) 0 3px, var(--admin-line-strong) 3px 6px);
+}
+
+.layout-thumb .lt-cards {
+    flex-grow: 1.3;
+    background: repeating-linear-gradient(90deg, var(--admin-line-strong) 0 30%, transparent 30% 35%);
+}
+
+/* Dark scoreboard header: name bar on top, a row of lit number cells below. */
+.layout-thumb .lt-board {
+    flex-grow: 2;
+    background:
+        repeating-linear-gradient(90deg, var(--admin-gold) 0 21%, transparent 21% 26.3%) left 4px bottom 5px / calc(100% - 8px) 38% no-repeat,
+        linear-gradient(#fff, #fff) left 4px top 5px / 45% 14% no-repeat,
+        #121212;
+}
+
+.layout-thumb .lt-results {
+    flex-grow: 1.8;
+    background: repeating-linear-gradient(180deg, var(--admin-line-strong) 0 26%, transparent 26% 34%);
+}
+
+.layout-thumb .lt-bar {
+    flex-grow: 0.4;
+    background: var(--maroon-dark);
+}
+
+/* Big robot viewer with the spec cards stacked on its right. */
+.layout-thumb .lt-stage {
+    flex-grow: 3;
+    background:
+        repeating-linear-gradient(180deg, var(--admin-line-strong) 0 28%, transparent 28% 36%) right 3px top 4px / 30% calc(100% - 8px) no-repeat,
+        linear-gradient(var(--admin-gold), var(--admin-gold)) left 3px center / 62% calc(100% - 8px) no-repeat,
+        var(--text-dark, #1a1a1a);
+}
+
+.layout-thumb .lt-cards--compact {
+    flex-grow: 0.8;
+    background: repeating-linear-gradient(90deg, var(--admin-line-strong) 0 22%, transparent 22% 26%);
+}
+
+/* Short maroon header with a row of gold faces along its bottom. */
+.layout-thumb .lt-crew {
+    flex-grow: 1.1;
+    background:
+        radial-gradient(circle, var(--admin-gold) 0 3px, transparent 3.5px) center bottom 4px / 9px 9px repeat-x,
+        var(--maroon-dark);
+}
+
+/* Narrow fact rail with gold rows on the left; awards and section blocks
+   stacked down the wider main column. */
+.layout-thumb .lt-dossier {
+    flex-grow: 6;
+    background:
+        repeating-linear-gradient(180deg, var(--admin-gold) 0 7%, var(--admin-line-strong) 7% 14%, transparent 14% 18%) left top / 30% 62% no-repeat,
+        repeating-linear-gradient(45deg, var(--admin-gold) 0 3px, var(--admin-line-strong) 3px 6px) right top / 66% 26% no-repeat,
+        repeating-linear-gradient(180deg, var(--admin-line-strong) 0 20%, transparent 20% 25%) right bottom / 66% 70% no-repeat;
+}
+
+.layout-thumb .lt-hero--short {
+    flex-grow: 1.4;
+}
+
+/* A row of pill tabs, the first one lit. */
+.layout-thumb .lt-tabs {
+    flex-grow: 0.45;
+    background:
+        linear-gradient(var(--maroon-dark), var(--maroon-dark)) left top / 18% 100% no-repeat,
+        repeating-linear-gradient(90deg, var(--admin-line-strong) 0 18%, transparent 18% 21%);
+}
+
+/* One framed panel holding the open tab: stats, awards, a section. */
+.layout-thumb .lt-panel {
+    flex-grow: 5;
+    border: 2px solid var(--admin-line-strong);
+    background:
+        repeating-linear-gradient(90deg, var(--admin-gold) 0 30%, transparent 30% 35%) center top 5px / calc(100% - 10px) 16% no-repeat,
+        repeating-linear-gradient(45deg, var(--admin-gold) 0 3px, var(--admin-line-strong) 3px 6px) center top 28% / calc(100% - 10px) 30% no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) center bottom 5px / calc(100% - 10px) 28% no-repeat,
+        transparent;
+}
+
+/* A maroon spine down the middle with entries alternating either side. */
+.layout-thumb .lt-spine {
+    flex-grow: 5;
+    background:
+        linear-gradient(var(--maroon-dark), var(--maroon-dark)) center / 3px 100% no-repeat,
+        repeating-linear-gradient(180deg, var(--admin-line-strong) 0 18%, transparent 18% 50%) left top / 44% 100% no-repeat,
+        repeating-linear-gradient(180deg, transparent 0 25%, var(--admin-gold) 25% 43%, transparent 43% 50%) right top / 44% 100% no-repeat;
+}
+
+/* Photo on the left half, masthead lines on a maroon right half. */
+.layout-thumb .lt-split {
+    flex-grow: 2.4;
+    background:
+        linear-gradient(#fff, #fff) right 8% bottom 34% / 34% 9% no-repeat,
+        linear-gradient(var(--admin-gold), var(--admin-gold)) right 16% bottom 18% / 26% 7% no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) left / 54% 100% no-repeat,
+        var(--maroon-dark);
+}
+
+/* A short centred quote line between two rules. */
+.layout-thumb .lt-quote {
+    flex-grow: 0.6;
+    background:
+        linear-gradient(var(--maroon-dark), var(--maroon-dark)) center / 60% 34% no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) top / 100% 2px no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) bottom / 100% 2px no-repeat,
+        transparent;
+}
+
+/* One big photo and four small ones. */
+.layout-thumb .lt-mosaic {
+    flex-grow: 2;
+    background:
+        linear-gradient(var(--maroon-light, #944547), var(--maroon-light, #944547)) left / 48% 100% no-repeat,
+        repeating-linear-gradient(90deg, var(--admin-line-strong) 0 46%, transparent 46% 54%) right top / 48% 46% no-repeat,
+        repeating-linear-gradient(90deg, var(--admin-line-strong) 0 46%, transparent 46% 54%) right bottom / 48% 46% no-repeat,
+        transparent;
+}
+
+/* A tall feature tile on the left, a cluster of mixed tiles on the right. */
+.layout-thumb .lt-bento {
+    flex-grow: 3.4;
+    background:
+        linear-gradient(var(--maroon-light, #944547), var(--maroon-light, #944547)) left top / 32% 100% no-repeat,
+        linear-gradient(var(--admin-gold), var(--admin-gold)) right 37% top / 28% 31% no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) right top / 34% 31% no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) right center / 64% 31% no-repeat,
+        linear-gradient(var(--maroon-dark), var(--maroon-dark)) right 46% bottom / 18% 31% no-repeat,
+        linear-gradient(var(--admin-gold), var(--admin-gold)) right bottom / 44% 31% no-repeat;
+}
+
+/* One framed card: awards, a row of name chips, a row of link buttons. */
+.layout-thumb .lt-card {
+    flex-grow: 4;
+    border: 2px solid var(--admin-line-strong);
+    background:
+        repeating-linear-gradient(45deg, var(--admin-gold) 0 3px, var(--admin-line-strong) 3px 6px) center top 5px / calc(100% - 10px) 46% no-repeat,
+        repeating-linear-gradient(90deg, var(--admin-line-strong) 0 17%, transparent 17% 20%) center top 62% / calc(100% - 10px) 12% no-repeat,
+        repeating-linear-gradient(90deg, var(--maroon-dark) 0 30%, transparent 30% 34%) center bottom 6px / calc(100% - 10px) 12% no-repeat,
+        transparent;
+}
+
+/* The rest of the screen stays empty: the page ends there. */
+.layout-thumb .lt-blank {
+    flex-grow: 1.6;
+    background: transparent;
+    border: 1.5px dashed var(--admin-line-strong);
+}
+
+/* Big member cards, three to a row, each with a portrait block on top. */
+.layout-thumb .lt-people {
+    flex-grow: 1.7;
+    background:
+        repeating-linear-gradient(90deg, transparent 0 30%, var(--admin-bg) 30% 35%),
+        linear-gradient(180deg, var(--maroon-light, #944547) 0 60%, var(--admin-line-strong) 60%);
 }

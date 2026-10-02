@@ -13,6 +13,17 @@ os.environ.setdefault('MONGO_URI', 'mongodb://tests-use-mongomock')
 import api.index as app_module  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def no_robotevents_token(monkeypatch):
+    """Start every test without a RobotEvents token, whatever the shell has set.
+
+    Tests that need one set it themselves.
+    """
+    from api import robotevents
+    for name in robotevents.TOKEN_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+
+
 class CsrfClient(FlaskClient):
     """Test client that carries a CSRF token like a real browser session.
 

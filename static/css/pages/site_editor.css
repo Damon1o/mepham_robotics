@@ -265,6 +265,13 @@
     font-size: 0.82rem;
 }
 
+/* Beside "Add photo": the gallery takes several dropped photos at once. */
+.site-editor .drop-hint {
+    align-self: center;
+    color: var(--admin-muted);
+    font-size: 0.8rem;
+}
+
 @media (max-width: 720px) {
     .site-editor .setting-row--wide {
         grid-template-columns: minmax(0, 1fr);
@@ -280,4 +287,19 @@
     .list-cell--amount {
         max-width: none;
     }
+}
+
+/* The fundraiser editor (/manage/fundraisers) has one section, so no side menu. */
+.settings-layout--single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.list-cell--goal,
+.list-cell--raised {
+    max-width: 12rem;
+}
+
+/* List cells stack vertically, so the text box's 18rem flex-basis would become height. */
+.list-cell .text-with-count {
+    flex: none;
 }

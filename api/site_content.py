@@ -40,6 +40,38 @@ SOCIAL_PLATFORMS = {
 TIER_COLOURS = ('bronze', 'silver', 'gold', 'platinum')
 TONES = ('info', 'celebrate', 'alert')
 COUNTDOWN_MODES = ('always', 'scheduled', 'never')
+# Team page layouts: key -> name shown in the pickers. Each key has a template at
+# templates/team_layouts/<key>.html; any key but 'classic' also loads
+# static/css/pages/team-layouts/<key>.css.
+TEAM_LAYOUTS = {
+    'classic': 'Classic Stack',
+    'scoreboard': 'Scoreboard',
+    'spotlight': 'Robot Spotlight',
+    'meet': 'Meet the Team',
+    'dossier': 'Dossier',
+    'tabs': 'Tabbed Hub',
+    'timeline': 'Season Timeline',
+    'magazine': 'Magazine',
+    'bento': 'Bento Dashboard',
+    'compact': 'Compact Card',
+}
+DEFAULT_TEAM_LAYOUT = 'classic'
+# The Competition Awards design each layout shows: templates/partials/awards/<style>.html,
+# plus static/css/pages/awards/<style>.css for any style but 'classic'. Layouts not
+# listed keep the classic tile grid.
+LAYOUT_AWARD_STYLES = {
+    'meet': 'mosaic',
+    'tabs': 'mosaic',
+    'bento': 'mosaic',
+    'dossier': 'plaque',
+    'compact': 'plaque',
+    'spotlight': 'shelf',
+    'magazine': 'shelf',
+    'scoreboard': 'banners',
+    'timeline': 'banners',
+}
+FUNDRAISERS_MAX = 20
+MONEY_MAX = 1_000_000
 
 
 class Field:
@@ -154,6 +186,36 @@ SECTIONS = (
               'Join the legacy.', max=200, group='Search & sharing'),
     ), page='index', blurb='Hero, countdown, sections'),
 
+    Section('fundraisers', 'Fundraisers', 'piggy-bank', (
+        Field('mode', 'choice', 'Homepage section', 'scheduled', choices=COUNTDOWN_MODES, group='Homepage section',
+              hint='"Scheduled" hides the section when no fundraiser is coming up.'),
+        Field('heading', 'text', 'Heading', 'Next Fundraiser', max=60, required=True, group='Homepage section'),
+        Field('more_heading', 'text', 'Heading for the rest', 'More Ways to Help', max=60, group='Homepage section'),
+        Field('empty_text', 'text', 'When there are no fundraisers',
+              'No fundraisers right now. Check back soon!', max=160, group='Homepage section'),
+        Field('show_progress', 'toggle', 'Show progress bars', True, group='Homepage section',
+              hint='Only for fundraisers with a goal.'),
+        Field('max_shown', 'number', 'How many to show', 4, min_value=1, max_value=FUNDRAISERS_MAX,
+              group='Homepage section', hint='The next one is shown big; the rest sit below it.'),
+        Field('entries', 'list', 'Fundraisers', [], items=(
+            Field('name', 'text', 'Name', '', max=80, required=True),
+            Field('starts', 'datetime', 'Starts', '', required=True),
+            Field('ends', 'datetime', 'Ends', '', hint='Optional'),
+            Field('location', 'text', 'Where', '', max=100),
+            Field('description', 'textarea', 'Description', '', max=400),
+            Field('image', 'image', 'Photo', None),
+            Field('link_label', 'text', 'Button label', '', max=30),
+            Field('link_url', 'link', 'Button link', '', max=300),
+            Field('goal', 'number', 'Goal ($)', None, min_value=0, max_value=MONEY_MAX),
+            Field('raised', 'number', 'Raised so far ($)', None, min_value=0, max_value=MONEY_MAX),
+            Field('featured', 'toggle', 'Pin as next', False),
+            Field('hidden', 'toggle', 'Draft (hidden)', False),
+        ), max_items=FUNDRAISERS_MAX, group='Fundraisers',
+            hint='Past fundraisers drop off the homepage on their own.'),
+        Field('owner_group', 'text', 'Fundraising group', 'fundraising', max=40, pattern=r'[a-z0-9]+(?:-[a-z0-9]+)*',
+              group='Who can edit', hint='Everyone on this group can edit this page. Editors and admins always can.'),
+    ), role='fundraisers', page='index', blurb='Homepage fundraisers'),
+
     Section('gallery', 'Photo gallery', 'images', (
         Field('photos', 'list', 'Photos', [{'image': {'key': f'photos/carousel{n}'}, 'alt': f'Team photo {n}'}
                                            for n in range(1, 11)],
@@ -217,6 +279,7 @@ SECTIONS = (
     Section('donate', 'Donate page', 'heart-handshake', (
         Field('hero_title', 'text', 'Big title', 'Support Us', max=40, required=True, group='Top of the page'),
         Field('hero_tagline', 'text', 'Tagline', 'Help Build The Future', max=80, group='Top of the page'),
+        Field('hero_image', 'image', 'Background photo', None, group='Top of the page'),
         Field('givebutter_id', 'text', 'Givebutter campaign ID', os.getenv('GIVEBUTTER_CAMPAIGN_ID', ''), max=40,
               group='Online donations', pattern=r'[A-Za-z0-9_-]+',
               hint='The code at the end of your Givebutter campaign link. Leave empty to show the email fallback.'),
@@ -333,8 +396,22 @@ SECTIONS = (
         Field('hero_title', 'text', 'Big title', 'Achievements', max=40, required=True, group='Top of the page'),
         Field('hero_tagline', 'text', 'Tagline', 'Our Competition History', max=80, group='Top of the page'),
         Field('hero_image', 'image', 'Background photo', None, group='Top of the page'),
-        Field('awards_heading', 'text', 'Awards heading', 'All-Time VEX V5 Competition Awards', max=80,
-              group='Awards', hint='The awards themselves are counted on the dashboard Awards tab.'),
+        Field('show_stats', 'toggle', 'Show the club record', True, group='Top of the page',
+              hint='Awards won, award types, teams and events, counted automatically.'),
+        Field('show_featured', 'toggle', 'Show headline honors', True, group='Headline honors',
+              hint='Awards styled with a gold border or shimmer on the dashboard Awards tab.'),
+        Field('featured_heading', 'text', 'Heading', 'Headline Honors', max=60, group='Headline honors'),
+        Field('awards_heading', 'text', 'Heading', 'All-Time VEX V5 Competition Awards', max=80,
+              group='Honor roll', hint='The awards themselves are counted on the dashboard Awards tab.'),
+        Field('show_unearned', 'toggle', 'List awards not won yet', True, group='Honor roll'),
+        Field('show_teams', 'toggle', 'Show awards by team', True, group='Awards by team',
+              hint='One card per robot team with its own award counts.'),
+        Field('teams_heading', 'text', 'Heading', 'Awards by Team', max=60, group='Awards by team'),
+        Field('show_history', 'toggle', 'Show the competition log', True, group='Competition log',
+              hint='Past events from the dashboard Events tab, grouped by season.'),
+        Field('history_heading', 'text', 'Heading', 'Competition Log', max=60, group='Competition log'),
+        Field('history_limit', 'number', 'How many events to list', 12, min_value=1, max_value=50,
+              group='Competition log'),
         Field('show_live', 'toggle', 'Show live match results', True, group='Live results',
               hint='Needs the RobotEvents key; hidden automatically without it.'),
         Field('live_heading', 'text', 'Heading', 'Live Match Results', max=60, group='Live results'),
@@ -343,9 +420,11 @@ SECTIONS = (
         Field('meta_description', 'textarea', 'Search description',
               'Our history of excellence in VEX Robotics competitions, including awards and match results.',
               max=200, group='Search & sharing'),
-    ), page='achievements', blurb='Awards heading, live results'),
+    ), page='achievements', blurb='Sections, headings, competition log, live results'),
 
     Section('teams', 'Team pages', 'bot', (
+        Field('layout', 'choice', 'Default layout', DEFAULT_TEAM_LAYOUT, choices=TEAM_LAYOUTS,
+              hint='Used by every team that has not picked its own layout for the season.'),
         Field('default_tagline', 'text', 'Shown when a team has no nickname', 'Build. Code. Compete.', max=60),
         Field('cta_show', 'toggle', 'Show the "Interested?" band', True),
         Field('cta_heading', 'text', 'Band heading', 'Interested?', max=60),
@@ -481,6 +560,8 @@ def clean_value(field, value):
             raise ContentError('Pick meeting days from the list.')
         return sorted(set(value))
     if kind == 'number':
+        if value in (None, '') and not field.required and field.default is None:
+            return None
         if isinstance(value, bool) or not isinstance(value, int):
             raise ContentError(f'{field.label} must be a whole number.')
         if not field.min_value <= value <= field.max_value:
@@ -666,3 +747,35 @@ def announcement_live(announcement, now):
 def css_url(src):
     """A stored image URL, safe to place inside url('...') in a style attribute."""
     return src if src and IMAGE_URL_RE.fullmatch(src) else ''
+
+
+def _moment(value):
+    try:
+        return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M') if value else None
+    except ValueError:
+        return None
+
+
+def fundraiser_cards(entries, now, limit):
+    """Fundraisers for the homepage: not drafts, not over, pinned ones first, then soonest.
+
+    A fundraiser without an end time runs until the end of the day it starts.
+    Each card gains `start` and `end` datetimes, `live` (happening now),
+    `days_away` and `percent` (None without a goal).
+    """
+    cards = []
+    for entry in entries or []:
+        start = _moment(entry.get('starts'))
+        if entry.get('hidden') or not entry.get('name') or not start:
+            continue
+        end = _moment(entry.get('ends'))
+        if not end or end < start:
+            end = start.replace(hour=23, minute=59)
+        if end < now:
+            continue
+        goal, raised = entry.get('goal'), entry.get('raised')
+        percent = min(100, round(100 * (raised or 0) / goal)) if goal else None
+        cards.append(dict(entry, start=start, end=end, live=start <= now, percent=percent,
+                          days_away=(start.date() - now.date()).days))
+    cards.sort(key=lambda c: (not c.get('featured'), c['start']))
+    return cards[:limit]

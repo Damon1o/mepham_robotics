@@ -1,0 +1,21 @@
+{#- 07 Season Timeline: the season told in order. Goals sit on top as the season's
+    targets, then a spine mixes journey milestones and competitions by date, each
+    competition with its photos (and, with RobotEvents live data, its record and
+    awards). Awards, people and the robot follow. A season with no milestones and
+    no event galleries has no story to tell, so it gets the Classic page instead. -#}
+{% if not is_group and timeline %}
+{% include "partials/team/hero.html" %}
+{% include "partials/team/season_switcher.html" %}
+{% include "partials/team/goals.html" %}
+{% include "partials/team/timeline.html" %}
+{% include "partials/team/awards.html" %}
+{% include "partials/team/live_skills.html" %}
+{% include "partials/team/scoreboard.html" %}
+{% include "partials/team/roster.html" %}
+{% include "partials/team/robot.html" %}
+{% include "partials/team/specs.html" %}
+{% include "partials/team/notebook.html" %}
+{% include "partials/team/join_cta.html" %}
+{% else %}
+{% include "team_layouts/classic.html" %}
+{% endif %}

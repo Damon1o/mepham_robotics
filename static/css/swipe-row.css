@@ -1,0 +1,242 @@
+/* Swipe rows (static/js/swipe-row.js): a row that drags aside to uncover a drawer
+   of actions. A port of React Bits' SwipeRow. Pages theme it through the --sr-*
+   properties; the row takes its own height from its content. */
+
+.swipe-row {
+    --sr-r: 0px;
+    --sr-a: 76px;
+    --sr-row: #ffffff;
+    --sr-text: inherit;
+    --sr-drawer: #5c5451;
+    --sr-on-drawer: #ffffff;
+    --sr-action: #b3261e;
+    --sr-on-action: #ffffff;
+    --sr-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+    position: relative;
+}
+
+.swipe-row__clip {
+    position: relative;
+    border-radius: var(--sr-r);
+    overflow: hidden;
+    background: var(--sr-row);
+}
+
+.swipe-row__rail {
+    position: absolute;
+    inset: 0;
+    background: var(--sr-drawer);
+}
+
+.swipe-row__action {
+    position: absolute;
+    top: 0;
+    display: grid;
+    place-items: center;
+    width: var(--sr-a);
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--sr-drawer);
+    color: var(--sr-on-drawer);
+    font: inherit;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.swipe-row__action[hidden] {
+    display: none;
+}
+
+.swipe-row__action::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.swipe-row__action:focus-visible {
+    outline: 2px solid var(--sr-on-drawer);
+    outline-offset: -4px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .swipe-row__action::after {
+        transition: opacity 150ms ease;
+    }
+
+    .swipe-row__action:hover::after {
+        opacity: 0.1;
+    }
+}
+
+.swipe-row__glyph {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    transition: transform 160ms var(--sr-ease-out);
+}
+
+.swipe-row__icon {
+    display: inline-flex;
+}
+
+.swipe-row__icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.swipe-row__action:active .swipe-row__glyph {
+    transform: scale(0.97);
+}
+
+.swipe-row__block {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--sr-action);
+}
+
+.swipe-row[data-direction='left'] .swipe-row__block {
+    left: calc(100% - var(--sr-a));
+}
+
+.swipe-row[data-direction='right'] .swipe-row__block {
+    right: calc(100% - var(--sr-a));
+}
+
+.swipe-row__action--commit {
+    background: transparent;
+    color: var(--sr-on-action);
+}
+
+.swipe-row__action--commit:focus-visible {
+    outline-color: var(--sr-on-action);
+}
+
+/* After a full swipe with a fuse (fuse.js), the leapt label becomes an Undo
+   pill in the block's own ink, centred in the row. Custom properties marked
+   !important to beat the radius fuse.js copies inline at arm time. */
+.swipe-row__action--commit.is-fuse-armed {
+    --fuse-radius: 17px !important;
+    --fuse-face: transparent;
+    --fuse-face-hover: color-mix(in srgb, var(--sr-on-action) 16%, transparent);
+    --fuse-ink: var(--sr-on-action);
+    --fuse-line: var(--sr-on-action);
+
+    top: calc(50% - 17px);
+    height: 34px;
+    font-size: 0.85rem;
+}
+
+.swipe-row__action--commit.is-fuse-armed .fuse-face--undo::after {
+    content: 'Undo';
+}
+
+.swipe-row[data-direction='left'] .swipe-row__action--commit {
+    left: 0;
+}
+
+.swipe-row[data-direction='right'] .swipe-row__action--commit {
+    right: 0;
+}
+
+.swipe-row__surface {
+    position: relative;
+    z-index: 1;
+    background: var(--sr-row);
+    color: var(--sr-text);
+    touch-action: pan-y;
+    -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .swipe-row[data-dragging] .swipe-row__surface {
+        cursor: grabbing;
+    }
+}
+
+@media (pointer: coarse) {
+    .swipe-row__surface {
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+    }
+}
+
+.swipe-row[data-dragging] .swipe-row__surface,
+.swipe-row[data-dragging] .swipe-row__surface * {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Keyboard way in: hidden until focused, then a small pill on the row's edge. */
+.swipe-row__toggle {
+    position: absolute;
+    top: 50%;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    background: transparent;
+    color: var(--sr-text);
+    font: inherit;
+    outline: none;
+}
+
+.swipe-row[data-direction='left'] .swipe-row__toggle {
+    right: 12px;
+}
+
+.swipe-row[data-direction='right'] .swipe-row__toggle {
+    left: 12px;
+}
+
+.swipe-row__toggle:focus-visible {
+    width: auto;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 12px;
+    overflow: visible;
+    clip-path: none;
+    background: color-mix(in srgb, currentColor 14%, var(--sr-row));
+    font-size: 0.75rem;
+    white-space: nowrap;
+    transform: translateY(-50%);
+}
+
+.swipe-row__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .swipe-row__action:active .swipe-row__glyph {
+        transform: none;
+    }
+}
+
+@media (forced-colors: active) {
+    .swipe-row__action {
+        border: 1px solid ButtonText;
+    }
+}

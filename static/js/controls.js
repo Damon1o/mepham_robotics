@@ -13,15 +13,23 @@
 //   <input list="…">                          shows its <datalist> as a styled list
 //   <input type="file">                       (visible ones) becomes a drop zone
 //   <input type="range">                      gets a filled track (--fill)
+//   [data-animated-list="<items>"]            a scrolling list whose items ease in
+//                                             and whose edges fade while it scrolls
+//                                             (data-animated-list-rows="N": N items tall)
+//
+// Every drop zone, including the editors' own and any [data-drop] card, takes
+// dragged or pasted files through one shared handler (see "Dropping and pasting").
 //
 // Options can carry data-image (a picture) or data-icon (a Lucide icon name),
-// shown next to their label in the menu. Put data-native on an element, or on
+// shown next to their label in the menu, and data-tag (a short note, like a
+// price) shown muted at the right. Put data-native on an element, or on
 // a wrapper, to keep the browser's own control.
 
 (function () {
     'use strict';
 
     const SEARCH_AT = 10;
+    const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)');
     const SVG_NS = 'http://www.w3.org/2000/svg';
     let uid = 0;
     const nextId = prefix => `ctl-${prefix}-${++uid}`;
@@ -141,10 +149,13 @@
             pop.style.setProperty('--pop-max', `${Math.round(Math.max(below, above, 160))}px`);
             const height = pop.offsetHeight;
             const width = pop.offsetWidth;
-            const top = (height <= below || below >= above) ? rect.bottom + 4 : rect.top - height - 4;
+            const under = height <= below || below >= above;
+            const top = under ? rect.bottom + 4 : rect.top - height - 4;
             const left = Math.min(rect.left, window.innerWidth - width - margin);
             pop.style.top = `${Math.round(Math.max(margin, top))}px`;
             pop.style.left = `${Math.round(Math.max(margin, left))}px`;
+            // It grows out of the corner it shares with its anchor.
+            pop.style.transformOrigin = `${under ? 'top' : 'bottom'} ${left < rect.left - 1 ? 'right' : 'left'}`;
         }
 
         // Follow the anchor while open: pages animate, toasts push content, lists grow.
@@ -175,7 +186,14 @@
             const hadFocus = pop.contains(document.activeElement);
             cancelAnimationFrame(frame);
             current = null;
-            pop.remove();
+            // Dismissed, it shrinks back into its corner; a choice closes it at once.
+            if ((reason === 'outside' || reason === 'toggle') && pop.classList.contains('is-open') && !REDUCED.matches) {
+                pop.classList.remove('is-open');
+                pop.classList.add('is-leaving');
+                setTimeout(() => pop.remove(), 140);
+            } else {
+                pop.remove();
+            }
             if (onClose) onClose(reason, hadFocus);
         }
 
@@ -229,7 +247,10 @@
         const enabled = () => state.items.filter(item => !item.node.hidden && !item.option.disabled);
 
         function build(select) {
-            const list = h('div', { className: 'cs-list', role: 'listbox', id: nextId('list'), 'aria-label': labelOf(select) || null });
+            const list = h('div', { className: 'cs-list cs-glide', role: 'listbox', id: nextId('list'), 'aria-label': labelOf(select) || null });
+            // One highlight that glides between rows instead of each row lighting up.
+            const pill = h('span', { className: 'cs-pill', 'aria-hidden': 'true' });
+            list.append(pill);
             const items = [];
             let group = null;
             choices(select).forEach(option => {
@@ -245,6 +266,7 @@
                         ? h('img', { className: 'cs-thumb', src: option.dataset.image, alt: '', width: '24', height: '24' })
                         : option.dataset.icon ? h('i', { className: 'cs-lucide', 'data-lucide': option.dataset.icon, 'aria-hidden': 'true' }) : null,
                     h('span', { className: 'cs-label', text: option.label || option.textContent }),
+                    option.dataset.tag ? h('span', { className: 'cs-tag', text: option.dataset.tag }) : null,
                     icon('check', 'ctl-icon cs-check'),
                 ]);
                 items.push({ option, node });
@@ -264,26 +286,56 @@
             const empty = h('p', { className: 'cs-empty', text: 'Nothing matches.', hidden: true });
             pop.append(list, empty);
 
-            list.addEventListener('pointerdown', e => e.preventDefault());
+            const itemAt = target => {
+                const node = target.closest && target.closest('.cs-option');
+                return node ? items.find(item => item.node === node) : null;
+            };
+            // A mouse can press, drag along the rows and let go on one to pick it,
+            // starting in the list or on the select itself. Taps pick on click, so
+            // a finger can still scroll a long list.
+            list.addEventListener('pointerdown', e => {
+                e.preventDefault();
+                if (state && e.pointerType !== 'touch') state.pressed = true;
+            });
+            list.addEventListener('pointerup', e => {
+                if (state && state.pressed && e.pointerType !== 'touch') choose(itemAt(e.target), true);
+            });
             list.addEventListener('click', e => {
-                const node = e.target.closest('.cs-option');
-                if (node) choose(items.find(item => item.node === node));
+                if (state) choose(itemAt(e.target), true);
             });
             list.addEventListener('pointermove', e => {
-                const node = e.target.closest('.cs-option');
-                const item = node && items.find(i => i.node === node);
-                if (item && !item.option.disabled && state && state.active !== item) activate(item, false);
+                const item = itemAt(e.target);
+                if (item && !item.option.disabled && state && state.active !== item) activate(item, false, true);
             });
             if (search) {
                 search.addEventListener('input', () => filter(search.value));
                 search.addEventListener('keydown', e => onKey(e, select, true));
             }
-            return { pop, list, items, search, empty };
+            return { pop, list, pill, items, search, empty };
         }
 
-        function activate(item, scroll = true) {
+        // The pointer glides the pill to its row; keys and opening jump it there.
+        function glide(item, smooth) {
+            const { pill } = state;
+            if (!item || item.node.hidden) {
+                pill.classList.remove('is-on');
+                return;
+            }
+            const jump = !smooth || !pill.classList.contains('is-on') || REDUCED.matches;
+            if (jump) pill.classList.add('is-instant');
+            pill.style.transform = `translateY(${item.node.offsetTop}px)`;
+            pill.style.height = `${item.node.offsetHeight}px`;
+            if (jump) {
+                void pill.offsetHeight;
+                pill.classList.remove('is-instant');
+            }
+            pill.classList.add('is-on');
+        }
+
+        function activate(item, scroll = true, smooth = false) {
             if (state.active) state.active.node.classList.remove('is-active');
             state.active = item || null;
+            glide(item, smooth);
             const owner = state.search || state.select;
             if (!item) {
                 owner.removeAttribute('aria-activedescendant');
@@ -366,7 +418,7 @@
             if (hadFocus && reason !== 'outside') select.focus({ preventScroll: true });
         }
 
-        function choose(item) {
+        function choose(item, byPointer = false) {
             if (!item || item.option.disabled) return;
             const { select } = state;
             Popover.close('choose');
@@ -374,6 +426,12 @@
             if (!item.option.selected) {
                 item.option.selected = true;
                 fire(select, 'input', 'change');
+                // The new label settles in out of a soft blur.
+                if (byPointer && !REDUCED.matches) {
+                    select.classList.remove('cs-swap');
+                    void select.offsetWidth;
+                    select.classList.add('cs-swap');
+                }
             }
         }
 
@@ -441,9 +499,15 @@
             const color = getComputedStyle(select).color;
             if (!color || tints.get(select) === color) return;
             tints.set(select, color);
-            const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1.5 1.75 6 6.25l4.5-4.5' fill='none' stroke='${color}' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>`;
-            select.style.setProperty('--cs-chevron', `url("data:image/svg+xml,${encodeURIComponent(svg)}")`);
+            const chevron = d => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='${d}' fill='none' stroke='${color}' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`;
+            select.style.setProperty('--cs-chevron', chevron('M1.5 1.75 6 6.25l4.5-4.5'));
+            select.style.setProperty('--cs-chevron-open', chevron('M1.5 6.25 6 1.75l4.5 4.5'));
+            select.style.setProperty('--cs-ink', color);
         }
+
+        document.addEventListener('pointerup', () => {
+            if (state) state.pressed = false;
+        });
 
         function enhance(select) {
             if (seen.has(select) || select.multiple || select.size > 1 || keepsNative(select)) return;
@@ -459,8 +523,12 @@
                 }
                 select.focus({ preventScroll: true });
                 open(select);
+                if (state) state.pressed = true;
             });
             select.addEventListener('keydown', e => onKey(e, select, false));
+            select.addEventListener('animationend', e => {
+                if (e.animationName === 'cs-swap') select.classList.remove('cs-swap');
+            });
 
             // A tap opens our list too; a swipe that starts on the select still scrolls the page.
             let start = null;
@@ -1078,16 +1146,18 @@
 
     // --- File inputs ------------------------------------------------------------------------------
     // Only visible ones; the editors already draw their own drop zones around hidden inputs.
+    // Dropping and pasting are handled for every zone at once, further down.
 
     const FileDrop = (function () {
         const zones = new WeakMap();
+        const inputs = new WeakMap();
 
         function sync(input) {
             const zone = zones.get(input);
             if (!zone) return;
-            const file = input.files && input.files[0];
-            zone.querySelector('.fd-name').textContent = file ? file.name : '';
-            zone.classList.toggle('has-file', Boolean(file));
+            const count = input.files ? input.files.length : 0;
+            zone.querySelector('.fd-name').textContent = count > 1 ? `${count} files` : count ? input.files[0].name : '';
+            zone.classList.toggle('has-file', count > 0);
             zone.disabled = input.disabled;
             zone.hidden = input.hidden;
         }
@@ -1101,31 +1171,247 @@
                 h('span', { className: 'fd-name' }),
             ]);
             zones.set(input, zone);
+            inputs.set(zone, input);
             input.after(zone);
             input.classList.add('ctl-native');
             input.tabIndex = -1;
             zone.addEventListener('click', () => input.click());
-            zone.addEventListener('dragover', e => {
-                e.preventDefault();
-                zone.classList.add('is-over');
-            });
-            zone.addEventListener('dragleave', () => zone.classList.remove('is-over'));
-            zone.addEventListener('drop', e => {
-                e.preventDefault();
-                zone.classList.remove('is-over');
-                if (!e.dataTransfer.files.length) return;
-                try {
-                    input.files = e.dataTransfer.files;
-                } catch (err) {
-                    return;
-                }
-                fire(input, 'input', 'change');
-            });
             input.addEventListener('change', () => sync(input));
             sync(input);
         }
 
-        return { enhance, sync, owns: input => zones.has(input), zoneFor: input => zones.get(input) };
+        return {
+            enhance, sync,
+            owns: input => zones.has(input),
+            zoneFor: input => zones.get(input),
+            inputOf: zone => inputs.get(zone),
+        };
+    })();
+
+    // --- Dropping and pasting files -------------------------------------------------------------------
+    // Every drop zone on the page takes files dragged onto it, or pasted (Ctrl+V) while it has
+    // the keyboard focus or the pointer:
+    //   .drop-zone, .file-drop   an upload box around (or beside) a file input
+    //   [data-drop]              a bigger target, like a whole card or row. It feeds the file input
+    //                            inside it or the one named by data-drop-input; with
+    //                            data-drop="event" it only fires ctl:files (below).
+    // Files are checked against the input's accept list (or data-drop-accept). A zone takes one
+    // file unless its input is multiple or it has data-drop-multiple; several files over a
+    // one-file zone go to the nearest zone around it that takes several.
+    //
+    // The zone first gets a bubbling, cancelable ctl:files event with detail.files. Page code
+    // can preventDefault() it to handle the files itself; otherwise they are put on the input,
+    // which fires input and change as if a person had picked them.
+    //
+    // While files are over the page, html.ctl-dragging lights up every zone. The one under the
+    // pointer gets .is-over and shows its data-drop-label (data-drop-label-many for several
+    // files, {n} being the count). A drop that misses every zone is refused, so the browser
+    // never replaces the page, and its unsaved edits, with the file.
+
+    (function drops() {
+        const ZONE = '.drop-zone, .file-drop, [data-drop]';
+        const IDLE_MS = 1200;
+        const status = h('div', { className: 'visually-hidden', role: 'status', 'aria-live': 'polite' });
+        let dragging = false;
+        let over = null;
+        let hovered = null;
+        let idle = 0;
+        let note = null;
+        let noteTimer = 0;
+
+        const hasFiles = e => Boolean(e.dataTransfer) && Array.from(e.dataTransfer.types || []).includes('Files');
+        const elementOf = node => (node && node.nodeType === 1 ? node : node && node.parentElement) || null;
+        const outerZone = zone => zone.parentElement && zone.parentElement.closest(ZONE);
+
+        function inputFor(zone) {
+            if (zone.dataset.drop === 'event') return null;
+            if (zone.dataset.dropInput) return document.getElementById(zone.dataset.dropInput);
+            return FileDrop.inputOf(zone) || zone.querySelector('input[type="file"]');
+        }
+
+        function usable(zone) {
+            if (!zone.isConnected || zone.hidden || zone.disabled || keepsNative(zone)) return false;
+            if (zone.dataset.drop === 'event') return true;
+            const input = inputFor(zone);
+            return Boolean(input) && !input.disabled;
+        }
+
+        const takesMany = zone => zone.hasAttribute('data-drop-multiple') || Boolean(inputFor(zone)?.multiple);
+        const acceptOf = zone => zone.dataset.dropAccept || inputFor(zone)?.accept || '';
+
+        // The zone a drop on `node` belongs to, for `count` files.
+        function zoneFor(node, count = 1) {
+            let zone = elementOf(node)?.closest(ZONE) || null;
+            while (zone && !usable(zone)) zone = outerZone(zone);
+            if (!zone || count < 2 || takesMany(zone)) return zone;
+            let outer = outerZone(zone);
+            while (outer && !(usable(outer) && takesMany(outer))) outer = outerZone(outer);
+            return outer || zone;
+        }
+
+        function rulesOf(accept) {
+            return accept.split(',').map(rule => rule.trim().toLowerCase()).filter(Boolean);
+        }
+
+        function accepts(file, accept) {
+            const rules = rulesOf(accept);
+            if (!rules.length) return true;
+            const type = (file.type || '').toLowerCase();
+            const name = file.name.toLowerCase();
+            return rules.some(rule => {
+                if (rule.startsWith('.')) return name.endsWith(rule);
+                if (rule.endsWith('/*')) return type.startsWith(rule.slice(0, -1));
+                return type === rule;
+            });
+        }
+
+        const NAMES = { jpeg: 'JPG', 'svg+xml': 'SVG', webp: 'WebP', plain: '.txt', csv: '.csv' };
+        const orList = items => (items.length < 2 ? items.join('')
+            : `${items.slice(0, -1).join(', ')} or ${items[items.length - 1]}`);
+
+        // "Only PNG, JPG or WebP images go here." from an accept list.
+        function describe(accept) {
+            const rules = rulesOf(accept);
+            if (rules.includes('image/*') && rules.length === 1) return 'Only images go here.';
+            const images = rules.filter(rule => rule.startsWith('image/'));
+            const kinds = [...new Set(rules.map(rule => {
+                const sub = rule.startsWith('.') ? rule : rule.split('/')[1];
+                return NAMES[sub] || (sub.startsWith('.') ? sub : sub.toUpperCase());
+            }))];
+            return `Only ${orList(kinds)} ${images.length === rules.length ? 'images' : 'files'} go here.`;
+        }
+
+        // A short message beside the zone, also read out by screen readers.
+        function tell(zone, message) {
+            status.textContent = message;
+            note?.remove();
+            note = h('div', { className: 'drop-note', text: message });
+            document.body.append(note);
+            const rect = zone.getBoundingClientRect();
+            const room = window.innerHeight - rect.bottom;
+            note.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - note.offsetWidth - 8))}px`;
+            note.style.top = `${room > note.offsetHeight + 14 ? rect.bottom + 6 : Math.max(8, rect.top - note.offsetHeight - 6)}px`;
+            clearTimeout(noteTimer);
+            const shown = note;
+            noteTimer = setTimeout(() => {
+                shown.classList.add('is-leaving');
+                setTimeout(() => shown.remove(), 250);
+            }, 3600);
+        }
+
+        function deliver(zone, files) {
+            const input = inputFor(zone);
+            const accept = acceptOf(zone);
+            const fits = files.filter(file => accepts(file, accept));
+            if (!fits.length) {
+                tell(zone, describe(accept));
+                return;
+            }
+            const chosen = takesMany(zone) ? fits : fits.slice(0, 1);
+            const event = new CustomEvent('ctl:files', { bubbles: true, cancelable: true, detail: { files: chosen, input } });
+            if (zone.dispatchEvent(event) && input) {
+                const transfer = new DataTransfer();
+                chosen.forEach(file => transfer.items.add(file));
+                input.files = transfer.files;
+                fire(input, 'input', 'change');
+            }
+            const skipped = files.length - chosen.length;
+            if (skipped && fits.length > chosen.length) tell(zone, `One file at a time here, so only ${chosen[0].name} was used.`);
+            else if (skipped) tell(zone, `Skipped ${skipped} file${skipped === 1 ? '' : 's'}. ${describe(accept)}`);
+        }
+
+        // --- Highlighting ----------------------------------------------------------------
+
+        function point(zone, count, y) {
+            if (over && over !== zone) {
+                over.classList.remove('is-over');
+                over.removeAttribute('data-drop-now');
+                over.style.removeProperty('--drop-y');
+            }
+            over = zone;
+            if (!zone) return;
+            // dragover repeats many times a second; only touch the DOM when something changes.
+            if (!zone.classList.contains('is-over')) zone.classList.add('is-over');
+            const template = (count > 1 && zone.dataset.dropLabelMany) || zone.dataset.dropLabel || '';
+            const label = template.replace('{n}', count);
+            if (label && zone.dataset.dropNow !== label) zone.dataset.dropNow = label;
+            else if (!label) zone.removeAttribute('data-drop-now');
+            // On a tall zone the label sits level with the pointer, so it is always in view.
+            const rect = zone.getBoundingClientRect();
+            if (label && rect.height > 120) {
+                zone.style.setProperty('--drop-y', `${Math.round(Math.max(28, Math.min(rect.height - 28, y - rect.top)))}px`);
+            }
+        }
+
+        function stop() {
+            dragging = false;
+            clearTimeout(idle);
+            document.documentElement.classList.remove('ctl-dragging');
+            point(null);
+        }
+
+        // Browsers do not always say how many files are coming until the drop.
+        function countOf(e) {
+            const items = e.dataTransfer.items;
+            const count = items ? Array.from(items).filter(item => item.kind === 'file').length : 0;
+            return count || 1;
+        }
+
+        function onDrag(e) {
+            if (!hasFiles(e) || !document.querySelector(ZONE)) return;
+            e.preventDefault();
+            if (!dragging) {
+                dragging = true;
+                document.documentElement.classList.add('ctl-dragging');
+            }
+            // dragover repeats while the pointer is on the page; silence means it left.
+            clearTimeout(idle);
+            idle = setTimeout(stop, IDLE_MS);
+            const count = countOf(e);
+            const zone = zoneFor(e.target, count);
+            point(zone, count, e.clientY);
+            e.dataTransfer.dropEffect = zone ? 'copy' : 'none';
+        }
+
+        document.addEventListener('dragenter', onDrag);
+        document.addEventListener('dragover', onDrag);
+        document.addEventListener('dragleave', e => {
+            if (!dragging || e.relatedTarget) return;
+            const { clientX: x, clientY: y } = e;
+            if (x <= 0 || y <= 0 || x >= window.innerWidth || y >= window.innerHeight) stop();
+        });
+        document.addEventListener('drop', e => {
+            if (!dragging || !hasFiles(e)) return;
+            e.preventDefault();
+            const files = Array.from(e.dataTransfer.files || []);
+            const zone = zoneFor(e.target, files.length);
+            stop();
+            if (zone && files.length) deliver(zone, files);
+        });
+        document.addEventListener('dragend', stop);
+
+        // --- Pasting --------------------------------------------------------------------------
+
+        document.addEventListener('mouseover', e => {
+            hovered = e.target;
+        }, { passive: true });
+
+        document.addEventListener('paste', e => {
+            const data = e.clipboardData;
+            const files = Array.from((data && data.files) || []);
+            if (!files.length) return;
+            const focused = document.activeElement;
+            // Text copied with a picture (from a web page, say) is meant for the text field.
+            if (focused && focused.matches('input:not([type="file"]), textarea, [contenteditable]')
+                && Array.from(data.types).includes('text/plain')) return;
+            const zone = (focused && focused !== document.body && zoneFor(focused, files.length))
+                || zoneFor(hovered, files.length);
+            if (!zone) return;
+            e.preventDefault();
+            deliver(zone, files);
+        });
+
+        document.body.append(status);
     })();
 
     // --- Sliders --------------------------------------------------------------------------------------
@@ -1140,6 +1426,80 @@
     document.addEventListener('input', e => {
         if (e.target instanceof HTMLInputElement && e.target.type === 'range') paintRange(e.target);
     });
+
+    // --- Animated lists ---------------------------------------------------------------------------------
+    // data-animated-list="<item selector>" on a scrolling box: items ease in once half of them
+    // is in view, and the edges fade while there is more to scroll (controls.css, section 10).
+
+    const AnimatedList = (function () {
+        const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const seen = new WeakSet();
+
+        function fades(list) {
+            const { scrollTop, scrollHeight, clientHeight } = list;
+            const bottom = scrollHeight <= clientHeight ? 0 : Math.min((scrollHeight - scrollTop - clientHeight) / 50, 1);
+            list.style.setProperty('--fade-top', Math.min(scrollTop / 50, 1).toFixed(2));
+            list.style.setProperty('--fade-bottom', bottom.toFixed(2));
+        }
+
+        // data-animated-list-rows="N": the box is exactly N items tall, however tall they are.
+        function fit(list, selector) {
+            const rows = Number(list.dataset.animatedListRows);
+            if (!rows) return;
+            const items = list.querySelectorAll(selector);
+            const last = items[rows - 1];
+            if (items.length <= rows || !last) {
+                list.style.removeProperty('max-height');
+                return;
+            }
+            if (!last.offsetHeight) return; // hidden (a closed tab); measured again once shown
+            const style = getComputedStyle(list);
+            const px = name => parseFloat(style[name]) || 0;
+            // offsetTop counts from inside the border (the box is positioned, see controls.css).
+            const bottom = last.offsetTop + last.offsetHeight;
+            const height = style.boxSizing === 'border-box'
+                ? bottom + px('paddingBottom') + px('borderTopWidth') + px('borderBottomWidth')
+                : bottom - px('paddingTop');
+            list.style.maxHeight = `${Math.ceil(height)}px`;
+        }
+
+        function enhance(list) {
+            if (seen.has(list)) return;
+            seen.add(list);
+            const selector = list.dataset.animatedList || ':scope > *';
+            const update = () => {
+                fit(list, selector);
+                fades(list);
+            };
+            const inView = 'IntersectionObserver' in window && !still.matches && new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    // An item moved to another list reports here once more; only its own list counts.
+                    if (list.contains(entry.target)) entry.target.classList.toggle('is-in', entry.intersectionRatio >= 0.5);
+                });
+            }, { root: list, threshold: [0, 0.5] });
+            // The box and, when it counts rows, its items: a closed tab opening or a card growing changes the fit.
+            const resized = 'ResizeObserver' in window && new ResizeObserver(update);
+            if (resized) resized.observe(list);
+            const watch = () => list.querySelectorAll(selector).forEach(item => {
+                item.classList.add('ctl-animated-item');
+                if (inView) inView.observe(item);
+                if (resized && list.dataset.animatedListRows) resized.observe(item);
+            });
+            if (inView) list.classList.add('is-animated');
+            watch();
+            new MutationObserver(records => {
+                if (inView) records.forEach(record => record.removedNodes.forEach(node => {
+                    if (node.nodeType === 1 && !list.contains(node)) inView.unobserve(node);
+                }));
+                watch();
+                update();
+            }).observe(list, { childList: true, subtree: true });
+            list.addEventListener('scroll', () => fades(list), { passive: true });
+            update();
+        }
+
+        return { enhance };
+    })();
 
     // --- Wiring -------------------------------------------------------------------------------------------
 
@@ -1157,6 +1517,8 @@
         if (root.nodeType !== 1) return;
         if (root.matches(TARGETS)) enhance(root);
         root.querySelectorAll(TARGETS).forEach(enhance);
+        if (root.matches('[data-animated-list]')) AnimatedList.enhance(root);
+        root.querySelectorAll('[data-animated-list]').forEach(AnimatedList.enhance);
     }
 
     // A control removed on its own leaves its button behind; take that too.

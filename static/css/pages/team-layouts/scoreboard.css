@@ -1,0 +1,317 @@
+/* Team page layout 02: Scoreboard. Loaded after team.css. */
+
+/* --- BOARD HEADER --- */
+
+/* A dark stadium board in place of the hero: team name on top, then a panel of
+   lit-up numbers. Everything here comes from stored data. */
+.sb-board {
+    background:
+        radial-gradient(circle at 12% 0%, rgba(128, 0, 0, 0.6) 0%, transparent 55%),
+        radial-gradient(circle at 90% 100%, rgba(255, 215, 0, 0.08) 0%, transparent 45%),
+        #121212;
+    color: #fff;
+    padding: 6rem var(--spacing-md) var(--spacing-lg);
+    border-bottom: 4px solid var(--accent-gold);
+}
+
+.sb-board-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.sb-board-eyebrow {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    margin-bottom: 0.4rem;
+}
+
+.sb-board-title h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 6vw, 4.5rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -1px;
+    margin: 0;
+    background: linear-gradient(135deg, #fff 0%, #ffd700 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.sb-board-title p {
+    margin: 0.5rem 0 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* The number panel: one lit cell per stat, split by thin rules. */
+.sb-board-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    margin: 0;
+    background: #0a0a0a;
+    border: 3px solid #2e2e2e;
+    border-radius: 16px;
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+.sb-cell {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    padding: var(--spacing-md);
+    border-right: 1px solid #2e2e2e;
+}
+
+.sb-cell:last-child {
+    border-right: 0;
+}
+
+.sb-cell-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.sb-cell-value {
+    margin: 0;
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(2.2rem, 4vw, 3.2rem);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--accent-gold);
+    text-shadow: 0 0 18px rgba(255, 215, 0, 0.35);
+    font-variant-numeric: tabular-nums;
+}
+
+.sb-cell--lead {
+    background: linear-gradient(180deg, rgba(128, 0, 0, 0.55), rgba(90, 0, 0, 0.35));
+}
+
+.sb-cell--lead .sb-cell-value {
+    color: #fff;
+    text-shadow: 0 0 18px rgba(255, 255, 255, 0.3);
+}
+
+.sb-cell--gold {
+    background: var(--accent-gold);
+}
+
+.sb-cell--gold .sb-cell-label {
+    color: var(--ink-on-gold);
+}
+
+.sb-cell--gold .sb-cell-value {
+    color: var(--ink-on-gold);
+    text-shadow: none;
+}
+
+.sb-board-honor {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.95rem;
+    color: #fff;
+}
+
+.sb-board-honor-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-on-gold);
+    background: var(--accent-gold);
+    border: 2px solid var(--text-dark);
+    border-radius: 999px;
+    padding: 0.15rem 0.7rem;
+}
+
+@media (max-width: 600px) {
+    .sb-board-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .sb-cell {
+        border-right: 0;
+        border-bottom: 1px solid #2e2e2e;
+    }
+
+    .sb-cell:nth-child(odd) {
+        border-right: 1px solid #2e2e2e;
+    }
+
+    /* An odd number of stats: the last one takes the full row, not half of it. */
+    .sb-cell:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+        border-right: 0;
+    }
+
+    .sb-cell:last-child {
+        border-bottom: 0;
+    }
+}
+
+/* --- LIVE ROWS --- */
+
+/* With RobotEvents data, skills and season numbers hang under the board as more
+   dark rows. team.js removes either one that has nothing to show. */
+.sb-board:has(+ .sb-live > section) {
+    border-bottom: 0;
+}
+
+.sb-live:has(> section) {
+    border-bottom: 4px solid var(--accent-gold);
+}
+
+.sb-live .skills-panel,
+.sb-live .scoreboard-band {
+    background: #121212;
+    padding: var(--spacing-md);
+    border-top: 1px solid #2e2e2e;
+}
+
+.sb-live h2 {
+    width: auto;
+    margin: 0 0 var(--spacing-sm);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--accent-gold);
+    animation: none;
+}
+
+.sb-live h2::after {
+    display: none;
+}
+
+/* styles.css caps .skills-grid at 900px and centres it; line it up with the board. */
+.sb-live .skills-grid {
+    max-width: none;
+    margin: 0;
+}
+
+.sb-live .skills-tile {
+    background: #0a0a0a;
+    border-color: #2e2e2e;
+    text-align: left;
+}
+
+.sb-live .skills-tile-primary {
+    border-color: var(--accent-gold);
+}
+
+.sb-live .skills-meta {
+    justify-content: flex-start;
+    margin-top: var(--spacing-sm);
+}
+
+.sb-live .scoreboard-stat {
+    background: #0a0a0a;
+    border: 1px solid #2e2e2e;
+    border-radius: 12px;
+    box-shadow: none;
+    text-align: left;
+}
+
+.sb-live .scoreboard-value {
+    color: var(--accent-gold);
+}
+
+.sb-live .scoreboard-label {
+    color: #fff;
+}
+
+.sb-live .scoreboard-breakdown {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.sb-live .scoreboard-crown {
+    border-color: var(--accent-gold);
+}
+
+@media (max-width: 700px) {
+    .sb-live .skills-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* --- COMPACT ROSTER --- */
+
+/* Small photo beside the name and roles, so a big team fits in a few rows. */
+.team-layout--scoreboard .roster-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--spacing-sm);
+}
+
+.team-layout--scoreboard .roster-card {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-areas:
+        "photo name"
+        "photo roles"
+        "photo since";
+    grid-template-rows: auto auto 1fr;
+    column-gap: var(--spacing-sm);
+    align-content: start;
+    text-align: left;
+    padding: var(--spacing-sm);
+    border-radius: 12px;
+    box-shadow: 5px 5px 0px rgba(148, 69, 71, 0.2);
+}
+
+.team-layout--scoreboard .roster-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0px rgba(148, 69, 71, 0.25);
+}
+
+.team-layout--scoreboard .roster-photo,
+.team-layout--scoreboard .roster-initials {
+    grid-area: photo;
+    width: 56px;
+    height: 56px;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.team-layout--scoreboard .roster-name {
+    grid-area: name;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.team-layout--scoreboard .roster-roles {
+    grid-area: roles;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.25rem;
+    margin-top: 0.3rem;
+}
+
+.team-layout--scoreboard .roster-role-chip {
+    font-size: 0.62rem;
+    padding: 0.1rem 0.5rem;
+}
+
+.team-layout--scoreboard .roster-since {
+    grid-area: since;
+    margin-top: 0.25rem;
+    font-size: 0.7rem;
+}

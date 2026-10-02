@@ -7,8 +7,9 @@
 //
 // Sections, in order: DOM helpers, notifications, dialog, JSON calls, tabs and
 // search, forms (sponsor/account editors), autosave (numbers, awards, events),
-// homepage number modes, awards, events, teams, people (approvals, roles,
-// roster), messages and newsletter, activity, help, and the delegated wiring.
+// homepage number modes, awards, events, teams, dropped files (team banners,
+// sponsor logos), people (approvals, roles, roster), messages and newsletter,
+// activity, help, and the delegated wiring.
 
 // --- DOM helpers --------------------------------------------------------------
 
@@ -204,12 +205,31 @@ async function api(url, body = {}, method = 'POST') {
             headers: jsonHeaders(),
             credentials: 'same-origin',
             body: method === 'GET' ? undefined : JSON.stringify(body),
+            // A fuse committed as the page closes must outlive it.
+            keepalive: Boolean(window.Fuse?.leaving),
         });
     } catch (err) {
         throw new Error('Could not reach the server. Check your connection.');
     }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `Save failed (${response.status}).`);
+    return data;
+}
+
+// Send a form upload ({field: file or text}). Same promise shape as api().
+async function uploadFile(url, fields) {
+    const body = new FormData();
+    Object.entries(fields).forEach(([name, value]) => body.append(name, value));
+    let response;
+    try {
+        response = await fetch(url, {
+            method: 'POST', headers: { 'X-CSRF-Token': csrfToken() }, credentials: 'same-origin', body,
+        });
+    } catch (err) {
+        throw new Error('Could not reach the server. Check your connection.');
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Upload failed (${response.status}).`);
     return data;
 }
 
@@ -240,19 +260,22 @@ const DELETE_WARNINGS = {
     sponsor: 'The sponsor and its logo disappear from the Donate page.',
 };
 
-function confirmDelete(form, type) {
+// Deleting lights a fuse on the button: Undo stays on offer while it burns,
+// and the form only posts once it burns out (see fuse.js).
+function confirmDelete(form, type, button) {
     const name = form.dataset.confirmName;
-    Dialog.confirm({
-        title: name ? `Delete ${name}?` : `Delete this ${type}?`,
-        message: `${DELETE_WARNINGS[type] || ''} This cannot be undone.`.trim(),
-        confirmLabel: 'Delete',
-    }).then(confirmed => {
-        if (!confirmed) return;
-        lockSubmit(form);
-        showLoading();
-        form.submit();
+    Fuse.arm(button || form.querySelector('[type="submit"]'), {
+        label: name ? `Deleting ${name}` : `Deleting this ${type}`,
+        detail: DELETE_WARNINGS[type],
+        form,
     });
 }
+
+// The fuse is about to post a delete form.
+document.addEventListener('fuse:commit', function (e) {
+    lockSubmit(e.target);
+    showLoading();
+});
 
 // --- Tabs and search -------------------------------------------------------------------
 
@@ -760,15 +783,12 @@ const Awards = {
 
     remove(button) {
         const row = button.closest('[data-category-id]');
-        Dialog.confirm({
-            title: `Delete "${button.dataset.title}"?`,
-            message: 'The category and every team\'s count of it are removed from the site. This cannot be undone.',
-            confirmLabel: 'Delete',
-        }).then(ok => {
-            if (!ok) return;
-            api(`/admin/api/award-categories/${row.dataset.categoryId}`, {}, 'DELETE')
+        Fuse.arm(button, {
+            label: `Deleting the ${button.dataset.title} category`,
+            detail: 'Every team\'s count of it goes too',
+            run: () => api(`/admin/api/award-categories/${row.dataset.categoryId}`, {}, 'DELETE')
                 .then(() => location.reload())
-                .catch(err => Admin.notify(err.message, 'error'));
+                .catch(err => Admin.notify(err.message, 'error')),
         });
     },
 
@@ -790,18 +810,14 @@ const Awards = {
 
 function prunePastEvents(button) {
     const count = Number(button.dataset.count);
-    Dialog.confirm({
-        title: `Delete ${plural(count, 'past event')}?`,
-        message: 'They are no longer on the homepage. Delete them to keep this list short. This cannot be undone.',
-        confirmLabel: 'Delete them',
-    }).then(ok => {
-        if (!ok) return;
-        api('/admin/api/events/prune')
+    Fuse.arm(button, {
+        label: `Deleting ${plural(count, 'past event')}`,
+        run: () => api('/admin/api/events/prune')
             .then(data => {
                 document.getElementById('past-events')?.remove();
                 Admin.notify(`Deleted ${plural(data.deleted, 'past event')}.`, 'success');
             })
-            .catch(err => Admin.notify(err.message, 'error'));
+            .catch(err => Admin.notify(err.message, 'error')),
     });
 }
 
@@ -837,6 +853,104 @@ function startNewSeason(button) {
     });
 }
 
+// --- Dropped files: team banners and sponsor logos ------------------------------------------
+// controls.js finds the zone under the pointer and checks the file type, then fires
+// ctl:files on it; these send the file where that zone says.
+
+const DroppedFiles = (function () {
+    function busy(node, promise) {
+        node.classList.add('is-uploading');
+        node.setAttribute('aria-busy', 'true');
+        return promise
+            .catch(err => Admin.notify(err.message, 'error'))
+            .finally(() => {
+                node.classList.remove('is-uploading');
+                node.removeAttribute('aria-busy');
+            });
+    }
+
+    function teamBanner(tile, file) {
+        busy(tile, uploadFile(`/api/team/${tile.dataset.teamId}/image`, { hero_image: file }).then(data => {
+            let photo = tile.querySelector('.team-tile-photo');
+            if (!photo) {
+                photo = el('img', { className: 'team-tile-photo', alt: '' });
+                tile.querySelector('.team-tile-main').append(photo);
+            }
+            photo.src = data.url;
+            Admin.notify(`New banner photo for ${tile.dataset.teamName}.`, 'success');
+        }));
+    }
+
+    function sponsorLogo(row, file) {
+        const edit = row.querySelector('[data-action="edit-sponsor"]');
+        busy(row, uploadFile(`/admin/api/sponsor/${row.dataset.sponsorId}/logo`, { logo: file }).then(data => {
+            row.querySelector('.sponsor-thumb').replaceChildren(el('img', { src: data.url, alt: '' }));
+            if (edit) edit.dataset.hasLogo = 'true';
+            Admin.notify(`New logo for ${edit ? edit.dataset.name : 'the sponsor'}.`, 'success');
+        }));
+    }
+
+    // "acme_corp-logo-final.png" suggests the name "Acme Corp".
+    const FILLER = /^(logos?|final|transparent|icon|vector|colou?r|hi|res|hires|rgb|cmyk|white|black|dark|light|copy|v?\d+(px)?|\d+x\d*)$/i;
+
+    function nameFromFile(fileName) {
+        return fileName.replace(/\.[^.]+$/, '').split(/[\s_.-]+/)
+            .filter(word => word && !FILLER.test(word))
+            .map(word => (word === word.toUpperCase() ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+            .join(' ')
+            .slice(0, 100);
+    }
+
+    // A photo dropped on a People board card: that person's photo on that team or group.
+    function memberPhoto(card, file) {
+        const teamId = card.closest('.roster-col')?.dataset.teamId;
+        busy(card, uploadFile(`/api/team/${teamId}/image`, { member_photo: file, member_id: card.dataset.memberId })
+            .then(data => {
+                card.querySelector('.roster-avatar').replaceChildren(el('img', { src: data.url, alt: '' }));
+                Admin.notify(`New photo for ${card.dataset.name}.`, 'success');
+            }));
+    }
+
+    // A logo dropped on the list, not on a sponsor: start a new sponsor with it.
+    function newSponsor(file) {
+        guarded('sponsor_form', () => {
+            resetSponsorForm();
+            const form = document.getElementById('sponsor_form');
+            const input = document.getElementById('f-logo');
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            input.files = transfer.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            const name = form.querySelector('[name="name"]');
+            name.value = nameFromFile(file.name);
+            scrollToId('sponsor_form_card');
+            name.focus({ preventScroll: true });
+            name.select();
+        });
+    }
+
+    function onFiles(e) {
+        const zone = e.target;
+        const file = e.detail.files[0];
+        if (!file) return;
+        if (zone.matches('.team-tile')) {
+            e.preventDefault();
+            teamBanner(zone, file);
+        } else if (zone.matches('.sponsor-row')) {
+            e.preventDefault();
+            sponsorLogo(zone, file);
+        } else if (zone.id === 'sponsor_list_card') {
+            e.preventDefault();
+            newSponsor(file);
+        } else if (zone.matches('.roster-card')) {
+            e.preventDefault();
+            memberPhoto(zone, file);
+        }
+    }
+
+    return { onFiles };
+})();
+
 // --- People: approvals, roles, roster board -------------------------------------------------
 
 const Approvals = {
@@ -860,20 +974,16 @@ const Approvals = {
             });
     },
 
-    reject(item, username) {
-        Dialog.confirm({
-            title: 'Reject this request?',
-            message: `${username}'s request will be deleted. They can sign up again later.`,
-            confirmLabel: 'Reject',
-        }).then(ok => {
-            if (!ok) return;
-            api(`/admin/api/users/${item.dataset.userId}/reject`)
+    reject(item, username, button) {
+        Fuse.arm(button, {
+            label: `Rejecting ${username}'s request`,
+            run: () => api(`/admin/api/users/${item.dataset.userId}/reject`)
                 .then(() => {
                     item.remove();
                     Admin.notify(`Request from ${username} rejected.`, 'info');
                     if (!document.querySelector('.approval-item')) document.getElementById('approvals')?.remove();
                 })
-                .catch(err => Admin.notify(err.message, 'error'));
+                .catch(err => Admin.notify(err.message, 'error')),
         });
     },
 };
@@ -930,8 +1040,21 @@ const Roster = (function () {
         });
     }
 
+    // A card on a team or group takes a dropped photo for that spot; an account in Unassigned has
+    // no roster spot to hold one.
+    function photoDrop(card) {
+        if (card.dataset.memberId && teamOf(card)) {
+            card.dataset.drop = 'event';
+            card.dataset.dropAccept = 'image/png,image/jpeg,image/gif,image/webp';
+            card.dataset.dropLabel = `Set as ${card.dataset.name}’s photo`;
+        } else {
+            ['drop', 'dropAccept', 'dropLabel'].forEach(key => delete card.dataset[key]);
+        }
+    }
+
     // Rebuild a card's Move-to menu for the column it now sits in (same shape as move_options in _people.html).
     function refreshMenu(card) {
+        photoDrop(card);
         const here = card.closest('.roster-col');
         const option = col => el('option', { value: col.dataset.teamId, text: labelOf(col) });
         const targets = columns().filter(col => col.dataset.teamId && canGo(card, col.dataset.teamId));
@@ -969,8 +1092,8 @@ const Roster = (function () {
         const dataset = { memberId: member.member_id, name: member.name };
         if (member.user_id) dataset.userId = member.user_id;
         return el('li', { className: 'roster-card', draggable: 'true', dataset }, [
-            el('span', { className: 'roster-avatar', 'aria-hidden': 'true',
-                text: like.querySelector('.roster-avatar')?.textContent || '' }),
+            like.querySelector('.roster-avatar')?.cloneNode(true)
+                || el('span', { className: 'roster-avatar', 'aria-hidden': 'true' }),
             el('span', { className: 'roster-text' }, [el('strong', { text: member.name }), meta]),
             el('div', { className: 'roster-card-controls' }, [
                 el('select', { className: 'roster-move', 'aria-label': `Move ${member.name} to` }),
@@ -1073,6 +1196,7 @@ const Roster = (function () {
     function init() {
         const board = document.getElementById('rosterBoard');
         if (!board) return;
+        board.querySelectorAll('.roster-card').forEach(photoDrop);
 
         board.addEventListener('dragstart', e => {
             dragged = e.target.closest('.roster-card');
@@ -1137,7 +1261,8 @@ const Messages = (function () {
         const count = selected().length;
         const label = document.getElementById('messagesSelected');
         if (label) label.textContent = count ? `${count} selected` : '';
-        panel.querySelectorAll('[data-bulk]').forEach(b => { b.disabled = !count; });
+        // A lit bulk Delete stays pressable, as Undo, whatever the selection.
+        panel.querySelectorAll('[data-bulk]').forEach(b => { b.disabled = !count && !Fuse.isArmed(b); });
         const all = document.getElementById('messagesSelectAll');
         if (all) {
             const visible = items().filter(i => !i.hidden);
@@ -1181,20 +1306,45 @@ const Messages = (function () {
         if (old !== newStatus) adjustCount(old, newStatus);
     }
 
-    function act(item, action) {
-        const run = () => api(`/admin/api/messages/${item.dataset.messageId}`, { action })
+    // Resolves true once the change is saved, false (already reported) if not.
+    function send(item, action) {
+        return api(`/admin/api/messages/${item.dataset.messageId}`, { action })
             .then(data => {
                 applyStatus(item, data.status);
                 applyFilters();
                 Admin.notify(data.status === 'deleted' ? 'Message deleted.' : `Marked ${data.status}.`, 'success');
+                return true;
             })
-            .catch(err => Admin.notify(err.message, 'error'));
-        if (action !== 'delete') return run();
-        return Dialog.confirm({ title: 'Delete this message?', message: 'This cannot be undone.', confirmLabel: 'Delete' })
-            .then(ok => ok && run());
+            .catch(err => {
+                Admin.notify(err.message, 'error');
+                return false;
+            });
     }
 
-    function bulk(action) {
+    function act(item, action, button) {
+        const run = () => send(item, action);
+        if (action !== 'delete') return run();
+        return Fuse.arm(button, { label: 'Deleting this message', run });
+    }
+
+    // Drag a message left: Delete (full swipe, with the fuse), Archive, Read/Unread.
+    function swipe(item) {
+        const status = () => item.dataset.status;
+        SwipeRow.attach(item.querySelector('.message-summary'), {
+            label: `Message from ${item.querySelector('.message-from').textContent.trim()}`,
+            fold: item,
+            actions: [
+                { id: 'delete', label: 'Delete', icon: 'trash-2', fuse: 'Deleting this message' },
+                { id: 'archive', label: 'Archive', icon: 'archive', hidden: () => status() === 'archived' },
+                { id: 'read', label: 'Read', icon: 'mail-open', hidden: () => status() !== 'new' },
+                { id: 'new', label: 'Unread', icon: 'mail', hidden: () => status() === 'new' },
+            ],
+            onAction: action => { if (action.id !== 'delete') send(item, action.id); },
+            onCommit: (action, row) => send(item, 'delete').then(ok => { if (!ok) row.reset(); }),
+        });
+    }
+
+    function bulk(action, button) {
         const chosen = selected();
         if (!chosen.length) return;
         const run = () => api('/admin/api/messages/bulk', { action, ids: chosen.map(i => i.dataset.messageId) })
@@ -1205,9 +1355,7 @@ const Messages = (function () {
             })
             .catch(err => Admin.notify(err.message, 'error'));
         if (action !== 'delete') return run();
-        return Dialog.confirm({
-            title: `Delete ${plural(chosen.length, 'message')}?`, message: 'This cannot be undone.', confirmLabel: 'Delete',
-        }).then(ok => ok && run());
+        return Fuse.arm(button, { label: `Deleting ${plural(chosen.length, 'message')}`, run });
     }
 
     function toggle(button) {
@@ -1229,6 +1377,10 @@ const Messages = (function () {
     function init() {
         panel = document.getElementById('panel-messages');
         if (!panel) return;
+        if (window.SwipeRow) {
+            items().forEach(swipe);
+            panel.querySelectorAll('.subscriber-item').forEach(swipeSubscriber);
+        }
         panel.querySelectorAll('.message-filter').forEach(button => {
             button.addEventListener('click', () => {
                 panel.querySelectorAll('.message-filter').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
@@ -1241,9 +1393,9 @@ const Messages = (function () {
             const toggleBtn = e.target.closest('.message-toggle');
             if (toggleBtn) return toggle(toggleBtn);
             const actionBtn = e.target.closest('[data-message-action]');
-            if (actionBtn) return act(actionBtn.closest('.message-item'), actionBtn.dataset.messageAction);
+            if (actionBtn) return act(actionBtn.closest('.message-item'), actionBtn.dataset.messageAction, actionBtn);
             const bulkBtn = e.target.closest('[data-bulk]');
-            if (bulkBtn) return bulk(bulkBtn.dataset.bulk);
+            if (bulkBtn) return bulk(bulkBtn.dataset.bulk, bulkBtn);
             return undefined;
         });
         panel.addEventListener('change', e => {
@@ -1257,23 +1409,38 @@ const Messages = (function () {
     return { init };
 })();
 
+// Resolves true once the address is gone, false (already reported) if not.
+function dropSubscriber(item) {
+    const email = item.querySelector('[data-email]').dataset.email;
+    return api(`/admin/api/subscribers/${item.dataset.subscriberId}`, {}, 'DELETE')
+        .then(() => {
+            item.remove();
+            const chip = document.querySelector('#newsletterCard .count-chip');
+            if (chip) chip.textContent = String(Math.max(0, parseInt(chip.textContent, 10) - 1));
+            Admin.notify(`Removed ${email}.`, 'success');
+            return true;
+        })
+        .catch(err => {
+            Admin.notify(err.message, 'error');
+            return false;
+        });
+}
+
 function removeSubscriber(button) {
-    const email = button.dataset.email;
-    Dialog.confirm({
-        title: `Remove ${email}?`,
-        message: 'They will stop getting the newsletter. They can sign up again from the footer.',
-        confirmLabel: 'Remove',
-    }).then(ok => {
-        if (!ok) return;
-        const item = button.closest('[data-subscriber-id]');
-        api(`/admin/api/subscribers/${item.dataset.subscriberId}`, {}, 'DELETE')
-            .then(() => {
-                item.remove();
-                const chip = document.querySelector('#newsletterCard .count-chip');
-                if (chip) chip.textContent = String(Math.max(0, parseInt(chip.textContent, 10) - 1));
-                Admin.notify(`Removed ${email}.`, 'success');
-            })
-            .catch(err => Admin.notify(err.message, 'error'));
+    Fuse.arm(button, {
+        label: `Removing ${button.dataset.email} from the newsletter`,
+        run: () => dropSubscriber(button.closest('[data-subscriber-id]')),
+    });
+}
+
+// Drag a subscriber left past the drawer to remove them, with the same fuse.
+function swipeSubscriber(item) {
+    const email = item.querySelector('[data-email]').dataset.email;
+    SwipeRow.attach(item.querySelector('.subscriber-row'), {
+        label: email,
+        fold: item,
+        actions: [{ id: 'remove', label: 'Remove', icon: 'user-minus', fuse: `Removing ${email} from the newsletter` }],
+        onCommit: (action, row) => dropSubscriber(item).then(ok => { if (!ok) row.reset(); }),
     });
 }
 
@@ -1401,7 +1568,7 @@ document.addEventListener('click', function (e) {
     } else if (action === 'approve-user') {
         Approvals.approve(trigger.closest('[data-user-id]'));
     } else if (action === 'reject-user') {
-        Approvals.reject(trigger.closest('[data-user-id]'), trigger.dataset.username);
+        Approvals.reject(trigger.closest('[data-user-id]'), trigger.dataset.username, trigger);
     } else if (action === 'copy-reset-link') {
         copyResetLink();
     } else if (action === 'select-all') {
@@ -1446,6 +1613,8 @@ document.addEventListener('change', function (e) {
     if (target.matches('.award-style [data-category-field]')) Awards.styleChange(target);
 });
 
+document.addEventListener('ctl:files', DroppedFiles.onFiles);
+
 document.addEventListener('submit', function (e) {
     const form = e.target;
     if (form.id === 'awardCategoryForm') {
@@ -1456,7 +1625,7 @@ document.addEventListener('submit', function (e) {
     if (form.id === 'userForm') validateUserForm(e);
     if (form.dataset.confirmDelete) {
         e.preventDefault();
-        confirmDelete(form, form.dataset.confirmDelete);
+        confirmDelete(form, form.dataset.confirmDelete, e.submitter);
         return;
     }
     if (e.defaultPrevented) {

@@ -46,6 +46,7 @@
     // --- live panels -------------------------------------------------------
 
     function fillSkills(panel, data) {
+        if (!panel) return;
         const skills = data.skills;
         if (!skills) {
             drop(panel);
@@ -201,6 +202,149 @@
         section.removeAttribute('hidden');
     }
 
+    // --- bento tiles -------------------------------------------------------
+
+    // The Bento layout's two live tiles; each one is dropped when its data is missing
+    // and the tiles around it grow into the space.
+    function fillBentoTile(tile, data) {
+        if (tile.dataset.bentoLive === 'skills') {
+            const skills = data.skills;
+            if (!skills) return drop(tile);
+            setText(tile, 'combined', skills.combined);
+            setText(tile, 'rank', skills.rank ? 'Rank #' + skills.rank + ' · ' + trendText(data.trend) : 'Combined score');
+        } else {
+            const events = (data.events || []).slice().sort(function (a, b) {
+                return (b.start || '').localeCompare(a.start || '');
+            });
+            const latest = events[0];
+            if (!latest) return drop(tile);
+            setText(tile, 'event', latest.name || 'Competition');
+            const parts = [recordLine(latest.record)].concat(latest.awards || []).filter(Boolean);
+            setText(tile, 'record', parts.join(' · ') || shortDate(latest.start));
+        }
+        tile.removeAttribute('hidden');
+    }
+
+    // --- season timeline ---------------------------------------------------
+
+    function shortDate(iso) {
+        const parts = (iso || '').slice(0, 10).split('-').map(Number);
+        if (parts.length !== 3 || !parts[0]) return '';
+        return new Date(parts[0], parts[1] - 1, parts[2])
+            .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function timelineItem(event) {
+        const item = document.createElement('li');
+        item.className = 'tl-item tl-item--event';
+        item.dataset.kind = 'event';
+        item.dataset.name = event.name || 'Competition';
+        item.dataset.when = '';
+
+        const dot = document.createElement('span');
+        dot.className = 'tl-dot';
+        dot.setAttribute('aria-hidden', 'true');
+
+        const card = document.createElement('article');
+        card.className = 'tl-card';
+        const meta = document.createElement('p');
+        meta.className = 'tl-meta';
+        const kind = document.createElement('span');
+        kind.className = 'tl-kind';
+        kind.textContent = 'Competition';
+        meta.appendChild(kind);
+        const title = document.createElement('h3');
+        title.className = 'tl-title';
+        title.textContent = item.dataset.name;
+        const live = document.createElement('div');
+        live.className = 'tl-live';
+        live.dataset.field = 'live';
+
+        card.append(meta, title, live);
+        item.append(dot, card);
+        return item;
+    }
+
+    // Before the first dated entry that comes later; an undated entry goes
+    // before the undated events that close the list.
+    function placeInTimeline(list, item) {
+        const when = item.dataset.when;
+        const next = Array.from(list.children).find(function (other) {
+            if (other === item) return false;
+            if (!when) return !other.dataset.when && other.dataset.kind === 'event';
+            return other.dataset.when ? other.dataset.when > when : other.dataset.kind === 'event';
+        });
+        list.insertBefore(item, next || null);
+    }
+
+    function setTimelineDate(item, iso) {
+        item.dataset.when = iso;
+        const meta = item.querySelector('.tl-meta');
+        let date = meta.querySelector('.tl-date');
+        if (!date) {
+            date = document.createElement('span');
+            date.className = 'tl-date';
+            meta.insertBefore(date, meta.firstChild);
+        }
+        date.textContent = shortDate(iso);
+    }
+
+    // RobotEvents results join the stored timeline: a competition the team already
+    // has a gallery for gains its record and awards; any other one is slotted in by date.
+    function fillTimeline(list, data) {
+        if (!list) return;
+        (data.events || []).forEach(function (event) {
+            const name = (event.name || '').trim().toLowerCase();
+            const when = (event.start || '').slice(0, 10);
+            let item = Array.from(list.children).find(function (other) {
+                return other.dataset.kind === 'event' && other.dataset.name.trim().toLowerCase() === name;
+            });
+            if (!item) {
+                item = timelineItem(event);
+                if (when) setTimelineDate(item, when);
+                placeInTimeline(list, item);
+            } else if (!item.dataset.when && when) {
+                setTimelineDate(item, when);
+                placeInTimeline(list, item);
+            }
+
+            const live = field(item, 'live');
+            if (!live) return;
+            live.textContent = '';
+            if (event.level) {
+                const level = document.createElement('span');
+                level.className = 'tl-level';
+                level.textContent = event.level;
+                live.appendChild(level);
+            }
+            const record = recordLine(event.record);
+            if (record) {
+                const line = document.createElement('span');
+                line.className = 'tl-record';
+                line.textContent = record;
+                live.appendChild(line);
+            }
+            (event.awards || []).forEach(function (title) {
+                const award = document.createElement('span');
+                award.className = 'tl-award';
+                award.textContent = title;
+                live.appendChild(award);
+            });
+            if (live.children.length) live.removeAttribute('hidden');
+            item.classList.add('tl-item--live');
+        });
+    }
+
+    // Server-rendered photo buttons (the timeline's event galleries) open the lightbox too.
+    function initPhotoButtons() {
+        document.addEventListener('click', function (event) {
+            const button = event.target.closest('[data-lightbox]');
+            if (!button) return;
+            const img = button.querySelector('img');
+            openLightbox(button.dataset.lightbox, button.getAttribute('aria-label') || (img && img.alt), button);
+        });
+    }
+
     // --- lightbox ----------------------------------------------------------
 
     let lightbox = null;
@@ -260,11 +404,15 @@
         const panel = document.getElementById('skills-panel');
         const band = document.getElementById('scoreboard-band');
         const results = document.getElementById('results-section');
-        if (!panel && !band && !results) return;
+        const tiles = Array.from(document.querySelectorAll('[data-bento-live]'));
+        const live = [panel, band, results].concat(tiles);
+        if (!panel && !band && !results && !tiles.length) return;
 
-        const url = panel && panel.dataset.liveUrl;
+        // The skills panel carries the URL; the Bento layout has a skills tile instead.
+        const source = document.querySelector('[data-live-url]');
+        const url = source && source.dataset.liveUrl;
         if (!url) {
-            [panel, band, results].forEach(drop);
+            live.forEach(drop);
             return;
         }
 
@@ -285,16 +433,18 @@
             })
             .then(function (data) {
                 if (!data) {
-                    [panel, band, results].forEach(drop);
+                    live.forEach(drop);
                     return;
                 }
                 fillSkills(panel, data);
                 fillScoreboard(band, data);
                 fillResults(results, data, photosByEvent);
+                fillTimeline(document.querySelector('[data-timeline]'), data);
+                tiles.forEach(function (tile) { fillBentoTile(tile, data); });
             })
             .catch(function () {
                 // An unreachable endpoint must leave no empty frames behind.
-                [panel, band, results].forEach(drop);
+                live.forEach(drop);
             });
     }
 
@@ -430,9 +580,127 @@
         observer.observe(host);
     }
 
+    // --- dossier rail ------------------------------------------------------
+
+    // The Dossier layout's fact rail sticks below the menu button. A rail taller
+    // than the screen gets a negative offset instead, so it scrolls with the page
+    // until its bottom edge is in view and sticks from there: nothing is cut off.
+    const RAIL_TOP = 96;
+    const RAIL_GAP = 16;
+
+    function initDossierRail() {
+        const rail = document.querySelector('.dossier-rail');
+        if (!rail || !('ResizeObserver' in window)) return;
+        function place() {
+            const top = Math.min(RAIL_TOP, window.innerHeight - rail.offsetHeight - RAIL_GAP);
+            rail.style.setProperty('--rail-top', top + 'px');
+        }
+        new ResizeObserver(place).observe(rail);
+        window.addEventListener('resize', place);
+    }
+
+    // --- tabbed hub -------------------------------------------------------
+
+    // The Tabbed Hub layout shows one panel at a time. Tabs follow the ARIA tabs
+    // pattern (arrow keys, Home, End), and every tab but the first deep-links as
+    // #<key>. A panel whose content goes away (Results, when RobotEvents has
+    // nothing) takes its tab with it. The CAD viewer waits on an
+    // IntersectionObserver, so it only loads once the Robot panel is shown.
+    function initHub() {
+        const hub = document.querySelector('[data-hub]');
+        if (!hub) return;
+        const tabs = Array.from(hub.querySelectorAll('[data-hub-tab]'));
+        const panelOf = tab => document.getElementById(tab.getAttribute('aria-controls'));
+        const shown = () => tabs.filter(tab => !tab.hidden);
+        const byKey = key => shown().find(tab => tab.dataset.hubTab === key);
+
+        // On a phone the tab row scrolls sideways; keep the open tab in sight.
+        function centerTab(tab) {
+            const bar = tab.parentElement;
+            bar.scrollLeft = tab.offsetLeft - bar.offsetLeft - (bar.clientWidth - tab.offsetWidth) / 2;
+        }
+        // Tab widths settle once the web fonts load, so centre the open tab again then.
+        window.addEventListener('load', function () {
+            const open = tabs.find(tab => tab.getAttribute('aria-selected') === 'true');
+            if (open) centerTab(open);
+        });
+
+        function select(key, opts) {
+            const tab = byKey(key) || shown()[0];
+            tabs.forEach(function (other) {
+                const on = other === tab;
+                other.setAttribute('aria-selected', on ? 'true' : 'false');
+                other.tabIndex = on ? 0 : -1;
+                const panel = panelOf(other);
+                if (panel) panel.hidden = !on;
+            });
+            if (opts.focus) tab.focus();
+            centerTab(tab);
+            if (opts.hash) {
+                const first = tab === shown()[0];
+                history.replaceState(null, '', first ? location.pathname + location.search : '#' + tab.dataset.hubTab);
+            }
+            // A switch from far down a long panel lands at the top of the new one.
+            if (opts.scroll && hub.getBoundingClientRect().top < 0) hub.scrollIntoView({ block: 'start' });
+        }
+
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                select(tab.dataset.hubTab, { hash: true, scroll: true });
+            });
+        });
+
+        hub.querySelector('[role="tablist"]').addEventListener('keydown', function (event) {
+            const list = shown();
+            const at = list.indexOf(document.activeElement);
+            if (at < 0) return;
+            let next;
+            if (event.key === 'ArrowRight') next = list[(at + 1) % list.length];
+            else if (event.key === 'ArrowLeft') next = list[(at - 1 + list.length) % list.length];
+            else if (event.key === 'Home') next = list[0];
+            else if (event.key === 'End') next = list[list.length - 1];
+            else return;
+            event.preventDefault();
+            select(next.dataset.hubTab, { hash: true, focus: true });
+        });
+
+        // Overview tiles (and any other [data-hub-open] link) open their tab.
+        hub.addEventListener('click', function (event) {
+            const opener = event.target.closest('[data-hub-open]');
+            if (!opener || !byKey(opener.dataset.hubOpen)) return;
+            event.preventDefault();
+            select(opener.dataset.hubOpen, { hash: true, scroll: true, focus: true });
+        });
+
+        function fromHash(scroll) {
+            const key = decodeURIComponent(location.hash.slice(1));
+            if (byKey(key)) {
+                select(key, {});
+                if (scroll) hub.scrollIntoView({ block: 'start' });
+            }
+        }
+        window.addEventListener('hashchange', function () { fromHash(true); });
+        fromHash(true);
+
+        tabs.forEach(function (tab) {
+            const panel = panelOf(tab);
+            if (!panel) return;
+            new MutationObserver(function () {
+                if (panel.children.length) return;
+                const wasOpen = tab.getAttribute('aria-selected') === 'true';
+                tab.hidden = true;
+                hub.querySelectorAll('[data-hub-open="' + tab.dataset.hubTab + '"]').forEach(drop);
+                if (wasOpen) select(shown()[0].dataset.hubTab, { hash: true });
+            }).observe(panel, { childList: true });
+        });
+    }
+
     function boot() {
+        initHub();
+        initPhotoButtons();
         loadLiveData();
         initViewer();
+        initDossierRail();
     }
 
     if (document.readyState === 'loading') {

@@ -1,0 +1,59 @@
+{% if not is_group and not (team.hide_cad and not robot_photos) %}
+<!-- ROBOT SHOWCASE: a compact CAD card, or the robot photos when there is no model (or it is hidden). -->
+<section class="robot-showcase fade-in-section">
+    <h2 class="ripple">Our Robot{% if team.nickname %}: "{{ team.nickname }}"{% endif %}</h2>
+
+    {% if team.stl_path %}
+    {#- Specs sit beside the model, unless the layout already shows them elsewhere (Dossier's rail). #}
+    {% set specs_here = specs and not specs_in_rail %}
+    <div class="cad-stage{% if specs_here %} cad-stage--specs{% endif %}">
+    <figure class="cad-card">
+        <div class="viewer-shell">
+            <div id="robot-viewer" class="viewer-canvas" data-stl="{{ get_image_url(team.stl_path) }}" role="img"
+                aria-label="Interactive 3D model of {{ team.nickname or team.team_number }}">
+                <p class="viewer-status">Loading 3D model…</p>
+            </div>
+            <div class="viewer-controls">
+                <button type="button" class="viewer-btn" id="viewer-reset" title="Reset view">
+                    <i data-lucide="rotate-ccw" aria-hidden="true"></i><span class="visually-hidden">Reset view</span>
+                </button>
+                <span class="viewer-hint">Drag to rotate · scroll to zoom</span>
+                <a href="{{ team.stl_path }}" class="viewer-btn" download title="Download CAD model (.stl)">
+                    <i data-lucide="download" aria-hidden="true"></i><span class="visually-hidden">Download CAD model (.stl)</span>
+                </a>
+            </div>
+        </div>
+        <figcaption class="cad-caption">
+            <span class="cad-kicker">CAD · {{ team.team_number }}</span>
+            <span class="robot-tagline">"{{ team.tagline or 'Precision. Power. Performance.' }}"</span>
+        </figcaption>
+    </figure>
+    {% if specs_here %}
+    <div class="cad-specs">
+        <h3 class="cad-specs-title">Technical Specifications</h3>
+        <dl>
+            {% for label, value in specs %}
+            <div class="cad-spec">
+                <dt>{{ label }}</dt>
+                <dd>{{ value }}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </div>
+    {% endif %}
+    </div>
+    {% else %}
+    {% if robot_photos %}
+    <div class="viewer-gallery">
+        {% for photo in robot_photos %}
+        <img src="{{ get_image_url(photo) }}" alt="{{ team.nickname or team.team_number }} robot photo"
+            class="viewer-gallery-photo" loading="lazy">
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="viewer-empty">CAD model not published for this robot yet.</p>
+    {% endif %}
+    <p class="robot-tagline">"{{ team.tagline or 'Precision. Power. Performance.' }}"</p>
+    {% endif %}
+</section>
+{% endif %}

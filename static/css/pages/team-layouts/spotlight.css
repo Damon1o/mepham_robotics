@@ -1,0 +1,175 @@
+/* Team page layout 03: Robot Spotlight. Loaded after team.css. */
+
+/* --- STAGE: ROBOT + SPECS --- */
+
+.spotlight-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(240px, 1fr);
+    align-items: center;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg) max(var(--spacing-md), calc((100% - 1280px) / 2));
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+}
+
+.spotlight-stage:not(:has(> .robot-specs)) {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.spotlight-stage > section {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    background: none;
+    text-align: left;
+}
+
+.spotlight-stage .robot-showcase > * {
+    max-width: none;
+}
+
+.spotlight-stage .robot-showcase h2 {
+    font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+    text-align: left;
+    margin-bottom: var(--spacing-md);
+}
+
+.spotlight-stage h2::after {
+    left: 0;
+    transform: none;
+}
+
+/* The CAD card sits centred in its column, so its heading centres over it. */
+.spotlight-stage .robot-showcase:has(.cad-card) h2 {
+    text-align: center;
+}
+
+.spotlight-stage .robot-showcase:has(.cad-card) h2::after {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.spotlight-stage .viewer-empty {
+    text-align: left;
+}
+
+.spotlight-stage .robot-showcase > .robot-tagline {
+    margin: var(--spacing-md) 0 0;
+    font-style: italic;
+}
+
+/* No CAD model: the robot photos take the viewer's place, the first one large. */
+.spotlight-stage .viewer-gallery {
+    max-width: none;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-sm);
+}
+
+.spotlight-stage .viewer-gallery-photo {
+    height: 130px;
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 5px 5px 0px rgba(0, 0, 0, 0.4);
+}
+
+.spotlight-stage .viewer-gallery-photo:first-child {
+    grid-column: 1 / -1;
+    height: auto;
+    aspect-ratio: 16 / 10;
+    border-color: var(--accent-gold);
+}
+
+/* Specs stack down the right as a spec sheet. */
+.spotlight-stage .robot-specs h2 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    text-align: left;
+    margin: 0 0 var(--spacing-sm);
+    animation: none;
+}
+
+.spotlight-stage .robot-specs h2::after {
+    display: none;
+}
+
+.spotlight-stage .specs-container {
+    max-width: none;
+    margin: 0;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+}
+
+.spotlight-stage .spec-card {
+    text-align: left;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-left: 4px solid var(--accent-gold);
+}
+
+.spotlight-stage .spec-card:hover {
+    transform: translateX(4px);
+}
+
+.spotlight-stage .spec-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.spotlight-stage .spec-value {
+    font-size: 1.3rem;
+}
+
+@media (max-width: 900px) {
+    .spotlight-stage {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .spotlight-stage .specs-container {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .team-titlebar .identity-bar {
+        justify-content: flex-start;
+    }
+}
+
+/* --- PHOTO STRIP --- */
+
+.robot-photos {
+    max-width: none;
+    margin: 0;
+    padding: var(--spacing-md) max(var(--spacing-md), calc((100% - 1280px) / 2)) var(--spacing-lg);
+    background: #111;
+}
+
+.robot-photos-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    text-align: left;
+    margin: 0 0 var(--spacing-sm);
+}
+
+.robot-photos-title::after {
+    display: none;
+}
+
+.robot-photos-strip {
+    display: flex;
+    gap: var(--spacing-sm);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: var(--spacing-xs);
+}
+
+.robot-photos-item {
+    flex: 0 0 auto;
+    width: clamp(200px, 26vw, 300px);
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    scroll-snap-align: start;
+}

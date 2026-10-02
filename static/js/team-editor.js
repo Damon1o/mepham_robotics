@@ -60,7 +60,9 @@
     async function send(url, options) {
         let response;
         try {
-            response = await fetch(url, Object.assign({ credentials: 'same-origin' }, options));
+            // A fuse committed as the page closes must outlive it (fuse.js).
+            const keepalive = Boolean(window.Fuse?.leaving);
+            response = await fetch(url, Object.assign({ credentials: 'same-origin', keepalive }, options));
         } catch (err) {
             throw new Error('Could not reach the server. Check your connection.');
         }
@@ -117,10 +119,14 @@
                 if (input.dataset.memberField === 'name') {
                     const initials = memberCard.querySelector('.member-initials');
                     if (initials) initials.textContent = toInitials(input.value);
+                    if (memberCard.hasAttribute('data-drop')) memberCard.dataset.dropLabel = photoLabel(input.value);
                 }
             })
             .catch(() => revert(input));
     }
+
+    // Shown over a roster row while a photo is dragged onto it.
+    const photoLabel = name => (name.trim() ? `Set as ${name.trim()}’s photo` : 'Set as their photo');
 
     function toInitials(name) {
         const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -201,7 +207,9 @@
         }
     });
 
-    // --- Uploads (click to browse or drop a file) -------------------------------------------------------
+    // --- Uploads (click to browse, drop or paste a file) ---------------------------------------------------
+    // controls.js does the dropping and pasting and hands the file to the zone's input, so
+    // every upload arrives here as a change event.
 
     function upload(zone, file) {
         if (!file) return;
@@ -235,23 +243,6 @@
         const zone = e.target.type === 'file' && e.target.closest('[data-upload]');
         if (zone) upload(zone, e.target.files[0]);
     });
-    root.addEventListener('dragover', e => {
-        const zone = e.target.closest('[data-upload]');
-        if (!zone) return;
-        e.preventDefault();
-        zone.classList.add('is-over');
-    });
-    root.addEventListener('dragleave', e => {
-        const zone = e.target.closest('[data-upload]');
-        if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove('is-over');
-    });
-    root.addEventListener('drop', e => {
-        const zone = e.target.closest('[data-upload]');
-        if (!zone) return;
-        e.preventDefault();
-        zone.classList.remove('is-over');
-        upload(zone, e.dataTransfer.files[0]);
-    });
 
     // --- Removing an image, the CAD model, or a member's photo ------------------------------------------
 
@@ -261,6 +252,7 @@
         return scope.querySelector(`[data-action="remove-image"][data-kind="${kind}"]`);
     }
 
+    // The file is deleted for good, so the button lights a fuse first (fuse.js).
     root.addEventListener('click', e => {
         const button = e.target.closest('[data-action="remove-image"]');
         if (!button) return;
@@ -269,6 +261,13 @@
         const zone = (card || button.closest('.image-field')).querySelector(`[data-upload="${kind}"]`);
         const body = { kind };
         if (card) body.member_id = card.dataset.memberId;
+        Fuse.arm(button, {
+            label: button.getAttribute('aria-label') || button.textContent.trim() || 'Removing',
+            run: () => removeImage(button, card, zone, body),
+        });
+    });
+
+    function removeImage(button, card, zone, body) {
         track(zone, post('/image', body, 'DELETE')).then(() => {
             button.hidden = true;
             const preview = zone.querySelector('.drop-zone-preview');
@@ -286,52 +285,240 @@
             }
             showToast('Removed.', 'success');
         }).catch(() => {});
-    });
+    }
 
     // --- Roster: add and remove (editors and admins) -------------------------------------------------------
 
     const addForm = document.getElementById('addMemberForm');
+    const grid = document.getElementById('memberGrid');
+
+    // Add one person; resolves with their new roster row.
+    function addMember(name, holder) {
+        return track(holder, post('/member', { name })).then(data => {
+            const card = document.getElementById('tpl-member').content.firstElementChild.cloneNode(true);
+            card.dataset.memberId = data.member.member_id;
+            card.dataset.dropLabel = photoLabel(name);
+            card.querySelector('.member-initials').textContent = toInitials(name);
+            card.querySelector('[data-member-field="name"]').value = name;
+            card.querySelector('[data-member-field="role"]').value = data.member.role;
+            card.querySelectorAll(FIELD).forEach(field => { field.dataset.saved = field.value; });
+            document.getElementById('rosterEmpty')?.remove();
+            grid.append(card);
+            refreshLucideIcons();
+            return card;
+        });
+    }
+
     addForm?.addEventListener('submit', e => {
         e.preventDefault();
         const input = addForm.querySelector('input');
         const name = input.value.trim();
         if (!name) return;
-        track(addForm, post('/member', { name })).then(data => {
-            const card = document.getElementById('tpl-member').content.firstElementChild.cloneNode(true);
-            card.dataset.memberId = data.member.member_id;
-            card.querySelector('.member-initials').textContent = toInitials(name);
-            const nameInput = card.querySelector('[data-member-field="name"]');
-            nameInput.value = name;
-            card.querySelector('[data-member-field="role"]').value = data.member.role;
-            card.querySelectorAll(FIELD).forEach(field => { field.dataset.saved = field.value; });
-            document.getElementById('rosterEmpty')?.remove();
-            document.getElementById('memberGrid').append(card);
-            refreshLucideIcons();
+        addMember(name, addForm).then(card => {
             input.value = '';
             card.querySelector('[data-member-field="role"]').focus();
         }).catch(() => {});
     });
 
-    // Removing asks twice in place ("Remove?") instead of a modal.
+    // --- Dropping files on the roster as a whole (editors and admins) ---------------------------------------
+    // Headshots go to the people they are named after ("alice-smith.jpg", "Alice.png"), and a
+    // .csv or .txt of names adds everyone on it after a quick check. One photo dropped on a
+    // row goes to that row's own photo input instead.
+
+    const tidy = text => text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ').trim();
+    const nameOf = card => (card.querySelector('[data-member-field="name"]')?.value
+        || card.querySelector('.member-name')?.textContent || '');
+    const isNameList = file => /\.(csv|txt)$/i.test(file.name) || /^text\//.test(file.type);
+
+    // The one person a file name points at: every part of their name in it beats some of it.
+    // Null when no one fits, or when two people fit equally well.
+    function personFor(file, people) {
+        const words = tidy(file.name.replace(/\.[^.]+$/, '')).split(' ').filter(word => word.length > 1);
+        const joined = words.join('');
+        let best = null;
+        let bestScore = 0;
+        let tied = false;
+        people.forEach(person => {
+            const parts = person.name.split(' ').filter(Boolean);
+            let score = parts.filter(part => words.includes(part)).length;
+            // "alicesmith.jpg" names Alice Smith too; a one-word name has to be a whole word.
+            const whole = parts.length > 1 && joined.includes(parts.join(''));
+            if (parts.length && (score === parts.length || whole)) score = 100 + parts.length;
+            if (score > bestScore) {
+                best = person;
+                bestScore = score;
+                tied = false;
+            } else if (score && score === bestScore) {
+                tied = true;
+            }
+        });
+        return tied ? null : best;
+    }
+
+    function matchPhotos(photos) {
+        const people = Array.from(grid.querySelectorAll('.member-card'))
+            .filter(card => card.querySelector('[data-upload="member_photo"]'))
+            .map(card => ({ card, name: tidy(nameOf(card)) }))
+            .filter(person => person.name);
+        const used = new Set();
+        const missed = [];
+        photos.forEach(file => {
+            const person = personFor(file, people);
+            if (!person || used.has(person.card)) {
+                missed.push(file.name);
+                return;
+            }
+            used.add(person.card);
+            upload(person.card.querySelector('[data-upload="member_photo"]'), file);
+        });
+        // One toast shows at a time, so say it all in one.
+        const matched = used.size === 1 ? 'Matched 1 photo to a name. '
+            : used.size ? `Matched ${used.size} photos to names. ` : '';
+        if (!missed.length) showToast(matched.trim(), 'success');
+        else showToast(`${matched}No one on the roster matches ${missed.join(', ')}. Name photos after people, `
+            + 'or drop one straight onto a row.', 'error');
+    }
+
+    // One name per line; for a spreadsheet export, the "Name" column (or First + Last).
+    function cellsOf(line) {
+        const cells = [];
+        let cell = '';
+        let quoted = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (quoted && ch === '"' && line[i + 1] === '"') {
+                cell += '"';
+                i++;
+            } else if (ch === '"') {
+                quoted = !quoted;
+            } else if (!quoted && (ch === ',' || ch === '\t' || ch === ';')) {
+                cells.push(cell.trim());
+                cell = '';
+            } else {
+                cell += ch;
+            }
+        }
+        cells.push(cell.trim());
+        return cells;
+    }
+
+    // A spreadsheet cell of "Reyes, Sam" is Sam Reyes.
+    function firstLast(name) {
+        const parts = name.split(',').map(part => part.trim());
+        return parts.length === 2 && parts[0] && parts[1] ? `${parts[1]} ${parts[0]}` : name;
+    }
+
+    function namesIn(text, spreadsheet) {
+        const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+        // A plain list can put several names on a line: "Dana Kim, Evan Lopez".
+        if (!spreadsheet) return lines.flatMap(line => line.split(/[,;\t]/));
+        const head = cellsOf(lines[0] || '').map(cell => cell.toLowerCase());
+        const nameCol = head.findIndex(cell => /^(full )?name$|^student( name)?$|^member( name)?$/.test(cell));
+        const first = head.findIndex(cell => /^first( ?name)?$/.test(cell));
+        const last = head.findIndex(cell => /^(last|sur)( ?name)?$/.test(cell));
+        const byParts = nameCol < 0 && first >= 0 && last >= 0;
+        const rows = nameCol >= 0 || byParts ? lines.slice(1) : lines;
+        return rows.map(line => {
+            const cells = cellsOf(line);
+            return byParts ? `${cells[first] || ''} ${cells[last] || ''}` : firstLast(cells[Math.max(nameCol, 0)] || '');
+        });
+    }
+
+    const MAX_IMPORT = 60;
+
+    async function importNames(file) {
+        const text = await file.text();
+        const taken = new Set(Array.from(grid.querySelectorAll('.member-card')).map(card => tidy(nameOf(card))));
+        const seen = new Set();
+        let already = 0;
+        const names = namesIn(text, /\.csv$/i.test(file.name) || file.type === 'text/csv')
+            .map(name => name.replace(/\s+/g, ' ').trim().slice(0, 100))
+            .filter(name => {
+                const key = tidy(name);
+                if (!key || seen.has(key)) return false;
+                seen.add(key);
+                if (taken.has(key)) {
+                    already++;
+                    return false;
+                }
+                return true;
+            });
+        if (!names.length) {
+            showToast(already ? `Everyone in ${file.name} is already on the roster.` : `No names found in ${file.name}.`, 'info');
+            return;
+        }
+        showImport(file.name, names.slice(0, MAX_IMPORT), already, names.length - MAX_IMPORT);
+    }
+
+    // A check before adding anyone: the names, with Add and Cancel, just above the add form.
+    function showImport(fileName, names, already, over) {
+        document.getElementById('rosterImport')?.remove();
+        const make = (tag, className, text) => Object.assign(document.createElement(tag), { className, textContent: text || '' });
+        const box = make('div', 'roster-import');
+        box.id = 'rosterImport';
+        box.setAttribute('role', 'group');
+        box.setAttribute('aria-label', `Names from ${fileName}`);
+        const title = make('p', 'roster-import-title');
+        title.append(make('strong', '', `Add ${names.length} ${names.length === 1 ? 'person' : 'people'} from ${fileName}?`));
+        const notes = [];
+        if (already) notes.push(`${already} already on the roster`);
+        if (over > 0) notes.push(`${over} more left out (${MAX_IMPORT} at a time)`);
+        if (notes.length) title.append(` ${notes.join('; ')}.`);
+        const list = make('ul', 'roster-import-names');
+        names.forEach(name => list.append(make('li', '', name)));
+        const actions = make('div', 'roster-import-actions');
+        const add = make('button', 'admin-btn admin-btn-small', names.length === 1 ? 'Add' : `Add all ${names.length}`);
+        const cancel = make('button', 'admin-btn admin-btn-secondary admin-btn-small', 'Cancel');
+        add.type = 'button';
+        cancel.type = 'button';
+        actions.append(add, cancel);
+        box.append(title, list, actions);
+        addForm.before(box);
+        box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        add.focus({ preventScroll: true });
+
+        cancel.addEventListener('click', () => box.remove());
+        add.addEventListener('click', async () => {
+            add.disabled = true;
+            cancel.disabled = true;
+            let added = 0;
+            for (const name of names) {
+                add.textContent = `Adding ${added + 1} of ${names.length}…`;
+                try {
+                    await addMember(name, box);
+                    added++;
+                } catch (err) {
+                    break;
+                }
+            }
+            box.remove();
+            if (added) showToast(`Added ${added} ${added === 1 ? 'person' : 'people'} to the roster.`, 'success');
+        });
+    }
+
+    grid?.addEventListener('ctl:files', e => {
+        if (e.target !== grid) return;
+        e.preventDefault();
+        const files = e.detail.files;
+        const list = files.find(isNameList);
+        if (list) importNames(list).catch(() => showToast(`Could not read ${list.name}.`, 'error'));
+        const photos = files.filter(file => !isNameList(file));
+        if (photos.length) matchPhotos(photos);
+    });
+
+    // Removing lights a fuse in place instead of a modal; Undo keeps them (fuse.js).
     root.addEventListener('click', e => {
         const button = e.target.closest('[data-action="remove-member"]');
         if (!button) return;
         const card = button.closest('[data-member-id]');
-        if (!button.classList.contains('is-confirming')) {
-            button.classList.add('is-confirming');
-            button.dataset.label = button.getAttribute('aria-label');
-            button.setAttribute('aria-label', 'Click again to remove');
-            button.title = 'Click again to remove';
-            setTimeout(() => {
-                button.classList.remove('is-confirming');
-                button.setAttribute('aria-label', button.dataset.label);
-                button.removeAttribute('title');
-            }, 3000);
-            return;
-        }
-        track(card, post(`/member/${card.dataset.memberId}`, {}, 'DELETE'))
-            .then(() => card.remove())
-            .catch(() => {});
+        const name = card.querySelector('[data-member-field="name"]')?.value.trim();
+        Fuse.arm(button, {
+            label: name ? `Removing ${name} from the roster` : 'Removing from the roster',
+            run: () => track(card, post(`/member/${card.dataset.memberId}`, {}, 'DELETE'))
+                .then(() => card.remove())
+                .catch(() => {}),
+        });
     });
 
     // --- "Other roles" suggestions -------------------------------------------------------
@@ -366,6 +553,44 @@
         if (count) count.textContent = root.querySelectorAll('#memberGrid .member-card').length;
     }
     new MutationObserver(updateRosterCount).observe(document.getElementById('memberGrid'), { childList: true });
+
+    // --- Roster as an animated list -------------------------------------------------------
+    // controls.js animates the rows and fades the edges (data-animated-list). Here: the top
+    // fade starts below the sticky header, and Up/Down in a row's field moves to the same
+    // field one row over (unless a dropdown or suggestion list took the key).
+
+    const rosterViewport = document.getElementById('rosterViewport');
+    const rosterHead = grid.querySelector('.member-head');
+
+    if (rosterViewport) {
+        const placeFade = () => rosterViewport.style.setProperty('--fade-start', `${rosterHead.offsetHeight}px`);
+        placeFade();
+        window.addEventListener('resize', placeFade);
+
+        rosterViewport.addEventListener('keydown', e => {
+            if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+            const field = e.target.closest('input[data-member-field]');
+            if (!field) return;
+            const rows = Array.from(grid.querySelectorAll('.member-card'));
+            const step = e.key === 'ArrowDown' ? 1 : -1;
+            let target = null;
+            // Skip rows this person can't edit.
+            for (let i = rows.indexOf(field.closest('.member-card')) + step; !target && rows[i]; i += step) {
+                target = rows[i].querySelector(`[data-member-field="${field.dataset.memberField}"]`);
+            }
+            if (!target) return;
+            e.preventDefault();
+            target.focus({ preventScroll: true });
+            // Keep the row clear of the sticky header and the edge fades.
+            const margin = 50;
+            const view = rosterViewport.getBoundingClientRect();
+            const row = target.closest('.member-card').getBoundingClientRect();
+            const top = view.top + rosterHead.offsetHeight;
+            if (row.top < top + margin) rosterViewport.scrollBy({ top: row.top - top - margin, behavior: 'smooth' });
+            else if (row.bottom > view.bottom - margin) rosterViewport.scrollBy({ top: row.bottom - view.bottom + margin, behavior: 'smooth' });
+        });
+    }
 
     const navLinks = Array.from(root.querySelectorAll('.settings-nav a'));
     if ('IntersectionObserver' in window && navLinks.length) {

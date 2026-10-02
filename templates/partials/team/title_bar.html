@@ -1,0 +1,12 @@
+<!-- TITLE BAR: a slim header in place of the full hero -->
+<header class="team-titlebar" style="--team-hero-image: url('{{ get_image_url(team.hero_image) }}')">
+    <div class="team-titlebar-inner">
+        <div class="team-titlebar-name">
+            <h1>{{ team_name }}</h1>
+            <p>{{ team.nickname or site.teams.default_tagline }}</p>
+        </div>
+        {% include "partials/team/identity_bar.html" %}
+    </div>
+</header>
+
+{% include "partials/team/breadcrumb.html" %}

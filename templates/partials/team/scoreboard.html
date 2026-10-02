@@ -1,0 +1,23 @@
+{% if live_enabled %}
+<!-- SEASON SCOREBOARD -->
+<section id="scoreboard-band" class="scoreboard-band fade-in-section" aria-live="polite" hidden>
+    <div class="scoreboard-inner">
+        <h2 class="ripple">This Season</h2>
+        <div class="scoreboard-grid">
+            <div class="scoreboard-stat">
+                <span class="scoreboard-value" data-field="competitions">0</span>
+                <span class="scoreboard-label">Competitions</span>
+                <span class="scoreboard-breakdown" data-field="breakdown"></span>
+            </div>
+            <div class="scoreboard-stat">
+                <span class="scoreboard-value" data-field="awards">0</span>
+                <span class="scoreboard-label">Awards</span>
+            </div>
+            <div class="scoreboard-stat scoreboard-crown" data-field="crown-wrap" hidden>
+                <span class="scoreboard-value" data-field="triple_crowns">0</span>
+                <span class="scoreboard-label">Triple Crowns</span>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}

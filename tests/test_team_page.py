@@ -1,5 +1,7 @@
 import pytest
 
+from api import site_content
+
 
 @pytest.fixture
 def team_factory(db):
@@ -88,10 +90,12 @@ def test_awards_section_always_present(client, db, team_factory, award_factory):
     assert 'Competition Awards' in bare
 
 
-def test_awards_grid_partial_still_included():
-    with open('templates/team.html', encoding='utf-8') as fh:
-        source = fh.read()
-    assert source.count('awards_grid.html') == 1
+def test_awards_partial_still_included():
+    with open('templates/partials/team/awards.html', encoding='utf-8') as fh:
+        assert fh.read().count('partials/awards/') == 1
+    for layout in site_content.TEAM_LAYOUTS:
+        with open(f'templates/team_layouts/{layout}.html', encoding='utf-8') as fh:
+            assert fh.read().count('partials/team/awards.html') == 1, layout
 
 
 # --- honest empty states ---------------------------------------------------
@@ -178,6 +182,15 @@ def test_member_roles_chips(client, team_factory):
     body = html(client)[1]
     assert body.count('roster-role-chip') >= 3
     assert 'Programmer' in body
+
+
+def test_main_role_leads_the_chips_in_gold(client, team_factory):
+    team_factory(members=[{'name': 'Ada Lovelace', 'role': 'Driver', 'roles': ['Coder', 'driver']}])
+    body = html(client)[1]
+    assert 'roster-role-chip roster-role-chip--main">Driver<' in body
+    assert body.index('>Driver<') < body.index('>Coder<')
+    assert body.count('roster-role-chip--main') == 1
+    assert '>driver<' not in body
 
 
 def test_roster_grouped_by_subteam(client, team_factory):
@@ -283,10 +296,17 @@ def test_live_sections_present_with_token(client, team_factory, monkeypatch):
     assert 'aria-busy="true"' in body
 
 
+def test_live_sections_use_the_api_key(client, team_factory, monkeypatch):
+    # The deployment's variable is ROBOTEVENTS_API_KEY; it alone must turn the panels on.
+    monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'test-key')
+    team_factory()
+    assert 'id="skills-panel"' in html(client)[1]
+
+
 def test_live_panels_point_at_the_json_route(client, team_factory, monkeypatch):
     monkeypatch.setenv('ROBOTEVENTS_TOKEN', 'test-token')
     team_factory()
-    assert 'data-live-url="/api/team/77628A/live"' in html(client)[1]
+    assert 'data-live-url="/api/team/77628A/live' in html(client)[1]
 
 
 def test_team_js_always_loaded(client, team_factory):
@@ -310,7 +330,8 @@ def test_viewer_rendered_when_stl_present(client, team_factory):
     body = html(client)[1]
     assert 'id="robot-viewer"' in body
     assert 'data-stl="https://blob.example.com/robot.stl"' in body
-    assert 'Reset View' in body
+    assert 'Reset view' in body
+    assert 'class="cad-card"' in body
 
 
 def test_no_viewer_and_no_dead_button_without_stl(client, team_factory):
@@ -327,6 +348,46 @@ def test_photo_gallery_replaces_viewer_when_photos_exist(client, team_factory):
     body = html(client)[1]
     assert 'viewer-gallery' in body
     assert 'CAD model not published' not in body
+
+
+def test_hidden_cad_drops_the_viewer_and_showcase(client, team_factory):
+    team_factory(hide_cad=True)
+    body = html(client)[1]
+    assert 'robot-viewer' not in body
+    assert 'robot.stl' not in body
+    assert 'robot-showcase' not in body
+    assert 'CAD model not published' not in body
+
+
+def test_hidden_cad_falls_back_to_photos(client, team_factory):
+    team_factory(hide_cad=True, events=[{'name': 'States',
+                                         'photos': ['static/assets/photos/hero.png']}])
+    body = html(client)[1]
+    assert 'robot-viewer' not in body
+    assert 'viewer-gallery' in body
+
+
+def test_specs_sit_beside_the_cad_model(client, team_factory):
+    team_factory()
+    body = html(client)[1]
+    stage = body[body.index('class="cad-stage'):body.index('</section>', body.index('class="cad-stage'))]
+    assert 'cad-stage--specs' in stage and 'class="cad-specs"' in stage
+    assert 'X-Drive' in stage and 'Flex Wheel' in stage
+    assert 'class="robot-specs' not in body  # not a second time below
+    assert body.count('Technical Specifications') == 1
+
+
+def test_specs_keep_their_own_section_without_a_model(client, team_factory):
+    team_factory(stl_path='')
+    body = html(client)[1]
+    assert 'class="robot-specs' in body and 'cad-specs' not in body
+    assert 'X-Drive' in body
+
+
+def test_hidden_cad_puts_specs_back_in_their_section(client, team_factory):
+    team_factory(hide_cad=True)
+    body = html(client)[1]
+    assert 'class="robot-specs' in body and 'cad-specs' not in body
 
 
 def test_missing_team_redirects(client):

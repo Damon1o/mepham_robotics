@@ -89,10 +89,12 @@
                         {% if col.hidden %}<small class="hidden-chip">hidden from menu</small>{% endif %}</span>
                     <span class="roster-count">{{ col.cards|length }}</span>
                 </header>
-                <ul class="roster-drop" role="list">
+                <ul class="roster-drop" role="list" data-animated-list=".roster-card" data-animated-list-rows="3">
                     {% for c in col.cards %}
                     <li class="roster-card" draggable="true" data-member-id="{{ c.member_id }}"{% if c.user_id %} data-user-id="{{ c.user_id }}"{% endif %} data-name="{{ c.name }}">
-                        <span class="roster-avatar" aria-hidden="true">{{ c.name|initials }}</span>
+                        <span class="roster-avatar" aria-hidden="true">
+                            {%- if c.photo %}<img src="{{ get_image_url(c.photo) }}" alt="" loading="lazy">{% else %}{{ c.name|initials }}{% endif -%}
+                        </span>
                         <span class="roster-text">
                             <strong>{{ c.name }}</strong>
                             <small data-card-meta>{{ c.role or 'Member' }}{% if c.username %} · @{{ c.username }}{% elif not c.user_id %} · <span class="no-login-chip">no login</span>{% endif %}</small>
@@ -121,7 +123,7 @@
                     <span class="roster-col-title"><strong>Unassigned</strong><small>Accounts not on any roster</small></span>
                     <span class="roster-count">{{ unassigned|length }}</span>
                 </header>
-                <ul class="roster-drop" role="list">
+                <ul class="roster-drop" role="list" data-animated-list=".roster-card" data-animated-list-rows="3">
                     {% for u in unassigned %}
                     <li class="roster-card" draggable="true" data-user-id="{{ u._id }}" data-name="{{ u.full_name or u.username }}">
                         <span class="roster-avatar" aria-hidden="true">{{ (u.full_name or u.username)|initials }}</span>
@@ -246,9 +248,9 @@
                 <div class="field-group">
                     <label for="role">Role</label>
                     <select id="role" name="role">
-                        <option value="member">Member (edits own team)</option>
-                        <option value="editor">Editor (edits every team)</option>
-                        <option value="admin">Admin (full access)</option>
+                        <option value="member" data-tag="Own team">Member</option>
+                        <option value="editor" data-tag="Every team">Editor</option>
+                        <option value="admin" data-tag="Full access">Admin</option>
                     </select>
                 </div>
                 <div class="field-group">

@@ -3,7 +3,9 @@
 {% macro team_tile(team, older) -%}
 {% set grp = team is group %}
 {% set name = (team.title or team.team_number) if grp else team.team_number %}
-<article class="data-item team-tile{% if grp %} is-group{% endif %}{% if team.hidden %} is-hidden-team{% endif %}">
+<article class="data-item team-tile{% if grp %} is-group{% endif %}{% if team.hidden %} is-hidden-team{% endif %}"
+    data-team-id="{{ team._id }}" data-team-name="{{ name }}" data-drop="event"
+    data-drop-accept="image/png,image/jpeg,image/gif,image/webp" data-drop-label="Use as the banner photo">
     <a class="team-tile-main" href="{{ url_for('manage_team', team_id=team._id) }}">
         {% if grp %}
         <span class="team-number-box team-number-box--group"><i data-lucide="users" aria-hidden="true"></i></span>
@@ -16,6 +18,7 @@
                 {{ team.members|length }} member{{ 's' if team.members|length != 1 }}
                 {%- if team.hidden %} · hidden from menu{% endif %}</small>
         </span>
+        {% if team.hero_image %}<img class="team-tile-photo" src="{{ get_image_url(team.hero_image) }}" alt="" loading="lazy">{% endif %}
     </a>
     <div class="team-tile-actions">
         <a class="admin-btn admin-btn-small" href="{{ url_for('manage_team', team_id=team._id) }}">
@@ -73,7 +76,8 @@
         {% endcall %}
         <p class="form-hint">Each team has one profile per season. Open a team to edit its page; anyone on its roster
             can edit it too. Start a team's next season with <em>New season</em>: the roster and identity carry over,
-            and last season stays on the team page under its season picker.</p>
+            and last season stays on the team page under its season picker. Drop a photo on a team to make it the
+            banner.</p>
 
         {% if robot_teams %}
         {{ tiles(robot_teams) }}

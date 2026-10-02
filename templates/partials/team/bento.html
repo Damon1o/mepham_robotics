@@ -1,0 +1,124 @@
+{#- Bento Dashboard tiles. A feature tile on the left (a robot photo, else the awards
+    count) beside a cluster of stat tiles that grow to fill their rows, so a missing tile
+    never leaves a hole. Every stored tile hides when its data is empty; the two live
+    tiles stay hidden until static/js/team.js fills them from RobotEvents. -#}
+{% set feature_photo = robot_photos[0] if robot_photos else '' %}
+{% set top_award = team_awards[0] if team_awards else none %}
+<section class="bento{{ '' if feature_photo or award_total else ' bento--flat' }} fade-in-section" aria-label="Team at a glance">
+    {% if feature_photo %}
+    <figure class="bento-feature bento-feature--photo">
+        <img src="{{ get_image_url(feature_photo) }}" alt="{{ team.nickname or team_name }} robot" loading="lazy">
+        <figcaption>
+            <span class="bento-label">Robot</span>
+            <span class="bento-feature-name">{{ team.nickname or team_name }}</span>
+            {% if team.stl_path %}<span class="bento-chip">3D model below</span>{% endif %}
+        </figcaption>
+    </figure>
+    {% elif award_total %}
+    <div class="bento-feature bento-feature--awards">
+        <span class="bento-label">Awards</span>
+        <span class="bento-big">{{ award_total }}</span>
+        <span class="bento-note">{{ top_award.title }}{% if top_award.count > 1 %} &times;{{ top_award.count }}{% endif %}</span>
+    </div>
+    {% endif %}
+
+    <div class="bento-cluster">
+        {% if live_enabled %}
+        <div class="bento-tile bento-tile--gold" data-bento-live="skills"
+            data-live-url="{{ url_for('team_live_data', team_number=team.team_number, season=active_season) }}" hidden>
+            <span class="bento-label">Skills</span>
+            <span class="bento-value" data-field="combined">—</span>
+            <span class="bento-note" data-field="rank"></span>
+        </div>
+        {% endif %}
+
+        {% if feature_photo and award_total %}
+        <div class="bento-tile bento-tile--gold bento-tile--wide">
+            <span class="bento-label">Awards</span>
+            <span class="bento-value">{{ award_total }}</span>
+            <span class="bento-note">{{ top_award.title }}{% if top_award.count > 1 %} &times;{{ top_award.count }}{% endif %}</span>
+        </div>
+        {% endif %}
+
+        {% if team.members %}
+        <a class="bento-tile bento-tile--wide bento-tile--people" href="#team">
+            <span class="bento-label">Team</span>
+            <span class="bento-faces">
+                {% for member in team.members[:6] %}
+                {% set photo = member.photo|real_photo %}
+                {% if photo %}<img class="bento-face" src="{{ get_image_url(photo) }}" alt="" loading="lazy">
+                {% else %}<span class="bento-face bento-face--initials">{{ member.name|initials }}</span>{% endif %}
+                {% endfor %}
+                {% if team.members|length > 6 %}<span class="bento-face bento-face--more">+{{ team.members|length - 6 }}</span>{% endif %}
+            </span>
+            <span class="bento-note">{{ team.members|length }} {{ 'member' if team.members|length == 1 else 'members' }} &rarr;</span>
+        </a>
+        {% endif %}
+
+        {% if team.goals %}
+        <div class="bento-tile bento-tile--wide">
+            <span class="bento-label">Season Goals</span>
+            <ul class="bento-rings">
+                {% for goal in team.goals[:4] %}
+                {% set progress = [[goal.progress|default(0, true)|int, 0]|max, 100]|min %}
+                <li class="bento-ring-item{{ ' is-done' if progress == 100 }}">
+                    <svg class="bento-ring" viewBox="0 0 36 36" role="img" aria-label="{{ goal.name }}: {{ progress }}%">
+                        <circle class="bento-ring-track" cx="18" cy="18" r="15.9"></circle>
+                        <circle class="bento-ring-fill" cx="18" cy="18" r="15.9" pathLength="100"
+                            stroke-dasharray="{{ progress }} 100"></circle>
+                        <text x="18" y="21" text-anchor="middle">{{ progress }}</text>
+                    </svg>
+                    <span class="bento-ring-name">{{ goal.name }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if live_enabled %}
+        <div class="bento-tile bento-tile--wide bento-tile--dark" data-bento-live="latest" hidden>
+            <span class="bento-label">Latest Result</span>
+            <span class="bento-latest" data-field="event"></span>
+            <span class="bento-note" data-field="record"></span>
+        </div>
+        {% endif %}
+
+        {% if team.journey %}
+        {% set latest = team.journey[-1] %}
+        <div class="bento-tile bento-tile--wide">
+            <span class="bento-label">Latest Milestone{% if latest.date %} · {{ latest.date }}{% endif %}</span>
+            <span class="bento-latest">{{ latest.title }}</span>
+            {% if latest.description %}<span class="bento-note">{{ latest.description }}</span>{% endif %}
+        </div>
+        {% endif %}
+
+        {% if team.worlds_appearances %}
+        <div class="bento-tile bento-tile--maroon">
+            <span class="bento-label">Worlds</span>
+            <span class="bento-value">{{ team.worlds_appearances }}&times;</span>
+        </div>
+        {% endif %}
+
+        {% if team.since %}
+        <div class="bento-tile">
+            <span class="bento-label">Since</span>
+            <span class="bento-value">{{ team.since }}</span>
+        </div>
+        {% endif %}
+
+        {% if specs %}
+        <div class="bento-tile">
+            <span class="bento-label">{{ specs[0][0] }}</span>
+            <span class="bento-latest">{{ specs[0][1] }}</span>
+        </div>
+        {% endif %}
+
+        {% if team.events %}
+        <div class="bento-tile">
+            <span class="bento-label">Galleries</span>
+            <span class="bento-value">{{ team.events|length }}</span>
+            <span class="bento-note">{{ 'event' if team.events|length == 1 else 'events' }} photographed</span>
+        </div>
+        {% endif %}
+    </div>
+</section>

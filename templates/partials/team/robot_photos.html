@@ -1,0 +1,12 @@
+{% if team.stl_path and robot_photos and not is_group %}
+<!-- ROBOT PHOTOS: a strip under the CAD viewer. Without a model these photos fill the viewer's place instead. -->
+<section class="robot-photos fade-in-section" aria-labelledby="robot-photos-title">
+    <h2 id="robot-photos-title" class="robot-photos-title">On the field</h2>
+    <div class="robot-photos-strip">
+        {% for photo in robot_photos %}
+        <img src="{{ get_image_url(photo) }}" alt="{{ team.nickname or team.team_number }} robot photo"
+            class="robot-photos-item" loading="lazy">
+        {% endfor %}
+    </div>
+</section>
+{% endif %}

@@ -1,0 +1,50 @@
+{#- 06 Tabbed Hub: the Classic hero, then one topic at a time behind a tab bar —
+    Overview (tiles into the other tabs, live skills, awards), Results, Robot, Team
+    and Journey. A tab only appears when it has something to show; Results needs live
+    data and hides itself again if RobotEvents returns nothing. Tabs deep-link as
+    #results, #robot, #team and #journey. static/js/team.js runs the tabs; the CAD
+    viewer only loads once the Robot tab is opened. -#}
+{% set hub_tabs = [
+('overview', 'Overview', true),
+('results', 'Results', live_enabled),
+('robot', 'Robot', team.stl_path or robot_photos or specs or has_notebook),
+('team', 'Team', true),
+('journey', 'Journey', team.goals or team.journey)
+]|selectattr('2')|list %}
+{% include "partials/team/hero.html" %}
+{% include "partials/team/season_switcher.html" %}
+<div class="hub" data-hub>
+    <div class="hub-bar">
+        <div class="hub-tabs" role="tablist" aria-label="Team sections">
+            {% for key, label, _ in hub_tabs %}
+            <button type="button" class="hub-tab" role="tab" id="hub-tab-{{ key }}" aria-controls="hub-{{ key }}"
+                aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ 0 if loop.first else -1 }}"
+                data-hub-tab="{{ key }}">{{ label }}{% if key == 'team' and team.members %}<span class="hub-tab-count">{{ team.members|length }}</span>{% endif %}</button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div id="hub-overview" class="hub-panel" role="tabpanel" aria-labelledby="hub-tab-overview" data-hub-panel="overview">
+        {% include "partials/team/hub_tiles.html" %}
+        {% include "partials/team/live_skills.html" %}
+        {% include "partials/team/scoreboard.html" %}
+        {% include "partials/team/awards.html" %}
+    </div>
+    {% for key, label, _ in hub_tabs if key != 'overview' %}
+    <div id="hub-{{ key }}" class="hub-panel" role="tabpanel" aria-labelledby="hub-tab-{{ key }}" data-hub-panel="{{ key }}" hidden>
+        {% if key == 'results' %}
+        {% include "partials/team/results.html" %}
+        {% elif key == 'robot' %}
+        {% include "partials/team/robot.html" %}
+        {% include "partials/team/specs.html" %}
+        {% include "partials/team/notebook.html" %}
+        {% elif key == 'team' %}
+        {% include "partials/team/roster.html" %}
+        {% else %}
+        {% include "partials/team/goals.html" %}
+        {% include "partials/team/journey.html" %}
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% include "partials/team/join_cta.html" %}

@@ -1,0 +1,27 @@
+{#- Tiny wireframe of a team page layout for the layout pickers. Styled in team_editor.css.
+    Add a branch here with each new layout in site_content.TEAM_LAYOUTS. -#}
+{% macro layout_thumb(key) -%}
+<span class="layout-thumb layout-thumb--{{ key }}" aria-hidden="true">
+    {%- if key == 'classic' -%}
+    <i class="lt-hero"></i><i class="lt-stats"></i><i class="lt-awards"></i><i></i><i class="lt-cards"></i><i></i><i></i>
+    {%- elif key == 'scoreboard' -%}
+    <i class="lt-board"></i><i class="lt-awards"></i><i class="lt-results"></i><i class="lt-cards lt-cards--compact"></i><i></i>
+    {%- elif key == 'spotlight' -%}
+    <i class="lt-bar"></i><i class="lt-stage"></i><i class="lt-cards lt-cards--compact"></i><i class="lt-awards"></i><i class="lt-cards"></i><i></i>
+    {%- elif key == 'meet' -%}
+    <i class="lt-crew"></i><i class="lt-people"></i><i class="lt-people"></i><i class="lt-stats"></i><i class="lt-awards"></i><i></i>
+    {%- elif key == 'dossier' -%}
+    <i class="lt-bar"></i><i class="lt-dossier"></i>
+    {%- elif key == 'tabs' -%}
+    <i class="lt-hero lt-hero--short"></i><i class="lt-tabs"></i><i class="lt-panel"></i>
+    {%- elif key == 'timeline' -%}
+    <i class="lt-hero lt-hero--short"></i><i class="lt-stats"></i><i class="lt-spine"></i><i class="lt-awards"></i>
+    {%- elif key == 'magazine' -%}
+    <i class="lt-split"></i><i class="lt-quote"></i><i class="lt-mosaic"></i><i class="lt-awards"></i><i class="lt-cards"></i>
+    {%- elif key == 'bento' -%}
+    <i class="lt-bar"></i><i class="lt-bento"></i><i class="lt-awards"></i><i class="lt-results"></i>
+    {%- elif key == 'compact' -%}
+    <i class="lt-bar"></i><i class="lt-card"></i><i class="lt-blank"></i>
+    {%- endif -%}
+</span>
+{%- endmacro %}

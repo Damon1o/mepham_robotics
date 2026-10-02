@@ -52,7 +52,9 @@
     async function send(url, options) {
         let response;
         try {
-            response = await fetch(url, Object.assign({ credentials: 'same-origin' }, options));
+            // A fuse committed as the page closes must outlive it (fuse.js).
+            const keepalive = Boolean(window.Fuse?.leaving);
+            response = await fetch(url, Object.assign({ credentials: 'same-origin', keepalive }, options));
         } catch (err) {
             throw new Error('Could not reach the server. Check your connection.');
         }
@@ -99,12 +101,13 @@
         if (radio) return radio.value;
         const input = row.querySelector('[data-value]');
         if (!input) return null;
-        return input.type === 'checkbox' ? input.checked : input.value;
+        return itemValue(input);
     }
 
     function itemValue(control) {
         if (control.classList.contains('site-image')) return JSON.parse(control.dataset.image || 'null');
         if (control.type === 'checkbox') return control.checked;
+        if (control.type === 'number') return control.value === '' ? null : Number(control.value);
         return control.value;
     }
 
@@ -130,6 +133,8 @@
     }
 
     function save(row) {
+        // A photo still uploading has no stored image yet; its upload saves the list when done.
+        if (row.dataset.kind === 'list' && row.querySelector('.site-image.is-saving')) return;
         const value = row.dataset.kind === 'list' ? listValue(row) : scalarValue(row);
         if (JSON.stringify(value) === row.dataset.saved) return;
         track(target(row), post('/admin/api/site', { key: row.dataset.key, value }))
@@ -175,6 +180,7 @@
     });
 
     root.addEventListener('input', e => {
+        if (e.target.type === 'file') return;
         const counter = e.target.closest('.text-with-count')?.querySelector('.char-count');
         if (counter) counter.textContent = `${e.target.value.length} / ${e.target.maxLength}`;
         const row = e.target.closest('.setting-row');
@@ -201,6 +207,14 @@
         row.querySelector('[data-action="row-add"]').disabled = rows.length >= Number(list.dataset.max);
     }
 
+    function addRow(row) {
+        const item = row.querySelector('[data-row-template]').content.firstElementChild.cloneNode(true);
+        row.querySelector('[data-list]').append(item);
+        refreshLucideIcons();
+        refreshListButtons(row);
+        return item;
+    }
+
     root.addEventListener('click', e => {
         const button = e.target.closest('[data-action]');
         if (!button) return;
@@ -208,17 +222,19 @@
         const action = button.dataset.action;
 
         if (action === 'row-add') {
-            const template = row.querySelector('[data-row-template]');
-            const item = template.content.firstElementChild.cloneNode(true);
-            row.querySelector('[data-list]').append(item);
-            refreshLucideIcons();
-            refreshListButtons(row);
-            item.querySelector('input:not([type="file"]), textarea, select')?.focus();
+            addRow(row).querySelector('input:not([type="file"]), textarea, select')?.focus();
             // Saved once something is typed; an empty new row would fail validation.
         } else if (action === 'row-remove') {
-            button.closest('[data-row]').remove();
-            refreshListButtons(row);
-            scheduleList(row, 100);
+            Fuse.arm(button, {
+                label: 'Removing this entry',
+                run: () => {
+                    button.closest('[data-row]').remove();
+                    refreshListButtons(row);
+                    // Leaving the page: save now, a timer would never fire.
+                    if (Fuse.leaving) save(row);
+                    else scheduleList(row, 100);
+                },
+            });
         } else if (action === 'row-up' || action === 'row-down') {
             const item = button.closest('[data-row]');
             const sibling = action === 'row-up' ? item.previousElementSibling : item.nextElementSibling;
@@ -229,33 +245,47 @@
             button.focus();
             scheduleList(row, 300);
         } else if (action === 'reset') {
-            track(target(row), post('/admin/api/site/reset', { key: row.dataset.key }))
-                .then(data => {
-                    const kind = row.dataset.kind;
-                    // Lists and images are simplest to redraw from the server.
-                    if (kind === 'list' || kind === 'image' || kind === 'days') {
-                        location.hash = row.closest('.settings-section').id;
-                        location.reload();
-                        return;
-                    }
-                    const radio = row.querySelector(`input[type="radio"][value="${CSS.escape(String(data.value))}"]`);
-                    if (radio) radio.checked = true;
-                    const input = row.querySelector('[data-value]:not([type="radio"])');
-                    if (input && input.type === 'checkbox') input.checked = Boolean(data.value);
-                    else if (input) input.value = data.value ?? '';
-                    afterSave(row, data);
-                    toast('Put back to the original.', 'success');
-                })
-                .catch(() => {});
+            Fuse.arm(button, { label: 'Putting back the original', run: () => resetRow(row) });
         } else if (action === 'clear-value') {
-            row.querySelector('[data-value]').value = '';
-            button.hidden = true;
-            save(row);
+            Fuse.arm(button, {
+                label: 'Clearing this field',
+                run: () => {
+                    row.querySelector('[data-value]').value = '';
+                    button.hidden = true;
+                    save(row);
+                },
+            });
         } else if (action === 'clear-image') {
-            setImage(row.querySelector('.site-image'), null);
-            save(row);
+            Fuse.arm(button, {
+                label: 'Removing this image',
+                run: () => {
+                    setImage(row.querySelector('.site-image'), null);
+                    save(row);
+                },
+            });
         }
     });
+
+    function resetRow(row) {
+        track(target(row), post('/admin/api/site/reset', { key: row.dataset.key }))
+            .then(data => {
+                const kind = row.dataset.kind;
+                // Lists and images are simplest to redraw from the server.
+                if (kind === 'list' || kind === 'image' || kind === 'days') {
+                    location.hash = row.closest('.settings-section').id;
+                    location.reload();
+                    return;
+                }
+                const radio = row.querySelector(`input[type="radio"][value="${CSS.escape(String(data.value))}"]`);
+                if (radio) radio.checked = true;
+                const input = row.querySelector('[data-value]:not([type="radio"])');
+                if (input && input.type === 'checkbox') input.checked = Boolean(data.value);
+                else if (input) input.value = data.value ?? '';
+                afterSave(row, data);
+                toast('Put back to the original.', 'success');
+            })
+            .catch(() => {});
+    }
 
     // --- Images ---------------------------------------------------------------------------
 
@@ -326,31 +356,63 @@
         track(holder, send('/admin/api/site/image', { method: 'POST', headers: { 'X-CSRF-Token': csrfToken() }, body: form }))
             .then(data => {
                 setImage(holder, data.image);
+                holder.closest('[data-row]')?.removeAttribute('data-fresh');
                 if (row.dataset.kind === 'list') scheduleList(row, 100);
                 else save(row);
             })
-            .catch(() => setImage(holder, null));
+            .catch(() => {
+                // A photo added by dropping several at once goes again if it could not be stored.
+                const item = holder.closest('[data-row][data-fresh]');
+                if (!item) {
+                    setImage(holder, null);
+                    return;
+                }
+                item.remove();
+                refreshListButtons(row);
+                scheduleList(row, 100);
+            });
     }
 
+    // Dropped and pasted files arrive as a change on the input too (controls.js puts them there).
     root.addEventListener('change', e => {
         if (e.target.matches('[data-image-input]')) upload(e.target.closest('.site-image'), e.target.files[0]);
     });
-    root.addEventListener('dragover', e => {
-        const zone = e.target.closest('.site-image-zone');
-        if (!zone) return;
+
+    // A description from the file name ("robot-at-worlds.jpg" is "Robot at worlds"). Camera
+    // names like IMG_2041 say nothing, so those get a plain one to change.
+    function describeFile(file) {
+        const words = file.name.replace(/\.[^.]+$/, '').replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim();
+        const meaningful = words.replace(/\b(img|dsc|dscn|pxl|mvimg|photo|image|screenshot|screen shot|whatsapp image)\b/gi, '')
+            .replace(/[\d\s]+/g, '');
+        if (meaningful.length < 3) return 'Team photo';
+        return (words.charAt(0).toUpperCase() + words.slice(1)).slice(0, 150);
+    }
+
+    // Photos dropped on a photo list, rather than on one of its photos, become new entries.
+    root.addEventListener('ctl:files', e => {
+        const row = e.target;
+        if (!row.matches('.setting-row[data-kind="list"]')) return;
         e.preventDefault();
-        zone.classList.add('is-over');
-    });
-    root.addEventListener('dragleave', e => {
-        const zone = e.target.closest('.site-image-zone');
-        if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove('is-over');
-    });
-    root.addEventListener('drop', e => {
-        const zone = e.target.closest('.site-image-zone');
-        if (!zone) return;
-        e.preventDefault();
-        zone.classList.remove('is-over');
-        upload(zone.closest('.site-image'), e.dataTransfer.files[0]);
+        const list = row.querySelector('[data-list]');
+        const max = Number(list.dataset.max);
+        const room = Math.max(0, max - list.querySelectorAll('[data-row]').length);
+        const files = e.detail.files.slice(0, room);
+        if (!files.length) {
+            toast(`This list is full (${max} photos). Remove one to make room.`, 'error');
+            return;
+        }
+        const added = files.map(file => {
+            const item = addRow(row);
+            item.dataset.fresh = '';
+            const alt = item.querySelector('[data-item="alt"]');
+            if (alt) alt.value = describeFile(file);
+            upload(item.querySelector('.site-image'), file);
+            return item;
+        });
+        added[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        const left = e.detail.files.length - files.length;
+        toast(`Adding ${files.length} photo${files.length === 1 ? '' : 's'}. Check each description.`
+            + (left ? ` ${left} did not fit: the most is ${max}.` : ''), left ? 'error' : 'success');
     });
 
     // --- Section nav --------------------------------------------------------------------

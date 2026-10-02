@@ -1,0 +1,35 @@
+{#- Weighted Mosaic: the classic tiles, sized by how often the team won each award.
+    The most-won award (when it was won more than once) takes a 2×2 block, other
+    repeat wins a double-width tile and single wins one tile, all in the admin's
+    sort order. Awards not won yet follow at the end, greyed out. -#}
+{% set earned = team_awards|selectattr('count')|list %}
+{% set lead = earned|sort(attribute='count', reverse=True)|first if earned else none %}
+<section class="award-container team-awards team-awards--mosaic fade-in-section">
+    <div class="text-center">
+        <h2 class="ripple">Competition Awards</h2>
+    </div>
+
+    <div class="awards-grid awards-mosaic">
+        {% for award in earned + team_awards|rejectattr('count')|list %}
+        {% if award is sameas lead and award.count > 1 %}{% set size = 'award-box--feature' %}
+        {% elif award.count > 1 %}{% set size = 'award-box--double' %}
+        {% else %}{% set size = '' %}{% endif %}
+        <div
+            class="award-box {{ size }} {{ 'border-' + award.border if award.border else '' }} {{ 'bg-shimmer' if award.shimmer else '' }} {{ 'is-zero' if not award.count else '' }}">
+            <div class="award-count">×{{ award.count }}</div>
+            <div class="award-icon-container">
+                <img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}" alt="{{ award.title }}"
+                    class="award-icon" loading="lazy">
+            </div>
+            <div class="award-title">{{ award.title }}</div>
+        </div>
+        {% endfor %}
+        {% if not team_awards %}
+        <p class="awards-empty">No awards recorded for this team yet. Check back after our next competition!</p>
+        {% endif %}
+    </div>
+
+    <div class="text-center mt-lg">
+        <a href="{{ url_for('achievements') }}" class="cta-button cta-primary">View All Achievements</a>
+    </div>
+</section>

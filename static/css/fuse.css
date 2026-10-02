@@ -1,0 +1,142 @@
+/* ==========================================================================
+   Fuse buttons (static/js/fuse.js), on every page.
+
+   A lit button keeps its box: its own content goes invisible in place and an
+   Undo face covers it, while a gold ring burns down the rim clockwise. The
+   radius and border width are copied from the button as --fuse-radius and
+   --fuse-inset, so the ring sits exactly on the edge.
+   ========================================================================== */
+
+:root {
+    --fuse-line: #9a6f00;
+    --fuse-face: var(--ctl-surface, #faf7f5);
+    --fuse-face-hover: var(--ctl-hover, #f8eded);
+    --fuse-ink: var(--ctl-text, #1f1b1a);
+    --fuse-thickness: 2px;
+    --fuse-fade: 200ms;
+    --fuse-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-theme="dark"] {
+    --fuse-line: #ffd700;
+}
+
+/* Text in the idle face cannot be hidden node by node, so the button's own ink
+   goes transparent and the Undo face sets it back. Opacity is forced up for
+   buttons that only show on hover (the photo ×). Page stylesheets load after
+   this one and colour their buttons per state, hence !important. */
+.is-fuse-armed {
+    color: transparent !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+}
+
+.fuse-face--idle {
+    display: contents;
+}
+
+.is-fuse-armed .fuse-face--idle > * {
+    visibility: hidden;
+}
+
+.fuse-face--undo {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35em;
+    border-radius: var(--fuse-radius);
+    background: var(--fuse-face);
+    color: var(--fuse-ink);
+    font: inherit;
+    font-weight: 600;
+    white-space: nowrap;
+    animation: fuse-in var(--fuse-fade) ease both;
+}
+
+.is-fuse-armed:hover .fuse-face--undo {
+    background: var(--fuse-face-hover);
+}
+
+.is-fuse-armed svg.fuse-undo-icon {
+    flex: none;
+    width: 1.05em;
+    max-width: 70%;
+    height: 1.05em;
+    max-height: 70%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.25;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    animation: fuse-icon-in var(--fuse-fade) var(--fuse-ease-out) both;
+}
+
+.is-fuse-armed > svg.fuse-rim {
+    position: absolute;
+    inset: var(--fuse-inset, 0);
+    z-index: 2;
+    width: calc(100% - 2 * var(--fuse-inset, 0px));
+    height: calc(100% - 2 * var(--fuse-inset, 0px));
+    overflow: visible;
+    pointer-events: none;
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--fuse-line) 60%, transparent));
+    animation: fuse-in var(--fuse-fade) ease both;
+}
+
+.is-fuse-armed > svg.fuse-rim rect {
+    x: calc(var(--fuse-thickness) / 2);
+    y: calc(var(--fuse-thickness) / 2);
+    width: calc(100% - var(--fuse-thickness));
+    height: calc(100% - var(--fuse-thickness));
+    rx: max(0px, calc(var(--fuse-radius, 0px) - var(--fuse-thickness) / 2));
+    fill: none;
+    stroke: var(--fuse-line);
+    stroke-width: var(--fuse-thickness);
+    stroke-linecap: round;
+    stroke-dasharray: 1;
+}
+
+/* Lit from the keyboard, or with reduced motion: the faces swap at once. */
+.is-fuse-instant.is-fuse-armed .fuse-face--undo,
+.is-fuse-instant.is-fuse-armed svg.fuse-undo-icon,
+.is-fuse-instant.is-fuse-armed > svg.fuse-rim {
+    animation: none;
+}
+
+.fuse-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+@keyframes fuse-in {
+    from {
+        opacity: 0;
+        filter: blur(2px);
+    }
+}
+
+@keyframes fuse-icon-in {
+    from {
+        transform: rotate(-70deg);
+    }
+}
+
+@media (forced-colors: active) {
+    .is-fuse-armed > svg.fuse-rim rect {
+        stroke: Highlight;
+    }
+
+    .fuse-face--undo {
+        border: 1px solid ButtonText;
+    }
+}

@@ -35,6 +35,10 @@
     {% else %}
     <p>No teams have been created yet.</p>
     {% endif %}
+    {% if can_manage_fundraisers() %}
+    <p class="team-picker-extra"><a class="cta-button cta-secondary" href="{{ url_for('manage_fundraisers') }}">
+        <i data-lucide="piggy-bank" aria-hidden="true"></i> Edit the homepage fundraisers</a></p>
+    {% endif %}
 </section>
 {% else %}
 <section class="my-team-empty">

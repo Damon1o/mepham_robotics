@@ -1,0 +1,21 @@
+{#- 04 Meet the Team: people first. A short header with the members' faces, then the
+    roster as large cards grouped by sub-team, with the join banner right after it for
+    recruiting. The season story and competition sections follow. A team with no
+    members yet has nobody to lead with, so it gets the Classic page instead. -#}
+{% if not is_group and team.members %}
+{% include "partials/team/crew_header.html" %}
+{% include "partials/team/season_switcher.html" %}
+{% include "partials/team/roster.html" %}
+{% include "partials/team/join_cta.html" %}
+{% include "partials/team/journey.html" %}
+{% include "partials/team/goals.html" %}
+{% include "partials/team/awards.html" %}
+{% include "partials/team/live_skills.html" %}
+{% include "partials/team/scoreboard.html" %}
+{% include "partials/team/results.html" %}
+{% include "partials/team/robot.html" %}
+{% include "partials/team/specs.html" %}
+{% include "partials/team/notebook.html" %}
+{% else %}
+{% include "team_layouts/classic.html" %}
+{% endif %}

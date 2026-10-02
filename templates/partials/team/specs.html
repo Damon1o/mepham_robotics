@@ -1,0 +1,14 @@
+{% if specs and not is_group and not team.stl_path %}
+<!-- ROBOT SPECS: with a CAD model these sit beside the viewer instead (robot.html). -->
+<section class="robot-specs fade-in-section">
+    <h2 class="ripple">Technical Specifications</h2>
+    <div class="specs-container">
+        {% for label, value in specs %}
+        <div class="spec-card">
+            <div class="spec-label">{{ label }}</div>
+            <div class="spec-value">{{ value }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}

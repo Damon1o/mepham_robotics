@@ -491,8 +491,7 @@ body:has(.admin-container) #custom-chatbot-container {
     background: var(--admin-card-bg);
 }
 
-.icon-btn--danger:hover,
-.icon-btn.is-confirming {
+.icon-btn--danger:hover {
     background: var(--admin-danger-soft);
     color: var(--admin-danger);
 }
@@ -1872,9 +1871,22 @@ body:has(.admin-container) #custom-chatbot-container {
     flex-direction: column;
     gap: 0.4rem;
     min-height: 3rem;
+    max-height: min(32rem, 65vh);
     margin: 0;
     padding: 0.5rem;
     list-style: none;
+}
+
+/* Three cards show before the list scrolls (data-animated-list-rows); short fades keep
+   the third one readable. */
+.roster-board .roster-drop {
+    --fade-top-size: 1.25rem;
+    --fade-bottom-size: 1.5rem;
+}
+
+/* The card being dragged stays see-through inside an animated list (controls.css, 10). */
+.roster-board .roster-drop.is-animated .roster-card.is-dragging {
+    opacity: 0.5;
 }
 
 .roster-card {
@@ -1903,6 +1915,13 @@ body:has(.admin-container) #custom-chatbot-container {
     width: 2rem;
     height: 2rem;
     font-size: 0.72rem;
+}
+
+.roster-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
 .roster-col--unassigned .roster-avatar {
@@ -2113,6 +2132,22 @@ body:has(.admin-container) #custom-chatbot-container {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* The banner photo, when the team has one; drop a photo on the tile to set it. */
+.team-tile-photo {
+    flex: none;
+    width: 4.2rem;
+    height: 2.6rem;
+    margin-left: auto;
+    border-radius: var(--admin-radius-sm);
+    object-fit: cover;
+}
+
+/* A file dropped on a tile or row is on its way up. */
+.data-item.is-uploading {
+    opacity: 0.6;
+    cursor: progress;
 }
 
 .team-tile-actions {
@@ -2344,6 +2379,7 @@ body:has(.admin-container) #custom-chatbot-container {
     align-items: stretch;
     gap: 0;
     padding: 0;
+    overflow: hidden;
 }
 
 .message-item[data-status="new"] {
@@ -2462,11 +2498,27 @@ body:has(.admin-container) #custom-chatbot-container {
 }
 
 .subscriber-item {
+    border-top: 1px solid var(--admin-line);
+}
+
+.subscriber-row {
     display: flex;
     align-items: center;
     gap: 0.6rem;
     padding: 0.3rem 0.2rem;
-    border-top: 1px solid var(--admin-line);
+}
+
+/* Swipe rows (swipe-row.js): messages and subscribers drag left for their actions. */
+#panel-messages .swipe-row {
+    --sr-row: var(--admin-surface);
+    --sr-drawer: var(--admin-muted);
+    --sr-on-drawer: var(--admin-card-bg);
+    --sr-action: var(--admin-danger);
+    --sr-on-action: var(--admin-card-bg);
+}
+
+#panel-messages .subscriber-item .swipe-row {
+    --sr-row: var(--admin-card-bg);
 }
 
 .subscriber-email {
@@ -2803,6 +2855,17 @@ body:has(.admin-container) #custom-chatbot-container {
 
 .setting-row--top {
     align-items: start;
+}
+
+/* A settings row that takes a dropped file has no padding of its own, so its drag
+   outline and veil sit a little outside it, clear of the label text. */
+html.ctl-dragging .admin-editor .setting-row[data-drop] {
+    outline-offset: 4px;
+    border-radius: var(--admin-radius-sm);
+}
+
+.admin-editor .setting-row[data-drop-now]::before {
+    inset: -4px;
 }
 
 .setting-label label,

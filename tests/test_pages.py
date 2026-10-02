@@ -90,6 +90,13 @@ def test_robots_blocks_private_areas(client):
         assert rule in body
 
 
+def test_google_site_verification_is_served_from_the_root(client):
+    resp = client.get('/googleb1225e3231cfbee0.html')
+    assert resp.status_code == 200
+    assert resp.mimetype == 'text/html'
+    assert resp.get_data(as_text=True).strip() == 'google-site-verification: googleb1225e3231cfbee0.html'
+
+
 def test_static_assets_are_cached_hard(client):
     resp = client.get('/static/js/theme.js')
     assert resp.status_code == 200
@@ -127,7 +134,8 @@ def test_missing_static_file_still_builds_a_url(client):
 JS_BUNDLES_UNDER_STRICT_CSP = ['static/js/script.js', 'static/js/login.js',
                                'static/js/theme.js', 'static/js/admin.js',
                                'static/js/team.js', 'static/js/team-editor.js',
-                               'static/js/site-editor.js', 'static/js/controls.js']
+                               'static/js/site-editor.js', 'static/js/controls.js',
+                               'static/js/circular-carousel.js', 'static/js/layout-carousel.js']
 
 
 @pytest.mark.parametrize('bundle', JS_BUNDLES_UNDER_STRICT_CSP)
@@ -186,3 +194,19 @@ def test_light_is_the_default_theme():
 def test_footer_toggle_starts_on_light(client):
     page = client.get('/').get_data(as_text=True)
     assert '<span data-theme-label>Light theme</span>' in page
+
+
+def test_donate_levels_link_to_the_inquiry_form(client):
+    page = client.get('/donate').get_data(as_text=True)
+    options = re.findall(r'<option value="([^"]+)"', page)
+    picks = re.findall(r'class="dn-tier-pick" data-tier="([^"]+)"', page)
+    assert picks and all(p in options for p in picks)
+    assert 'id="sponsor"' in page and 'js/donate.js' in page
+
+
+def test_donate_sponsor_wall_and_empty_state(client, db):
+    empty = client.get('/donate').get_data(as_text=True)
+    assert 'dn-sponsors-empty' in empty
+    db['sponsors'].insert_one({'name': 'Acme Machining', 'level': 'Gold'})
+    page = client.get('/donate').get_data(as_text=True)
+    assert 'dn-sponsor level-gold' in page and 'dn-sponsors-empty' not in page

@@ -6,7 +6,7 @@
     <div class="awards-grid">
         {% for award in team_awards %}
         <div
-            class="award-box {{ award.layout }} {{ 'border-' + award.border if award.border else '' }} {{ 'bg-shimmer' if award.shimmer else '' }}">
+            class="award-box {{ award.layout }} {{ 'border-' + award.border if award.border else '' }} {{ 'bg-shimmer' if award.shimmer else '' }} {{ 'is-zero' if not award.count else '' }}">
             <div class="award-count">×{{ award.count }}</div>
             <div class="award-icon-container">
                 <img src="{{ url_for('static', filename='assets/icons/' + award.icon) }}" alt="{{ award.title }}"
@@ -16,8 +16,7 @@
         </div>
         {% endfor %}
         {% if not team_awards %}
-        <p style="grid-column: 1 / -1; text-align: center; color: var(--text-light); padding: 2rem;">
-            No awards recorded for this team yet. Check back after our next competition!</p>
+        <p class="awards-empty">No awards recorded for this team yet. Check back after our next competition!</p>
         {% endif %}
     </div>
 

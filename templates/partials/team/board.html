@@ -1,0 +1,48 @@
+{#- Scoreboard header: the team's numbers as a stadium board, in place of the hero.
+    Built from stored data only, so it is full even without RobotEvents live data. -#}
+{% set top_award = team_awards|first if team_awards else none %}
+<header class="sb-board">
+    <div class="sb-board-inner">
+        <div class="sb-board-title">
+            <span class="sb-board-eyebrow">{{ team.division or 'VEX Robotics' }}{% if active_season %} · {{ active_season }} season{% endif %}</span>
+            <h1>{{ team_name }}</h1>
+            <p>{{ team.nickname or site.teams.default_tagline }}</p>
+        </div>
+
+        <dl class="sb-board-stats">
+            <div class="sb-cell sb-cell--lead">
+                <dt class="sb-cell-label">Awards</dt>
+                <dd class="sb-cell-value">{{ award_total }}</dd>
+            </div>
+            {% if team.worlds_appearances %}
+            <div class="sb-cell sb-cell--gold">
+                <dt class="sb-cell-label">Worlds</dt>
+                <dd class="sb-cell-value">{{ team.worlds_appearances }}&times;</dd>
+            </div>
+            {% endif %}
+            <div class="sb-cell">
+                <dt class="sb-cell-label">Members</dt>
+                <dd class="sb-cell-value">{{ team.members|length if team.members else 0 }}</dd>
+            </div>
+            {% if seasons|length > 1 %}
+            <div class="sb-cell">
+                <dt class="sb-cell-label">Seasons</dt>
+                <dd class="sb-cell-value">{{ seasons|length }}</dd>
+            </div>
+            {% endif %}
+            {% if team.since %}
+            <div class="sb-cell">
+                <dt class="sb-cell-label">Since</dt>
+                <dd class="sb-cell-value">{{ team.since }}</dd>
+            </div>
+            {% endif %}
+        </dl>
+
+        {% if top_award %}
+        <p class="sb-board-honor">
+            <span class="sb-board-honor-label">Top honor</span>
+            {{ top_award.title }}{% if top_award.count and top_award.count > 1 %} &times;{{ top_award.count }}{% endif %}
+        </p>
+        {% endif %}
+    </div>
+</header>

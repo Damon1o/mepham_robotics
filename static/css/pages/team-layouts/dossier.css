@@ -1,0 +1,466 @@
+/* Team page layout 05: Dossier. Loaded after team.css. */
+
+/* --- FILE COVER --- */
+
+.dossier-head {
+    background: linear-gradient(120deg, rgba(90, 0, 0, 0.94) 0%, rgba(148, 69, 71, 0.86) 100%),
+        var(--team-hero-image) center/cover;
+    color: #fff;
+    padding: 6rem var(--spacing-md) var(--spacing-md);
+    border-bottom: 4px solid var(--accent-gold);
+}
+
+.dossier-head-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+/* A stamp on the file cover. */
+.dossier-file {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    border: 2px solid var(--accent-gold);
+    border-radius: 6px;
+    padding: 0.2rem 0.6rem;
+    transform: rotate(-2deg);
+}
+
+.dossier-head h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -1px;
+    margin: 0.6rem 0 0;
+    background: linear-gradient(135deg, #fff 0%, #ffd700 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dossier-head p {
+    margin: 0.5rem 0 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* --- TWO COLUMNS --- */
+
+.dossier {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    align-items: start;
+    gap: var(--spacing-lg);
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--spacing-md) var(--spacing-md) var(--spacing-xl);
+}
+
+/* Sticks clear of the fixed menu button. team.js lowers --rail-top below zero
+   when the rail is taller than the screen, so it sticks by its bottom edge. */
+.dossier-rail {
+    position: sticky;
+    top: var(--rail-top, 6rem);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+/* --- RAIL CARDS --- */
+
+.dossier-card {
+    background: #fff;
+    border: 3px solid var(--text-dark);
+    border-radius: 16px;
+    box-shadow: 6px 6px 0px rgba(148, 69, 71, 0.2);
+    padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+}
+
+.dossier-rail h2 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--maroon-dark);
+    margin: 0 0 var(--spacing-xs);
+    animation: none;
+}
+
+.dossier-rail h2::after {
+    display: none;
+}
+
+.dossier-facts {
+    margin: 0;
+}
+
+.dossier-facts > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--spacing-sm);
+    padding: 0.35rem 0;
+    border-bottom: 1px dashed rgba(26, 26, 26, 0.18);
+}
+
+.dossier-facts > div:last-child {
+    border-bottom: 0;
+}
+
+.dossier-facts dt {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    white-space: nowrap;
+}
+
+.dossier-facts dd {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    text-align: right;
+}
+
+/* Profile numbers pair up two to a row, label above value, to keep the rail short. */
+.dossier-facts--profile {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--spacing-sm);
+}
+
+.dossier-facts--profile > div {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+}
+
+.dossier-facts--profile > div:nth-last-child(2):nth-child(odd) {
+    border-bottom: 0;
+}
+
+.dossier-facts--profile dd {
+    text-align: left;
+}
+
+.dossier-facts--specs dd {
+    font-size: 0.95rem;
+}
+
+.dossier-fact--gold dd {
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    border-radius: 999px;
+    padding: 0 0.6rem;
+}
+
+.dossier-honor {
+    margin: var(--spacing-sm) 0 0;
+    padding: 0.6rem 0.8rem;
+    border-radius: 10px;
+    background: var(--maroon-dark);
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.dossier-honor-label {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    margin-bottom: 0.15rem;
+}
+
+.dossier-card .season-switcher {
+    max-width: none;
+    padding: 0;
+}
+
+.dossier-links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding-top: var(--spacing-md);
+}
+
+.dossier-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.75rem;
+    border: 2px solid var(--text-dark);
+    border-radius: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: var(--transition-base);
+}
+
+.dossier-link:hover,
+.dossier-link:focus-visible {
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0px rgba(148, 69, 71, 0.25);
+}
+
+.dossier-link svg {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+}
+
+/* Live skills shrink to a 2x2 card in the rail. */
+.dossier-rail .skills-panel {
+    margin: 0;
+    padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+    border: 3px solid var(--text-dark);
+    border-radius: 16px;
+    box-shadow: 6px 6px 0px rgba(148, 69, 71, 0.2);
+}
+
+.dossier-rail .skills-panel h2 {
+    color: var(--accent-gold);
+}
+
+.dossier-rail .skills-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-xs);
+    max-width: none;
+    margin: 0;
+}
+
+.dossier-rail .skills-tile {
+    padding: 0.5rem;
+    border-radius: 10px;
+}
+
+.dossier-rail .skills-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+}
+
+.dossier-rail .skills-value {
+    font-size: 1.4rem;
+}
+
+.dossier-rail .skills-meta {
+    margin-top: var(--spacing-sm);
+    font-size: 0.68rem;
+    gap: var(--spacing-xs);
+}
+
+/* --- MAIN COLUMN --- */
+
+/* Sections read as pages of one file: left-aligned headings, no full-bleed bands. */
+.dossier-main {
+    container-type: inline-size;
+}
+
+.dossier-main > section {
+    max-width: none;
+    margin: 0;
+    padding: var(--spacing-md) 0 var(--spacing-lg);
+    background: none;
+}
+
+.dossier-main h2 {
+    font-size: clamp(1.7rem, 2.8vw, 2.4rem);
+    text-align: left;
+    margin-bottom: var(--spacing-md);
+}
+
+.dossier-main h2::after {
+    left: 0;
+    transform: none;
+}
+
+.dossier-main .text-center {
+    text-align: left;
+}
+
+/* 270px keeps each box as wide as the site's own grid gives it: three beside the
+   rail on desktop, two on a tablet, one on a phone. */
+.dossier-main .awards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+    max-width: none;
+    margin: var(--spacing-md) 0;
+}
+
+@container (max-width: 580px) {
+    .dossier-main .award-box.wide {
+        grid-column: span 1;
+    }
+}
+
+.dossier-main .scoreboard-inner,
+.dossier-main .roster-group-title {
+    max-width: none;
+}
+
+/* Personnel list: small portrait on the left, name, roles and tenure beside it. */
+.dossier-main .roster-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    justify-content: stretch;
+    justify-items: stretch;
+    gap: var(--spacing-sm);
+}
+
+.dossier-main .roster-card {
+    max-width: none;
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    column-gap: var(--spacing-sm);
+    align-items: center;
+    align-content: center;
+    text-align: left;
+    padding: var(--spacing-sm);
+    box-shadow: 5px 5px 0px rgba(148, 69, 71, 0.2);
+}
+
+.dossier-main .roster-card > :not(.roster-photo):not(.roster-initials) {
+    grid-column: 2;
+}
+
+.dossier-main .roster-photo,
+.dossier-main .roster-initials {
+    grid-row: 1 / span 3;
+    width: 64px;
+    height: 64px;
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.dossier-main .roster-name {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.dossier-main .roster-roles {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.3rem;
+}
+
+.dossier-main .roster-role-chip {
+    font-size: 0.62rem;
+    padding: 0.1rem 0.5rem;
+}
+
+.dossier-main .roster-since {
+    margin: 0.25rem 0 0;
+    font-size: 0.7rem;
+}
+
+.dossier-main .goals-container,
+.dossier-main .journey-list {
+    max-width: 720px;
+    margin-left: 0;
+}
+
+/* The robot keeps its dark stage, as a card inside the column. */
+.dossier-main > .robot-showcase {
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    border-radius: 16px;
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    text-align: left;
+}
+
+.dossier-main .robot-showcase > * {
+    max-width: none;
+}
+
+/* The CAD card sits centred in the stage, so its heading centres over it. */
+.dossier-main .robot-showcase:has(.cad-card) h2 {
+    text-align: center;
+}
+
+.dossier-main .robot-showcase:has(.cad-card) h2::after {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.dossier-main .robot-showcase .viewer-empty {
+    text-align: left;
+}
+
+/* --- DARK THEME --- */
+
+/* The site's dark-theme section bands outrank the reset above. */
+[data-theme="dark"] .dossier-main > section:not(.robot-showcase) {
+    background: none;
+}
+
+[data-theme="dark"] .dossier-card {
+    background: #1e1e1e;
+    border-color: #444;
+}
+
+[data-theme="dark"] .dossier-rail h2 {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .dossier-rail .skills-panel h2 {
+    color: var(--accent-gold);
+}
+
+[data-theme="dark"] .dossier-rail .skills-panel {
+    border-color: #444;
+}
+
+[data-theme="dark"] .dossier-facts > div {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .dossier-facts dt {
+    color: #bbb;
+}
+
+[data-theme="dark"] .dossier-facts dd,
+[data-theme="dark"] .dossier-link {
+    color: #f1f1f1;
+}
+
+[data-theme="dark"] .dossier-fact--gold dd {
+    color: var(--ink-on-gold);
+}
+
+[data-theme="dark"] .dossier-link {
+    border-color: #555;
+}
+
+/* --- PHONES AND TABLETS: the rail becomes a fact sheet on top --- */
+
+@media (max-width: 900px) {
+    .dossier {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--spacing-md);
+    }
+
+    .dossier-rail {
+        position: static;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+        align-items: start;
+    }
+}
