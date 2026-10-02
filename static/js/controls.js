@@ -21,13 +21,15 @@
 // dragged or pasted files through one shared handler (see "Dropping and pasting").
 //
 // Options can carry data-image (a picture) or data-icon (a Lucide icon name),
-// shown next to their label in the menu. Put data-native on an element, or on
+// shown next to their label in the menu, and data-tag (a short note, like a
+// price) shown muted at the right. Put data-native on an element, or on
 // a wrapper, to keep the browser's own control.
 
 (function () {
     'use strict';
 
     const SEARCH_AT = 10;
+    const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)');
     const SVG_NS = 'http://www.w3.org/2000/svg';
     let uid = 0;
     const nextId = prefix => `ctl-${prefix}-${++uid}`;
@@ -147,10 +149,13 @@
             pop.style.setProperty('--pop-max', `${Math.round(Math.max(below, above, 160))}px`);
             const height = pop.offsetHeight;
             const width = pop.offsetWidth;
-            const top = (height <= below || below >= above) ? rect.bottom + 4 : rect.top - height - 4;
+            const under = height <= below || below >= above;
+            const top = under ? rect.bottom + 4 : rect.top - height - 4;
             const left = Math.min(rect.left, window.innerWidth - width - margin);
             pop.style.top = `${Math.round(Math.max(margin, top))}px`;
             pop.style.left = `${Math.round(Math.max(margin, left))}px`;
+            // It grows out of the corner it shares with its anchor.
+            pop.style.transformOrigin = `${under ? 'top' : 'bottom'} ${left < rect.left - 1 ? 'right' : 'left'}`;
         }
 
         // Follow the anchor while open: pages animate, toasts push content, lists grow.
@@ -181,7 +186,14 @@
             const hadFocus = pop.contains(document.activeElement);
             cancelAnimationFrame(frame);
             current = null;
-            pop.remove();
+            // Dismissed, it shrinks back into its corner; a choice closes it at once.
+            if ((reason === 'outside' || reason === 'toggle') && pop.classList.contains('is-open') && !REDUCED.matches) {
+                pop.classList.remove('is-open');
+                pop.classList.add('is-leaving');
+                setTimeout(() => pop.remove(), 140);
+            } else {
+                pop.remove();
+            }
             if (onClose) onClose(reason, hadFocus);
         }
 
@@ -235,7 +247,10 @@
         const enabled = () => state.items.filter(item => !item.node.hidden && !item.option.disabled);
 
         function build(select) {
-            const list = h('div', { className: 'cs-list', role: 'listbox', id: nextId('list'), 'aria-label': labelOf(select) || null });
+            const list = h('div', { className: 'cs-list cs-glide', role: 'listbox', id: nextId('list'), 'aria-label': labelOf(select) || null });
+            // One highlight that glides between rows instead of each row lighting up.
+            const pill = h('span', { className: 'cs-pill', 'aria-hidden': 'true' });
+            list.append(pill);
             const items = [];
             let group = null;
             choices(select).forEach(option => {
@@ -251,6 +266,7 @@
                         ? h('img', { className: 'cs-thumb', src: option.dataset.image, alt: '', width: '24', height: '24' })
                         : option.dataset.icon ? h('i', { className: 'cs-lucide', 'data-lucide': option.dataset.icon, 'aria-hidden': 'true' }) : null,
                     h('span', { className: 'cs-label', text: option.label || option.textContent }),
+                    option.dataset.tag ? h('span', { className: 'cs-tag', text: option.dataset.tag }) : null,
                     icon('check', 'ctl-icon cs-check'),
                 ]);
                 items.push({ option, node });
@@ -270,26 +286,56 @@
             const empty = h('p', { className: 'cs-empty', text: 'Nothing matches.', hidden: true });
             pop.append(list, empty);
 
-            list.addEventListener('pointerdown', e => e.preventDefault());
+            const itemAt = target => {
+                const node = target.closest && target.closest('.cs-option');
+                return node ? items.find(item => item.node === node) : null;
+            };
+            // A mouse can press, drag along the rows and let go on one to pick it,
+            // starting in the list or on the select itself. Taps pick on click, so
+            // a finger can still scroll a long list.
+            list.addEventListener('pointerdown', e => {
+                e.preventDefault();
+                if (state && e.pointerType !== 'touch') state.pressed = true;
+            });
+            list.addEventListener('pointerup', e => {
+                if (state && state.pressed && e.pointerType !== 'touch') choose(itemAt(e.target), true);
+            });
             list.addEventListener('click', e => {
-                const node = e.target.closest('.cs-option');
-                if (node) choose(items.find(item => item.node === node));
+                if (state) choose(itemAt(e.target), true);
             });
             list.addEventListener('pointermove', e => {
-                const node = e.target.closest('.cs-option');
-                const item = node && items.find(i => i.node === node);
-                if (item && !item.option.disabled && state && state.active !== item) activate(item, false);
+                const item = itemAt(e.target);
+                if (item && !item.option.disabled && state && state.active !== item) activate(item, false, true);
             });
             if (search) {
                 search.addEventListener('input', () => filter(search.value));
                 search.addEventListener('keydown', e => onKey(e, select, true));
             }
-            return { pop, list, items, search, empty };
+            return { pop, list, pill, items, search, empty };
         }
 
-        function activate(item, scroll = true) {
+        // The pointer glides the pill to its row; keys and opening jump it there.
+        function glide(item, smooth) {
+            const { pill } = state;
+            if (!item || item.node.hidden) {
+                pill.classList.remove('is-on');
+                return;
+            }
+            const jump = !smooth || !pill.classList.contains('is-on') || REDUCED.matches;
+            if (jump) pill.classList.add('is-instant');
+            pill.style.transform = `translateY(${item.node.offsetTop}px)`;
+            pill.style.height = `${item.node.offsetHeight}px`;
+            if (jump) {
+                void pill.offsetHeight;
+                pill.classList.remove('is-instant');
+            }
+            pill.classList.add('is-on');
+        }
+
+        function activate(item, scroll = true, smooth = false) {
             if (state.active) state.active.node.classList.remove('is-active');
             state.active = item || null;
+            glide(item, smooth);
             const owner = state.search || state.select;
             if (!item) {
                 owner.removeAttribute('aria-activedescendant');
@@ -372,7 +418,7 @@
             if (hadFocus && reason !== 'outside') select.focus({ preventScroll: true });
         }
 
-        function choose(item) {
+        function choose(item, byPointer = false) {
             if (!item || item.option.disabled) return;
             const { select } = state;
             Popover.close('choose');
@@ -380,6 +426,12 @@
             if (!item.option.selected) {
                 item.option.selected = true;
                 fire(select, 'input', 'change');
+                // The new label settles in out of a soft blur.
+                if (byPointer && !REDUCED.matches) {
+                    select.classList.remove('cs-swap');
+                    void select.offsetWidth;
+                    select.classList.add('cs-swap');
+                }
             }
         }
 
@@ -447,9 +499,15 @@
             const color = getComputedStyle(select).color;
             if (!color || tints.get(select) === color) return;
             tints.set(select, color);
-            const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1.5 1.75 6 6.25l4.5-4.5' fill='none' stroke='${color}' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>`;
-            select.style.setProperty('--cs-chevron', `url("data:image/svg+xml,${encodeURIComponent(svg)}")`);
+            const chevron = d => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='${d}' fill='none' stroke='${color}' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>`)}")`;
+            select.style.setProperty('--cs-chevron', chevron('M1.5 1.75 6 6.25l4.5-4.5'));
+            select.style.setProperty('--cs-chevron-open', chevron('M1.5 6.25 6 1.75l4.5 4.5'));
+            select.style.setProperty('--cs-ink', color);
         }
+
+        document.addEventListener('pointerup', () => {
+            if (state) state.pressed = false;
+        });
 
         function enhance(select) {
             if (seen.has(select) || select.multiple || select.size > 1 || keepsNative(select)) return;
@@ -465,8 +523,12 @@
                 }
                 select.focus({ preventScroll: true });
                 open(select);
+                if (state) state.pressed = true;
             });
             select.addEventListener('keydown', e => onKey(e, select, false));
+            select.addEventListener('animationend', e => {
+                if (e.animationName === 'cs-swap') select.classList.remove('cs-swap');
+            });
 
             // A tap opens our list too; a swipe that starts on the select still scrolls the page.
             let start = null;

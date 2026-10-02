@@ -198,7 +198,7 @@ def test_footer_toggle_starts_on_light(client):
 
 def test_donate_levels_link_to_the_inquiry_form(client):
     page = client.get('/donate').get_data(as_text=True)
-    options = re.findall(r'<option>([^<]+)</option>', page)
+    options = re.findall(r'<option value="([^"]+)"', page)
     picks = re.findall(r'class="dn-tier-pick" data-tier="([^"]+)"', page)
     assert picks and all(p in options for p in picks)
     assert 'id="sponsor"' in page and 'js/donate.js' in page

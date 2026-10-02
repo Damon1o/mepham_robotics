@@ -35,6 +35,7 @@
     --ctl-shadow: 0 14px 34px rgba(50, 15, 15, 0.16), 0 2px 6px rgba(50, 15, 15, 0.08);
     --ctl-radius: 12px;
     --ctl-radius-sm: 8px;
+    --ctl-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ctl-drop-line: #9a6f00;
     --ctl-drop-veil: rgba(255, 244, 194, 0.7);
 }
@@ -109,6 +110,19 @@ select:not([multiple]):disabled {
 
 select.cs-select[aria-expanded="true"] {
     border-color: var(--ctl-accent);
+    background-image: var(--cs-chevron-open) !important;
+}
+
+/* A label picked with the pointer settles in out of a soft blur. */
+select.cs-select.cs-swap {
+    animation: cs-swap 0.16s ease;
+}
+
+@keyframes cs-swap {
+    from {
+        color: transparent;
+        text-shadow: 0 0 3px var(--cs-ink, currentColor);
+    }
 }
 
 /* The open menu */
@@ -147,6 +161,39 @@ select.cs-select[aria-expanded="true"] {
     background: var(--ctl-hover);
 }
 
+/* Dropdown lists draw the highlight once, as a pill that glides between rows
+   (controls.js moves it); the rows sit above it. */
+.cs-pill {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    border-radius: var(--ctl-radius-sm);
+    background: var(--ctl-hover);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        transform 0.22s var(--ctl-ease-out),
+        height 0.22s var(--ctl-ease-out),
+        opacity 0.15s ease;
+}
+
+.cs-pill.is-on {
+    opacity: 1;
+}
+
+.cs-pill.is-instant {
+    transition: opacity 0.15s ease;
+}
+
+.cs-glide .cs-option {
+    position: relative;
+}
+
+.cs-glide .cs-option.is-active {
+    background: none;
+}
+
 .cs-option[aria-selected="true"] {
     color: var(--ctl-accent-ink);
     font-weight: 700;
@@ -168,6 +215,14 @@ select.cs-select[aria-expanded="true"] {
     flex: 1;
     min-width: 0;
     overflow-wrap: anywhere;
+}
+
+.cs-tag {
+    flex: none;
+    color: var(--ctl-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
 }
 
 .cs-check {
@@ -260,13 +315,21 @@ select.cs-select[aria-expanded="true"] {
     color: var(--ctl-text);
     font-family: var(--font-body, inherit);
     opacity: 0;
-    transform: translateY(-4px);
-    transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+    /* Grows out of the corner it shares with its anchor (controls.js sets the origin). */
+    transform: scale(0.95);
+    transform-origin: top left;
+    transition: opacity 0.18s var(--ctl-ease-out), transform 0.18s var(--ctl-ease-out);
 }
 
 .ctl-pop.is-open {
     opacity: 1;
     transform: none;
+}
+
+/* Dismissed, it shrinks back in two thirds of the time. */
+.ctl-pop.is-leaving {
+    transition-duration: 0.12s;
+    pointer-events: none;
 }
 
 /* Phones: dock to the bottom edge, full width, with a grab bar. */
@@ -1008,6 +1071,8 @@ input[type="search"]::-webkit-search-cancel-button {
     }
 
     .ctl-pop,
+    .cs-pill,
+    select.cs-select.cs-swap,
     :where(input[type="checkbox"], input[type="radio"]),
     :where(input[type="checkbox"], input[type="radio"])::before,
     .file-drop,

@@ -154,14 +154,14 @@
                     <label for="sponsor-level">Sponsorship Level Interest</label>
                     <select id="sponsor-level" name="level">
                         {% for tier in donate.tiers %}
-                        <option>{{ tier_option(tier) }}</option>
+                        <option value="{{ tier_option(tier) }}"{% if tier.amount %} data-tag="{{ tier.amount }}"{% endif %}>{{ tier.name }}</option>
                         {% else %}
-                        <option>Bronze ($50+)</option>
-                        <option>Silver ($150+)</option>
-                        <option>Gold ($500+)</option>
-                        <option>Platinum ($1000+)</option>
+                        <option value="Bronze ($50+)" data-tag="$50+">Bronze</option>
+                        <option value="Silver ($150+)" data-tag="$150+">Silver</option>
+                        <option value="Gold ($500+)" data-tag="$500+">Gold</option>
+                        <option value="Platinum ($1000+)" data-tag="$1000+">Platinum</option>
                         {% endfor %}
-                        <option>Custom Amount</option>
+                        <option value="Custom Amount" data-tag="You choose">Custom Amount</option>
                     </select>
                 </div>
                 <div class="form-group">
