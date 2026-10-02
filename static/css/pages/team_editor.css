@@ -292,7 +292,7 @@ select[data-member-field] {
 }
 
 .team-picker {
-    max-width: 64rem;
+    max-width: 80rem;
     margin: 5.5rem auto 3rem;
     padding: 0 1.25rem;
 }
@@ -314,7 +314,7 @@ select[data-member-field] {
 
 .team-picker-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr));
     gap: 0.75rem;
     margin: 0;
     padding: 0;
@@ -378,10 +378,6 @@ select[data-member-field] {
 }
 
 .team-picker-name {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.15rem 0.4rem;
     line-height: 1.3;
 }
 
@@ -389,8 +385,11 @@ select[data-member-field] {
     color: #5c5451;
 }
 
+/* Pinned to the card's top-right corner, however long the name is. */
 .team-picker-own {
     flex: none;
+    align-self: flex-start;
+    margin-left: auto;
     padding: 0.05rem 0.45rem;
     border-radius: 999px;
     background: var(--accent-gold);
