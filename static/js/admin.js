@@ -205,6 +205,8 @@ async function api(url, body = {}, method = 'POST') {
             headers: jsonHeaders(),
             credentials: 'same-origin',
             body: method === 'GET' ? undefined : JSON.stringify(body),
+            // A fuse committed as the page closes must outlive it.
+            keepalive: Boolean(window.Fuse?.leaving),
         });
     } catch (err) {
         throw new Error('Could not reach the server. Check your connection.');
@@ -258,19 +260,22 @@ const DELETE_WARNINGS = {
     sponsor: 'The sponsor and its logo disappear from the Donate page.',
 };
 
-function confirmDelete(form, type) {
+// Deleting lights a fuse on the button: Undo stays on offer while it burns,
+// and the form only posts once it burns out (see fuse.js).
+function confirmDelete(form, type, button) {
     const name = form.dataset.confirmName;
-    Dialog.confirm({
-        title: name ? `Delete ${name}?` : `Delete this ${type}?`,
-        message: `${DELETE_WARNINGS[type] || ''} This cannot be undone.`.trim(),
-        confirmLabel: 'Delete',
-    }).then(confirmed => {
-        if (!confirmed) return;
-        lockSubmit(form);
-        showLoading();
-        form.submit();
+    Fuse.arm(button || form.querySelector('[type="submit"]'), {
+        label: name ? `Deleting ${name}` : `Deleting this ${type}`,
+        detail: DELETE_WARNINGS[type],
+        form,
     });
 }
+
+// The fuse is about to post a delete form.
+document.addEventListener('fuse:commit', function (e) {
+    lockSubmit(e.target);
+    showLoading();
+});
 
 // --- Tabs and search -------------------------------------------------------------------
 
@@ -778,15 +783,12 @@ const Awards = {
 
     remove(button) {
         const row = button.closest('[data-category-id]');
-        Dialog.confirm({
-            title: `Delete "${button.dataset.title}"?`,
-            message: 'The category and every team\'s count of it are removed from the site. This cannot be undone.',
-            confirmLabel: 'Delete',
-        }).then(ok => {
-            if (!ok) return;
-            api(`/admin/api/award-categories/${row.dataset.categoryId}`, {}, 'DELETE')
+        Fuse.arm(button, {
+            label: `Deleting the ${button.dataset.title} category`,
+            detail: 'Every team\'s count of it goes too',
+            run: () => api(`/admin/api/award-categories/${row.dataset.categoryId}`, {}, 'DELETE')
                 .then(() => location.reload())
-                .catch(err => Admin.notify(err.message, 'error'));
+                .catch(err => Admin.notify(err.message, 'error')),
         });
     },
 
@@ -808,18 +810,14 @@ const Awards = {
 
 function prunePastEvents(button) {
     const count = Number(button.dataset.count);
-    Dialog.confirm({
-        title: `Delete ${plural(count, 'past event')}?`,
-        message: 'They are no longer on the homepage. Delete them to keep this list short. This cannot be undone.',
-        confirmLabel: 'Delete them',
-    }).then(ok => {
-        if (!ok) return;
-        api('/admin/api/events/prune')
+    Fuse.arm(button, {
+        label: `Deleting ${plural(count, 'past event')}`,
+        run: () => api('/admin/api/events/prune')
             .then(data => {
                 document.getElementById('past-events')?.remove();
                 Admin.notify(`Deleted ${plural(data.deleted, 'past event')}.`, 'success');
             })
-            .catch(err => Admin.notify(err.message, 'error'));
+            .catch(err => Admin.notify(err.message, 'error')),
     });
 }
 
@@ -976,20 +974,16 @@ const Approvals = {
             });
     },
 
-    reject(item, username) {
-        Dialog.confirm({
-            title: 'Reject this request?',
-            message: `${username}'s request will be deleted. They can sign up again later.`,
-            confirmLabel: 'Reject',
-        }).then(ok => {
-            if (!ok) return;
-            api(`/admin/api/users/${item.dataset.userId}/reject`)
+    reject(item, username, button) {
+        Fuse.arm(button, {
+            label: `Rejecting ${username}'s request`,
+            run: () => api(`/admin/api/users/${item.dataset.userId}/reject`)
                 .then(() => {
                     item.remove();
                     Admin.notify(`Request from ${username} rejected.`, 'info');
                     if (!document.querySelector('.approval-item')) document.getElementById('approvals')?.remove();
                 })
-                .catch(err => Admin.notify(err.message, 'error'));
+                .catch(err => Admin.notify(err.message, 'error')),
         });
     },
 };
@@ -1267,7 +1261,8 @@ const Messages = (function () {
         const count = selected().length;
         const label = document.getElementById('messagesSelected');
         if (label) label.textContent = count ? `${count} selected` : '';
-        panel.querySelectorAll('[data-bulk]').forEach(b => { b.disabled = !count; });
+        // A lit bulk Delete stays pressable, as Undo, whatever the selection.
+        panel.querySelectorAll('[data-bulk]').forEach(b => { b.disabled = !count && !Fuse.isArmed(b); });
         const all = document.getElementById('messagesSelectAll');
         if (all) {
             const visible = items().filter(i => !i.hidden);
@@ -1311,7 +1306,7 @@ const Messages = (function () {
         if (old !== newStatus) adjustCount(old, newStatus);
     }
 
-    function act(item, action) {
+    function act(item, action, button) {
         const run = () => api(`/admin/api/messages/${item.dataset.messageId}`, { action })
             .then(data => {
                 applyStatus(item, data.status);
@@ -1320,11 +1315,10 @@ const Messages = (function () {
             })
             .catch(err => Admin.notify(err.message, 'error'));
         if (action !== 'delete') return run();
-        return Dialog.confirm({ title: 'Delete this message?', message: 'This cannot be undone.', confirmLabel: 'Delete' })
-            .then(ok => ok && run());
+        return Fuse.arm(button, { label: 'Deleting this message', run });
     }
 
-    function bulk(action) {
+    function bulk(action, button) {
         const chosen = selected();
         if (!chosen.length) return;
         const run = () => api('/admin/api/messages/bulk', { action, ids: chosen.map(i => i.dataset.messageId) })
@@ -1335,9 +1329,7 @@ const Messages = (function () {
             })
             .catch(err => Admin.notify(err.message, 'error'));
         if (action !== 'delete') return run();
-        return Dialog.confirm({
-            title: `Delete ${plural(chosen.length, 'message')}?`, message: 'This cannot be undone.', confirmLabel: 'Delete',
-        }).then(ok => ok && run());
+        return Fuse.arm(button, { label: `Deleting ${plural(chosen.length, 'message')}`, run });
     }
 
     function toggle(button) {
@@ -1371,9 +1363,9 @@ const Messages = (function () {
             const toggleBtn = e.target.closest('.message-toggle');
             if (toggleBtn) return toggle(toggleBtn);
             const actionBtn = e.target.closest('[data-message-action]');
-            if (actionBtn) return act(actionBtn.closest('.message-item'), actionBtn.dataset.messageAction);
+            if (actionBtn) return act(actionBtn.closest('.message-item'), actionBtn.dataset.messageAction, actionBtn);
             const bulkBtn = e.target.closest('[data-bulk]');
-            if (bulkBtn) return bulk(bulkBtn.dataset.bulk);
+            if (bulkBtn) return bulk(bulkBtn.dataset.bulk, bulkBtn);
             return undefined;
         });
         panel.addEventListener('change', e => {
@@ -1389,21 +1381,17 @@ const Messages = (function () {
 
 function removeSubscriber(button) {
     const email = button.dataset.email;
-    Dialog.confirm({
-        title: `Remove ${email}?`,
-        message: 'They will stop getting the newsletter. They can sign up again from the footer.',
-        confirmLabel: 'Remove',
-    }).then(ok => {
-        if (!ok) return;
-        const item = button.closest('[data-subscriber-id]');
-        api(`/admin/api/subscribers/${item.dataset.subscriberId}`, {}, 'DELETE')
+    const item = button.closest('[data-subscriber-id]');
+    Fuse.arm(button, {
+        label: `Removing ${email} from the newsletter`,
+        run: () => api(`/admin/api/subscribers/${item.dataset.subscriberId}`, {}, 'DELETE')
             .then(() => {
                 item.remove();
                 const chip = document.querySelector('#newsletterCard .count-chip');
                 if (chip) chip.textContent = String(Math.max(0, parseInt(chip.textContent, 10) - 1));
                 Admin.notify(`Removed ${email}.`, 'success');
             })
-            .catch(err => Admin.notify(err.message, 'error'));
+            .catch(err => Admin.notify(err.message, 'error')),
     });
 }
 
@@ -1531,7 +1519,7 @@ document.addEventListener('click', function (e) {
     } else if (action === 'approve-user') {
         Approvals.approve(trigger.closest('[data-user-id]'));
     } else if (action === 'reject-user') {
-        Approvals.reject(trigger.closest('[data-user-id]'), trigger.dataset.username);
+        Approvals.reject(trigger.closest('[data-user-id]'), trigger.dataset.username, trigger);
     } else if (action === 'copy-reset-link') {
         copyResetLink();
     } else if (action === 'select-all') {
@@ -1588,7 +1576,7 @@ document.addEventListener('submit', function (e) {
     if (form.id === 'userForm') validateUserForm(e);
     if (form.dataset.confirmDelete) {
         e.preventDefault();
-        confirmDelete(form, form.dataset.confirmDelete);
+        confirmDelete(form, form.dataset.confirmDelete, e.submitter);
         return;
     }
     if (e.defaultPrevented) {

@@ -60,7 +60,9 @@
     async function send(url, options) {
         let response;
         try {
-            response = await fetch(url, Object.assign({ credentials: 'same-origin' }, options));
+            // A fuse committed as the page closes must outlive it (fuse.js).
+            const keepalive = Boolean(window.Fuse?.leaving);
+            response = await fetch(url, Object.assign({ credentials: 'same-origin', keepalive }, options));
         } catch (err) {
             throw new Error('Could not reach the server. Check your connection.');
         }
@@ -250,6 +252,7 @@
         return scope.querySelector(`[data-action="remove-image"][data-kind="${kind}"]`);
     }
 
+    // The file is deleted for good, so the button lights a fuse first (fuse.js).
     root.addEventListener('click', e => {
         const button = e.target.closest('[data-action="remove-image"]');
         if (!button) return;
@@ -258,6 +261,13 @@
         const zone = (card || button.closest('.image-field')).querySelector(`[data-upload="${kind}"]`);
         const body = { kind };
         if (card) body.member_id = card.dataset.memberId;
+        Fuse.arm(button, {
+            label: button.getAttribute('aria-label') || button.textContent.trim() || 'Removing',
+            run: () => removeImage(button, card, zone, body),
+        });
+    });
+
+    function removeImage(button, card, zone, body) {
         track(zone, post('/image', body, 'DELETE')).then(() => {
             button.hidden = true;
             const preview = zone.querySelector('.drop-zone-preview');
@@ -275,7 +285,7 @@
             }
             showToast('Removed.', 'success');
         }).catch(() => {});
-    });
+    }
 
     // --- Roster: add and remove (editors and admins) -------------------------------------------------------
 
@@ -497,26 +507,18 @@
         if (photos.length) matchPhotos(photos);
     });
 
-    // Removing asks twice in place ("Remove?") instead of a modal.
+    // Removing lights a fuse in place instead of a modal; Undo keeps them (fuse.js).
     root.addEventListener('click', e => {
         const button = e.target.closest('[data-action="remove-member"]');
         if (!button) return;
         const card = button.closest('[data-member-id]');
-        if (!button.classList.contains('is-confirming')) {
-            button.classList.add('is-confirming');
-            button.dataset.label = button.getAttribute('aria-label');
-            button.setAttribute('aria-label', 'Click again to remove');
-            button.title = 'Click again to remove';
-            setTimeout(() => {
-                button.classList.remove('is-confirming');
-                button.setAttribute('aria-label', button.dataset.label);
-                button.removeAttribute('title');
-            }, 3000);
-            return;
-        }
-        track(card, post(`/member/${card.dataset.memberId}`, {}, 'DELETE'))
-            .then(() => card.remove())
-            .catch(() => {});
+        const name = card.querySelector('[data-member-field="name"]')?.value.trim();
+        Fuse.arm(button, {
+            label: name ? `Removing ${name} from the roster` : 'Removing from the roster',
+            run: () => track(card, post(`/member/${card.dataset.memberId}`, {}, 'DELETE'))
+                .then(() => card.remove())
+                .catch(() => {}),
+        });
     });
 
     // --- "Other roles" suggestions -------------------------------------------------------
