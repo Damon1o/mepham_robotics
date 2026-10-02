@@ -564,12 +564,57 @@ def _site_overrides():
     return doc.get('values') or {}
 
 
+# Draft mode: an admin can collect changes in `draft` ({section: {field: value}}, the
+# value the field will have once published; the default means "put back") and browse
+# the real site with them applied before anyone else sees them.
+
+def _site_draft():
+    doc = db['site_metadata'].find_one({'_id': SITE_CONTENT_ID}, {'draft': 1}) or {}
+    return doc.get('draft') or {}
+
+
+def _with_draft(overrides, draft):
+    """Published overrides with a draft laid on top, in the same shape."""
+    out = {key: dict(fields) for key, fields in overrides.items() if isinstance(fields, dict)}
+    for section_key, fields in draft.items():
+        for field_key, value in (fields or {}).items():
+            section, field = site_content.field_for(f'{section_key}.{field_key}')
+            if not field:
+                continue
+            if value == field.default:
+                out.get(section_key, {}).pop(field_key, None)
+            else:
+                out.setdefault(section_key, {})[field_key] = value
+    return out
+
+
+def site_draft_mode():
+    """True while this admin is collecting changes in a draft (and previewing them)."""
+    return bool(session.get('site_draft')) and session.get('role') == 'admin'
+
+
+def _site_view_overrides():
+    overrides = _site_overrides()
+    return _with_draft(overrides, _site_draft()) if site_draft_mode() else overrides
+
+
 def site():
     """This request's site content, read at most once and only if a template uses it."""
     if 'site_content' not in g:
         g.site_content = site_content.SiteContent(
-            _site_overrides, on_error=lambda: logger.exception('Site content unavailable; using defaults'))
+            _site_view_overrides, on_error=lambda: logger.exception('Site content unavailable; using defaults'))
     return g.site_content
+
+
+app.jinja_env.globals['site_draft_mode'] = site_draft_mode
+
+
+@app.after_request
+def _private_while_previewing(response):
+    # A page showing an unpublished draft must never be stored by a shared cache.
+    if site_draft_mode() and response.mimetype == 'text/html':
+        response.headers['Cache-Control'] = 'private, no-store'
+    return response
 
 
 app.jinja_env.filters['rich'] = site_content.rich
@@ -3064,13 +3109,23 @@ def _blob_srcs(value):
 @app.route('/admin/site')
 @role_required('admin')
 def admin_site():
-    overrides = _site_overrides()
-    values = site_content.merged(overrides)
-    return render_template('site_editor.html', active_page='admin', sections=site_content.SECTIONS,
-                           values=values, overrides=overrides, icons=site_content.ICONS,
-                           platforms=site_content.SOCIAL_PLATFORMS, day_names=site_content.DAY_NAMES,
+    return render_template('site_editor.html', active_page='admin',
+                           **_site_editor_context(site_content.SECTIONS),
                            gallery_keys=sorted(k for k in image_manifest if k.startswith('photos/carousel')),
-                           club_timezone=CLUB_TIMEZONE, group_choices=_group_choices(), can_pick_group=True)
+                           group_choices=_group_choices(), can_pick_group=True)
+
+
+def _site_editor_context(sections):
+    """What both editors (/admin/site and /manage/fundraisers) need to draw their fields.
+    In draft mode the fields show the draft, and drafted fields are marked."""
+    overrides, draft = _site_overrides(), _site_draft()
+    drafting = site_draft_mode()
+    shown = _with_draft(overrides, draft) if drafting else overrides
+    return dict(sections=sections, values=site_content.merged(shown), overrides=shown,
+                draft_mode=drafting, drafted={key: set(fields or {}) for key, fields in draft.items()} if drafting else {},
+                draft_count=sum(len(fields or {}) for fields in draft.values()),
+                tokens=site_content.TOKENS, icons=site_content.ICONS, platforms=site_content.SOCIAL_PLATFORMS,
+                day_names=site_content.DAY_NAMES, club_timezone=CLUB_TIMEZONE)
 
 
 def _site_field(key):
@@ -3105,6 +3160,82 @@ def _site_log_type(section):
     return 'fundraiser_edit' if section.key == 'fundraisers' else 'site_edit'
 
 
+# Earlier values of each setting, newest first, so any change can be taken back.
+SITE_HISTORY_KEEP = 15
+# Newest first. Two saves can share a timestamp; the id breaks the tie in insert order.
+SITE_HISTORY_ORDER = [('at', -1), ('_id', -1)]
+
+
+def _record_site_change(section, field, old, value, verb='Changed'):
+    """Log a published change and remember the value it replaced."""
+    key = f'{section.key}.{field.key}'
+    if value == field.default and verb == 'Changed':
+        verb = 'Reset'
+    label = f'{verb} "{field.label}" on {section.title}' + (' to the original' if verb == 'Reset' else '')
+    log_activity(_site_log_type(section), label,
+                 details={'key': key, 'from': _loggable(old), 'to': _loggable(value)})
+    history = db['site_history']
+    history.insert_one({'key': key, 'value': old, 'at': _utcnow(), 'by': session.get('user')})
+    extra = [doc['_id'] for doc in history.find({'key': key}, {'_id': 1}).sort(SITE_HISTORY_ORDER)
+             .skip(SITE_HISTORY_KEEP)]
+    if extra:
+        history.delete_many({'_id': {'$in': extra}})
+
+
+def _site_srcs_in_use():
+    """Uploaded images that the published site or the draft still shows."""
+    return set(_blob_srcs(_site_overrides())) | set(_blob_srcs(_site_draft()))
+
+
+def _check_site_images(value, old):
+    """Only images uploaded through the editor may be stored, so a setting can never
+    point the public pages at some other website's picture."""
+    new = set(_blob_srcs(value)) - set(_blob_srcs(old))
+    if not new:
+        return
+    known = {doc['_id'] for doc in db['site_uploads'].find({'_id': {'$in': list(new)}}, {'_id': 1})}
+    if new - known - _site_srcs_in_use():
+        raise UserFacingError('That photo was not uploaded here, or has since been deleted. Upload it again.')
+
+
+def _site_response(section, field, value):
+    """The save answer, plus a warning when the section now does something unexpected."""
+    shown = site_content.merged(_site_view_overrides())[section.key]
+    warnings = site_content.warnings(section.key, shown, club_now())
+    body = {'ok': True, 'value': value, 'custom': value != field.default}
+    if site_draft_mode():
+        draft = _site_draft()
+        body.update(draft=True, drafted=field.key in (draft.get(section.key) or {}),
+                    draft_count=sum(len(fields or {}) for fields in draft.values()))
+    if warnings:
+        body['warning'] = warnings[0]
+    return jsonify(body)
+
+
+def _store_site_value(section, field, value):
+    """Save one value: into the draft while drafting, otherwise straight to the site."""
+    key = f'{section.key}.{field.key}'
+    stored = _site_overrides()
+    published = (stored.get(section.key) or {}).get(field.key, field.default)
+    stamp = {'updated_at': _utcnow(), 'updated_by': session.get('user')}
+    if site_draft_mode():
+        drafted = _site_draft().get(section.key) or {}
+        old = drafted.get(field.key, published)
+        _check_site_images(value, old)
+        path = f'draft.{key}'
+        # A draft that matches the live site is no change at all.
+        update = {'$unset': {path: ''}, '$set': stamp} if value == published else {'$set': {path: value, **stamp}}
+        db['site_metadata'].update_one({'_id': SITE_CONTENT_ID}, update, upsert=True)
+        return
+    _check_site_images(value, published)
+    path = f'values.{key}'
+    update = {'$unset': {path: ''}, '$set': stamp} if value == field.default else {'$set': {path: value, **stamp}}
+    db['site_metadata'].update_one({'_id': SITE_CONTENT_ID}, update, upsert=True)
+    _delete_site_blobs(set(_blob_srcs(published)) - set(_blob_srcs(value)))
+    if published != value:
+        _record_site_change(section, field, published, value)
+
+
 @app.route('/admin/api/site', methods=['POST'])
 @login_required
 def admin_api_site():
@@ -3114,25 +3245,12 @@ def admin_api_site():
         section, field = _site_field(key)
         _check_site_access(section, field)
         value = site_content.clean_value(field, body.get('value'))
+        if key == 'fundraisers.owner_group' and value not in _group_slugs():
+            raise UserFacingError('Pick one of the groups.')
+        _store_site_value(section, field, value)
     except (UserFacingError, site_content.ContentError) as e:
         return _json_error(str(e), getattr(e, 'status', 400))
-    if key == 'fundraisers.owner_group' and value not in _group_slugs():
-        return _json_error('Pick one of the groups.')
-    stored = _site_overrides()
-    old = (stored.get(section.key) or {}).get(field.key, field.default)
-    path = f'values.{section.key}.{field.key}'
-    if value == field.default:
-        update = {'$unset': {path: ''}}
-    else:
-        update = {'$set': {path: value}}
-    update.setdefault('$set', {}).update(updated_at=_utcnow(), updated_by=session.get('user'))
-    db['site_metadata'].update_one({'_id': SITE_CONTENT_ID}, update, upsert=True)
-    gone = set(_blob_srcs(old)) - set(_blob_srcs(value))
-    _delete_site_blobs(gone)
-    if old != value:
-        log_activity(_site_log_type(section), f'Changed "{field.label}" on {section.title}',
-                     details={'key': key, 'from': _loggable(old), 'to': _loggable(value)})
-    return jsonify({'ok': True, 'value': value, 'custom': value != field.default})
+    return _site_response(section, field, value)
 
 
 @app.route('/admin/api/site/reset', methods=['POST'])
@@ -3142,32 +3260,113 @@ def admin_api_site_reset():
     try:
         section, field = _site_field(key)
         _check_site_access(section, field)
+        _store_site_value(section, field, field.default)
     except UserFacingError as e:
         return _json_error(str(e), getattr(e, 'status', 400))
-    old = (_site_overrides().get(section.key) or {}).get(field.key, field.default)
-    db['site_metadata'].update_one({'_id': SITE_CONTENT_ID},
-                                   {'$unset': {f'values.{section.key}.{field.key}': ''},
-                                    '$set': {'updated_at': _utcnow(), 'updated_by': session.get('user')}},
-                                   upsert=True)
-    _delete_site_blobs(set(_blob_srcs(old)))
-    if old != field.default:
-        log_activity(_site_log_type(section), f'Reset "{field.label}" on {section.title} to the original',
-                     details={'key': key, 'from': _loggable(old)})
-    return jsonify({'ok': True, 'value': field.default, 'custom': False})
+    return _site_response(section, field, field.default)
+
+
+def _history_preview(value):
+    """A one-line description of an earlier value."""
+    if isinstance(value, bool):
+        return 'On' if value else 'Off'
+    if isinstance(value, dict):
+        return 'A photo'
+    if isinstance(value, list) and value and isinstance(value[0], dict):
+        first = next((v for v in value[0].values() if isinstance(v, str) and v), '')
+        return f'{len(value)} entr{"y" if len(value) == 1 else "ies"}' + (f', starting "{first[:60]}"' if first else '')
+    return _loggable(value, 120) or '(empty)'
+
+
+@app.route('/admin/api/site/history')
+@login_required
+def admin_api_site_history():
+    """Earlier values of one setting, newest first, ready to put back with a normal save."""
+    key = str(request.args.get('key') or '')
+    try:
+        section, field = _site_field(key)
+        _check_site_access(section, field)
+    except UserFacingError as e:
+        return _json_error(str(e), getattr(e, 'status', 400))
+    items = [{'value': doc['value'], 'at': doc['at'].strftime('%b %d, %Y %I:%M %p UTC'),
+              'by': doc.get('by') or '', 'preview': _history_preview(doc['value']),
+              'original': doc['value'] == field.default}
+             for doc in db['site_history'].find({'key': key}).sort(SITE_HISTORY_ORDER).limit(SITE_HISTORY_KEEP)]
+    return jsonify({'items': items})
+
+
+@app.route('/admin/api/site/draft', methods=['POST'])
+@role_required('admin')
+def admin_api_site_draft():
+    """Draft mode on or off, or publish or throw away what the draft holds."""
+    action = _json_body().get('action')
+    if action in ('on', 'off'):
+        session['site_draft'] = action == 'on'
+        return jsonify({'ok': True, 'draft_mode': action == 'on'})
+    draft = _site_draft()
+    overrides = _site_overrides()
+    if action == 'discard':
+        db['site_metadata'].update_one({'_id': SITE_CONTENT_ID}, {'$unset': {'draft': ''}})
+        _delete_site_blobs(set(_blob_srcs(draft)) - set(_blob_srcs(overrides)))
+        return jsonify({'ok': True})
+    if action != 'publish':
+        return _json_error('Unknown action.')
+    sets, unsets, changed = {}, {}, []
+    for section_key, fields in draft.items():
+        for field_key, value in (fields or {}).items():
+            section, field = site_content.field_for(f'{section_key}.{field_key}')
+            if not field:
+                continue
+            old = (overrides.get(section_key) or {}).get(field_key, field.default)
+            if old == value:
+                continue
+            path = f'values.{section_key}.{field_key}'
+            if value == field.default:
+                unsets[path] = ''
+            else:
+                sets[path] = value
+            changed.append((section, field, old, value))
+    update = {'$unset': {'draft': '', **unsets}, '$set': {**sets, 'updated_at': _utcnow(),
+                                                          'updated_by': session.get('user')}}
+    db['site_metadata'].update_one({'_id': SITE_CONTENT_ID}, update, upsert=True)
+    for section, field, old, value in changed:
+        _record_site_change(section, field, old, value)
+    _delete_site_blobs(set(_blob_srcs(overrides)) - set(_blob_srcs(_site_overrides())))
+    session['site_draft'] = False
+    return jsonify({'ok': True, 'published': len(changed)})
 
 
 def _delete_site_blobs(urls):
-    """Delete uploaded site images that no setting uses any more."""
+    """Delete uploaded site images that no setting (published or drafted) uses any more."""
     if not urls:
         return
-    still_used = set(_blob_srcs(_site_overrides()))
+    still_used = _site_srcs_in_use()
     for url in urls:
         if url in still_used or not url.startswith('https://'):
             continue
         try:
             delete_from_vercel_blob(url)
+            db['site_uploads'].delete_one({'_id': url})
         except Exception:
             logger.exception('Could not delete site image %s', url)
+
+
+# An upload no setting picked up within a day (the save failed, the tab closed, or
+# another photo replaced it before saving) is deleted the next time anyone uploads.
+SITE_UPLOAD_GRACE = datetime.timedelta(days=1)
+
+
+def _sweep_site_uploads():
+    cutoff = _utcnow() - SITE_UPLOAD_GRACE
+    stale = [doc['_id'] for doc in db['site_uploads'].find({'at': {'$lt': cutoff}}, {'_id': 1}).limit(50)]
+    if not stale:
+        return
+    in_use = _site_srcs_in_use()
+    kept = [url for url in stale if url in in_use]
+    if kept:
+        # Still shown somewhere: look again tomorrow rather than every upload.
+        db['site_uploads'].update_many({'_id': {'$in': kept}}, {'$set': {'at': _utcnow()}})
+    _delete_site_blobs([url for url in stale if url not in in_use])
 
 
 @app.route('/admin/api/site/image', methods=['POST'])
@@ -3193,6 +3392,11 @@ def admin_api_site_image():
     except Exception:
         logger.exception('Site image upload failed')
         return _json_error('Upload failed. Try again in a moment.', 502)
+    db['site_uploads'].insert_one({'_id': url, 'at': _utcnow(), 'by': session.get('user')})
+    try:
+        _sweep_site_uploads()
+    except Exception:
+        logger.exception('Could not sweep unused site images')
     return jsonify({'ok': True, 'image': {'src': url, 'width': width, 'height': height}})
 
 
@@ -3338,12 +3542,9 @@ def manage_fundraisers():
     if not can_manage_fundraisers(user):
         flash('Only the fundraising group can edit fundraisers.', 'error')
         return redirect(url_for('my_team'))
-    section = site_content.SECTION_MAP['fundraisers']
-    overrides = _site_overrides()
-    return render_template('site_editor.html', active_page='my_team', sections=(section,),
-                           values=site_content.merged(overrides), overrides=overrides, icons=site_content.ICONS,
-                           platforms=site_content.SOCIAL_PLATFORMS, day_names=site_content.DAY_NAMES,
-                           gallery_keys=[], club_timezone=CLUB_TIMEZONE, fundraiser_editor=True,
+    return render_template('site_editor.html', active_page='my_team',
+                           **_site_editor_context((site_content.SECTION_MAP['fundraisers'],)),
+                           gallery_keys=[], fundraiser_editor=True,
                            group_choices=_group_choices(),
                            can_pick_group=role_at_least(user.get('role', 'member'), 'editor'))
 

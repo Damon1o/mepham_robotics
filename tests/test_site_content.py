@@ -18,6 +18,12 @@ def save(client, key, value):
     return client.post('/admin/api/site', json={'key': key, 'value': value})
 
 
+def uploaded(db, *urls, at=None):
+    """Mark URLs as uploaded through the editor, as /admin/api/site/image does."""
+    for url in urls:
+        db['site_uploads'].insert_one({'_id': url, 'at': at or app_module._utcnow(), 'by': 'root'})
+
+
 # --- Defaults reproduce the site as it was -------------------------------------------------
 
 @pytest.mark.parametrize('path,expected', [
@@ -160,13 +166,15 @@ def test_club_email_reaches_both_pages_once_set(admin):
     assert 'club@example.com' in admin.get('/donate').get_data(as_text=True)
 
 
-def test_hero_photo_override_uses_a_custom_property(admin):
+def test_hero_photo_override_uses_a_custom_property(admin, db):
+    uploaded(db, 'https://blob.example/site/hero.webp')
     save(admin, 'about.hero_image', {'src': 'https://blob.example/site/hero.webp', 'width': 1600, 'height': 900})
     page = admin.get('/about').get_data(as_text=True)
     assert 'has-custom-hero' in page and "--hero-image: url('https://blob.example/site/hero.webp')" in page
 
 
-def test_gallery_can_mix_built_in_and_uploaded_photos(admin):
+def test_gallery_can_mix_built_in_and_uploaded_photos(admin, db):
+    uploaded(db, 'https://blob.example/site/new.webp')
     save(admin, 'gallery.photos', [
         {'image': {'src': 'https://blob.example/site/new.webp', 'width': 1200, 'height': 800}, 'alt': 'Robot on field'},
         {'image': {'key': 'photos/carousel2'}, 'alt': 'Build night'},
@@ -189,9 +197,10 @@ def test_image_upload_stores_the_file_and_its_size(admin, monkeypatch):
     assert bad.status_code == 400
 
 
-def test_replacing_an_image_deletes_the_old_upload(admin, monkeypatch):
+def test_replacing_an_image_deletes_the_old_upload(admin, db, monkeypatch):
     deleted = []
     monkeypatch.setattr(app_module, 'delete_from_vercel_blob', deleted.append)
+    uploaded(db, 'https://blob.example/site/a.webp', 'https://blob.example/site/b.webp')
     save(admin, 'home.hero_image', {'src': 'https://blob.example/site/a.webp', 'width': 10, 'height': 10})
     save(admin, 'home.hero_image', {'src': 'https://blob.example/site/b.webp', 'width': 10, 'height': 10})
     assert deleted == ['https://blob.example/site/a.webp']

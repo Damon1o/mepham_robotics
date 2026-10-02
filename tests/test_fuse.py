@@ -27,7 +27,7 @@ def test_no_delete_waits_on_a_confirm_box():
 @pytest.mark.parametrize('name, count', [
     ('admin.js', 7),          # forms, award, prune, reject, message, bulk, subscriber
     ('team-editor.js', 2),    # image/photo/CAD, roster member
-    ('site-editor.js', 4),    # list row, reset, clear value, clear image
+    ('site-editor.js', 5),    # list row, reset, clear value, clear image, discard draft
 ])
 def test_destructive_actions_light_a_fuse(name, count):
     source = (JS / name).read_text(encoding='utf-8')
