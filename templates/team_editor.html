@@ -310,7 +310,8 @@
                 </div>
                 {% endcall %}
                 {% endif %}
-                {% call row('Started' if is_group else 'Competing since', 'f-since') %}
+                {% call row('Started' if is_group else 'Competing since', 'f-since',
+                    '' if is_group else 'Match results start with the season that began this year, so an earlier group with this number is left out.') %}
                 <select id="f-since" data-autosave="since">
                     <option value="">Not set</option>
                     {% for y in years %}

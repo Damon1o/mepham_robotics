@@ -214,3 +214,54 @@ def test_team_feed_looks_further_back(client, db, upstream):
     body = client.get('/api/matches?team=77628A').get_json()
     assert body['season']['label'] == '2023-24'
     assert client.get('/api/matches').get_json()['events'] == [], 'the club-wide feed stays recent'
+
+
+def test_team_page_feed_skips_an_earlier_group_with_the_same_number(client, db, upstream):
+    """77628A started in 2025; the 2023-24 matches under that number were another group's."""
+    db['teams'].insert_one({'team_number': '77628A', 'season': '2026-27', 'since': 2025, 'members': []})
+    upstream.responses[('/seasons', None)] = SEASONS + [
+        {'id': 181, 'name': 'VEX V5 Robotics Competition 2023-2024: Over Under'}]
+    upstream.responses[('/teams/7/matches', 204)] = []
+    upstream.responses[('/teams/7/matches', 197)] = []
+    old = [match(1, 'Q1', ['77628A', '1A'], ['2A', '3A'], 40, 20, '2025-02-24T10:00:00-05:00')]
+    upstream.responses[('/teams/7/matches', 190)] = old  # 2024-25: began in 2024, before this team
+    upstream.responses[('/teams/7/matches', 181)] = old
+
+    assert client.get('/api/matches?team=77628A').get_json()['events'] == []
+    assert client.get('/api/matches?team=77628A&season=2024-25').get_json()['events'] == []
+    asked = {params['season[]'] for path, params in upstream.calls if path.endswith('/matches')}
+    assert asked == {204, 197}, 'seasons before the team began are not even requested'
+
+
+def test_since_keeps_the_teams_own_seasons(db, upstream):
+    upstream.responses[('/teams/7/matches', 204)] = []
+    upstream.responses[('/teams/7/matches', 197)] = [
+        match(1, 'Q1', ['77628A', '1A'], ['2A', '3A'], 40, 20, '2025-11-15T10:00:00-05:00'),
+    ]
+    feed = re.match_feed(db, {'77628A'}, since={'77628a': '2025'})
+    assert feed['season']['label'] == '2025-26' and feed['teams'][0]['wins'] == 1
+
+
+def test_since_only_affects_its_own_team(db, upstream):
+    """77628B (since 2025) met 77628A in 2024-25: the match is A's, not B's."""
+    old = match(1, 'Q1', ['77628A', '1A'], ['77628B', '3A'], 40, 20, '2025-02-15T10:00:00-05:00')
+    for team_id in (7, 8):
+        upstream.responses[(f'/teams/{team_id}/matches', 204)] = []
+        upstream.responses[(f'/teams/{team_id}/matches', 197)] = []
+        upstream.responses[(f'/teams/{team_id}/matches', 190)] = [old]
+
+    feed = re.match_feed(db, {'77628A', '77628B'}, since={'77628B': 2025})
+
+    assert [t['number'] for t in feed['teams']] == ['77628A']
+    m = feed['events'][0]['matches'][0]
+    assert m['ours'] == [{'number': '77628A', 'color': 'red', 'result': 'win'}]
+    assert [t['ours'] for t in m['blue']['teams']] == [False, False]
+
+
+def test_club_feed_uses_each_teams_since(client, db, upstream):
+    db['teams'].insert_one({'team_number': '77628A', 'season': '2026-27', 'since': 2026, 'members': []})
+    upstream.responses[('/teams/7/matches', 204)] = []
+    upstream.responses[('/teams/7/matches', 197)] = [  # Jan 2026 is still the 2025-26 season
+        match(1, 'Q1', ['77628A', '1A'], ['2A', '3A'], 40, 20, '2026-01-24T10:00:00-05:00'),
+    ]
+    assert client.get('/api/matches').get_json()['events'] == []
