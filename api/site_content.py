@@ -427,16 +427,20 @@ SECTIONS = (
     ), page='achievements', blurb='Sections, headings, competition log, live results'),
 
     Section('teams', 'Team pages', 'bot', (
-        Field('layout', 'choice', 'Default layout', DEFAULT_TEAM_LAYOUT, choices=TEAM_LAYOUTS,
+        Field('layout', 'choice', 'Default layout', DEFAULT_TEAM_LAYOUT, choices=TEAM_LAYOUTS, group='Layout',
               hint='Used by every team that has not picked its own layout for the season.'),
-        Field('default_tagline', 'text', 'Shown when a team has no nickname', '{tagline}', max=60,
+        Field('default_tagline', 'text', 'Shown when a team has no nickname', '{tagline}', max=60, group='Layout',
               hint='{tagline} uses the club tagline from Club details.'),
-        Field('cta_show', 'toggle', 'Show the "Interested?" band', True),
-        Field('cta_heading', 'text', 'Band heading', 'Interested?', max=60),
+        Field('show_matches', 'toggle', 'Show match results', True, group='Match results',
+              hint="The team's matches, rankings and skills for the season shown, from RobotEvents. "
+                   'Needs the RobotEvents key; never on the Compact layout or for groups.'),
+        Field('matches_heading', 'text', 'Heading', 'Match Results', max=60, group='Match results'),
+        Field('cta_show', 'toggle', 'Show the "Interested?" band', True, group='Interested? band'),
+        Field('cta_heading', 'text', 'Band heading', 'Interested?', max=60, group='Interested? band'),
         Field('cta_body', 'textarea', 'Band text',
               "Mepham students can join any time — no experience needed. Come find us in the shop, or reach out "
-              "and we'll show you around.", max=300),
-        Field('cta_button', 'text', 'Band button', 'Join the Club', max=24),
+              "and we'll show you around.", max=300, group='Interested? band'),
+        Field('cta_button', 'text', 'Band button', 'Join the Club', max=24, group='Interested? band'),
     ), blurb='Shared copy on every team page'),
 
     Section('footer', 'Footer', 'panel-bottom', (

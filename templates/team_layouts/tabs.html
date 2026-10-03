@@ -34,6 +34,7 @@
     <div id="hub-{{ key }}" class="hub-panel" role="tabpanel" aria-labelledby="hub-tab-{{ key }}" data-hub-panel="{{ key }}" hidden>
         {% if key == 'results' %}
         {% include "partials/team/results.html" %}
+        {% include "partials/team/matches.html" %}
         {% elif key == 'robot' %}
         {% include "partials/team/robot.html" %}
         {% include "partials/team/specs.html" %}

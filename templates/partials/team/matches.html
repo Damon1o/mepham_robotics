@@ -1,0 +1,14 @@
+{% if show_matches %}
+<!-- MATCH RESULTS (filled by static/js/match-feed.js; stays hidden when RobotEvents has nothing) -->
+<section class="team-matches fade-in-section" aria-labelledby="team-matches-heading" data-match-section hidden>
+    <div class="text-center">
+        <h2 id="team-matches-heading" class="ripple">{{ site.teams.matches_heading }}</h2>
+        <p class="mf-season" id="match-feed-season" hidden></p>
+    </div>
+    <div class="mf" id="match-feed" data-team="{{ team.team_number }}"
+        {%- if active_season %} data-season="{{ active_season }}"{% endif %}
+        data-team-url="{{ url_for('team_page', team_number='TEAM') }}">
+    </div>
+    <p class="mf-credit">Data provided by RobotEvents API</p>
+</section>
+{% endif %}

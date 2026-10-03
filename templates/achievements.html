@@ -5,6 +5,9 @@
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/achievements.css') }}">
+{% if live_results %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/match-feed.css') }}">
+{% endif %}
 {% endblock %}
 
 {% from "partials/site_macros.html" import hero_attrs %}
