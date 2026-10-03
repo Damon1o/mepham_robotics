@@ -506,6 +506,20 @@ body:has(.admin-container) #custom-chatbot-container {
     height: 0.9rem;
 }
 
+/* A fingertip cannot hit a 24 x 21 button; keep the icon small, grow the target. */
+@media (pointer: coarse) {
+    .icon-btn--tiny {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+
+    .card-link {
+        display: inline-block;
+        padding: 0.5rem 0.25rem;
+        margin: -0.5rem -0.25rem;
+    }
+}
+
 .icon-btn-spacer {
     display: inline-block;
     width: 2.1rem;
@@ -3063,7 +3077,8 @@ html.ctl-dragging .admin-editor .setting-row[data-drop] {
 
     .settings-nav {
         position: sticky;
-        top: 0;
+        /* Below the fixed MENU button, which would otherwise cover the first tabs. */
+        top: 4.5rem;
         z-index: 5;
         flex-direction: row;
         max-height: none;

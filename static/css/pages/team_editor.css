@@ -168,6 +168,16 @@
     opacity: 1;
 }
 
+/* Touch screens have no hover to reveal it, so it stays visible and grows to a tappable size. */
+@media (hover: none) {
+    .photo-remove {
+        opacity: 1;
+        width: 1.6rem;
+        height: 1.6rem;
+        left: 1.6rem;
+    }
+}
+
 .photo-remove[hidden] {
     display: none;
 }
@@ -416,6 +426,16 @@ select[data-member-field] {
     .member-card > [data-member-field="roles"] { grid-column: 2 / 4; grid-row: 2; }
     .member-card > [data-member-field="subteam"] { grid-column: 2; grid-row: 3; }
     .member-card > [data-member-field="since"] { grid-column: 3; grid-row: 3; }
+}
+
+/* Phones: half a row truncated names, so name and main role each get a full line. */
+@media (max-width: 520px) {
+    .member-card > .member-photo { grid-row: 1 / 5; }
+    .member-card > [data-member-field="name"] { grid-column: 2 / 4; grid-row: 1; }
+    .member-card > [data-member-field="role"] { grid-column: 2 / 4; grid-row: 2; }
+    .member-card > [data-member-field="roles"] { grid-row: 3; }
+    .member-card > [data-member-field="subteam"],
+    .member-card > [data-member-field="since"] { grid-row: 4; }
 }
 
 @media (max-width: 640px) {

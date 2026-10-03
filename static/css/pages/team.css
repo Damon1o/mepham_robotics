@@ -1275,7 +1275,28 @@ body.has-lightbox {
 
 @media (max-width: 768px) {
     .specs-container {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Phones: two columns left long values (a full drivetrain description) one word per line. */
+@media (max-width: 520px) {
+    .robot-specs {
+        padding: 3rem 1rem;
+    }
+
+    .specs-container {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.75rem;
+    }
+
+    .spec-card {
+        padding: 1rem 1.25rem;
+    }
+
+    .spec-value {
+        font-size: 1.2rem;
+        overflow-wrap: anywhere;
     }
 }
 
@@ -1343,4 +1364,33 @@ body.has-lightbox {
     background: #1e1e1e;
     color: #f1f1f1;
     border-color: #444;
+}
+
+/* Phones: two compact cards a row. A single 260px card per sub-team left the
+   roster several screens tall and mostly empty. */
+@media (max-width: 560px) {
+    .roster-grid {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 165px));
+        gap: var(--spacing-sm);
+    }
+
+    .roster-card {
+        padding: var(--spacing-sm) 0.6rem;
+        box-shadow: 5px 5px 0px rgba(148, 69, 71, 0.2);
+    }
+
+    .roster-photo,
+    .roster-initials {
+        width: 72px;
+        height: 72px;
+    }
+
+    .roster-initials {
+        font-size: 1.4rem;
+    }
+
+    .roster-name {
+        font-size: 0.95rem;
+        overflow-wrap: anywhere;
+    }
 }

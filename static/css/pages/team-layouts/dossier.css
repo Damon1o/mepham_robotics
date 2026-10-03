@@ -180,7 +180,7 @@
 .dossier-honor-label {
     display: block;
     font-family: 'Space Mono', monospace;
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     font-weight: 400;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -254,7 +254,7 @@
 }
 
 .dossier-rail .skills-label {
-    font-size: 0.6rem;
+    font-size: 0.7rem;
     letter-spacing: 0.06em;
 }
 
@@ -362,7 +362,7 @@
 }
 
 .dossier-main .roster-role-chip {
-    font-size: 0.62rem;
+    font-size: 0.7rem;
     padding: 0.1rem 0.5rem;
 }
 

@@ -235,8 +235,10 @@
 
 /* Two smaller cards a row on phones, so one portrait never fills the screen. */
 @media (max-width: 480px) {
+    /* Capped tracks, centred, so a one-person sub-team sits in the middle, not the left half. */
     .team-layout--meet .roster-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(130px, 165px));
+        justify-content: center;
         gap: var(--spacing-sm);
     }
 
@@ -255,13 +257,13 @@
     }
 
     .team-layout--meet .roster-role-chip {
-        font-size: 0.62rem;
+        font-size: 0.7rem;
         padding: 0.1rem 0.5rem;
     }
 
     .team-layout--meet .roster-since {
         top: 0.9rem;
         right: 0.9rem;
-        font-size: 0.6rem;
+        font-size: 0.7rem;
     }
 }
