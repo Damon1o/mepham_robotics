@@ -574,15 +574,25 @@ def _season_record(number, matches):
     }
 
 
-def match_feed(db, numbers, season_label=None, seasons_to_try=FEED_SEASONS_TO_TRY):
+def _since_year(value):
+    """A team's "Competing since" year as an int, or None."""
+    year = _int(value)
+    return year if year and 1990 < year < 2200 else None
+
+
+def match_feed(db, numbers, season_label=None, seasons_to_try=FEED_SEASONS_TO_TRY, since=None):
     """Season match feed for our robot teams.
 
     Tries the newest seasons in turn and uses the first one where any of the
     teams has played, so the page keeps showing last season's results until
     the first event of the new one. With `season_label` ('2025-26') only that
-    season is used, as a team page showing an older season wants. Returns
-    {'season', 'teams', 'events'}; both lists are empty when there is nothing
-    to show.
+    season is used, as a team page showing an older season wants.
+
+    `since` maps a team number to the year the current team started
+    competing. Team numbers get reused, and RobotEvents keeps one team per
+    number, so seasons that started before that year belonged to an earlier
+    group of students and are left out for that team. Returns {'season', 'teams', 'events'}; both lists are empty
+    when there is nothing to show.
     """
     empty = {'season': None, 'teams': [], 'events': []}
     if not get_token() or not numbers:
@@ -591,6 +601,8 @@ def match_feed(db, numbers, season_label=None, seasons_to_try=FEED_SEASONS_TO_TR
     if not team_rows:
         return empty
     ours = {str(row['number']).upper() for row in team_rows}
+    since = {str(k).upper(): _since_year(v) for k, v in (since or {}).items()}
+    started = {row['id']: since.get(str(row['number']).upper()) for row in team_rows}
 
     season, raw = None, {}
     if season_label:
@@ -600,6 +612,10 @@ def match_feed(db, numbers, season_label=None, seasons_to_try=FEED_SEASONS_TO_TR
     for candidate in candidates:
         raw = {}
         for row in team_rows:
+            year = started[row['id']]
+            if year and candidate['start'] < year:
+                raw[row['id']] = []  # an earlier group's season: not even asked for
+                continue
             payload, _, _ = get_cached(db, f"/teams/{row['id']}/matches",
                                        {'season[]': candidate['id'], 'per_page': PER_PAGE_MAX})
             raw[row['id']] = _rows(payload)
@@ -609,6 +625,11 @@ def match_feed(db, numbers, season_label=None, seasons_to_try=FEED_SEASONS_TO_TR
     if not season:
         return empty
 
+    # Which matches count as ours, per team: when another of our teams met
+    # this number in a season before this team began, that wasn't this team.
+    numbers_by_id = {row['id']: str(row['number']).upper() for row in team_rows}
+    played = {numbers_by_id[team_id]: {r.get('id') for r in rows} for team_id, rows in raw.items()}
+
     matches, events = {}, {}
     for rows in raw.values():
         for row in rows:
@@ -616,6 +637,11 @@ def match_feed(db, numbers, season_label=None, seasons_to_try=FEED_SEASONS_TO_TR
             match = parse_match(row, ours)
             if not match or match['id'] in matches or event.get('id') is None:
                 continue
+            match['ours'] = [s for s in match['ours'] if match['id'] in played.get(s['number'].upper(), ())]
+            mine = {s['number'].upper() for s in match['ours']}
+            for color in ('red', 'blue'):
+                for team in match[color]['teams']:
+                    team['ours'] = team['number'].upper() in mine
             matches[match['id']] = match
             entry = events.setdefault(event['id'], {'id': event['id'], 'name': event.get('name') or 'Event',
                                                     'code': event.get('code'), 'matches': [], 'teams': {}})

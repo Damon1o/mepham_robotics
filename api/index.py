@@ -1629,7 +1629,7 @@ def _newest_season_docs(query=None):
     newest = {}
     for team in db['teams'].find(query or {}, {'team_number': 1, 'season': 1, 'members': 1, 'nickname': 1,
                                                'hidden': 1, 'kind': 1, 'title': 1,
-                                               'robotevents_number': 1}):
+                                               'robotevents_number': 1, 'since': 1}):
         number = team.get('team_number')
         if number and (number not in newest
                        or (team.get('season') or '') > (newest[number].get('season') or '')):
@@ -3951,14 +3951,17 @@ def _fetch_matches(team_number='', season=''):
             return _EMPTY_FEED
         doc = next((d for d in docs if d.get('season') == season),
                    max(docs, key=lambda d: d.get('season') or ''))
-        pages = {(doc.get('robotevents_number') or team_number).upper(): team_number}
+        teams = [doc]
     else:
-        pages = {(t.get('robotevents_number') or t['team_number']).upper(): t['team_number']
-                 for t in listed_teams() if not is_group(t)}
+        teams = [t for t in listed_teams() if not is_group(t)]
+    pages = {(t.get('robotevents_number') or t['team_number']).upper(): t['team_number'] for t in teams}
+    # "Competing since": a reused team number's older results belong to an earlier group.
+    since = {(t.get('robotevents_number') or t['team_number']).upper(): t.get('since') for t in teams}
     try:
         feed = robotevents.match_feed(db, set(pages), season_label=season or None,
                                       seasons_to_try=robotevents.TEAM_FEED_SEASONS_TO_TRY if team_number
-                                      else robotevents.FEED_SEASONS_TO_TRY)
+                                      else robotevents.FEED_SEASONS_TO_TRY,
+                                      since=since)
     except Exception:
         logger.exception('Match feed failed')
         return _EMPTY_FEED
