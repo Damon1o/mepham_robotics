@@ -2,6 +2,7 @@
 
 .hero-image {
     min-height: 100vh;
+    min-height: 100svh;
     /* Fallback for browsers without image-set(type()); the rule below wins elsewhere. */
     background: linear-gradient(135deg, rgba(128, 0, 0, 0.7) 0%, rgba(90, 0, 0, 0.6) 100%), url('../../assets/photos/hero.jpg') center/cover no-repeat;
     background: linear-gradient(135deg, rgba(128, 0, 0, 0.7) 0%, rgba(90, 0, 0, 0.6) 100%),
@@ -224,6 +225,13 @@
     .timeline-card::before {
         left: -32px;
     }
+
+    /* On a narrow card the corner pill sat on top of the event name; give it its own line. */
+    .date-pill {
+        position: static;
+        display: inline-block;
+        margin: -1.6rem 0 0.75rem;
+    }
 }
 
 /* --- STATS SECTION --- */
@@ -285,6 +293,31 @@
 
     .stats-container {
         gap: 2rem;
+    }
+}
+
+/* Phones: the four numbers as a 2x2 block instead of four screen-tall cards. */
+@media (max-width: 600px) {
+    .stats-section {
+        padding: 3rem 1rem;
+    }
+
+    .stats-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .stat-item {
+        padding: 1.25rem 0.5rem;
+    }
+
+    .stat-number {
+        font-size: clamp(2rem, 10vw, 2.75rem);
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        letter-spacing: 1px;
     }
 }
 

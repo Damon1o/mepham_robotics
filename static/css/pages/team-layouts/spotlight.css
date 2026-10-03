@@ -133,6 +133,16 @@
     }
 }
 
+@media (max-width: 520px) {
+    .spotlight-stage .specs-container {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .spotlight-stage .spec-value {
+        font-size: 1.15rem;
+    }
+}
+
 /* --- PHOTO STRIP --- */
 
 .robot-photos {

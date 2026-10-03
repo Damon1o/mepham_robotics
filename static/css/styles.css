@@ -140,6 +140,8 @@ body::before {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    /* dvh: the visible height, so the iOS toolbar never hides the login link at the bottom. */
+    height: 100dvh;
     width: 320px;
     position: fixed;
     z-index: 1500;
@@ -564,6 +566,9 @@ h2::after {
 }
 
 .cta-button {
+    /* Inline-block so a label that wraps on a narrow card stays one box. */
+    display: inline-block;
+    text-align: center;
     padding: 1rem 2.5rem;
     font-size: 1.1rem;
     font-family: var(--font-display);
@@ -1388,14 +1393,6 @@ footer::before {
         width: 280px;
         height: 200px;
     }
-
-    .theme-toggle {
-        width: 45px;
-        height: 45px;
-        font-size: 1.2rem;
-        bottom: 80px;
-        right: 16px;
-    }
 }
 
 /* ============================================
@@ -1781,6 +1778,34 @@ footer::before {
     opacity: 0.9;
 }
 
+/* Phones: all four units on one row instead of four stacked screen-height tiles. */
+@media (max-width: 600px) {
+    .countdown-section {
+        padding: 3.5rem 1rem;
+    }
+
+    .countdown-container {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    .countdown-item {
+        min-width: 0;
+        padding: 1rem 0.25rem;
+        border-radius: 10px;
+    }
+
+    .countdown-number {
+        font-size: clamp(1.6rem, 9vw, 2.5rem);
+    }
+
+    .countdown-label {
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+    }
+}
+
 /* --- PREMIUM NEWSLETTER --- */
 .newsletter-section {
     padding: 6rem 2rem;
@@ -1860,7 +1885,7 @@ footer::before {
 /* --- PREMIUM RESOURCES --- */
 .resources-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
     gap: 3rem;
     padding: 6rem 2rem;
     max-width: 1300px;
@@ -2130,7 +2155,7 @@ footer::before {
 /* --- WHAT WE DO PAGE --- */
 .features {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
     gap: 2.5rem;
     padding: 6rem 2rem;
     max-width: 1200px;
@@ -2268,7 +2293,7 @@ footer::before {
 
 .process-steps {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
     gap: 4rem;
     max-width: 1300px;
     margin: 0 auto;
@@ -2364,7 +2389,7 @@ footer::before {
 /* --- TEAM PAGES --- */
 .team-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
     gap: 3rem;
     padding: 6rem 2rem;
     max-width: 1200px;
@@ -2765,11 +2790,6 @@ footer::before {
         flex-direction: column;
     }
 
-    .theme-toggle {
-        bottom: 74px;
-        right: 16px;
-    }
-
     .a11y-toggle {
         bottom: 130px;
         right: 16px;
@@ -2784,6 +2804,7 @@ footer::before {
 /* 404 Page */
 .error-page {
     min-height: 100vh;
+    min-height: 100svh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4221,4 +4242,108 @@ textarea:focus-visible,
 .timeline-link:hover,
 .timeline-link:focus-visible {
     text-decoration: underline;
+}
+
+/* ==========================================================================
+   PHONES, TABLETS AND TOUCH SCREENS
+   Site-wide fixes from the mobile audit. Page-specific ones live in each page's
+   stylesheet next to the component they fix.
+   ========================================================================== */
+
+/* Stop iOS enlarging text when a phone turns sideways. */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* No double-tap-to-zoom delay on controls; pinch zoom still works. */
+a,
+button,
+input,
+select,
+textarea,
+label,
+summary,
+[role="button"] {
+    touch-action: manipulation;
+}
+
+/* iOS Safari zooms the whole page into any field under 16px when it is focused.
+   !important because page and admin stylesheets size their fields with class
+   selectors; max() leaves fields that are already larger alone. */
+@media (pointer: coarse), (max-width: 768px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+    select,
+    textarea {
+        font-size: max(16px, 1em) !important;
+    }
+}
+
+/* Comfortable tap targets for small text links on touch screens. */
+@media (pointer: coarse) {
+    .breadcrumb a {
+        display: inline-block;
+        padding: 0.6rem 0.25rem;
+        margin: -0.6rem 0;
+    }
+
+    .footer-col li a {
+        display: inline-block;
+        padding: 0.3rem 0.5rem;
+    }
+
+    summary {
+        padding-block: 0.5rem;
+    }
+}
+
+/* Pages that open with the breadcrumb (no hero) sit under the fixed MENU button. */
+@media (max-width: 768px) {
+    #main-content > .breadcrumb:first-child {
+        margin-top: 5rem;
+    }
+}
+
+/* Phones held sideways: a full-screen hero leaves no room for its buttons, so
+   shrink the type and let the hero size to its content. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .hero-image {
+        min-height: 100vh;
+        min-height: 100svh;
+        padding: 4.5rem 1rem 2rem;
+    }
+
+    .hero-image h1 {
+        font-size: clamp(2rem, 13vh, 3.5rem);
+        margin-bottom: 0.25rem;
+    }
+
+    .hero-image p {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .hero-cta {
+        flex-direction: row;
+        gap: 0.75rem;
+    }
+
+    .hero-cta .cta-button {
+        width: auto;
+        padding: 0.7rem 1.6rem;
+        font-size: 0.95rem;
+    }
+
+    .scroll-indicator {
+        display: none;
+    }
+
+    .sidenav {
+        padding-top: 72px;
+    }
+
+    .sidenav a,
+    .dropdown-btn {
+        padding-block: 12px;
+    }
 }

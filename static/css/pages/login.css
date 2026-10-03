@@ -144,6 +144,16 @@
     cursor: pointer;
 }
 
+@media (pointer: coarse) {
+    .password-toggle {
+        right: 0.2rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
 .password-toggle:hover,
 .password-toggle:focus-visible {
     color: var(--maroon-dark);
