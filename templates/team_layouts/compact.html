@@ -1,7 +1,8 @@
 {#- 10 Compact Card: everything important in about one screen. The title bar, then one
     card holding the awards, the roster as name chips and link buttons for results,
-    the notebook and other seasons. No live panels and no 3D viewer, so the page makes
-    no RobotEvents requests at all. -#}
+    the notebook and other seasons. No live panels and no 3D viewer; the only
+    RobotEvents request is the match results below the card, which Site editor >
+    Team pages can switch off for Compact on its own. -#}
 {% set other_seasons = seasons|reject('equalto', active_season)|list %}
 {% include "partials/team/title_bar.html" %}
 <article class="cc-card fade-in-section">
@@ -31,4 +32,5 @@
     </dl>
     {% endif %}
 </article>
+{% include "partials/team/matches.html" %}
 {% include "partials/team/join_cta.html" %}

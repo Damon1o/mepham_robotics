@@ -433,7 +433,9 @@ SECTIONS = (
               hint='{tagline} uses the club tagline from Club details.'),
         Field('show_matches', 'toggle', 'Show match results', True, group='Match results',
               hint="The team's matches, rankings and skills for the season shown, from RobotEvents. "
-                   'Needs the RobotEvents key; never on the Compact layout or for groups.'),
+                   'Needs the RobotEvents key; never for groups.'),
+        Field('matches_compact', 'toggle', 'Also on the Compact layout', True, group='Match results',
+              hint='Off keeps Compact pages to one screen with no RobotEvents requests.'),
         Field('matches_heading', 'text', 'Heading', 'Match Results', max=60, group='Match results'),
         Field('cta_show', 'toggle', 'Show the "Interested?" band', True, group='Interested? band'),
         Field('cta_heading', 'text', 'Band heading', 'Interested?', max=60, group='Interested? band'),

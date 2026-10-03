@@ -1341,7 +1341,8 @@ def team_page(team_number):
                            robotevents_url=None if is_group(team) else robotevents.team_url(team_number),
                            seasons=seasons, active_season=team.get('season'),
                            live_enabled=live_enabled,
-                           show_matches=live_enabled and layout != 'compact' and site().teams.show_matches,
+                           show_matches=live_enabled and site().teams.show_matches
+                           and (layout != 'compact' or site().teams.matches_compact),
                            active_page=team_number)
 
 @app.route('/api/team/<team_number>/live')

@@ -181,5 +181,14 @@ def test_team_page_match_results_need_the_key(client, db, monkeypatch):
     assert 'id="match-feed"' not in _team_page(client, db)
 
 
-def test_compact_layout_has_no_match_results(client, db):
-    assert 'id="match-feed"' not in _team_page(client, db, layout='compact')
+def test_compact_layout_shows_match_results_by_default(client, db):
+    assert 'id="match-feed"' in _team_page(client, db, layout='compact')
+
+
+def test_compact_layout_has_its_own_toggle(client, db):
+    html = _team_page(client, db, {'teams': {'matches_compact': False}}, layout='compact')
+    assert 'id="match-feed"' not in html and 'js/match-feed.js' not in html
+
+
+def test_compact_toggle_leaves_other_layouts_alone(client, db):
+    assert 'id="match-feed"' in _team_page(client, db, {'teams': {'matches_compact': False}})
