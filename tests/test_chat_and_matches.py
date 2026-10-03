@@ -1,5 +1,4 @@
-"""The two public proxy endpoints: both spend money upstream, so both are capped."""
-import time
+"""The chat proxy endpoint: it spends money upstream, so it is capped. Matches: test_match_feed.py."""
 
 import pytest
 
@@ -75,35 +74,3 @@ def test_chat_upstream_failure_is_not_a_500(client, monkeypatch):
 
     monkeypatch.setattr(app_module.requests, 'post', _boom)
     assert client.post('/api/chat', json={'message': 'hi'}).status_code == 502
-
-
-def test_matches_are_empty_without_a_key(client, monkeypatch):
-    monkeypatch.delenv('ROBOTEVENTS_API_KEY', raising=False)
-    app_module._matches_cache.update(expires_at=0.0, payload=None)
-    assert client.get('/api/matches').get_json() == {'matches': []}
-
-
-def test_matches_are_cached(client, db, monkeypatch):
-    db['teams'].insert_one({'team_number': '77628A', 'members': []})
-    monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'test-key')
-    app_module._matches_cache.update(expires_at=0.0, payload=None)
-    calls = []
-
-    class Resp:
-        def raise_for_status(self):
-            pass
-
-        def json(self):
-            return {'data': []}
-
-    monkeypatch.setattr(app_module.requests, 'get',
-                        lambda url, **k: (calls.append(url), Resp())[1])
-
-    client.get('/api/matches')
-    upstream_calls = len(calls)
-    assert 'number[]=77628A' in calls[0], 'the feed follows the teams in the database'
-    assert upstream_calls > 0
-
-    client.get('/api/matches')
-    assert len(calls) == upstream_calls, 'second request should be served from cache'
-    assert app_module._matches_cache['expires_at'] > time.time()

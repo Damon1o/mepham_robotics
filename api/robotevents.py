@@ -46,10 +46,11 @@ def team_url(team_number):
 
 # How long a cached payload counts as fresh.
 FRESHNESS = {
+    'matches': datetime.timedelta(minutes=5),
     'skills': datetime.timedelta(minutes=30),
     'events': datetime.timedelta(hours=6),
     'awards': datetime.timedelta(hours=6),
-    'rankings': datetime.timedelta(hours=6),
+    'rankings': datetime.timedelta(minutes=30),
     'team': datetime.timedelta(days=7),
 }
 DEFAULT_FRESHNESS = datetime.timedelta(hours=6)
@@ -407,6 +408,265 @@ def team_summary(db, team_number, season_id=None):
         'fetched_at': fetched_at.isoformat() if fetched_at else None,
         'stale': bool(skills_stale or events_stale or awards_stale),
         'profile_url': team_url(team_number),
+    }
+
+
+# --- Match feed (achievements page) ---------------------------------------------------
+# One season of matches for every robot team, grouped by event, newest first.
+# RobotEvents lists a team's matches in no useful order, so everything is
+# sorted here by the time the match started (or was scheduled).
+
+FEED_SEASONS_TO_TRY = 3
+FEED_EVENT_LIMIT = 6
+PER_PAGE_MAX = 250
+
+ROUND_NAMES = {1: 'Practice', 2: 'Qualification', 3: 'Quarterfinal', 4: 'Semifinal',
+               5: 'Final', 6: 'Round of 16', 7: 'Round of 32'}
+
+
+def _season_start(row):
+    """2025 for 'VEX V5 Robotics Competition 2025-2026: Push Back', else None."""
+    name = str(row.get('name', ''))
+    for i in range(len(name) - 8):
+        chunk = name[i:i + 9]
+        if chunk[:4].isdigit() and chunk[4] == '-' and chunk[5:].isdigit():
+            return int(chunk[:4])
+    return None
+
+
+def recent_seasons(db, count=FEED_SEASONS_TO_TRY):
+    """The newest seasons that have started, newest first, as {'id', 'name', 'label'}."""
+    payload, _, _ = get_cached(db, '/seasons', {'program[]': PROGRAM_V5RC})
+    this_year = _now().year
+    seasons = []
+    for row in _rows(payload):
+        start = _season_start(row)
+        if start is None or start > this_year or not row.get('id'):
+            continue
+        game = str(row.get('name', '')).rpartition(':')[2].strip()
+        seasons.append({'id': row['id'], 'start': start, 'game': game,
+                        'label': f'{start}-{(start + 1) % 100:02d}'})
+    seasons.sort(key=lambda s: s['start'], reverse=True)
+    return seasons[:count]
+
+
+def _team_rows(db, numbers):
+    payload, _, _ = get_cached(db, '/teams', {'number[]': sorted(numbers), 'program[]': PROGRAM_V5RC})
+    wanted = {n.upper() for n in numbers}
+    return [row for row in _rows(payload) if str(row.get('number', '')).upper() in wanted and row.get('id')]
+
+
+def _int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _match_time(row):
+    return row.get('started') or row.get('scheduled') or ''
+
+
+def _ts(value):
+    """Sortable seconds for an ISO time string; RobotEvents mixes UTC offsets."""
+    try:
+        return datetime.datetime.fromisoformat(str(value).replace('Z', '+00:00')).timestamp()
+    except ValueError:
+        return 0.0
+
+
+def parse_match(row, ours):
+    """One match as the feed shows it, or None for practice and malformed rows.
+
+    `ours` is the set of our team numbers, upper-cased.
+    """
+    round_no = _int(row.get('round'))
+    if round_no == 1:
+        return None
+    sides = {}
+    for alliance in row.get('alliances') or []:
+        color = alliance.get('color')
+        if color not in ('red', 'blue'):
+            continue
+        teams = []
+        for entry in alliance.get('teams') or []:
+            name = str(((entry or {}).get('team') or {}).get('name') or '')
+            if name:
+                teams.append({'number': name, 'ours': name.upper() in ours,
+                              'sitting': bool(entry.get('sitting'))})
+        sides[color] = {'score': _int(alliance.get('score')), 'teams': teams}
+    if set(sides) != {'red', 'blue'}:
+        return None
+
+    red, blue = sides['red']['score'], sides['blue']['score']
+    played = red is not None and blue is not None and (bool(row.get('started')) or red or blue or row.get('scored'))
+    winner = None
+    if played:
+        winner = 'tie' if red == blue else ('red' if red > blue else 'blue')
+
+    our_sides = []
+    for color in ('red', 'blue'):
+        for team in sides[color]['teams']:
+            if team['ours']:
+                result = None
+                if winner:
+                    result = 'tie' if winner == 'tie' else ('win' if winner == color else 'loss')
+                our_sides.append({'number': team['number'], 'color': color, 'result': result})
+
+    return {
+        'id': row.get('id'),
+        'name': row.get('name') or ROUND_NAMES.get(round_no, 'Match'),
+        'round': ROUND_NAMES.get(round_no, 'Elimination'),
+        'elimination': bool(round_no and round_no > 2),
+        'field': row.get('field') or None,
+        'time': _match_time(row) or None,
+        'played': bool(played),
+        'winner': winner,
+        'red': sides['red'],
+        'blue': sides['blue'],
+        'ours': our_sides,
+    }
+
+
+def _skills_by_event(payload):
+    """{event_id: {'driver', 'programming', 'combined', 'rank'}} for one team."""
+    events = {}
+    for row in _rows(payload):
+        kind = str(row.get('type', '')).lower()
+        event_id = (row.get('event') or {}).get('id')
+        score = _int(row.get('score'))
+        if kind not in ('driver', 'programming') or event_id is None or score is None:
+            continue
+        entry = events.setdefault(event_id, {'driver': 0, 'programming': 0, 'rank': None})
+        entry[kind] = max(entry[kind], score)
+        rank = _int(row.get('rank'))
+        if rank:
+            entry['rank'] = rank if entry['rank'] is None else min(entry['rank'], rank)
+    for entry in events.values():
+        entry['combined'] = entry['driver'] + entry['programming']
+    return events
+
+
+def _rankings_by_event(payload):
+    keys = ('rank', 'wins', 'losses', 'ties', 'wp', 'ap', 'sp', 'high_score', 'average_points')
+    return {(row.get('event') or {}).get('id'): {k: row.get(k) for k in keys}
+            for row in _rows(payload) if (row.get('event') or {}).get('id') is not None}
+
+
+def _season_record(number, matches):
+    """Win/loss record and scoring for one of our teams across parsed matches."""
+    record = {'wins': 0, 'losses': 0, 'ties': 0}
+    scores = []
+    for match in matches:
+        for side in match['ours']:
+            if side['number'] != number or not side['result']:
+                continue
+            record[{'win': 'wins', 'loss': 'losses', 'tie': 'ties'}[side['result']]] += 1
+            scores.append(match[side['color']]['score'])
+    played = sum(record.values())
+    return {
+        **record,
+        'played': played,
+        'win_rate': round(100 * record['wins'] / played) if played else None,
+        'high_score': max(scores) if scores else None,
+        'average_score': round(sum(scores) / len(scores), 1) if scores else None,
+    }
+
+
+def match_feed(db, numbers):
+    """Season match feed for our robot teams.
+
+    Tries the newest seasons in turn and uses the first one where any of the
+    teams has played, so the page keeps showing last season's results until
+    the first event of the new one. Returns {'season', 'teams', 'events'};
+    both lists are empty when there is nothing to show.
+    """
+    empty = {'season': None, 'teams': [], 'events': []}
+    if not get_token() or not numbers:
+        return empty
+    team_rows = _team_rows(db, numbers)
+    if not team_rows:
+        return empty
+    ours = {str(row['number']).upper() for row in team_rows}
+
+    season, raw = None, {}
+    for candidate in recent_seasons(db):
+        raw = {}
+        for row in team_rows:
+            payload, _, _ = get_cached(db, f"/teams/{row['id']}/matches",
+                                       {'season[]': candidate['id'], 'per_page': PER_PAGE_MAX})
+            raw[row['id']] = _rows(payload)
+        if any(raw.values()):
+            season = candidate
+            break
+    if not season:
+        return empty
+
+    matches, events = {}, {}
+    for rows in raw.values():
+        for row in rows:
+            event = row.get('event') or {}
+            match = parse_match(row, ours)
+            if not match or match['id'] in matches or event.get('id') is None:
+                continue
+            matches[match['id']] = match
+            entry = events.setdefault(event['id'], {'id': event['id'], 'name': event.get('name') or 'Event',
+                                                    'code': event.get('code'), 'matches': [], 'teams': {}})
+            entry['matches'].append(match)
+
+    teams = []
+    for row in sorted(team_rows, key=lambda r: str(r['number'])):
+        number = str(row['number'])
+        team_id = row['id']
+        if not raw.get(team_id):
+            continue
+        season_params = {'season[]': season['id'], 'per_page': PER_PAGE_MAX}
+        skills_payload, _, _ = get_cached(db, f'/teams/{team_id}/skills', season_params)
+        rankings_payload, _, _ = get_cached(db, f'/teams/{team_id}/rankings', season_params)
+        skills = _skills_by_event(skills_payload)
+        rankings = _rankings_by_event(rankings_payload)
+
+        team_matches = [m for m in matches.values() if any(s['number'] == number for s in m['ours'])]
+        event_ids = {(r.get('event') or {}).get('id') for r in raw[team_id]}
+        for event_id in event_ids & set(events):
+            event_matches = [m for m in events[event_id]['matches'] if any(s['number'] == number for s in m['ours'])]
+            events[event_id]['teams'][number] = {
+                **_season_record(number, event_matches),
+                'ranking': rankings.get(event_id),
+                'skills': skills.get(event_id),
+            }
+
+        best_skills = max(skills.values(), key=lambda s: s['combined'], default=None)
+        ranks = [r['rank'] for r in rankings.values() if _int(r.get('rank'))]
+        teams.append({
+            'number': number,
+            'name': row.get('team_name') or '',
+            'profile_url': team_url(number),
+            'events': len(event_ids),
+            'best_rank': min(ranks) if ranks else None,
+            'skills': {
+                'best_driver': max((s['driver'] for s in skills.values()), default=0),
+                'best_programming': max((s['programming'] for s in skills.values()), default=0),
+                'best_combined': best_skills['combined'] if best_skills else 0,
+                'best_rank': min((s['rank'] for s in skills.values() if s['rank']), default=None),
+            } if skills else None,
+            **_season_record(number, team_matches),
+        })
+
+    ordered = []
+    for entry in events.values():
+        entry['matches'].sort(key=lambda m: _ts(m['time']), reverse=True)
+        times = sorted((m['time'] for m in entry['matches'] if m['time']), key=_ts)
+        entry['start'] = times[0] if times else None
+        entry['end'] = times[-1] if times else None
+        ordered.append(entry)
+    # Newest event first; events with no times fall back to RobotEvents' id order.
+    ordered.sort(key=lambda e: (_ts(e['end']), e['id']), reverse=True)
+
+    return {
+        'season': {'label': season['label'], 'game': season['game']},
+        'teams': teams,
+        'events': ordered[:FEED_EVENT_LIMIT],
     }
 
 
