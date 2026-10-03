@@ -166,7 +166,8 @@ def _team_page(client, db, values=None, layout=None):
 
 def test_team_page_shows_match_results_by_default(client, db):
     html = _team_page(client, db)
-    assert 'id="match-feed"' in html and 'data-team="77628A"' in html and 'data-season="2025-26"' in html
+    assert 'id="match-feed"' in html and 'data-team="77628A"' in html
+    assert 'data-season=' not in html, 'the newest season falls back to the latest one with matches'
     assert 'js/match-feed.js' in html and 'css/match-feed.css' in html
     assert 'Match Results' in html
 
@@ -192,3 +193,24 @@ def test_compact_layout_has_its_own_toggle(client, db):
 
 def test_compact_toggle_leaves_other_layouts_alone(client, db):
     assert 'id="match-feed"' in _team_page(client, db, {'teams': {'matches_compact': False}})
+
+
+def test_team_page_pins_an_older_season(client, db):
+    db['teams'].insert_one({'team_number': '77628A', 'season': '2024-25', 'members': []})
+    _team_page(client, db)  # adds the 2025-26 season
+    html = client.get('/team/77628A?season=2024-25').get_data(as_text=True)
+    assert 'data-season="2024-25"' in html
+
+
+def test_team_feed_looks_further_back(client, db, upstream):
+    db['teams'].insert_one({'team_number': '77628A', 'season': '2026-27', 'members': []})
+    upstream.responses[('/seasons', None)] = SEASONS + [
+        {'id': 181, 'name': 'VEX V5 Robotics Competition 2023-2024: Over Under'}]
+    for season in (204, 197, 190):
+        upstream.responses[('/teams/7/matches', season)] = []
+    upstream.responses[('/teams/7/matches', 181)] = [
+        match(1, 'Q1', ['77628A', '1A'], ['2A', '3A'], 40, 20, '2024-01-24T10:00:00-05:00'),
+    ]
+    body = client.get('/api/matches?team=77628A').get_json()
+    assert body['season']['label'] == '2023-24'
+    assert client.get('/api/matches').get_json()['events'] == [], 'the club-wide feed stays recent'

@@ -417,6 +417,7 @@ def team_summary(db, team_number, season_id=None):
 # sorted here by the time the match started (or was scheduled).
 
 FEED_SEASONS_TO_TRY = 3
+TEAM_FEED_SEASONS_TO_TRY = 5
 FEED_EVENT_LIMIT = 6
 PER_PAGE_MAX = 250
 
@@ -573,7 +574,7 @@ def _season_record(number, matches):
     }
 
 
-def match_feed(db, numbers, season_label=None):
+def match_feed(db, numbers, season_label=None, seasons_to_try=FEED_SEASONS_TO_TRY):
     """Season match feed for our robot teams.
 
     Tries the newest seasons in turn and uses the first one where any of the
@@ -595,7 +596,7 @@ def match_feed(db, numbers, season_label=None):
     if season_label:
         candidates = [c for c in recent_seasons(db, count=None) if c['label'] == season_label]
     else:
-        candidates = recent_seasons(db)
+        candidates = recent_seasons(db, count=seasons_to_try)
     for candidate in candidates:
         raw = {}
         for row in team_rows:

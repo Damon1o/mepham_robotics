@@ -6,7 +6,7 @@
         <p class="mf-season" id="match-feed-season" hidden></p>
     </div>
     <div class="mf" id="match-feed" data-team="{{ team.team_number }}"
-        {%- if active_season %} data-season="{{ active_season }}"{% endif %}
+        {%- if matches_season %} data-season="{{ matches_season }}"{% endif %}
         data-team-url="{{ url_for('team_page', team_number='TEAM') }}">
     </div>
     <p class="mf-credit">Data provided by RobotEvents API</p>
