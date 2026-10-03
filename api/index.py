@@ -1340,6 +1340,11 @@ def team_page(team_number):
                            mosaic=mosaic, mosaic_more=mosaic_more,
                            robotevents_url=None if is_group(team) else robotevents.team_url(team_number),
                            seasons=seasons, active_season=team.get('season'),
+                           # The newest season usually has no matches yet (a new
+                           # season's page goes up before its first event), so it
+                           # falls back to the latest season with results. An
+                           # older season picked in the switcher stays pinned.
+                           matches_season=team.get('season') if seasons and team.get('season') != seasons[0] else None,
                            live_enabled=live_enabled,
                            show_matches=live_enabled and site().teams.show_matches
                            and (layout != 'compact' or site().teams.matches_compact),
@@ -3951,7 +3956,9 @@ def _fetch_matches(team_number='', season=''):
         pages = {(t.get('robotevents_number') or t['team_number']).upper(): t['team_number']
                  for t in listed_teams() if not is_group(t)}
     try:
-        feed = robotevents.match_feed(db, set(pages), season_label=season or None)
+        feed = robotevents.match_feed(db, set(pages), season_label=season or None,
+                                      seasons_to_try=robotevents.TEAM_FEED_SEASONS_TO_TRY if team_number
+                                      else robotevents.FEED_SEASONS_TO_TRY)
     except Exception:
         logger.exception('Match feed failed')
         return _EMPTY_FEED
