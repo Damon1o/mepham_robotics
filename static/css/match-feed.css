@@ -774,6 +774,7 @@ a.mf-team-number:hover {
     max-width: 1100px;
     margin: 0 auto;
     padding: var(--spacing-xl) var(--spacing-md);
+    container-type: inline-size;
 }
 
 .team-matches[hidden] {
@@ -787,6 +788,41 @@ a.mf-team-number:hover {
 .team-matches .mf-teams {
     grid-template-columns: minmax(0, 560px);
     justify-content: center;
+}
+
+/* One team: its card on the left, held in view while the events scroll past
+   on the right. Sized by the section itself, so a narrow layout column
+   (Dossier) or a phone keeps the stacked order. */
+@container (min-width: 820px) {
+    .team-matches .mf:has(.mf-events) {
+        display: grid;
+        grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+        align-items: start;
+        gap: var(--spacing-lg);
+    }
+
+    .team-matches .mf-teams {
+        position: sticky;
+        top: var(--spacing-lg);
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .team-matches .mf-events {
+        margin-top: 0;
+    }
+
+    .team-matches .mf-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .team-matches .mf-table {
+        font-size: 0.8rem;
+    }
+
+    .team-matches .mf-table th,
+    .team-matches .mf-table td {
+        padding: 0.5rem 0.4rem;
+    }
 }
 
 .mf-credit {
