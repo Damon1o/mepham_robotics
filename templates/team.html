@@ -19,6 +19,9 @@ members, competition results, and season goals.{% endif %}{% endblock %}
 {% if award_style == 'plaque' %}
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap">
 {% endif %}
+{% if show_matches %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/match-feed.css') }}">
+{% endif %}
 {% endblock %}
 
 {% block page_scripts %}
@@ -26,6 +29,9 @@ members, competition results, and season goals.{% endif %}{% endblock %}
 <script type="application/json" id="team_event_photos">{{ event_photos|tojson }}</script>
 {% endif %}
 <script src="{{ url_for('static', filename='js/team.js') }}" defer></script>
+{% if show_matches %}
+<script src="{{ url_for('static', filename='js/match-feed.js') }}" defer></script>
+{% endif %}
 {% endblock %}
 
 {#- Shared by the section partials in partials/team/. Each layout in team_layouts/

@@ -573,13 +573,15 @@ def _season_record(number, matches):
     }
 
 
-def match_feed(db, numbers):
+def match_feed(db, numbers, season_label=None):
     """Season match feed for our robot teams.
 
     Tries the newest seasons in turn and uses the first one where any of the
     teams has played, so the page keeps showing last season's results until
-    the first event of the new one. Returns {'season', 'teams', 'events'};
-    both lists are empty when there is nothing to show.
+    the first event of the new one. With `season_label` ('2025-26') only that
+    season is used, as a team page showing an older season wants. Returns
+    {'season', 'teams', 'events'}; both lists are empty when there is nothing
+    to show.
     """
     empty = {'season': None, 'teams': [], 'events': []}
     if not get_token() or not numbers:
@@ -590,7 +592,11 @@ def match_feed(db, numbers):
     ours = {str(row['number']).upper() for row in team_rows}
 
     season, raw = None, {}
-    for candidate in recent_seasons(db):
+    if season_label:
+        candidates = [c for c in recent_seasons(db, count=None) if c['label'] == season_label]
+    else:
+        candidates = recent_seasons(db)
+    for candidate in candidates:
         raw = {}
         for row in team_rows:
             payload, _, _ = get_cached(db, f"/teams/{row['id']}/matches",

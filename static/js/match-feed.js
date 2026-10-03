@@ -8,6 +8,13 @@
     if (!root) return;
     const seasonEl = document.getElementById('match-feed-season');
     const teamUrl = root.dataset.teamUrl || '';
+    // On a team page: one team and the season that page shows. The section
+    // stays hidden until there is something to show.
+    const section = root.closest('[data-match-section]');
+    const params = new URLSearchParams();
+    if (root.dataset.team) params.set('team', root.dataset.team);
+    if (root.dataset.season) params.set('season', root.dataset.season);
+    const feedUrl = `/api/matches${params.toString() ? `?${params}` : ''}`;
 
     const MATCHES_SHOWN = 6;
     const REFRESH_MS = 300000;
@@ -50,7 +57,7 @@
     }
 
     function teamLink(team) {
-        if (!team.page || !teamUrl) return `<span class="mf-team-number">${esc(team.number)}</span>`;
+        if (!team.page || !teamUrl || root.dataset.team) return `<span class="mf-team-number">${esc(team.number)}</span>`;
         return `<a class="mf-team-number" href="${esc(teamUrl.replace('TEAM', encodeURIComponent(team.page)))}">${esc(team.number)}</a>`;
     }
 
@@ -135,7 +142,7 @@
             if (t.ours) cls.push('is-ours');
             if (t.sitting) cls.push('is-sitting');
             const team = feed.teams.find(x => x.number === t.number);
-            if (t.ours && team && team.page && teamUrl) {
+            if (t.ours && team && team.page && teamUrl && !root.dataset.team) {
                 return `<a class="${cls.join(' ')}" href="${esc(teamUrl.replace('TEAM', encodeURIComponent(team.page)))}">${esc(t.number)}</a>`;
             }
             return `<span class="${cls.join(' ')}"${t.sitting ? ' title="Sat out"' : ''}>${esc(t.number)}</span>`;
@@ -315,19 +322,20 @@
     async function load() {
         let data;
         try {
-            const response = await fetch('/api/matches');
+            const response = await fetch(feedUrl);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             data = await response.json();
         } catch (error) {
             console.error('Match feed error:', error);
-            if (!feed) showStatus('Match results are unavailable right now.');
+            if (!feed && !section) showStatus('Match results are unavailable right now.');
             return;
         }
         if (!data.events || !data.events.length) {
-            if (!feed) showStatus('No recent matches found.');
+            if (!feed && !section) showStatus('No recent matches found.');
             return;
         }
         feed = data;
+        if (section) section.hidden = false;
         if (seasonEl && data.season) {
             seasonEl.textContent = `${data.season.label} season${data.season.game ? ` · ${data.season.game}` : ''}`;
             seasonEl.hidden = false;

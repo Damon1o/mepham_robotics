@@ -1331,6 +1331,7 @@ def team_page(team_number):
         # The awards grid builds the icon path from this; a row missing it used to 500 the page.
         award['icon'] = award.get('icon') or AWARD_ICONS[0]
     layout = team_layout(team)
+    live_enabled = bool(robotevents.get_token()) and not is_group(team)
     mosaic, mosaic_more = team_mosaic(team) if layout == 'magazine' else ([], 0)
     return render_template('team.html', team=team, team_awards=team_awards,
                            event_photos=event_photos, robot_photos=robot_photos,
@@ -1339,7 +1340,8 @@ def team_page(team_number):
                            mosaic=mosaic, mosaic_more=mosaic_more,
                            robotevents_url=None if is_group(team) else robotevents.team_url(team_number),
                            seasons=seasons, active_season=team.get('season'),
-                           live_enabled=bool(robotevents.get_token()) and not is_group(team),
+                           live_enabled=live_enabled,
+                           show_matches=live_enabled and layout != 'compact' and site().teams.show_matches,
                            active_page=team_number)
 
 @app.route('/api/team/<team_number>/live')
@@ -3898,8 +3900,11 @@ def api_team_image(team_id):
 
 
 MATCHES_CACHE_SECONDS = 300
-_matches_cache = {'expires_at': 0.0, 'payload': None}
+MATCHES_CACHE_MAX = 64
+_matches_cache = {}
 _matches_cache_lock = threading.Lock()
+_SEASON_LABEL = re.compile(r'^\d{4}-\d{2}$')
+_EMPTY_FEED = {'season': None, 'teams': [], 'events': []}
 
 
 @app.route('/api/matches')
@@ -3907,29 +3912,48 @@ def api_matches():
     """Proxy RobotEvents match data so the API key never reaches the browser.
 
     One season of matches, skills and rankings for every robot team, grouped by
-    event (see robotevents.match_feed). Results are cached for a few minutes: every visitor hitting this endpoint
-    otherwise costs one upstream call per team plus a team lookup.
+    event (see robotevents.match_feed). ?team= narrows it to one team page's
+    team and ?season= to the season that page shows. Results are cached for a
+    few minutes per query: every visitor hitting this endpoint otherwise costs
+    several upstream calls per team.
     """
+    team = (request.args.get('team') or '').strip().upper()[:20]
+    season = (request.args.get('season') or '').strip()
+    if not _SEASON_LABEL.match(season):
+        season = ''
+    key = (team, season)
     with _matches_cache_lock:
-        if _matches_cache['payload'] is not None and time.time() < _matches_cache['expires_at']:
-            return jsonify(_matches_cache['payload'])
+        cached = _matches_cache.get(key)
+        if cached and time.time() < cached['expires_at']:
+            return jsonify(cached['payload'])
 
-    payload = _fetch_matches()
+    payload = _fetch_matches(team, season)
     with _matches_cache_lock:
-        _matches_cache['payload'] = payload
-        _matches_cache['expires_at'] = time.time() + MATCHES_CACHE_SECONDS
+        if len(_matches_cache) >= MATCHES_CACHE_MAX:
+            _matches_cache.clear()
+        _matches_cache[key] = {'payload': payload, 'expires_at': time.time() + MATCHES_CACHE_SECONDS}
     return jsonify(payload)
 
 
-def _fetch_matches():
+def _fetch_matches(team_number='', season=''):
     # RobotEvents number -> site team number, for links back to team pages.
-    pages = {(t.get('robotevents_number') or t['team_number']).upper(): t['team_number']
-             for t in listed_teams() if not is_group(t)}
+    if team_number:
+        # Straight from the database so hidden teams' pages work too, using
+        # the RobotEvents number saved for the season being shown.
+        docs = [d for d in db['teams'].find({'team_number': team_number}) if not is_group(d)]
+        if not docs:
+            return _EMPTY_FEED
+        doc = next((d for d in docs if d.get('season') == season),
+                   max(docs, key=lambda d: d.get('season') or ''))
+        pages = {(doc.get('robotevents_number') or team_number).upper(): team_number}
+    else:
+        pages = {(t.get('robotevents_number') or t['team_number']).upper(): t['team_number']
+                 for t in listed_teams() if not is_group(t)}
     try:
-        feed = robotevents.match_feed(db, set(pages))
+        feed = robotevents.match_feed(db, set(pages), season_label=season or None)
     except Exception:
         logger.exception('Match feed failed')
-        return {'season': None, 'teams': [], 'events': []}
+        return _EMPTY_FEED
     for team in feed['teams']:
         team['page'] = pages.get(team['number'].upper())
     return feed

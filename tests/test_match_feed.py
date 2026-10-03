@@ -13,7 +13,7 @@ SEASONS = [{'id': 204, 'name': 'VEX V5 Robotics Competition 2026-2027: Override'
 def token(monkeypatch):
     monkeypatch.setenv('ROBOTEVENTS_API_KEY', 'test-key')
     monkeypatch.setattr(re, '_now', lambda: re.datetime.datetime(2026, 10, 2, tzinfo=re.datetime.timezone.utc))
-    app_module._matches_cache.update(expires_at=0.0, payload=None)
+    app_module._matches_cache.clear()
 
 
 @pytest.fixture
@@ -133,3 +133,53 @@ def test_endpoint_follows_the_database_links_pages_and_caches(client, db, upstre
     count = len(upstream.calls)
     client.get('/api/matches')
     assert len(upstream.calls) == count, 'second request is served from cache'
+
+
+def test_endpoint_narrows_to_one_team_and_season(client, db, upstream):
+    db['teams'].insert_many([
+        {'team_number': '77628A', 'season': '2024-25', 'members': [], 'hidden': True},
+        {'team_number': '77628B', 'season': '2025-26', 'members': []},
+    ])
+    upstream.responses[('/teams/7/matches', 190)] = [
+        match(1, 'Q1', ['77628A', '1A'], ['2A', '3A'], 40, 20, '2025-01-24T10:00:00-05:00'),
+    ]
+
+    body = client.get('/api/matches?team=77628a&season=2024-25').get_json()
+    teams_call = next(params for path, params in upstream.calls if path == '/teams')
+    assert teams_call['number[]'] == ['77628A'], 'only the asked-for team, even when hidden'
+    assert body['season']['label'] == '2024-25'
+    assert [t['number'] for t in body['teams']] == ['77628A']
+    match_seasons = {params['season[]'] for path, params in upstream.calls if path.endswith('/matches')}
+    assert match_seasons == {190}, 'an explicit season is the only one tried'
+
+    assert client.get('/api/matches?team=99999Z').get_json()['events'] == []
+    assert client.get('/api/matches?team=77628A&season=bogus').status_code == 200
+
+
+def _team_page(client, db, values=None, layout=None):
+    db['teams'].insert_one({'team_number': '77628A', 'season': '2025-26', 'members': [],
+                            **({'layout': layout} if layout else {})})
+    if values:
+        db['site_metadata'].insert_one({'_id': app_module.SITE_CONTENT_ID, 'values': values})
+    return client.get('/team/77628A').get_data(as_text=True)
+
+
+def test_team_page_shows_match_results_by_default(client, db):
+    html = _team_page(client, db)
+    assert 'id="match-feed"' in html and 'data-team="77628A"' in html and 'data-season="2025-26"' in html
+    assert 'js/match-feed.js' in html and 'css/match-feed.css' in html
+    assert 'Match Results' in html
+
+
+def test_team_page_match_results_toggle(client, db):
+    html = _team_page(client, db, {'teams': {'show_matches': False}})
+    assert 'id="match-feed"' not in html and 'js/match-feed.js' not in html
+
+
+def test_team_page_match_results_need_the_key(client, db, monkeypatch):
+    monkeypatch.delenv('ROBOTEVENTS_API_KEY', raising=False)
+    assert 'id="match-feed"' not in _team_page(client, db)
+
+
+def test_compact_layout_has_no_match_results(client, db):
+    assert 'id="match-feed"' not in _team_page(client, db, layout='compact')
