@@ -419,7 +419,7 @@ SECTIONS = (
         Field('show_live', 'toggle', 'Show live match results', True, group='Live results',
               hint='Needs the RobotEvents key; hidden automatically without it.'),
         Field('live_heading', 'text', 'Heading', 'Live Match Results', max=60, group='Live results'),
-        Field('live_lede', 'text', 'Text', 'Recent scores from our latest competition, straight from RobotEvents',
+        Field('live_lede', 'text', 'Text', 'Every match, ranking and skills run from our latest season, straight from RobotEvents',
               max=160, group='Live results'),
         Field('meta_description', 'textarea', 'Search description',
               'Our history of excellence in VEX Robotics competitions, including awards and match results.',

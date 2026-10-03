@@ -1152,60 +1152,6 @@ function showToast(message, type = 'info') {
 })();
 
 /* ============================================
-   ROBOTEVENTS MATCH RESULTS (via backend proxy — key stays server-side)
-   ============================================ */
-(function initRobotEvents() {
-    const resultsBody = document.getElementById('live-results-body');
-    if (!resultsBody) return;
-
-    function showStatus(message) {
-        resultsBody.innerHTML = `<tr><td colspan="4" class="results-status">${escapeHtml(message)}</td></tr>`;
-    }
-
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    async function updateMatches() {
-        let data;
-        try {
-            const response = await fetch('/api/matches');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            data = await response.json();
-        } catch (error) {
-            console.error('Match fetch error:', error);
-            showStatus('Match results are unavailable right now.');
-            return;
-        }
-
-        const matches = data.matches || [];
-        if (matches.length === 0) {
-            showStatus('No recent matches found.');
-            return;
-        }
-
-        resultsBody.innerHTML = matches.map(match => {
-            const scoreDisplay = match.score || 'Pending';
-            const statusClass = match.score ? 'match-score' : 'match-status-live';
-
-            return `
-                <tr>
-                    <td>${escapeHtml(match.name)}</td>
-                    <td class="alliance-red">${escapeHtml(match.red_teams)}</td>
-                    <td class="alliance-blue">${escapeHtml(match.blue_teams)}</td>
-                    <td class="${statusClass}">${escapeHtml(scoreDisplay)}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    updateMatches();
-    setInterval(updateMatches, 300000);
-})();
-
-/* ============================================
    CUSTOM CHATBOT UI & LOGIC
    ============================================ */
 (function initCustomChatbot() {

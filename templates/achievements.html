@@ -178,26 +178,19 @@
         <p class="ach-eyebrow"><span class="ach-live-dot" aria-hidden="true"></span>Live from RobotEvents</p>
         <h2 id="live-heading">{{ page.live_heading }}</h2>
         {% if page.live_lede %}<p class="ach-lede">{{ page.live_lede }}</p>{% endif %}
+        <p class="mf-season" id="match-feed-season" hidden></p>
     </header>
 
-    <div class="results-table-container ach-results">
-        <table class="results-table">
-            <thead>
-                <tr>
-                    <th>Match</th>
-                    <th>Red Alliance</th>
-                    <th>Blue Alliance</th>
-                    <th>Score</th>
-                </tr>
-            </thead>
-            <tbody id="live-results-body" aria-live="polite">
-                <tr>
-                    <td colspan="4" class="results-status">Loading match results…</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="mf" id="match-feed" data-team-url="{{ url_for('team_page', team_number='TEAM') }}">
+        <p class="mf-status" role="status">Loading match results…</p>
     </div>
     <p class="ach-credit">Data provided by RobotEvents API</p>
 </section>
+{% endif %}
+{% endblock %}
+
+{% block page_scripts %}
+{% if live_results %}
+<script src="{{ url_for('static', filename='js/match-feed.js') }}" defer></script>
 {% endif %}
 {% endblock %}

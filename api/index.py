@@ -1620,7 +1620,8 @@ def _newest_season_docs(query=None):
     """One team document per team number: the newest season (a missing season sorts oldest)."""
     newest = {}
     for team in db['teams'].find(query or {}, {'team_number': 1, 'season': 1, 'members': 1, 'nickname': 1,
-                                               'hidden': 1, 'kind': 1, 'title': 1}):
+                                               'hidden': 1, 'kind': 1, 'title': 1,
+                                               'robotevents_number': 1}):
         number = team.get('team_number')
         if number and (number not in newest
                        or (team.get('season') or '') > (newest[number].get('season') or '')):
@@ -3905,7 +3906,8 @@ _matches_cache_lock = threading.Lock()
 def api_matches():
     """Proxy RobotEvents match data so the API key never reaches the browser.
 
-    Results are cached for a few minutes: every visitor hitting this endpoint
+    One season of matches, skills and rankings for every robot team, grouped by
+    event (see robotevents.match_feed). Results are cached for a few minutes: every visitor hitting this endpoint
     otherwise costs one upstream call per team plus a team lookup.
     """
     with _matches_cache_lock:
@@ -3920,60 +3922,17 @@ def api_matches():
 
 
 def _fetch_matches():
-    api_key = robotevents.get_token()
-    if not api_key:
-        return {'matches': []}
-
-    headers = {'Authorization': f'Bearer {api_key}', 'Accept': 'application/json'}
-
-    def fetch(endpoint):
-        try:
-            resp = requests.get(f'{robotevents.BASE_URL}/{endpoint}', headers=headers, timeout=8)
-            resp.raise_for_status()
-            return resp.json()
-        except Exception:
-            logger.warning('RobotEvents fetch failed for %s', endpoint, exc_info=True)
-            return None
-
-    numbers = sorted({t.get('robotevents_number') or t['team_number'] for t in listed_teams() if not is_group(t)})
-    if not numbers:
-        return {'matches': []}
-    number_qs = '&'.join(f'number[]={urllib.parse.quote(n)}' for n in numbers)
-    teams_data = fetch(f'teams?{number_qs}')
-    if not teams_data or not teams_data.get('data'):
-        return {'matches': []}
-
-    all_matches = []
-    for team in teams_data['data']:
-        matches_data = fetch(f"teams/{team['id']}/matches?per_page=20")
-        if matches_data and matches_data.get('data'):
-            all_matches.extend(matches_data['data'])
-
-    seen = {}
-    for m in all_matches:
-        seen[m['id']] = m
-    unique_matches = sorted(seen.values(), key=lambda m: m.get('scheduled') or '', reverse=True)
-
-    displayed = []
-    if unique_matches:
-        latest_event_id = unique_matches[0]['event']['id']
-        same_event = [m for m in unique_matches if m['event']['id'] == latest_event_id]
-        displayed = sorted(same_event, key=lambda m: m.get('matchnum', 0), reverse=True)[:5]
-
-    results = []
-    for match in displayed:
-        red = next((a for a in match['alliances'] if a['color'] == 'red'), None)
-        blue = next((a for a in match['alliances'] if a['color'] == 'blue'), None)
-        if not red or not blue:
-            continue
-        results.append({
-            'name': match.get('name', ''),
-            'red_teams': ', '.join(t['team']['name'] for t in red['teams']),
-            'blue_teams': ', '.join(t['team']['name'] for t in blue['teams']),
-            'score': f"{red['score']} - {blue['score']}" if red['score'] is not None else None,
-        })
-
-    return {'matches': results}
+    # RobotEvents number -> site team number, for links back to team pages.
+    pages = {(t.get('robotevents_number') or t['team_number']).upper(): t['team_number']
+             for t in listed_teams() if not is_group(t)}
+    try:
+        feed = robotevents.match_feed(db, set(pages))
+    except Exception:
+        logger.exception('Match feed failed')
+        return {'season': None, 'teams': [], 'events': []}
+    for team in feed['teams']:
+        team['page'] = pages.get(team['number'].upper())
+    return feed
 
 @app.route('/api/contact', methods=['POST'])
 def api_contact():
