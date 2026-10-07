@@ -1,0 +1,28 @@
+/* Under construction notice (Site settings -> Under construction). Builds on the
+   .error-page styles in styles.css. */
+.construction-page .error-emoji {
+    width: 7rem;
+    height: 7rem;
+    margin: 0 auto 1.25rem;
+    color: var(--accent-gold);
+}
+
+.construction-tape {
+    height: 14px;
+    margin: 0 auto 1.5rem;
+    max-width: 320px;
+    border-radius: 3px;
+    background: repeating-linear-gradient(-45deg, var(--accent-gold), var(--accent-gold) 12px, #111 12px, #111 24px);
+}
+
+.construction-page .error-submessage p {
+    margin: 0 0 0.75rem;
+}
+
+.construction-page .error-submessage p:last-child {
+    margin-bottom: 0;
+}
+
+.construction-page .error-submessage a {
+    color: var(--accent-gold);
+}

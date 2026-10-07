@@ -989,6 +989,35 @@ def verify_csrf():
     return None
 
 
+# --- Under construction ----------------------------------------------------------
+# Site settings -> Under construction swaps public pages for a notice. Editors and
+# admins still see the real page (with a strip saying visitors do not), so the
+# rebuild can be checked before it is switched back on.
+
+def construction_bypassed():
+    user = _current_db_user()
+    return bool(user) and role_at_least(user.get('role', 'member'), 'editor')
+
+
+def page_under_construction():
+    # Checked by endpoint first so static files and the API never load site content.
+    return (request.endpoint in site_content.CONSTRUCTION_PAGES
+            and site_content.under_construction(site().construction, request.endpoint))
+
+
+app.jinja_env.globals['page_under_construction'] = page_under_construction
+
+
+@app.before_request
+def under_construction():
+    if request.method not in SAFE_METHODS or not page_under_construction() or construction_bypassed():
+        return None
+    response = app.make_response((render_template('construction.html'), 503))
+    response.headers['Retry-After'] = '86400'
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
 @app.errorhandler(400)
 def bad_request(e):
     if _wants_json():
