@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>{{ site.construction.heading }} | {{ site.general.short_name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/construction.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='assets/icons/favicon-32.png') }}">
+</head>
+
+<body>
+    <div class="error-page construction-page">
+        <div class="error-content">
+            <i data-lucide="construction" class="error-emoji" aria-hidden="true"></i>
+            <div class="construction-tape" aria-hidden="true"></div>
+            <h1 class="error-message">{{ site.construction.heading }}</h1>
+            {% if site.construction.message %}
+            <div class="error-submessage">{{ site.construction.message|rich }}</div>
+            {% endif %}
+            <div class="error-actions">
+                {% if request.endpoint != 'index' and not site.construction.enabled %}
+                <a href="{{ url_for('index') }}" class="cta-button cta-primary">Go Home</a>
+                {% endif %}
+                {% if 'user' not in session %}
+                <a href="{{ url_for('login', next=request.full_path.rstrip('?')) }}" class="cta-button cta-secondary">Member Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"
+        integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
+        crossorigin="anonymous" defer></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+</body>
+
+</html>

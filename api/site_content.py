@@ -56,6 +56,23 @@ TEAM_LAYOUTS = {
     'compact': 'Compact Card',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
+# Public pages that can be put under construction: view endpoint -> name in the picker.
+CONSTRUCTION_PAGES = {
+    'index': 'Homepage',
+    'about': 'About',
+    'achievements': 'Achievements',
+    'contact': 'Contact',
+    'donate': 'Donate',
+    'team_page': 'Team pages',
+    'glossary': 'Glossary',
+    'branding': 'Branding guide',
+    'standards': 'Design standards',
+    'resources': 'Member resources',
+    'notebook': 'Engineering notebook',
+    'safety_quiz': 'Safety quiz',
+    'privacy': 'Privacy policy',
+    'credits_page': 'Site credits',
+}
 # The Competition Awards design each layout shows: templates/partials/awards/<style>.html,
 # plus static/css/pages/awards/<style>.css for any style but 'classic'. Layouts not
 # listed keep the classic tile grid.
@@ -128,6 +145,19 @@ SECTIONS = (
         Field('ends', 'datetime', 'Hide after', '', hint='Optional. It hides itself after this time.'),
         Field('dismissible', 'toggle', 'Visitors can close it', True),
     ), blurb='Site-wide notice'),
+
+    Section('construction', 'Under construction', 'construction', (
+        Field('enabled', 'toggle', 'Put the whole site under construction', False, group='Which pages',
+              hint='Visitors see the notice below instead of any public page. Sign-in and the dashboard keep '
+                   'working, and editors and admins still see the real pages.'),
+        Field('pages', 'list', 'Or just these pages', [],
+              items=(Field('page', 'choice', 'Page', 'index', choices=CONSTRUCTION_PAGES),),
+              max_items=len(CONSTRUCTION_PAGES), group='Which pages',
+              hint='Used while the whole-site switch is off.'),
+        Field('heading', 'text', 'Heading', 'Under Construction', max=60, required=True, group='The notice'),
+        Field('message', 'rich', 'Message',
+              "We're rebuilding this part of the site. Check back soon!", max=400, group='The notice'),
+    ), blurb='Hide pages while they are rebuilt'),
 
     Section('general', 'Club details', 'flag', (
         Field('club_name', 'text', 'Club name', 'Mepham Robotics Club', max=60, required=True,
@@ -829,6 +859,15 @@ def announcement_live(announcement, now):
             if (now < moment) if after else (now > moment):
                 return False
     return True
+
+
+def under_construction(construction, endpoint):
+    """True when the page served by `endpoint` should show the under construction notice."""
+    if endpoint not in CONSTRUCTION_PAGES:
+        return False
+    if construction.get('enabled'):
+        return True
+    return any(row.get('page') == endpoint for row in construction.get('pages') or ())
 
 
 def css_url(src):
