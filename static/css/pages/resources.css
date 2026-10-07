@@ -1,9 +1,1036 @@
-/* Page styles: resources */
+/* Page styles: Member Hub (/resources)
+   ------------------------------------------------------------------
+   Hero, then one .hub column:
+
+     1. Shared
+     2. Hero
+     3. This week tiles
+     4. Search bar and shelf chips
+     5. Start here steps
+     6. Shelves
+     7. Drivetrain calculator
+     8. Dark mode
+     9. Responsive
+    10. Reduced motion
+   ------------------------------------------------------------------ */
+
+/* ================================================================
+   1. SHARED
+   ================================================================ */
+
+.hub {
+    --hub-ink: #1a1414;
+    --hub-muted: #6b5f5f;
+    --hub-paper: #ffffff;
+    --hub-rule: rgba(128, 0, 0, 0.12);
+    --hub-soft: #fbf6f6;
+    --hub-gold: #f2c200;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 5rem;
+    display: grid;
+    gap: 3.5rem;
+}
+
+.hub [hidden] {
+    display: none !important;
+}
+
+.hub-kicker {
+    margin: 0 0 1rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.hub-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: auto;
+    margin: 0 0 1rem;
+    font-size: 1.25rem;
+    text-align: left;
+    color: var(--hub-ink);
+}
+
+/* The global h2 underline belongs to centered page headings. */
+.hub-heading::after {
+    display: none;
+}
+
+.hub-heading svg {
+    width: 1.15em;
+    height: 1.15em;
+    color: var(--maroon-dark);
+}
+
+.hub-heading--big {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    letter-spacing: -0.5px;
+}
+
+.hub-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.95rem;
+    border: 1.5px solid var(--hub-rule);
+    border-radius: 999px;
+    background: var(--hub-paper);
+    color: var(--hub-ink);
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.hub-chip svg {
+    width: 0.95em;
+    height: 0.95em;
+}
+
+.hub-chip:hover {
+    border-color: var(--maroon-dark);
+}
+
+.hub-chip:active {
+    transform: scale(0.96);
+}
+
+.hub-chip.is-on {
+    background: var(--maroon-dark);
+    border-color: var(--maroon-dark);
+    color: #fff;
+}
+
+.hub-chip-count {
+    min-width: 1.4em;
+    padding: 0 0.35em;
+    border-radius: 999px;
+    background: rgba(128, 0, 0, 0.1);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+.hub-chip.is-on .hub-chip-count {
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+/* ================================================================
+   2. HERO
+   ================================================================ */
 
 .hero-image {
     /* Fallback for browsers without image-set(type()); the rule below wins elsewhere. */
     background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%), url('../../assets/photos/carousel9.jpg') center/cover;
     background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
     image-set(url('../../assets/photos/carousel9-1200.webp') type('image/webp'), url('../../assets/photos/carousel9.jpg') type('image/jpeg')) center/cover;
-    min-height: 60vh;
+    min-height: 48vh;
+}
+
+/* ================================================================
+   3. THIS WEEK
+   ================================================================ */
+
+.hub-week-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.hub-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+    padding: 1.5rem 1.5rem 1.4rem;
+    border: 1px solid var(--hub-rule);
+    border-radius: 20px;
+    background: var(--hub-paper);
+    box-shadow: 0 12px 32px rgba(80, 0, 0, 0.06);
+    overflow: hidden;
+}
+
+/* A thin colour bar along the top tells the three tiles apart at a glance. */
+.hub-tile::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: var(--maroon-dark);
+}
+
+.hub-tile--compete::before {
+    background: var(--accent-gold);
+}
+
+.hub-tile--team::before {
+    background: var(--maroon-accent);
+}
+
+.hub-tile-label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--hub-muted);
+}
+
+.hub-tile-label svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.hub-tile-big {
+    margin-top: 0.4rem;
+    font-size: clamp(2.2rem, 5vw, 3rem);
+    line-height: 1;
+    letter-spacing: -1px;
+    color: var(--maroon-dark);
+}
+
+.hub-tile-big small {
+    font-size: 0.4em;
+    letter-spacing: 0;
+    color: var(--hub-muted);
+}
+
+.hub-tile-big--soft {
+    font-size: clamp(1.7rem, 4vw, 2.2rem);
+}
+
+.hub-tile-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    color: var(--hub-ink);
+    overflow-wrap: anywhere;
+}
+
+.hub-tile-line a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--accent-gold);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
+.hub-tile-sub {
+    font-size: 0.9rem;
+    color: var(--hub-muted);
+    overflow-wrap: anywhere;
+}
+
+.hub-tile.is-live {
+    border-color: rgba(34, 160, 90, 0.4);
+}
+
+.hub-tile.is-live::before {
+    background: #22a05a;
+}
+
+.hub-pulse {
+    width: 0.6rem;
+    height: 0.6rem;
+    flex: none;
+    border-radius: 50%;
+    background: #22a05a;
+    box-shadow: 0 0 0 0 rgba(34, 160, 90, 0.6);
+    animation: hub-pulse 1.8s ease-out infinite;
+}
+
+@keyframes hub-pulse {
+    to {
+        box-shadow: 0 0 0 0.6rem rgba(34, 160, 90, 0);
+    }
+}
+
+.hub-rosters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.5rem 0 0.25rem;
+    padding: 0;
+    list-style: none;
+}
+
+.hub-rosters a {
+    display: inline-block;
+    padding: 0.45rem 0.85rem;
+    border-radius: 10px;
+    background: var(--maroon-dark);
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.hub-rosters a:hover {
+    background: var(--maroon-light);
+    transform: translateY(-2px);
+}
+
+.hub-tile-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: auto;
+    padding-top: 0.5rem;
+    font-weight: 700;
+    color: var(--maroon-dark);
+    text-decoration: none;
+}
+
+.hub-tile-action svg {
+    width: 1rem;
+    height: 1rem;
+    transition: transform var(--transition-fast);
+}
+
+.hub-tile-action:hover svg {
+    transform: translateX(3px);
+}
+
+/* ================================================================
+   4. SEARCH BAR
+   ================================================================ */
+
+.hub-bar {
+    position: sticky;
+    top: calc(var(--nav-height, 70px) + 0.5rem);
+    z-index: 5;
+    display: grid;
+    gap: 0.85rem;
+    padding: 0.85rem;
+    border: 1px solid var(--hub-rule);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.86);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 10px 30px rgba(80, 0, 0, 0.08);
+}
+
+.hub-search {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 0.9rem;
+    border: 1.5px solid var(--hub-rule);
+    border-radius: 14px;
+    background: var(--hub-paper);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.hub-search:focus-within {
+    border-color: var(--maroon-dark);
+    box-shadow: 0 0 0 4px rgba(128, 0, 0, 0.1);
+}
+
+.hub-search > svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    flex: none;
+    color: var(--maroon-dark);
+}
+
+.hub-search input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.85rem 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--hub-ink);
+    font: inherit;
+    font-size: 1.05rem;
+}
+
+.hub-search kbd {
+    padding: 0.1rem 0.5rem;
+    border: 1px solid var(--hub-rule);
+    border-bottom-width: 3px;
+    border-radius: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--hub-muted);
+}
+
+.hub-chips {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    /* Room for the focus ring inside the scroller. */
+    padding: 2px;
+}
+
+.hub-chips::-webkit-scrollbar {
+    display: none;
+}
+
+.hub-browse {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.hub-library {
+    display: grid;
+    gap: 2.5rem;
+}
+
+.hub-empty {
+    margin: 0;
+    padding: 2.5rem 1rem;
+    border: 2px dashed var(--hub-rule);
+    border-radius: 20px;
+    text-align: center;
+    color: var(--hub-muted);
+}
+
+.hub-empty svg {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.1em;
+    color: var(--accent-gold);
+}
+
+/* ================================================================
+   5. START HERE
+   ================================================================ */
+
+.hub-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: none;
+}
+
+.hub-step {
+    position: relative;
+}
+
+.hub-step > a {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    height: 100%;
+    padding: 1.25rem 3rem 1.25rem 1.25rem;
+    border-radius: 18px;
+    background: linear-gradient(150deg, var(--maroon-dark), #4d0000);
+    color: #fff;
+    text-decoration: none;
+    box-shadow: 0 12px 26px rgba(80, 0, 0, 0.18);
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.hub-step > a:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 36px rgba(80, 0, 0, 0.26);
+}
+
+.hub-step-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--accent-gold);
+}
+
+.hub-step strong {
+    font-size: 1.1rem;
+}
+
+.hub-step span:not(.hub-step-num) {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.hub-step .hub-star {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.hub-step .hub-star:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* ================================================================
+   6. SHELVES
+   ================================================================ */
+
+.hub-shelves {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+    align-items: start;
+    gap: 1.25rem;
+}
+
+.hub-shelf {
+    padding: 1.25rem 0.75rem 0.75rem;
+    border: 1px solid var(--hub-rule);
+    border-radius: 20px;
+    background: var(--hub-paper);
+}
+
+.hub-shelf .hub-heading {
+    padding: 0 0.5rem;
+}
+
+.hub-shelf-count {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--hub-muted);
+}
+
+.hub-links {
+    display: grid;
+    gap: 0.15rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hub-link {
+    position: relative;
+}
+
+.hub-link > a {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0.7rem 3rem 0.7rem 0.75rem;
+    border-radius: 12px;
+    color: var(--hub-ink);
+    text-decoration: none;
+    transition: background var(--transition-fast);
+}
+
+.hub-link > a:hover,
+.hub-link > a:focus-visible {
+    background: var(--hub-soft);
+}
+
+.hub-link strong {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 1rem;
+}
+
+.hub-ext {
+    width: 0.95rem;
+    height: 0.95rem;
+    color: var(--maroon-accent);
+    transition: transform var(--transition-fast);
+}
+
+.hub-link > a:hover .hub-ext {
+    transform: translate(2px, -2px);
+}
+
+.hub-note {
+    font-size: 0.88rem;
+    color: var(--hub-muted);
+}
+
+.hub-host {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    color: var(--maroon-light);
+}
+
+.hub-link.is-starred > a {
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.16), transparent 70%);
+}
+
+.hub-star {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.4rem;
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #b9aaaa;
+    cursor: pointer;
+    transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.hub-star svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.hub-star:hover {
+    background: rgba(128, 0, 0, 0.06);
+    color: var(--maroon-dark);
+}
+
+.hub-star[aria-pressed="true"] {
+    color: var(--hub-gold);
+}
+
+.hub-star[aria-pressed="true"] svg {
+    fill: currentColor;
+}
+
+.hub-star.is-popping svg {
+    animation: hub-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes hub-pop {
+    40% {
+        transform: scale(1.4) rotate(-12deg);
+    }
+}
+
+/* ================================================================
+   7. DRIVETRAIN CALCULATOR
+   ================================================================ */
+
+.hub-calc {
+    --calc-ink: #fff4e0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: 1.5rem 2.5rem;
+    padding: clamp(1.5rem, 4vw, 2.75rem);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 100% 0%, rgba(255, 215, 0, 0.14), transparent 45%),
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 14px),
+        linear-gradient(160deg, #2a0707, #120303);
+    color: var(--calc-ink);
+    box-shadow: 0 24px 60px rgba(40, 0, 0, 0.3);
+    scroll-margin-top: 6rem;
+}
+
+.hub-calc .hub-kicker {
+    color: var(--accent-gold);
+}
+
+.hub-calc .hub-heading {
+    color: #fff;
+}
+
+.hub-calc-head {
+    grid-column: 1 / -1;
+}
+
+.hub-calc-lede {
+    max-width: 52ch;
+    margin: 0 0 1.25rem;
+    color: rgba(255, 244, 224, 0.75);
+}
+
+.hub-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.hub-calc .hub-chip {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--calc-ink);
+}
+
+.hub-calc .hub-chip:hover {
+    border-color: var(--accent-gold);
+}
+
+.hub-calc-inputs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    align-content: start;
+}
+
+.hub-cartridge {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.hub-cartridge legend,
+.hub-field {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255, 244, 224, 0.7);
+}
+
+.hub-cartridge legend {
+    margin-bottom: 0.5rem;
+}
+
+.hub-cartridge label {
+    --cart: #d33;
+    position: relative;
+    cursor: pointer;
+}
+
+.hub-cartridge .is-green {
+    --cart: #2bb36b;
+}
+
+.hub-cartridge .is-blue {
+    --cart: #3d8bfd;
+}
+
+.hub-cartridge input {
+    position: absolute;
+    opacity: 0;
+}
+
+.hub-cartridge span {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0.75rem 0.5rem;
+    border: 1.5px solid rgba(255, 255, 255, 0.16);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-align: center;
+    text-transform: none;
+    color: #fff;
+    transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.hub-cartridge small {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: rgba(255, 244, 224, 0.65);
+}
+
+.hub-cartridge input:checked + span {
+    border-color: var(--cart);
+    background: color-mix(in srgb, var(--cart) 22%, transparent);
+    box-shadow: inset 0 -4px 0 var(--cart);
+}
+
+.hub-cartridge input:focus-visible + span {
+    outline: 2px solid var(--accent-gold);
+    outline-offset: 2px;
+}
+
+.hub-field {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.hub-calc select {
+    width: 100%;
+    padding: 0.7rem 0.8rem;
+    border: 1.5px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    font: inherit;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.hub-calc-out {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    align-content: start;
+}
+
+.hub-readout {
+    display: grid;
+    gap: 0.25rem;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.hub-readout > span {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255, 244, 224, 0.6);
+}
+
+.hub-readout strong {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(1.3rem, 3vw, 1.7rem);
+    line-height: 1.1;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+
+.hub-readout small {
+    font-size: 0.55em;
+    color: rgba(255, 244, 224, 0.6);
+}
+
+.hub-readout--hero {
+    grid-column: 1 / -1;
+    border-color: rgba(255, 215, 0, 0.35);
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.14), rgba(0, 0, 0, 0.2));
+}
+
+.hub-readout--hero strong {
+    font-size: clamp(2.8rem, 8vw, 4.2rem);
+    color: var(--accent-gold);
+}
+
+.hub-readout--hero em {
+    font-style: normal;
+    font-size: 0.9rem;
+    color: rgba(255, 244, 224, 0.75);
+}
+
+.hub-balance {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.5rem 0.25rem 0;
+}
+
+.hub-balance-ends {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255, 244, 224, 0.6);
+}
+
+.hub-balance-track {
+    position: relative;
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #d33, #2bb36b 50%, #3d8bfd);
+}
+
+.hub-balance-dot {
+    --pos: 50%;
+    position: absolute;
+    top: 50%;
+    left: var(--pos);
+    width: 22px;
+    height: 22px;
+    border: 4px solid #fff;
+    border-radius: 50%;
+    background: #120303;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    transform: translate(-50%, -50%);
+    transition: left 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.hub-calc-note {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 0.8rem;
+    color: rgba(255, 244, 224, 0.55);
+}
+
+.hub-admin {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--hub-muted);
+}
+
+.hub-admin svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.hub-admin a {
+    color: var(--maroon-dark);
+    font-weight: 700;
+}
+
+/* ================================================================
+   8. DARK MODE
+   ================================================================ */
+
+[data-theme="dark"] .hub {
+    --hub-ink: #f1e9e9;
+    --hub-muted: #b3a5a5;
+    --hub-paper: #1e1a1a;
+    --hub-rule: rgba(255, 255, 255, 0.1);
+    --hub-soft: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .hub-bar {
+    background: rgba(24, 20, 20, 0.86);
+}
+
+[data-theme="dark"] .hub-tile-big,
+[data-theme="dark"] .hub-heading svg,
+[data-theme="dark"] .hub-tile-action,
+[data-theme="dark"] .hub-admin a,
+[data-theme="dark"] .hub-search > svg {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .hub-host,
+[data-theme="dark"] .hub-kicker {
+    color: #d79a9c;
+}
+
+[data-theme="dark"] .hub-chip.is-on {
+    background: #a33a3c;
+    border-color: #a33a3c;
+}
+
+[data-theme="dark"] .hub-chip-count {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .hub-star {
+    color: #7d7070;
+}
+
+[data-theme="dark"] .hub-star:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .hub-star[aria-pressed="true"] {
+    color: var(--hub-gold);
+}
+
+[data-theme="dark"] .hub-link.is-starred > a {
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.1), transparent 70%);
+}
+
+[data-theme="dark"] .hub-calc {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ================================================================
+   9. RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 960px) {
+    .hub-calc {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 820px) {
+    .hub-week-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* The big word sits to the left of the details; the rosters tile keeps its stack. */
+    .hub-tile:has(> .hub-tile-big) {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: baseline;
+        gap: 0.25rem 1rem;
+    }
+
+    .hub-tile:has(> .hub-tile-big) > :not(.hub-tile-big) {
+        grid-column: 2;
+    }
+
+    .hub-tile-label {
+        grid-row: 1;
+    }
+
+    .hub-tile-big {
+        grid-column: 1;
+        grid-row: 1 / span 3;
+        align-self: center;
+        margin: 0;
+        min-width: 4.5rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .hub {
+        padding: 2rem 1rem 4rem;
+        gap: 2.75rem;
+    }
+
+    .hub-bar {
+        top: calc(var(--nav-height, 60px) + 0.25rem);
+        padding: 0.6rem;
+        border-radius: 16px;
+    }
+
+    .hub-search kbd {
+        display: none;
+    }
+
+    .hub-calc-inputs {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.75rem;
+    }
+
+    .hub-calc-out {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .hub-readout--hero {
+        grid-column: 1 / -1;
+    }
+
+    .hub-readout:last-of-type {
+        grid-column: 1 / -1;
+    }
+}
+
+/* ================================================================
+   10. REDUCED MOTION
+   ================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .hub-pulse,
+    .hub-star.is-popping svg {
+        animation: none;
+    }
+
+    .hub-balance-dot,
+    .hub-step > a,
+    .hub-rosters a {
+        transition: none;
+    }
+
+    .hub-step > a:hover,
+    .hub-rosters a:hover {
+        transform: none;
+    }
 }
