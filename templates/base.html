@@ -10,6 +10,9 @@
     <meta name="description"
         content="{% filter collapse_ws %}{% block meta_description %}{{ site.general.meta_description }}{% endblock %}{% endfilter %}">
 
+    <link rel="canonical" href="{{ request.base_url }}">
+    <script type="application/ld+json">{{ club_jsonld()|tojson }}</script>
+
     <!-- Open Graph / Link Preview -->
     <meta property="og:site_name" content="{{ site.general.club_name }}">
     <meta property="og:type" content="website">
