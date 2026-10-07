@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ site.general.club_name }} | {{ site.general.tagline }}{% endblock %}
+{% block title %}{{ site.general.club_name }} | VEX Robotics Team {{ site.general.team_number }}{% if site.general.town %} in {{ site.general.town }}{% if site.general.region %}, {{ site.general.region }}{% endif %}{% endif %}{% endblock %}
 {% block meta_description %}{{ site.home.meta_description }}{% endblock %}
 
 {% block page_styles %}

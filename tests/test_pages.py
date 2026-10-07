@@ -61,7 +61,7 @@ def test_no_inline_script_blocks_on_public_pages(client, db):
         for block in re.findall(r'<script\b([^>]*)>(.*?)</script>', page, re.S):
             attributes, body = block
             # JSON data islands never execute, so the CSP does not block them.
-            assert 'src=' in attributes or 'application/json' in attributes or not body.strip(), \
+            assert 'src=' in attributes or re.search(r'type="application/(ld\+)?json"', attributes) or not body.strip(), \
                 f'inline script on {path}: {body.strip()[:60]}'
 
 
@@ -154,7 +154,7 @@ def test_member_pages_have_no_inline_script(signed_in, path):
         assert attribute not in page, f'{attribute} found on {path}'
     for attributes, body in re.findall(r'<script\b([^>]*)>(.*?)</script>', page, re.S):
         # JSON data islands (the search index) are inert under CSP.
-        assert 'src=' in attributes or 'application/json' in attributes or not body.strip(), \
+        assert 'src=' in attributes or re.search(r'type="application/(ld\+)?json"', attributes) or not body.strip(), \
             f'inline script on {path}'
 
 

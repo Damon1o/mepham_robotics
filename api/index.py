@@ -4053,7 +4053,9 @@ def chat_system_prompt():
     content = site()
     meeting = content.meeting
     facts = [f"The club meets {site_content.fmt_schedule(meeting)} in {meeting['room']} at {meeting['school']}.",
-             f"The club email is {content.general.contact_email}."]
+             f"The club email is {content.general.contact_email}.",
+             f"Signed-in members have the {content.resources.hero_title} at /resources: this week's meeting and next "
+             "competition, the team's links and guides, and a drivetrain calculator."]
     if content.assistant.knowledge:
         facts.append(content.assistant.knowledge)
     return CHAT_SYSTEM_PROMPT + ' Facts you can rely on: ' + ' '.join(facts)
@@ -4213,6 +4215,67 @@ def google_site_verification():
     return send_from_directory(_root, GOOGLE_SITE_VERIFICATION, mimetype='text/html')
 
 
+def club_jsonld():
+    """schema.org data about the club for search engines and AI crawlers, on every page."""
+    general, meeting = site().general, site().meeting
+    number = general.team_number
+    names = [general.short_name, f'Team {number}', f'{general.short_name} {number}', f'VEX Team {number}']
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'SportsTeam',
+        'name': general.club_name,
+        'alternateName': [n for n in dict.fromkeys(names) if n != general.club_name],
+        'description': general.ai_summary,
+        'slogan': general.tagline,
+        'sport': 'VEX V5 Robotics Competition',
+        'url': _public_url('index'),
+        'logo': _public_url('static', filename='assets/icons/apple-touch-icon.png'),
+        'image': _public_url('static', filename='assets/photos/hero.jpg'),
+        'email': general.contact_email,
+        'location': {
+            '@type': 'Place',
+            'name': meeting['school'],
+            'address': {'@type': 'PostalAddress', 'addressLocality': general.town,
+                        'addressRegion': general.region, 'addressCountry': 'US'},
+        },
+        'areaServed': ', '.join(p for p in (general.area, general.region) if p),
+        'sameAs': [url for _, _, url in site_content.social_links(site().social.links)],
+        'knowsAbout': ['VEX Robotics', 'Robotics', 'STEM', 'Engineering', 'Programming', 'CAD'],
+    }
+
+
+app.jinja_env.globals['club_jsonld'] = club_jsonld
+
+
+@app.route('/llms.txt')
+def llms_txt():
+    """A plain-text summary of the club for AI assistants (llmstxt.org), built from live data."""
+    general, meeting = site().general, site().meeting
+    view = achievements_view()
+    teams = [t for t in listed_teams() if not is_group(t)]
+    lines = [f'# {general.club_name}', '', f'> {general.ai_summary}', '', '## Facts', '',
+             f'- VEX Robotics Competition team number: {general.team_number}',
+             '- School: ' + ', '.join(p for p in (meeting['school'], general.town, general.area, general.region) if p),
+             f'- Meets: {site_content.fmt_schedule(meeting)} in {meeting["room"]}',
+             f'- Contact: {general.contact_email}']
+    if teams:
+        lines.append('- Robot teams: ' + ', '.join(
+            t['team_number'] + (f" ({t['nickname']})" if t.get('nickname') else '') for t in teams))
+    if view['total']:
+        lines.append(f"- Competition awards won: {view['total']} ("
+                     + ', '.join(f"{a['count']}× {a['title']}" for a in view['earned']) + ')')
+    for label, _, url in site_content.social_links(site().social.links):
+        lines.append(f'- {label}: {url}')
+    lines += ['', '## Pages', '',
+              f"- [About]({_public_url('about')}): mission, values, sub-teams and culture",
+              f"- [Achievements]({_public_url('achievements')}): every award, the competition log and live results",
+              f"- [Support us]({_public_url('donate')}): donations and sponsorship levels",
+              f"- [Contact]({_public_url('contact')}): join the club, sponsor us, or invite us to an event"]
+    lines += [f"- [Team {t['team_number']}]({_public_url('team_page', team_number=t['team_number'])}): "
+              'robot, members, awards and match results' for t in teams]
+    return Response('\n'.join(lines) + '\n', mimetype='text/plain')
+
+
 @app.route('/robots.txt')
 def robots_txt():
     lines = [
@@ -4224,6 +4287,8 @@ def robots_txt():
         'Disallow: /logout',
         'Disallow: /api/',
         'Disallow: /unsubscribe/',
+        # Members-only pages send crawlers to the sign-in page, so keep them out of the index.
+        *(f'Disallow: {url_for(endpoint)}' for _, endpoint, _, _, members in SEARCH_PAGES if members),
         f"Sitemap: {url_for('sitemap_xml', _external=True)}",
     ]
     return Response('\n'.join(lines), mimetype='text/plain')

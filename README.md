@@ -21,6 +21,7 @@ School competing in the VEX V5 Robotics Competition.
 ```text
 api/index.py            # The Flask application: routes, auth, admin, JSON APIs
 api/robotevents.py      # Cached RobotEvents v2 client for the team pages
+api/site_content.py     # Admin-editable copy and settings (Site settings), with their defaults
 templates/              # Jinja2 templates (base.html holds the site chrome)
   partials/             # Shared fragments
 static/css/styles.css   # Global design system + dark theme
@@ -29,6 +30,7 @@ static/js/script.js     # Site-wide behaviour (nav, search, forms, chatbot, anim
 static/js/theme.js      # Theme bootstrap, loaded before first paint
 static/js/team.js       # Team page: live skills panel, event results, STL viewer
 static/js/admin.js      # Admin dashboard behaviour
+static/js/resources.js  # Member Hub: library search, stars, drivetrain calculator
 tests/                  # pytest suite, backed by mongomock
 docs/superpowers/       # Design specs and implementation plans
 ```

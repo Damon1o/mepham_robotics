@@ -55,7 +55,7 @@ def test_dashboard_has_no_inline_script(admin, db):
     assert not re.search(r'\son(click|change|submit|keyup|input)=', page)
     for attributes, body in re.findall(r'<script\b([^>]*)>(.*?)</script>', page, re.S):
         # JSON data islands are inert under CSP; executable inline script is not.
-        assert 'src=' in attributes or 'application/json' in attributes or not body.strip()
+        assert 'src=' in attributes or re.search(r'type="application/(ld\+)?json"', attributes) or not body.strip()
 
 
 def test_dashboard_edit_buttons_carry_their_update_urls(admin, db):

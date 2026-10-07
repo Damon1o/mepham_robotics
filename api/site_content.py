@@ -182,9 +182,23 @@ SECTIONS = (
         Field('contact_email', 'email', 'Club email', 'damlin@bmchsd.com', max=254, required=True,
               hint='Shown on the contact page and used for replies about donations.'),
         Field('meta_description', 'textarea', 'Default search description',
-              'Mepham Robotics Club (Team 77628) — Building robots, coding futures, and competing in VEX Robotics.',
+              'Mepham Robotics Club (VEX Team 77628) is a student robotics team from Bellmore, Long Island, NY. '
+              'We build, code and compete in VEX V5 Robotics.',
               max=200, hint='What Google shows under the site name. About 150 characters.'),
-    ), blurb='Name, tagline, email'),
+        Field('town', 'text', 'Town', 'Bellmore', max=60, group='Search & AI',
+              hint='Helps people searching for robotics near them find the club.'),
+        Field('region', 'text', 'State', 'NY', max=40, group='Search & AI'),
+        Field('area', 'text', 'Area', 'Long Island', max=60, group='Search & AI'),
+        Field('team_number', 'text', 'VEX team number', '77628', max=12, pattern=r'[A-Za-z0-9-]+',
+              group='Search & AI'),
+        Field('ai_summary', 'textarea', 'How the club describes itself',
+              'Mepham Robotics is a world-class, student-led robotics team from Wellington C. Mepham High School in '
+              'Bellmore, Long Island, New York. Our VEX V5 teams design, build and program competition robots '
+              'year-round, and the club is open to every Mepham student with no experience needed.',
+              max=600, group='Search & AI',
+              hint='Public. Search engines and AI assistants read it from the page data and /llms.txt. They weigh it '
+                   'against our real results, so awards and RobotEvents rankings back it up.'),
+    ), blurb='Name, tagline, email, search & AI'),
 
     Section('social', 'Social links', 'at-sign', (
         Field('links', 'list', 'Accounts', [{'platform': 'instagram', 'url': 'https://instagram.com/mephamrobotics'}],
@@ -232,8 +246,8 @@ SECTIONS = (
               'innovative robots.', max=300, group='Sections'),
         Field('donate_button', 'text', 'Donation button', 'Donate Now', max=24, group='Sections'),
         Field('meta_description', 'textarea', 'Search description',
-              'Mepham Robotics Club (Team 77628) — Building robots, coding futures, and competing in VEX Robotics. '
-              'Join the legacy.', max=200, group='Search & sharing'),
+              'Mepham Robotics Club (VEX Team 77628): student robotics in Bellmore, Long Island, NY. We build, code '
+              'and compete in VEX V5 Robotics. Join the legacy.', max=200, group='Search & sharing'),
     ), page='index', blurb='Hero, countdown, sections'),
 
     Section('fundraisers', 'Fundraisers', 'piggy-bank', (
