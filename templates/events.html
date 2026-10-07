@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% set ev = site.events %}
+{% block title %}{{ ev.hero_title }} | {{ site.general.short_name }}{% endblock %}
+{% block meta_description %}{{ ev.meta_description }}{% endblock %}
+
+{% block page_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/events.css') }}">
+<link rel="alternate" type="text/calendar" title="{{ site.general.short_name }} events" href="{{ url_for('events_ics') }}">
+{% endblock %}
+
+{% from "partials/site_macros.html" import hero_attrs %}
+
+{#- 3:00 PM -#}
+{% macro clock(moment) -%}{{ fmt_time(moment.strftime('%H:%M')) }}{%- endmacro %}
+
+{#- "Sat, Oct 12 · 9:00 AM", "3:00–5:00 PM" for a meeting, "Oct 12 – Oct 14" across days. -#}
+{% macro when(item, with_day=True) -%}
+{%- if item.end.date() != item.start.date() -%}
+{{ item.start.strftime('%a, %b ') ~ item.start.day }} – {{ item.end.strftime('%a, %b ') ~ item.end.day }}
+{%- elif item.source == 'meeting' -%}
+{{ clock(item.start) }}–{{ clock(item.end) }}
+{%- else -%}
+{% if with_day %}{{ item.start.strftime('%a, %b ') ~ item.start.day }} · {% endif %}{{ clock(item.start) }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro badge(item) -%}
+<span class="ev-badge ev-k-{{ item.kind }}"><i data-lucide="{{ item.icon }}" aria-hidden="true"></i>{{ item.label }}</span>
+{%- endmacro %}
+
+{% macro link_attrs(url) -%}
+href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{% endif %}
+{%- endmacro %}
+
+{% macro add_menu(item) -%}
+<details class="ev-add">
+    <summary class="ev-btn ev-btn--ghost"><i data-lucide="calendar-plus" aria-hidden="true"></i> Add to calendar</summary>
+    <div class="ev-add-menu">
+        <a href="{{ google_url(item) }}" target="_blank" rel="noopener"><i data-lucide="external-link" aria-hidden="true"></i> Google Calendar</a>
+        {% if item.source == 'event' %}
+        <a href="{{ url_for('event_ics', event_id=item.id) }}" download><i data-lucide="download" aria-hidden="true"></i> Apple, Outlook &amp; others</a>
+        {% endif %}
+    </div>
+</details>
+{%- endmacro %}
+
+{% macro actions(item, big=False) -%}
+<div class="ev-actions">
+    {% if item.link %}
+    <a class="ev-btn{{ ' ev-btn--primary' if big }}" {{ link_attrs(item.link) }}>
+        {{- item.link_label or ('Event page' if item.source == 'event' else 'Learn more') }} <i data-lucide="arrow-up-right" aria-hidden="true"></i></a>
+    {% endif %}
+    {{ add_menu(item) }}
+    {% if item.location and item.source != 'meeting' %}
+    <a class="ev-btn ev-btn--ghost" href="{{ maps_url(item.location) }}" target="_blank" rel="noopener"><i data-lucide="navigation" aria-hidden="true"></i> Directions</a>
+    {% endif %}
+</div>
+{%- endmacro %}
+
+{% block content %}
+<div {{ hero_attrs(ev.hero_image) }}>
+    <div class="hero-content">
+        <h1>{{ ev.hero_title }}</h1>
+        {% if ev.hero_tagline %}<p>{{ ev.hero_tagline }}</p>{% endif %}
+    </div>
+    <div class="scroll-indicator"></div>
+</div>
+
+<nav class="breadcrumb">
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="separator">›</span>
+    <span class="current">{{ ev.hero_title }}</span>
+</nav>
+
+<div class="ev">
+    <!-- NEXT UP, MEETINGS, SUBSCRIBE -->
+    <div class="ev-top">
+        {% set s = spotlight %}
+        {% if s %}
+        {% set days_away = (s.start.date() - today).days %}
+        <article class="ev-spot ev-k-{{ s.kind }}" data-kind="{{ s.kind }}" aria-labelledby="ev-spot-name">
+            <p class="ev-kicker">Next up</p>
+            <div class="ev-spot-body">
+                <div class="ev-spot-date" aria-hidden="true">
+                    <span>{{ s.start.strftime('%b') }}</span>
+                    <strong>{{ s.start.day }}</strong>
+                    <span>{{ s.start.strftime('%a') }}</span>
+                </div>
+                <div class="ev-spot-text">
+                    {{ badge(s) }}
+                    <h2 id="ev-spot-name">{{ s.name }}</h2>
+                    <p class="ev-meta"><i data-lucide="clock" aria-hidden="true"></i> {{ when(s) }}</p>
+                    {% if s.location %}<p class="ev-meta"><i data-lucide="map-pin" aria-hidden="true"></i> {{ s.location }}</p>{% endif %}
+                    {% if s.details %}<p class="ev-details">{{ s.details }}</p>{% endif %}
+                </div>
+            </div>
+            {% if s.start > now %}
+            <div class="ev-countdown" data-ev-seconds="{{ (s.start - now).total_seconds()|int }}" role="timer"
+                aria-label="Starts {{ 'today' if days_away == 0 else 'tomorrow' if days_away == 1 else 'in ' ~ days_away ~ ' days' }}">
+                <span><b data-unit="days">{{ (s.start - now).days }}</b> days</span>
+                <span><b data-unit="hours">{{ ((s.start - now).seconds // 3600) }}</b> hrs</span>
+                <span><b data-unit="minutes">{{ ((s.start - now).seconds // 60) % 60 }}</b> min</span>
+                <span><b data-unit="seconds">{{ (s.start - now).seconds % 60 }}</b> sec</span>
+            </div>
+            {% else %}
+            <p class="ev-live"><span class="ev-pulse" aria-hidden="true"></span> Happening now</p>
+            {% endif %}
+            {{ actions(s, big=True) }}
+        </article>
+        {% else %}
+        <article class="ev-spot ev-spot--empty">
+            <p class="ev-kicker">Next up</p>
+            <i data-lucide="calendar-search" class="ev-empty-icon" aria-hidden="true"></i>
+            <p class="ev-empty">{{ ev.upcoming_empty }}</p>
+        </article>
+        {% endif %}
+
+        <div class="ev-side">
+            {% set m = site.meeting %}
+            {% if ev.show_meetings and m.days %}
+            <article class="ev-card ev-card--meet">
+                <p class="ev-kicker"><i data-lucide="calendar-clock" aria-hidden="true"></i> Every week</p>
+                <p class="ev-card-big">{{ fmt_schedule(m) }}</p>
+                <p class="ev-card-sub">{{ m.room }} · {{ m.school_short }}</p>
+                {% if next_meeting %}
+                {% set live = next_meeting[0] <= now %}
+                <p class="ev-card-next{% if live %} is-live{% endif %}">
+                    {% if live %}<span class="ev-pulse" aria-hidden="true"></span> In session until {{ clock(next_meeting[1]) }}
+                    {% else %}Next: <strong>{{ 'Today' if next_meeting[0].date() == today else next_meeting[0].strftime('%A, %b ') ~ next_meeting[0].day }}</strong> at {{ clock(next_meeting[0]) }}{% endif %}
+                </p>
+                {% endif %}
+                <p class="ev-card-note">New members welcome at any meeting. No experience needed.</p>
+            </article>
+            {% endif %}
+
+            <article class="ev-card ev-card--feed">
+                <p class="ev-kicker"><i data-lucide="rss" aria-hidden="true"></i> Never miss one</p>
+                <p class="ev-card-text">Subscribe once and every new event lands in your calendar on its own.</p>
+                <div class="ev-actions">
+                    <a class="ev-btn ev-btn--primary" href="{{ webcal_url }}"><i data-lucide="bell-plus" aria-hidden="true"></i> Subscribe</a>
+                    <a class="ev-btn ev-btn--ghost" href="https://calendar.google.com/calendar/r?cid={{ webcal_url|urlencode }}" target="_blank" rel="noopener">Google</a>
+                    <button type="button" class="ev-btn ev-btn--ghost" data-copy="{{ feed_url }}"><i data-lucide="link" aria-hidden="true"></i> <span>Copy link</span></button>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <!-- FILTERS -->
+    {% if kinds|length > 1 %}
+    <div class="ev-filters" role="group" aria-label="Show event types">
+        <button type="button" class="ev-chip is-on" data-filter="all" aria-pressed="true">All</button>
+        {% for key, label, icon, plural in kinds %}
+        <button type="button" class="ev-chip" data-filter="{{ key }}" aria-pressed="false">
+            <span class="ev-dot ev-k-{{ key }}" aria-hidden="true"></span>{{ plural }}
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="ev-main">
+        <!-- MONTH CALENDAR -->
+        <section class="ev-cal" id="calendar" aria-labelledby="ev-cal-title">
+            <header class="ev-cal-head">
+                <h2 id="ev-cal-title">{{ month_start.strftime('%B') }} <span>{{ month_start.year }}</span></h2>
+                <nav class="ev-cal-nav" aria-label="Change month">
+                    <a class="ev-icon-btn" href="{{ url_for('events_page', month=prev_month) }}#calendar" rel="nofollow"
+                        aria-label="Previous month"><i data-lucide="chevron-left" aria-hidden="true"></i></a>
+                    {% if not is_this_month %}<a class="ev-today-btn" href="{{ url_for('events_page') }}#calendar">Today</a>{% endif %}
+                    <a class="ev-icon-btn" href="{{ url_for('events_page', month=next_month) }}#calendar" rel="nofollow"
+                        aria-label="Next month"><i data-lucide="chevron-right" aria-hidden="true"></i></a>
+                </nav>
+            </header>
+
+            <div class="ev-weekdays" aria-hidden="true">
+                {% for d in ('Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat') %}<span>{{ d }}</span>{% endfor %}
+            </div>
+            <ol class="ev-days">
+                {% for week in weeks %}{% for day in week %}
+                {% set main = day['items']|rejectattr('kind', 'equalto', 'meeting')|list %}
+                {% set meets = day['items']|selectattr('kind', 'equalto', 'meeting')|list %}
+                <li class="ev-day{% if not day.in_month %} is-out{% endif %}{% if day.today %} is-today{% endif %}{% if day.past %} is-past{% endif %}{% if day['items'] %} has-items{% endif %}"
+                    data-kinds="{{ day['items']|map(attribute='kind')|unique|join(' ') }}">
+                    {% if day['items'] %}
+                    <button type="button" class="ev-day-num" data-day="{{ day.date.isoformat() }}" aria-controls="ev-dayview"
+                        aria-expanded="false"
+                        aria-label="{{ day.date.strftime('%A, %B ') ~ day.date.day }}: {{ day['items']|map(attribute='name')|join(', ') }}">{{ day.date.day }}</button>
+                    {% else %}
+                    <span class="ev-day-num">{{ day.date.day }}</span>
+                    {% endif %}
+                    {% if main or meets %}
+                    <div class="ev-day-items" aria-hidden="true">
+                        {% for item in main[:2] %}
+                        <span class="ev-pill ev-k-{{ item.kind }}" data-kind="{{ item.kind }}">{{ item.name }}</span>
+                        {% endfor %}
+                        {% if main|length > 2 %}<span class="ev-more" data-kind="{{ main[2:]|map(attribute='kind')|join(' ') }}">+{{ main|length - 2 }} more</span>{% endif %}
+                        {% for item in meets %}
+                        <span class="ev-pill ev-pill--soft ev-k-meeting" data-kind="meeting">{{ item.label }}</span>
+                        {% endfor %}
+                    </div>
+                    <span class="ev-dots" aria-hidden="true">
+                        {% for item in day['items'][:4] %}<span class="ev-dot ev-k-{{ item.kind }}" data-kind="{{ item.kind }}"></span>{% endfor %}
+                    </span>
+                    {% endif %}
+                </li>
+                {% endfor %}{% endfor %}
+            </ol>
+
+            <div class="ev-dayview" id="ev-dayview" aria-live="polite">
+                {% for week in weeks %}{% for day in week if day['items'] %}
+                <div class="ev-dayview-panel" data-day-panel="{{ day.date.isoformat() }}" hidden>
+                    <h3>{{ day.date.strftime('%A, %B ') ~ day.date.day }}</h3>
+                    <ul>
+                        {% for item in day['items'] %}
+                        <li class="ev-dayview-item" data-kind="{{ item.kind }}">
+                            <span class="ev-dot ev-k-{{ item.kind }}" aria-hidden="true"></span>
+                            <div>
+                                <strong>{% if item.link %}<a {{ link_attrs(item.link) }}>{{ item.name }}</a>{% else %}{{ item.name }}{% endif %}</strong>
+                                <span>{{ item.label }} · {{ when(item, with_day=False) }}{% if item.location %} · {{ item.location }}{% endif %}</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}{% endfor %}
+            </div>
+
+            <ul class="ev-legend" aria-label="Colour key">
+                {% for key, label, icon, plural in kinds %}<li><span class="ev-dot ev-k-{{ key }}" aria-hidden="true"></span>{{ label }}</li>{% endfor %}
+            </ul>
+        </section>
+
+        <!-- COMING UP -->
+        <section class="ev-list" aria-labelledby="ev-list-title">
+            <h2 id="ev-list-title" class="ev-heading">{{ ev.upcoming_heading }}</h2>
+            {% if upcoming_groups %}
+            {% for month, items in upcoming_groups %}
+            <div class="ev-month" data-month>
+                <h3 class="ev-month-name">{{ month.strftime('%B') }}{% if month.year != today.year %} {{ month.year }}{% endif %}</h3>
+                <ol class="ev-items">
+                    {% for item in items %}
+                    <li class="ev-item ev-k-{{ item.kind }}" data-kind="{{ item.kind }}" id="{{ item.id or loop.index }}">
+                        <div class="ev-item-date" aria-hidden="true">
+                            <span>{{ item.start.strftime('%a') }}</span>
+                            <strong>{{ item.start.day }}</strong>
+                        </div>
+                        <div class="ev-item-body">
+                            {{ badge(item) }}
+                            <h4>{{ item.name }}</h4>
+                            <p class="ev-meta"><i data-lucide="clock" aria-hidden="true"></i> {{ when(item) }}
+                                {%- if item.start <= now %} <span class="ev-now">Now</span>{% endif %}</p>
+                            {% if item.location %}<p class="ev-meta"><i data-lucide="map-pin" aria-hidden="true"></i> {{ item.location }}</p>{% endif %}
+                            {% if item.details %}<p class="ev-details">{{ item.details }}</p>{% endif %}
+                            {{ actions(item) }}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </div>
+            {% endfor %}
+            <p class="ev-empty ev-empty--filtered" hidden>Nothing of that type coming up.</p>
+            {% else %}
+            <p class="ev-empty">{{ ev.upcoming_empty }}</p>
+            {% endif %}
+
+            {% if recent %}
+            <div class="ev-recent">
+                <h3 class="ev-month-name">Recently</h3>
+                <ul>
+                    {% for item in recent %}
+                    <li><span>{{ item.start.strftime('%b ') ~ item.start.day }}</span> {{ item.name }}</li>
+                    {% endfor %}
+                </ul>
+                <a class="ev-more-link" href="{{ url_for('achievements') }}">Results and awards <i data-lucide="arrow-right" aria-hidden="true"></i></a>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+
+    {% if ev.invite_show %}
+    <!-- INVITE US -->
+    <section class="ev-invite" aria-labelledby="ev-invite-title">
+        <i data-lucide="bot" class="ev-invite-icon" aria-hidden="true"></i>
+        <div>
+            <h2 id="ev-invite-title">{{ ev.invite_heading }}</h2>
+            {% if ev.invite_body %}<p>{{ ev.invite_body }}</p>{% endif %}
+        </div>
+        {% if ev.invite_button and ev.invite_url %}<a class="ev-btn ev-btn--gold" {{ link_attrs(ev.invite_url) }}>{{ ev.invite_button }}</a>{% endif %}
+    </section>
+    {% endif %}
+</div>
+
+{% for event in jsonld %}
+<script type="application/ld+json">{{ event|tojson }}</script>
+{% endfor %}
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/events.js') }}" defer></script>
+{% endblock %}

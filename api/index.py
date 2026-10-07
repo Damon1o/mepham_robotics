@@ -26,8 +26,9 @@ import requests
 import mimetypes
 
 try:  # package import on Vercel, flat import when run from the api/ directory
-    from api import robotevents, site_content
+    from api import events, robotevents, site_content
 except ImportError:  # pragma: no cover
+    import events
     import robotevents
     import site_content
 
@@ -631,6 +632,8 @@ SEARCH_PAGES = [
      'about mission values history team culture sub-teams diversity', False),
     ('Achievements', 'achievements', 'Awards, competition results, and season highlights',
      'awards achievements competitions results trophies seasons', False),
+    ('Events', 'events_page', 'Calendar of competitions, outreach, fundraisers and meetings',
+     'events calendar schedule competitions tournaments outreach meetings dates subscribe ics', False),
     ('Donate', 'donate', 'Support our team through sponsorship and donations',
      'donate sponsor support fundraising givebutter tiers', False),
     ('Contact', 'contact', 'Get in touch — contact form, meeting schedule, and FAQ',
@@ -658,7 +661,7 @@ def search_index(teams):
     signed_in = 'user' in session
     pages = [{'title': title, 'url': url_for(endpoint), 'desc': desc, 'keywords': keywords, 'members': members}
              for title, endpoint, desc, keywords, members in SEARCH_PAGES if signed_in or not members]
-    pages[5:5] = [_search_entry(t) for t in teams]
+    pages[6:6] = [_search_entry(t) for t in teams]
     return pages
 
 
@@ -1135,7 +1138,8 @@ def index():
         event['month'] = event['date'].strftime('%b').upper()
         event['day'] = event['date'].strftime('%d')
         event['time'] = event['date'].strftime('%I:%M %p')
-    competition = upcoming_events[0] if upcoming_events else None
+    # The countdown is for the next competition, not the next library visit.
+    competition = next((e for e in upcoming_events if events.kind_of(e) in events.COMPETITIVE_KINDS), None)
     settings = site().fundraisers
     fundraisers = (site_content.fundraiser_cards(settings.entries, club_now(), settings.max_shown)
                    if settings.mode != 'never' else [])
@@ -1181,17 +1185,18 @@ def achievements_view():
     team_cards.sort(key=lambda c: -c['total'])
 
     limit = site().achievements.history_limit or 12
-    events = list(db['competitions'].find({'date': {'$lt': club_now()}}).sort('date', -1).limit(limit + 1))
-    more_events = len(events) > limit
-    events = events[:limit]
-    for event in events:
+    log = list(db['competitions'].find({'date': {'$lt': club_now()}, **events.competitive_query()})
+               .sort('date', -1).limit(limit + 1))
+    more_events = len(log) > limit
+    log = log[:limit]
+    for event in log:
         # VEX seasons start in late spring: an April event belongs to the season that began last year.
         start = event['date'].year - (event['date'].month < 5)
         event['season'] = f'{start}–{str(start + 1)[-2:]}'
     return {
         'earned': earned, 'unearned': unearned, 'has_awards': bool(categories),
         'featured': [a for a in earned if a['featured']],
-        'total': total, 'team_cards': team_cards, 'past_events': events, 'more_events': more_events,
+        'total': total, 'team_cards': team_cards, 'past_events': log, 'more_events': more_events,
         'top_count': max((a['count'] for a in earned), default=0),
     }
 
@@ -1200,6 +1205,114 @@ def achievements_view():
 def achievements():
     return render_template('achievements.html', active_page='achievements', **achievements_view(),
                            live_results=bool(robotevents.get_token()) and site().achievements.show_live)
+
+# --- Events page and calendar feeds ---------------------------------------------------
+UPCOMING_LIST_LIMIT = 40
+RECENT_EVENTS_SHOWN = 4
+# How far back the subscription feed reaches, so last month's events stay in calendars.
+FEED_HISTORY = datetime.timedelta(days=90)
+
+
+def _club_iso(moment):
+    """ISO 8601 with the club's UTC offset, as schema.org dates want. Naive if the zone is unknown."""
+    try:
+        from zoneinfo import ZoneInfo
+        return moment.replace(tzinfo=ZoneInfo(CLUB_TIMEZONE)).isoformat()
+    except Exception:
+        return moment.isoformat()
+
+
+def _calendar_sources(since):
+    """Events from the database and published fundraisers that end on or after `since`."""
+    items = [events.event_item(row) for row in db['competitions'].find(
+        {'date': {'$gte': since - datetime.timedelta(days=1)}}).sort('date', 1)]
+    if site().events.show_fundraisers:
+        items += events.fundraiser_items(site().fundraisers.entries)
+    return events.sort_items(i for i in items if i and i['end'] >= since)
+
+
+def events_jsonld(items):
+    """schema.org Event entries for upcoming events that say where they are."""
+    general = site().general
+    organizer = {'@type': 'SportsTeam', 'name': general.club_name, 'url': _public_url('index')}
+    return [{
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        'name': item['name'],
+        'startDate': _club_iso(item['start']),
+        'endDate': _club_iso(item['end']),
+        'eventStatus': 'https://schema.org/EventScheduled',
+        'eventAttendanceMode': 'https://schema.org/OfflineEventAttendanceMode',
+        'location': {'@type': 'Place', 'name': item['location'], 'address': item['location']},
+        'description': item['details'] or f"{item['label']} with {general.club_name}.",
+        'organizer': organizer,
+        'url': item['link'] if item['link'].startswith('http') else _public_url('events_page'),
+    } for item in items if item['source'] == 'event' and item['location']]
+
+
+@app.route('/events')
+def events_page():
+    now = club_now()
+    today = now.date()
+    content = site().events
+    year, month = events.parse_month(request.args.get('month'), today)
+    first, last = events.grid_bounds(year, month)
+
+    items = _calendar_sources(datetime.datetime.combine(min(first, today), datetime.time()))
+    upcoming = [i for i in items if i['end'] >= now][:UPCOMING_LIST_LIMIT]
+    on_grid = [i for i in items if i['start'].date() <= last and i['end'].date() >= first]
+    if content.show_meetings:
+        on_grid += events.meeting_items(site().meeting, first, last, content.meeting_name)
+
+    # The spotlight is the next real event; a fundraiser only when nothing else is coming.
+    spotlight = next((i for i in upcoming if i['source'] == 'event'), upcoming[0] if upcoming else None)
+    recent = []
+    if content.show_recent:
+        recent = [events.event_item(row) for row in db['competitions'].find(
+            {'date': {'$lt': now}, **events.competitive_query()}).sort('date', -1).limit(RECENT_EVENTS_SHOWN)]
+    prev_month, next_month = events.shift_month(year, month, -1), events.shift_month(year, month, 1)
+    feed_url = _public_url('events_ics')
+    return render_template(
+        'events.html', active_page='events', now=now, today=today,
+        month_start=datetime.date(year, month, 1), weeks=events.month_weeks(year, month, on_grid, today),
+        prev_month='%04d-%02d' % prev_month, next_month='%04d-%02d' % next_month,
+        is_this_month=(year, month) == (today.year, today.month),
+        upcoming=upcoming, upcoming_groups=events.by_month(upcoming), spotlight=spotlight,
+        next_meeting=site_content.next_meeting(site().meeting, now) if content.show_meetings else None,
+        kinds=events.kinds_present(on_grid + upcoming), recent=[r for r in recent if r],
+        feed_url=feed_url, webcal_url='webcal://' + feed_url.split('://', 1)[-1],
+        google_url=lambda item: events.google_url(item, CLUB_TIMEZONE), maps_url=events.maps_url,
+        jsonld=events_jsonld(upcoming))
+
+
+def _ics_response(body, filename):
+    response = Response(body, mimetype='text/calendar')
+    response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+    response.headers['Cache-Control'] = 'public, max-age=900'
+    return response
+
+
+@app.route('/events.ics')
+def events_ics():
+    """The whole calendar as a feed calendar apps subscribe to and refresh on their own."""
+    now = club_now()
+    content, general = site().events, site().general
+    return _ics_response(events.ics_calendar(
+        f'{general.short_name} events', _calendar_sources(now - FEED_HISTORY), request.host, CLUB_TIMEZONE,
+        datetime.datetime.now(datetime.timezone.utc),
+        meeting=site().meeting if content.show_meetings else None, meeting_name=content.meeting_name,
+        meeting_from=(now - FEED_HISTORY).date()), 'events.ics')
+
+
+@app.route('/events/<event_id>.ics')
+def event_ics(event_id):
+    """One event, for "Add to calendar" in Apple Calendar, Outlook and the rest."""
+    item = events.event_item(_find_by_id('competitions', event_id) or {})
+    if not item:
+        abort(404)
+    return _ics_response(events.ics_calendar(item['name'], [item], request.host, CLUB_TIMEZONE,
+                                             datetime.datetime.now(datetime.timezone.utc)), 'event.ics')
+
 
 @app.route('/contact')
 def contact():
@@ -1431,7 +1544,8 @@ def resources():
     week = None
     if hub.show_week:
         meeting = site_content.next_meeting(site().meeting, now)
-        competition = db['competitions'].find_one({'date': {'$gte': now}}, sort=[('date', 1)])
+        competition = db['competitions'].find_one({'date': {'$gte': now}, **events.competitive_query()},
+                                                  sort=[('date', 1)])
         week = {'meeting': meeting, 'competition': competition,
                 'meeting_today': bool(meeting) and meeting[0].date() == now.date(),
                 'meeting_live': bool(meeting) and meeting[0] <= now,
@@ -1903,6 +2017,7 @@ def admin_dashboard():
         site_summary=site_summary, announcement=announcement,
         announcement_on=site_content.announcement_live(announcement, club_now()),
         reset_link=reset_link, reset_link_user=reset_link_user,
+        event_kinds=events.KINDS, kind_of=events.kind_of,
         event_locations=sorted({c['location'] for c in db['competitions'].find(
             {'location': {'$nin': [None, '']}}, {'location': 1})}),
         team_number_suggestions=next_team_numbers(t.get('team_number') for t in teams if not is_group(t)))
@@ -1928,6 +2043,12 @@ def parse_event_date(value):
 EVENT_TEXT_MAX = 200
 
 
+def _event_kind(value):
+    if value not in events.KINDS:
+        raise UserFacingError('Pick an event type from the list.')
+    return value
+
+
 def _admin_redirect(tab):
     return redirect(url_for('admin_dashboard', _anchor=tab))
 
@@ -1944,6 +2065,10 @@ def admin_add_competition():
         link = _clean_url(request.form.get('comp_link'), 'Event link')
         if link:
             event['link'] = link
+        event['kind'] = _event_kind(request.form.get('comp_kind') or events.DEFAULT_KIND)
+        details = _clean_text(request.form.get('comp_details'), events.DETAILS_MAX, 'Details')
+        if details:
+            event['details'] = details
         db['competitions'].insert_one(event)
         flash(f'Added {event["name"]}.', 'success')
         log_activity('competition_add', f'Added new competition: {event["name"]}',
@@ -2907,7 +3032,7 @@ def admin_api_award(id):
     return jsonify({'ok': True, 'count': count})
 
 
-EVENT_FIELDS = ('name', 'location', 'date', 'link')
+EVENT_FIELDS = ('name', 'kind', 'location', 'date', 'link', 'details')
 
 
 @app.route('/admin/api/events/<id>', methods=['POST'])
@@ -2927,6 +3052,10 @@ def admin_api_event(id):
             value = _clean_text(body.get('value'), EVENT_TEXT_MAX, 'Location')
         elif field == 'link':
             value = _clean_url(body.get('value'), 'Event link')
+        elif field == 'kind':
+            value = _event_kind(body.get('value'))
+        elif field == 'details':
+            value = _clean_text(body.get('value'), events.DETAILS_MAX, 'Details')
         else:
             value = parse_event_date(body.get('value'))
     except UserFacingError as e:
@@ -4055,7 +4184,18 @@ def chat_system_prompt():
     facts = [f"The club meets {site_content.fmt_schedule(meeting)} in {meeting['room']} at {meeting['school']}.",
              f"The club email is {content.general.contact_email}.",
              f"Signed-in members have the {content.resources.hero_title} at /resources: this week's meeting and next "
-             "competition, the team's links and guides, and a drivetrain calculator."]
+             "competition, the team's links and guides, and a drivetrain calculator.",
+             "Every competition, outreach event, fundraiser and meeting is on the events page at /events, "
+             "which also offers a calendar feed to subscribe to."]
+    try:
+        coming = [i for i in _calendar_sources(club_now()) if i['source'] == 'event'][:5]
+    except Exception:
+        logger.exception('chat_system_prompt: could not list upcoming events')
+        coming = []
+    if coming:
+        facts.append('Upcoming events: ' + '; '.join(
+            f"{i['name']} ({i['label'].lower()}) on {i['start']:%A, %B} {i['start'].day}"
+            + (f" at {i['location']}" if i['location'] else '') for i in coming) + '.')
     if content.assistant.knowledge:
         facts.append(content.assistant.knowledge)
     return CHAT_SYSTEM_PROMPT + ' Facts you can rely on: ' + ' '.join(facts)
@@ -4199,6 +4339,7 @@ STATIC_PUBLIC_PAGES = [
     ('index', 1.0, 'daily'),
     ('about', 0.8, 'monthly'),
     ('achievements', 0.8, 'weekly'),
+    ('events_page', 0.8, 'daily'),
     ('donate', 0.7, 'monthly'),
     ('contact', 0.6, 'monthly'),
     ('safety_quiz', 0.5, 'yearly'),
@@ -4266,9 +4407,16 @@ def llms_txt():
                      + ', '.join(f"{a['count']}× {a['title']}" for a in view['earned']) + ')')
     for label, _, url in site_content.social_links(site().social.links):
         lines.append(f'- {label}: {url}')
+    upcoming = [i for i in _calendar_sources(club_now()) if i['source'] == 'event'][:6]
+    if upcoming:
+        lines += ['', '## Upcoming events', '']
+        lines += [f"- {i['start']:%A, %B} {i['start'].day}, {i['start'].year}: {i['name']} ({i['label'].lower()})"
+                  + (f", {i['location']}" if i['location'] else '') for i in upcoming]
     lines += ['', '## Pages', '',
               f"- [About]({_public_url('about')}): mission, values, sub-teams and culture",
               f"- [Achievements]({_public_url('achievements')}): every award, the competition log and live results",
+              f"- [Events]({_public_url('events_page')}): competitions, outreach, fundraisers and meetings, "
+              f"with a calendar feed at {_public_url('events_ics')}",
               f"- [Support us]({_public_url('donate')}): donations and sponsorship levels",
               f"- [Contact]({_public_url('contact')}): join the club, sponsor us, or invite us to an event"]
     lines += [f"- [Team {t['team_number']}]({_public_url('team_page', team_number=t['team_number'])}): "

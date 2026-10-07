@@ -136,6 +136,7 @@
         <p class="timeline-empty">{{ home.events_empty }}</p>
         {% endif %}
     </div>
+    <p class="timeline-more"><a href="{{ url_for('events_page') }}">See the full calendar <i data-lucide="arrow-right" aria-hidden="true"></i></a></p>
 </section>
 
 {% set fr = site.fundraisers %}
