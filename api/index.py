@@ -4053,7 +4053,9 @@ def chat_system_prompt():
     content = site()
     meeting = content.meeting
     facts = [f"The club meets {site_content.fmt_schedule(meeting)} in {meeting['room']} at {meeting['school']}.",
-             f"The club email is {content.general.contact_email}."]
+             f"The club email is {content.general.contact_email}.",
+             f"Signed-in members have the {content.resources.hero_title} at /resources: this week's meeting and next "
+             "competition, the team's links and guides, and a drivetrain calculator."]
     if content.assistant.knowledge:
         facts.append(content.assistant.knowledge)
     return CHAT_SYSTEM_PROMPT + ' Facts you can rely on: ' + ' '.join(facts)
@@ -4224,6 +4226,8 @@ def robots_txt():
         'Disallow: /logout',
         'Disallow: /api/',
         'Disallow: /unsubscribe/',
+        # Members-only pages send crawlers to the sign-in page, so keep them out of the index.
+        *(f'Disallow: {url_for(endpoint)}' for _, endpoint, _, _, members in SEARCH_PAGES if members),
         f"Sitemap: {url_for('sitemap_xml', _external=True)}",
     ]
     return Response('\n'.join(lines), mimetype='text/plain')

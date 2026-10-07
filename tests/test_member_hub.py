@@ -1,5 +1,6 @@
 """Member Hub (/resources): editable library, this week tiles, drivetrain calculator."""
 import datetime
+import re
 
 import pytest
 
@@ -129,3 +130,37 @@ def test_external_links_open_safely(member):
     page = member.get('/resources').get_data(as_text=True)
     assert 'href="https://cad.onshape.com/" target="_blank" rel="noopener"' in page
     assert 'href="/glossary" target' not in page
+
+
+# --- Around the site ----------------------------------------------------------------------
+
+MEMBER_ONLY = ('/resources', '/glossary', '/branding', '/standards', '/notebook')
+
+
+def test_members_only_pages_stay_out_of_the_sitemap(client):
+    body = client.get('/sitemap.xml').get_data(as_text=True)
+    for path in MEMBER_ONLY:
+        assert f'{path}<' not in body
+
+
+def test_robots_keeps_crawlers_off_members_only_pages(client):
+    body = client.get('/robots.txt').get_data(as_text=True)
+    for path in MEMBER_ONLY:
+        assert f'Disallow: {path}\n' in body + '\n'
+
+
+def test_nav_footer_and_breadcrumbs_name_the_hub(member):
+    page = member.get('/glossary').get_data(as_text=True)
+    assert len(re.findall(r'href="/resources"[^>]*>Member Hub</a>', page)) == 3
+    assert '>Resources</a>' not in page
+
+
+def test_visitors_get_no_hub_links(client):
+    assert 'href="/resources"' not in client.get('/').get_data(as_text=True)
+
+
+def test_hub_title_flows_everywhere(admin):
+    save(admin, 'resources.hero_title', 'Pit Crew HQ')
+    assert 'Back to the Pit Crew HQ' in admin.get('/standards').get_data(as_text=True)
+    with app_module.app.test_request_context('/'):
+        assert 'Pit Crew HQ at /resources' in app_module.chat_system_prompt()

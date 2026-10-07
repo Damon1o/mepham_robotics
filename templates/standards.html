@@ -8,7 +8,7 @@
 <nav class="breadcrumb">
     <a href="{{ url_for('index') }}">Home</a>
     <span class="separator">›</span>
-    <a href="{{ url_for('resources') }}">Resources</a>
+    <a href="{{ url_for('resources') }}">{{ site.resources.hero_title }}</a>
     <span class="separator">›</span>
     <span class="current">Design Standards</span>
 </nav>
@@ -79,7 +79,7 @@
     </ul>
 
     <div class="page-back-cta">
-        <a href="{{ url_for('resources') }}" class="cta-button cta-primary"><i data-lucide="arrow-left"></i> Back to Resources</a>
+        <a href="{{ url_for('resources') }}" class="cta-button cta-primary"><i data-lucide="arrow-left"></i> Back to the {{ site.resources.hero_title }}</a>
     </div>
 </div>
 {% endblock %}
