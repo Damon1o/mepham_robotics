@@ -67,7 +67,7 @@ CONSTRUCTION_PAGES = {
     'glossary': 'Glossary',
     'branding': 'Branding guide',
     'standards': 'Design standards',
-    'resources': 'Member resources',
+    'resources': 'Member Hub',
     'notebook': 'Engineering notebook',
     'safety_quiz': 'Safety quiz',
     'privacy': 'Privacy policy',
@@ -87,6 +87,17 @@ LAYOUT_AWARD_STYLES = {
     'scoreboard': 'banners',
     'timeline': 'banners',
 }
+# Member Hub library shelves: key -> (name, lucide icon), in the order the page shows them.
+RESOURCE_SHELVES = {
+    'start': ('Start here', 'flag'),
+    'code': ('Programming', 'code'),
+    'build': ('Build & CAD', 'cog'),
+    'strategy': ('Strategy & scouting', 'chart-column'),
+    'compete': ('Competition day', 'trophy'),
+    'learn': ('Learning library', 'book-open'),
+    'team': ('Team documents', 'users'),
+}
+RESOURCES_MAX = 60
 FUNDRAISERS_MAX = 20
 MONEY_MAX = 1_000_000
 
@@ -121,6 +132,10 @@ class Section:
 
 def _card(icon, title, text, link_label='', link_url=''):
     return {'icon': icon, 'title': title, 'text': text, 'link_label': link_label, 'link_url': link_url}
+
+
+def _resource(shelf, title, url, note=''):
+    return {'shelf': shelf, 'title': title, 'url': url, 'note': note}
 
 
 CARD_ITEMS = (
@@ -474,6 +489,46 @@ SECTIONS = (
               "and we'll show you around.", max=300, group='Interested? band'),
         Field('cta_button', 'text', 'Band button', 'Join the Club', max=24, group='Interested? band'),
     ), blurb='Shared copy on every team page'),
+
+    Section('resources', 'Member Hub', 'library', (
+        Field('hero_title', 'text', 'Big title', 'Member Hub', max=40, required=True, group='Top of the page'),
+        Field('hero_tagline', 'text', 'Tagline', 'Everything you need between the bell and the buzzer', max=80,
+              group='Top of the page'),
+        Field('show_week', 'toggle', 'Show "This week"', True, group='This week',
+              hint='Next meeting, next competition and your team, worked out automatically.'),
+        Field('library', 'list', 'Library', [
+            _resource('start', 'Safety quiz', '/safety-quiz', 'Pass it before you touch a tool.'),
+            _resource('start', 'Design standards', '/standards', 'How we build, wire and name things.'),
+            _resource('start', 'Robotics glossary', '/glossary', 'Every word you will hear in the shop.'),
+            _resource('start', 'Engineering notebook', '/notebook', 'What judges read. Log your work daily.'),
+            _resource('code', 'VEXcode V5 API', 'https://api.vexcode.cloud/v5/', 'Every class and call in VEXcode.'),
+            _resource('code', 'PROS docs', 'https://pros.cs.purdue.edu/', 'C++ toolchain, tutorials and API.'),
+            _resource('code', 'Team GitHub', 'https://github.com/MephamRobotics', 'Our robot code. Pull before you push.'),
+            _resource('code', 'PID explained', '/glossary#P', 'Tuning loops without the guesswork.'),
+            _resource('build', 'Onshape', 'https://cad.onshape.com/', 'Team CAD workspace.'),
+            _resource('build', 'V5 parts catalog', 'https://www.vexrobotics.com/v5/products',
+                      'Sizes, part numbers and prices.'),
+            _resource('build', 'Gear ratios', '/glossary#G', 'Speed versus torque, in plain words.'),
+            _resource('strategy', 'RobotEvents', 'https://www.robotevents.com/', 'Teams, events, rankings and skills.'),
+            _resource('strategy', 'Path planner', 'https://jerryio.com/vex_path_generator/',
+                      'Draw autonomous routes on the field.'),
+            _resource('strategy', 'Game manual', 'https://link.vex.com/docs/2025-2026/game-manual',
+                      "This season's rules. Read it twice."),
+            _resource('compete', 'Pre-match checklist', '/standards#checklist', 'Run it before every match.'),
+            _resource('learn', 'VEX Knowledge Base', 'https://kb.vex.com/hc/en-us/categories/360002333191-V5',
+                      'Official how-tos for every V5 part.'),
+            _resource('learn', 'REC Foundation', 'https://www.roboticseducation.org/',
+                      'Who runs the competitions, and the judge guide.'),
+            _resource('team', 'Branding guide', '/branding', 'Colors, fonts and logos for anything we make.'),
+        ], items=(Field('shelf', 'choice', 'Shelf', 'learn', choices={k: v[0] for k, v in RESOURCE_SHELVES.items()}),
+                  Field('title', 'text', 'Title', '', max=50, required=True),
+                  Field('url', 'link', 'Link', '', max=300, required=True),
+                  Field('note', 'text', 'One-line note', '', max=90)),
+              max_items=RESOURCES_MAX, group='Library',
+              hint='"Start here" links show as numbered steps for new members.'),
+        Field('show_calculator', 'toggle', 'Show the drivetrain calculator', True, group='Tools',
+              hint='Motor cartridge, gears and wheels in; speed and pushing power out.'),
+    ), page='resources', blurb='Library, this week, tools'),
 
     Section('footer', 'Footer', 'panel-bottom', (
         Field('newsletter_heading', 'text', 'Newsletter heading', 'Stay Updated', max=40),
@@ -843,6 +898,34 @@ def fmt_schedule(meeting):
     if start[-2:] == end[-2:]:
         start = start[:-3]
     return f'{fmt_days(meeting["days"])} · {start}–{end}' if meeting['days'] else f'{start}–{end}'
+
+
+def next_meeting(meeting, now):
+    """(start, end) of the next meeting that has not ended yet, or None without meeting days.
+
+    Python counts Monday as 0 and DAY_NAMES starts on Sunday, so days are shifted by one.
+    """
+    days = set(meeting.get('days') or ())
+    if not days:
+        return None
+    (sh, sm), (eh, em) = (map(int, meeting[k].split(':')) for k in ('start', 'end'))
+    for ahead in range(8):
+        day = now.date() + datetime.timedelta(days=ahead)
+        if (day.weekday() + 1) % 7 not in days:
+            continue
+        start = datetime.datetime.combine(day, datetime.time(sh, sm))
+        end = datetime.datetime.combine(day, datetime.time(eh, em))
+        if end > now:
+            return start, end
+    return None
+
+
+def resource_shelves(library):
+    """Library rows grouped by shelf, in RESOURCE_SHELVES order: [(key, name, icon, rows)]."""
+    rows = [r for r in library or () if r.get('title') and r.get('url')]
+    return [(key, name, icon, [r for r in rows if r.get('shelf') == key])
+            for key, (name, icon) in RESOURCE_SHELVES.items()
+            if any(r.get('shelf') == key for r in rows)]
 
 
 def social_links(links):

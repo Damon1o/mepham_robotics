@@ -641,8 +641,8 @@ SEARCH_PAGES = [
      'branding colors fonts logo maroon gold style guide', True),
     ('Design Standards', 'standards', 'Build standards, code style, and naming conventions',
      'standards design build code style naming conventions', True),
-    ('Member Resources', 'resources', 'Guides, links, and tooling for team members',
-     'resources guides links tools members downloads', True),
+    ('Member Hub', 'resources', 'Team links, this week at a glance, and the drivetrain calculator',
+     'resources hub guides links tools members downloads calculator gear ratio drivetrain speed', True),
     ('Safety Quiz', 'safety_quiz', 'Interactive safety quiz — test your workshop knowledge',
      'safety quiz test workshop lab rules ppe', False),
     ('Engineering Notebook', 'notebook', 'Public engineering notebook — design process and logs',
@@ -1426,7 +1426,19 @@ def credits_page():
 @app.route('/resources')
 @role_required('member')
 def resources():
-    return render_template('resources.html', active_page='resources')
+    now = club_now()
+    hub = site().resources
+    week = None
+    if hub.show_week:
+        meeting = site_content.next_meeting(site().meeting, now)
+        competition = db['competitions'].find_one({'date': {'$gte': now}}, sort=[('date', 1)])
+        week = {'meeting': meeting, 'competition': competition,
+                'meeting_today': bool(meeting) and meeting[0].date() == now.date(),
+                'meeting_live': bool(meeting) and meeting[0] <= now,
+                'days_to_competition': (competition['date'].date() - now.date()).days if competition else None,
+                'rosters': _own_rosters()}
+    return render_template('resources.html', active_page='resources', week=week, now=now,
+                           shelves=site_content.resource_shelves(hub.library))
 
 @app.route('/glossary')
 @role_required('member')

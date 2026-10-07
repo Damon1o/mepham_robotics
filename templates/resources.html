@@ -1,20 +1,35 @@
 {% extends "base.html" %}
 
-{% block title %}Student Resources | Mepham Robotics{% endblock %}
-{% block meta_description %}Internal team resources, tutorials, and documentation for Mepham Robotics members.{%
-endblock %}
-
+{% set hub = site.resources %}
+{% block title %}{{ hub.hero_title }} | {{ site.general.short_name }}{% endblock %}
+{% block meta_description %}Team links, this week at a glance, and build tools for Mepham Robotics members.{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/resources.css') }}">
 {% endblock %}
 
+{% from "partials/site_macros.html" import hero_attrs %}
+
+{% macro host(url) -%}
+{%- if url.startswith('http') -%}{{ url.split('/')[2].removeprefix('www.') }}{%- else -%}On our site{%- endif -%}
+{%- endmacro %}
+
+{% macro star(row) -%}
+<button type="button" class="hub-star" data-star="{{ row.url }}" aria-pressed="false"
+    aria-label="Star {{ row.title }}" title="Star it to find it fast">
+    <i data-lucide="star" aria-hidden="true"></i>
+</button>
+{%- endmacro %}
+
+{% macro link_attrs(row) -%}
+href="{{ row.url }}"{% if row.url.startswith('http') %} target="_blank" rel="noopener"{% endif %}
+{%- endmacro %}
+
 {% block content %}
-<!-- HERO SECTION -->
-<div class="hero-image">
+<div {{ hero_attrs(None) }}>
     <div class="hero-content">
-        <h1>Student Resources</h1>
-        <p>Internal Training & Documentation</p>
+        <h1>{{ hub.hero_title }}</h1>
+        {% if hub.hero_tagline %}<p>{{ hub.hero_tagline }}</p>{% endif %}
     </div>
     <div class="scroll-indicator"></div>
 </div>
@@ -22,57 +37,212 @@ endblock %}
 <nav class="breadcrumb">
     <a href="{{ url_for('index') }}">Home</a>
     <span class="separator">›</span>
-    <span class="current">Resources</span>
+    <span class="current">{{ hub.hero_title }}</span>
 </nav>
 
-<section class="resources-grid">
-    <div class="resource-card">
-        <i data-lucide="laptop" class="resource-icon"></i>
-        <h2 class="resource-title">Programming</h2>
-        <ul class="resource-links">
-            <li><a href="https://api.vexcode.cloud/v5/" target="_blank" rel="noopener">VEXcode V5 API Docs</a></li>
-            <li><a href="https://pros.cs.purdue.edu/" target="_blank" rel="noopener">PROS C++ Tutorials</a></li>
-            <li><a href="https://github.com/MephamRobotics" target="_blank" rel="noopener">Team GitHub Repository</a></li>
-            <li><a href="{{ url_for('glossary') }}#P">Internal PID Guide (Glossary)</a></li>
-        </ul>
+<div class="hub">
+    {% if week %}
+    <div class="hub-week" aria-labelledby="hub-week-title">
+        <p class="hub-kicker" id="hub-week-title">This week · {{ now.strftime('%A, %B') }} {{ now.day }}</p>
+        <div class="hub-week-grid">
+            {% set m = week.meeting %}
+            <article class="hub-tile hub-tile--meeting{% if week.meeting_live %} is-live{% endif %}">
+                <span class="hub-tile-label"><i data-lucide="calendar" aria-hidden="true"></i> Next meeting</span>
+                {% if m %}
+                <strong class="hub-tile-big">
+                    {%- if week.meeting_live %}Now{% elif week.meeting_today %}Today{% else %}{{ m[0].strftime('%A') }}{% endif -%}
+                </strong>
+                <span class="hub-tile-line">
+                    {% if week.meeting_live %}<span class="hub-pulse" aria-hidden="true"></span> In session until {{ fmt_time(m[1].strftime('%H:%M')) }}
+                    {% else %}{{ fmt_time(m[0].strftime('%H:%M')) }}–{{ fmt_time(m[1].strftime('%H:%M')) }}{% endif %}
+                </span>
+                <span class="hub-tile-sub">{{ site.meeting.room }}</span>
+                {% else %}
+                <strong class="hub-tile-big">TBD</strong>
+                <span class="hub-tile-sub">No meeting days are set.</span>
+                {% endif %}
+            </article>
+
+            {% set c = week.competition %}
+            <article class="hub-tile hub-tile--compete">
+                <span class="hub-tile-label"><i data-lucide="trophy" aria-hidden="true"></i> Next competition</span>
+                {% if c %}
+                <strong class="hub-tile-big">
+                    {%- if week.days_to_competition == 0 %}Today{% elif week.days_to_competition == 1 %}Tomorrow
+                    {%- else %}{{ week.days_to_competition }}<small> days</small>{% endif -%}
+                </strong>
+                <span class="hub-tile-line">
+                    {%- if c.link %}<a href="{{ c.link }}" target="_blank" rel="noopener">{{ c.name }}</a>{% else %}{{ c.name }}{% endif -%}
+                </span>
+                <span class="hub-tile-sub">{{ c.date.strftime('%a %b') }} {{ c.date.day }}{% if c.location %} · {{ c.location }}{% endif %}</span>
+                {% else %}
+                <strong class="hub-tile-big">TBD</strong>
+                <span class="hub-tile-sub">Nothing on the calendar yet.</span>
+                {% endif %}
+            </article>
+
+            <article class="hub-tile hub-tile--team">
+                <span class="hub-tile-label"><i data-lucide="users" aria-hidden="true"></i> Your rosters</span>
+                {% if week.rosters %}
+                <ul class="hub-rosters">
+                    {% for t in week.rosters %}
+                    <li><a href="{{ url_for('team_page', team_number=t.team_number) }}">
+                        {%- if t.kind == 'group' %}{{ t.title or t.team_number }}{% else %}{{ t.team_number }}{% endif -%}
+                    </a></li>
+                    {% endfor %}
+                </ul>
+                {% if my_team_url() %}<a class="hub-tile-action" href="{{ my_team_url() }}">Edit your page <i data-lucide="arrow-right" aria-hidden="true"></i></a>{% endif %}
+                {% else %}
+                <strong class="hub-tile-big hub-tile-big--soft">Free agent</strong>
+                <span class="hub-tile-sub">Ask a captain to put you on a team.</span>
+                {% endif %}
+            </article>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if shelves %}
+    <div class="hub-browse">
+    <div class="hub-bar" role="search">
+        <label class="hub-search">
+            <i data-lucide="search" aria-hidden="true"></i>
+            <span class="visually-hidden">Search the library</span>
+            <input type="search" id="hub-q" placeholder="Search links, docs, tools…" autocomplete="off">
+            <kbd aria-hidden="true">/</kbd>
+        </label>
+        <div class="hub-chips" role="group" aria-label="Show">
+            <button type="button" class="hub-chip is-on" data-shelf="" aria-pressed="true">All</button>
+            <button type="button" class="hub-chip" data-shelf="starred" aria-pressed="false">
+                <i data-lucide="star" aria-hidden="true"></i> Starred <span class="hub-chip-count" data-star-count>0</span>
+            </button>
+            {% for key, name, icon, rows in shelves %}
+            <button type="button" class="hub-chip" data-shelf="{{ key }}" aria-pressed="false">{{ name }}</button>
+            {% endfor %}
+        </div>
     </div>
 
-    <!-- MECHANICS -->
-    <div class="resource-card">
-        <i data-lucide="settings" class="resource-icon"></i>
-        <h2 class="resource-title">Mechanics & Design</h2>
-        <ul class="resource-links">
-            <li><a href="https://cad.onshape.com/" target="_blank" rel="noopener">Onshape CAD</a></li>
-            <li><a href="https://www.vexrobotics.com/v5/products" target="_blank" rel="noopener">V5 Parts Catalog</a></li>
-            <li><a href="{{ url_for('glossary') }}#G">Gear Ratio Reference</a></li>
-            <li><a href="{{ url_for('standards') }}">Build Standards</a></li>
-            <li><a href="{{ url_for('standards') }}#checklist">Pre-Match Checklist</a></li>
-        </ul>
-    </div>
+    <div class="hub-library" id="hub-library">
+        {% for key, name, icon, rows in shelves %}
+        {% if key == 'start' %}
+        <div class="hub-start" data-shelf-box="start">
+            <h2 class="hub-heading"><i data-lucide="{{ icon }}" aria-hidden="true"></i> {{ name }}</h2>
+            <ol class="hub-steps">
+                {% for row in rows %}
+                <li class="hub-step" data-row data-shelf="start" data-url="{{ row.url }}"
+                    data-text="{{ (row.title ~ ' ' ~ row.note ~ ' ' ~ name)|lower }}">
+                    <a {{ link_attrs(row) }}>
+                        <span class="hub-step-num" aria-hidden="true">{{ '%02d' % loop.index }}</span>
+                        <strong>{{ row.title }}</strong>
+                        {% if row.note %}<span>{{ row.note }}</span>{% endif %}
+                    </a>
+                    {{ star(row) }}
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+        {% endfor %}
 
-    <!-- STRATEGY -->
-    <div class="resource-card">
-        <i data-lucide="chart-column" class="resource-icon"></i>
-        <h2 class="resource-title">Strategy & Data</h2>
-        <ul class="resource-links">
-            <li><a href="https://www.robotevents.com/" target="_blank" rel="noopener">RobotEvents Database</a></li>
-            <li><a href="{{ url_for('contact') }}">Team Scouting (Contact Lead)</a></li>
-            <li><a href="https://link.vex.com/docs/2025-2026/game-manual" target="_blank" rel="noopener">Game Manual</a></li>
-            <li><a href="https://jerryio.com/vex_path_generator/" target="_blank" rel="noopener">Autonomous Path Planner</a></li>
-        </ul>
+        <div class="hub-shelves">
+            {% for key, name, icon, rows in shelves if key != 'start' %}
+            <div class="hub-shelf" data-shelf-box="{{ key }}">
+                <h2 class="hub-heading"><i data-lucide="{{ icon }}" aria-hidden="true"></i> {{ name }}
+                    <span class="hub-shelf-count">{{ rows|length }}</span></h2>
+                <ul class="hub-links">
+                    {% for row in rows %}
+                    <li class="hub-link" data-row data-shelf="{{ key }}" data-url="{{ row.url }}"
+                        data-text="{{ (row.title ~ ' ' ~ row.note ~ ' ' ~ name ~ ' ' ~ host(row.url))|lower }}">
+                        <a {{ link_attrs(row) }}>
+                            <strong>{{ row.title }}
+                                {%- if row.url.startswith('http') %} <i data-lucide="arrow-up-right" class="hub-ext" aria-label="opens in a new tab"></i>{% endif -%}
+                            </strong>
+                            {% if row.note %}<span class="hub-note">{{ row.note }}</span>{% endif %}
+                            <span class="hub-host">{{ host(row.url) }}</span>
+                        </a>
+                        {{ star(row) }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="hub-empty" id="hub-empty" hidden>
+            <span data-empty-search>Nothing matches “<span data-empty-q></span>”.</span>
+            <span data-empty-stars>No stars yet. Tap the <i data-lucide="star" aria-hidden="true"></i> on any link to keep it here.</span>
+        </p>
     </div>
+    </div>
+    {% endif %}
 
-    <!-- LEARNING LIBRARY -->
-    <div class="resource-card">
-        <i data-lucide="book-open" class="resource-icon"></i>
-        <h2 class="resource-title">Learning Library</h2>
-        <ul class="resource-links">
-            <li><a href="https://kb.vex.com/hc/en-us/categories/360002333191-V5" target="_blank" rel="noopener">VEX Knowledge
-                    Base</a></li>
-            <li><a href="https://www.roboticseducation.org/" target="_blank" rel="noopener">REC Foundation</a></li>
-            <li><a href="{{ url_for('glossary') }}">Robotics Glossary</a></li>
-        </ul>
+    {% if hub.show_calculator %}
+    <div class="hub-calc" id="drivetrain" data-calc>
+        <div class="hub-calc-head">
+            <p class="hub-kicker">Tool</p>
+            <h2 class="hub-heading hub-heading--big">Drivetrain calculator</h2>
+            <p class="hub-calc-lede">Pick a cartridge, gears and wheels. See how fast the robot goes and how hard it pushes.</p>
+            <div class="hub-presets" role="group" aria-label="Presets">
+                <button type="button" class="hub-chip" data-preset="600,36,48,3.25,6">Fast · 450 rpm</button>
+                <button type="button" class="hub-chip" data-preset="600,36,60,3.25,6">Balanced · 360 rpm</button>
+                <button type="button" class="hub-chip" data-preset="200,1,1,4,4">Pusher · 200 rpm</button>
+            </div>
+        </div>
+
+        <form class="hub-calc-inputs">
+            <fieldset class="hub-cartridge">
+                <legend>Motor cartridge</legend>
+                <label class="is-red"><input type="radio" name="rpm" value="100"><span>Red<small>100 rpm</small></span></label>
+                <label class="is-green"><input type="radio" name="rpm" value="200"><span>Green<small>200 rpm</small></span></label>
+                <label class="is-blue"><input type="radio" name="rpm" value="600" checked><span>Blue<small>600 rpm</small></span></label>
+            </fieldset>
+            <label class="hub-field">Gear on the motor
+                <select name="drive">
+                    <option value="1">Direct drive</option>
+                    {% for n in (12, 24, 36, 48, 60, 72, 84) %}<option value="{{ n }}"{% if n == 36 %} selected{% endif %}>{{ n }} teeth</option>{% endfor %}
+                </select>
+            </label>
+            <label class="hub-field">Gear on the wheel
+                <select name="driven">
+                    <option value="1">Direct drive</option>
+                    {% for n in (12, 24, 36, 48, 60, 72, 84) %}<option value="{{ n }}"{% if n == 48 %} selected{% endif %}>{{ n }} teeth</option>{% endfor %}
+                </select>
+            </label>
+            <label class="hub-field">Wheel size
+                <select name="wheel">
+                    {% for d in ('2', '2.75', '3.25', '4') %}<option value="{{ d }}"{% if d == '3.25' %} selected{% endif %}>{{ d }}″</option>{% endfor %}
+                </select>
+            </label>
+            <label class="hub-field">Drive motors
+                <select name="motors">
+                    {% for n in (2, 4, 6, 8) %}<option value="{{ n }}"{% if n == 6 %} selected{% endif %}>{{ n }} motors</option>{% endfor %}
+                </select>
+            </label>
+        </form>
+
+        <div class="hub-calc-out" aria-live="polite">
+            <div class="hub-readout hub-readout--hero">
+                <span>Top speed</span>
+                <strong><output data-out="fps">0</output><small> ft/s</small></strong>
+                <em>Crosses the 12 ft field in <output data-out="cross">0</output> s</em>
+            </div>
+            <div class="hub-readout"><span>Wheel speed</span><strong><output data-out="wheel">0</output><small> rpm</small></strong></div>
+            <div class="hub-readout"><span>Gear ratio</span><strong><output data-out="ratio">1:1</output></strong></div>
+            <div class="hub-readout"><span>Pushing force</span><strong><output data-out="push">0</output><small> lbf</small></strong></div>
+            <div class="hub-balance">
+                <div class="hub-balance-ends"><span>Torque</span><span>Speed</span></div>
+                <div class="hub-balance-track"><span class="hub-balance-dot" data-balance></span></div>
+            </div>
+            <p class="hub-calc-note">Free speed and stall force with no friction, so real numbers come in lower. Use it to compare setups.</p>
+        </div>
     </div>
-</section>
+    {% endif %}
+
+    {% if session.get('role') == 'admin' %}
+    <p class="hub-admin"><i data-lucide="pencil" aria-hidden="true"></i> Change these links in
+        <a href="{{ url_for('admin_site', _anchor='resources') }}">Site settings → {{ hub.hero_title }}</a>.</p>
+    {% endif %}
+</div>
 {% endblock %}
 
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/resources.js') }}" defer></script>
+{% endblock %}
