@@ -11,7 +11,23 @@
 <script src="{{ url_for('static', filename='js/donate.js') }}" defer></script>
 {% endblock %}
 
-{% from "partials/site_macros.html" import hero_attrs %}
+{% from "partials/site_macros.html" import hero_attrs, site_photo %}
+
+{#- One finished fundraiser: photo, month, name, what it raised against its goal. -#}
+{% macro past_card(f) -%}
+<li class="dn-past-card{% if not f.image %} dn-past-card--no-photo{% endif %}">
+    {% if f.image %}<div class="dn-past-photo">{{ site_photo({'image': f.image}, '(max-width: 600px) 100vw, 340px', decorative=True) }}</div>{% endif %}
+    <div class="dn-past-body">
+        <p class="dn-past-date"><time datetime="{{ f.day.isoformat() }}">{{ f.day.strftime('%B %Y') }}</time></p>
+        <h3>{{ f.name }}</h3>
+        {% if f.raised is not none %}
+        <p class="dn-past-raised"><strong>${{ '{:,}'.format(f.raised) }}</strong> raised{% if f.goal %} of ${{ '{:,}'.format(f.goal) }}{% endif %}</p>
+        {% if f.percent is not none %}<progress max="100" value="{{ f.percent }}" aria-label="{{ f.name }}: {{ f.percent }}% of the goal"></progress>{% endif %}
+        {% endif %}
+        {% if f.description %}<p class="dn-past-text">{{ f.description }}</p>{% endif %}
+    </div>
+</li>
+{%- endmacro %}
 {% set donate = site.donate %}
 {% set show_impact = donate.show_impact and donate.impact %}
 
@@ -92,6 +108,32 @@
         {% endif %}
     </div>
 </section>
+
+<!-- PAST FUNDRAISERS -->
+{% if past_fundraisers %}
+{% set shown = 6 %}
+<section id="track-record" class="dn-section dn-past fade-in-section" aria-labelledby="past-heading">
+    <header class="dn-head">
+        <p class="dn-eyebrow">Past fundraisers</p>
+        <h2 id="past-heading">{{ site.fundraisers.history_heading }}</h2>
+        {% if past_raised %}
+        <p class="dn-past-total"><strong>${{ '{:,}'.format(past_raised) }}</strong> raised across
+            {{ past_fundraisers|length }} fundraiser{{ 's' if past_fundraisers|length != 1 }}. Thank you.</p>
+        {% endif %}
+    </header>
+    <ul class="dn-past-grid">
+        {% for f in past_fundraisers[:shown] %}{{ past_card(f) }}{% endfor %}
+    </ul>
+    {% if past_fundraisers|length > shown %}
+    <details class="dn-past-more">
+        <summary>See all {{ past_fundraisers|length }} fundraisers</summary>
+        <ul class="dn-past-grid">
+            {% for f in past_fundraisers[shown:] %}{{ past_card(f) }}{% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+</section>
+{% endif %}
 
 <!-- SPONSORSHIP LEVELS -->
 {% if donate.tiers %}

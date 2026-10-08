@@ -182,6 +182,77 @@ def test_multi_day_fundraiser_is_live_until_it_ends():
     assert site_content.fundraiser_cards([entry()], now, 4) == []
 
 
+# --- Past fundraisers -----------------------------------------------------------------
+
+def past(**overrides):
+    row = {'name': 'Spring Raffle', 'date': '2025-04-12', 'raised': 800, 'goal': 1000,
+           'description': 'New motors.', 'image': None}
+    row.update(overrides)
+    return row
+
+
+def test_group_members_can_add_past_fundraisers(client, db, make_user, groups):
+    user = login(client, make_user, 'finn')
+    join(db, 'fundraising', user)
+    resp = save(client, 'fundraisers.history', [past()])
+    assert resp.status_code == 200, resp.get_json()
+    page = client.get('/manage/fundraisers').get_data(as_text=True)
+    assert 'Earlier fundraisers' in page and 'type="date"' in page
+
+
+@pytest.mark.parametrize('bad', [{'name': ''}, {'date': ''}, {'date': '2025-02-30'}, {'date': 'last spring'},
+                                 {'raised': -1}])
+def test_bad_past_fundraisers_are_rejected(client, make_user, groups, bad):
+    login(client, make_user, 'eddie', role='editor')
+    assert save(client, 'fundraisers.history', [past(**bad)]).status_code == 400
+
+
+def test_past_list_merges_ended_entries_newest_first():
+    now = datetime.datetime(2026, 10, 7)
+    entries = [entry(name='Car Wash', starts='2026-06-01T09:00', raised=450),
+               entry(name='Gala', starts='2026-05-01T18:00', hidden=True),
+               entry(name='Future Sale', starts=FUTURE),
+               entry(name='Spring Raffle', starts='2025-04-12T10:00', raised=1)]
+    rows, total = site_content.past_fundraisers(entries, [past()], now)
+    assert [r['name'] for r in rows] == ['Car Wash', 'Spring Raffle']
+    # The history copy wins over the same fundraiser in the main list.
+    assert rows[1]['raised'] == 800 and rows[1]['percent'] == 80
+    assert total == 1250
+    assert rows[0]['percent'] is None
+
+
+def test_donate_page_shows_the_track_record(client, db):
+    put(db, history=[past(), past(name='Bottle Drive', date='2024-11-02', raised=200, goal=None, description='')],
+        entries=[entry(name='Car Wash', starts=PAST, raised=50)])
+    html = client.get('/donate').get_data(as_text=True)
+    assert 'Our Fundraising Track Record' in html
+    assert '$1,050</strong> raised across\n            3 fundraisers' in html
+    assert html.index('Spring Raffle') < html.index('Bottle Drive') < html.index('Car Wash')
+    assert '$800</strong> raised of $1,000' in html and 'value="80"' in html
+
+
+def test_track_record_hides_when_off_or_empty(client, db):
+    assert 'track-record' not in client.get('/donate').get_data(as_text=True)
+    put(db, history=[past()], show_history=False)
+    assert 'track-record' not in client.get('/donate').get_data(as_text=True)
+
+
+def test_past_fundraisers_land_on_the_events_calendar(client, db):
+    put(db, history=[past(date='2025-04-12')])
+    html = client.get('/events?month=2025-04').get_data(as_text=True)
+    panel = html.split('data-day-panel="2025-04-12"')[1].split('</div>')[0]
+    assert 'Spring Raffle' in panel and 'All day' in panel
+
+
+def test_past_fundraisers_are_all_day_in_calendar_files():
+    from api import events
+    [item] = events.history_items([past()])
+    body = events.ics_calendar('x', [item], 'example.org', 'America/New_York',
+                               datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc))
+    assert 'DTSTART;VALUE=DATE:20250412' in body and 'DTEND;VALUE=DATE:20250413' in body
+    assert 'dates=20250412%2F20250413' in events.google_url(item, 'America/New_York')
+
+
 def test_limit_and_percent_cap():
     now = datetime.datetime(2099, 1, 1)
     cards = site_content.fundraiser_cards([entry(goal=100, raised=250)] * 5, now, 3)

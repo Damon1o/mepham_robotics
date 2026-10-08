@@ -262,6 +262,152 @@ svg.dn-embed-fallback-icon {
 
 /* --- SPONSORSHIP LEVELS --- */
 
+/* --- PAST FUNDRAISERS --- */
+
+.dn-past-total {
+    margin: 0.75rem 0 0;
+    color: var(--dn-muted);
+    font-size: 1.1rem;
+}
+
+.dn-past-total strong {
+    color: var(--dn-heading);
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+}
+
+.dn-past-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--spacing-md);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dn-past-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--dn-surface);
+    border: 3px solid var(--dn-line);
+    border-radius: 20px;
+    box-shadow: var(--dn-shadow);
+    overflow: hidden;
+}
+
+/* Without a photo, a gold stripe stands in for it. */
+.dn-past-card--no-photo {
+    border-top-width: 10px;
+    border-top-color: var(--accent-gold);
+}
+
+.dn-past-photo {
+    aspect-ratio: 16 / 9;
+    border-bottom: 3px solid var(--dn-line);
+    overflow: hidden;
+}
+
+.dn-past-photo picture,
+.dn-past-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dn-past-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 1.1rem 1.25rem 1.3rem;
+}
+
+.dn-past-date {
+    margin: 0;
+    color: var(--dn-heading);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.dn-past-card h3 {
+    margin: 0;
+    color: var(--dn-ink);
+    font-size: 1.25rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.dn-past-raised {
+    margin: 0;
+    color: var(--dn-muted);
+}
+
+.dn-past-raised strong {
+    color: var(--dn-heading);
+    font-size: 1.15rem;
+}
+
+.dn-past-card progress {
+    display: block;
+    width: 100%;
+    height: 0.85rem;
+    border: 2px solid var(--dn-line);
+    border-radius: 999px;
+    background: var(--dn-soft);
+    overflow: hidden;
+    appearance: none;
+}
+
+.dn-past-card progress::-webkit-progress-bar {
+    background: var(--dn-soft);
+}
+
+.dn-past-card progress::-webkit-progress-value {
+    background: linear-gradient(90deg, var(--maroon-dark), var(--maroon-accent));
+}
+
+.dn-past-card progress::-moz-progress-bar {
+    background: linear-gradient(90deg, var(--maroon-dark), var(--maroon-accent));
+}
+
+.dn-past-text {
+    margin: 0.2rem 0 0;
+    color: var(--dn-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.dn-past-more {
+    margin-top: var(--spacing-md);
+}
+
+.dn-past-more > summary {
+    width: fit-content;
+    margin: 0 auto var(--spacing-md);
+    padding: 0.6rem 1.25rem;
+    border: 3px solid var(--dn-line);
+    border-radius: 999px;
+    background: var(--dn-surface);
+    color: var(--dn-ink);
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+}
+
+.dn-past-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.dn-past-more[open] > summary {
+    display: none;
+}
+
+/* --- SPONSORSHIP LEVELS --- */
+
 .dn-tiers {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
