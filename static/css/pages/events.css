@@ -719,6 +719,34 @@ button.ev-day-num:hover {
     font-weight: 700;
 }
 
+/* Flipping months in place (events.js): the new month slides in from its side. */
+.ev-cal.is-loading .ev-days {
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+
+.ev-days.is-entering-next {
+    animation: ev-from-right 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ev-days.is-entering-prev {
+    animation: ev-from-left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes ev-from-right {
+    from {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+}
+
+@keyframes ev-from-left {
+    from {
+        opacity: 0;
+        transform: translateX(-24px);
+    }
+}
+
 /* Phones swap the pills for dots; see Responsive. */
 .ev-dots {
     display: none;
@@ -1132,7 +1160,9 @@ button.ev-day-num:hover {
 @media (prefers-reduced-motion: reduce) {
     .ev-pulse,
     .ev-add-menu,
-    .ev-dayview-panel {
+    .ev-dayview-panel,
+    .ev-days.is-entering-next,
+    .ev-days.is-entering-prev {
         animation: none;
     }
 
