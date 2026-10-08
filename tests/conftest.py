@@ -22,6 +22,9 @@ def no_robotevents_token(monkeypatch):
     from api import robotevents
     for name in robotevents.TOKEN_ENV_VARS:
         monkeypatch.delenv(name, raising=False)
+    # Never send real email from the suite; tests that need it use the outbox fixture.
+    monkeypatch.delenv('RESEND_API_KEY', raising=False)
+    monkeypatch.delenv('MAIL_FROM', raising=False)
 
 
 class CsrfClient(FlaskClient):
