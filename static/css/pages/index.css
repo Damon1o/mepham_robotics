@@ -360,6 +360,28 @@
     opacity: 0.7;
 }
 
+.timeline-more {
+    margin: 1.5rem 0 0;
+    text-align: center;
+}
+
+.timeline-more a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--maroon-dark);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.timeline-more a:hover {
+    text-decoration: underline;
+}
+
+[data-theme="dark"] .timeline-more a {
+    color: #e6b8b9;
+}
+
 /* Contrast in dark mode: #944547 heading 2.7:1, #666 body 3.1:1. */
 [data-theme="dark"] .donate-container h2 {
     color: #e6b8b9;

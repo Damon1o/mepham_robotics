@@ -61,6 +61,7 @@ CONSTRUCTION_PAGES = {
     'index': 'Homepage',
     'about': 'About',
     'achievements': 'Achievements',
+    'events_page': 'Events',
     'contact': 'Contact',
     'donate': 'Donate',
     'team_page': 'Team pages',
@@ -484,6 +485,34 @@ SECTIONS = (
               'Our history of excellence in VEX Robotics competitions, including awards and match results.',
               max=200, group='Search & sharing'),
     ), page='achievements', blurb='Sections, headings, competition log, live results'),
+
+    Section('events', 'Events page', 'calendar-days', (
+        Field('hero_title', 'text', 'Big title', 'Events', max=40, required=True, group='Top of the page'),
+        Field('hero_tagline', 'text', 'Tagline', 'Competitions, outreach and every meeting in one place', max=80,
+              group='Top of the page'),
+        Field('hero_image', 'image', 'Background photo', None, group='Top of the page'),
+        Field('show_meetings', 'toggle', 'Show weekly meetings', True, group='Calendar',
+              hint='Every meeting day from Meetings & location, on the calendar and in the subscription feed.'),
+        Field('meeting_name', 'text', 'Meeting name', 'Club meeting', max=40, required=True, group='Calendar'),
+        Field('show_fundraisers', 'toggle', 'Show fundraisers', True, group='Calendar',
+              hint='Published fundraisers from the Fundraisers settings.'),
+        Field('upcoming_heading', 'text', 'Heading', 'Coming Up', max=60, group='Coming up',
+              hint='The events themselves are added on the dashboard.', hint_link=('Events', 'events')),
+        Field('upcoming_empty', 'text', 'When nothing is scheduled',
+              'Nothing on the schedule yet. Subscribe and new events show up in your calendar on their own.',
+              max=160, group='Coming up'),
+        Field('show_recent', 'toggle', 'Show recent competitions', True, group='Coming up'),
+        Field('invite_show', 'toggle', 'Show the "Invite us" band', True, group='Invite us'),
+        Field('invite_heading', 'text', 'Heading', 'Bring robots to your event', max=60, group='Invite us'),
+        Field('invite_body', 'textarea', 'Text',
+              'Schools, libraries, scout troops and street fairs: we bring competition robots, let kids take the '
+              'controls, and talk about how they work.', max=300, group='Invite us'),
+        Field('invite_button', 'text', 'Button', 'Invite us', max=24, group='Invite us'),
+        Field('invite_url', 'link', 'Button link', '/contact', max=300, group='Invite us'),
+        Field('meta_description', 'textarea', 'Search description',
+              'Upcoming VEX Robotics competitions, outreach events and weekly meetings for Mepham Robotics '
+              '(Team 77628). Add them to your calendar.', max=200, group='Search & sharing'),
+    ), page='events_page', blurb='Calendar, coming up, invite band'),
 
     Section('teams', 'Team pages', 'bot', (
         Field('layout', 'choice', 'Default layout', DEFAULT_TEAM_LAYOUT, choices=TEAM_LAYOUTS, group='Layout',

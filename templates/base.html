@@ -75,6 +75,7 @@
 
             <a href="{{ url_for('achievements') }}" {% if active_page=='achievements' %} class="active" {% endif
                 %}>Achievements</a>
+            <a href="{{ url_for('events_page') }}" {% if active_page=='events' %} class="active" {% endif %}>Events</a>
             <a href="{{ url_for('donate') }}" {% if active_page=='donate' %} class="active" {% endif %}>Donate</a>
             <a href="{{ url_for('contact') }}" {% if active_page=='contact' %} class="active" {% endif %}>Contact</a>
 
@@ -148,6 +149,7 @@
                 <a href="{{ url_for('index') }}">Home</a>
                 <a href="{{ url_for('about') }}">About</a>
                 <a href="{{ url_for('achievements') }}">Achievements</a>
+                <a href="{{ url_for('events_page') }}">Events</a>
                 <a href="{{ url_for('donate') }}">Donate</a>
                 <a href="{{ url_for('contact') }}">Contact</a>
             </div>

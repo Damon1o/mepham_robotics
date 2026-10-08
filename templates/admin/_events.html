@@ -3,6 +3,11 @@
 <div class="data-item event-item event-inline" data-event-id="{{ comp._id }}">
     <input type="text" class="inline-input inline-input--title" value="{{ comp.name }}" maxlength="200"
         data-event-field="name" aria-label="Event name" required>
+    <select class="inline-input" data-event-field="kind" aria-label="Type of {{ comp.name }}">
+        {% for key, (label, icon) in event_kinds.items() %}
+        <option value="{{ key }}" data-icon="{{ icon }}"{% if kind_of(comp) == key %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
     <input type="text" class="inline-input" value="{{ comp.location or '' }}" maxlength="200"
         data-event-field="location" aria-label="Location for {{ comp.name }}" placeholder="Location"
         list="dl-event-locations" autocomplete="off">
@@ -10,6 +15,9 @@
         data-event-field="date" aria-label="Date and time for {{ comp.name }}">
     <input type="url" class="inline-input inline-input--link" value="{{ comp.link or '' }}" maxlength="500"
         data-event-field="link" aria-label="Event page link for {{ comp.name }}" placeholder="Event page (optional)">
+    <input type="text" class="inline-input inline-input--details" value="{{ comp.details or '' }}" maxlength="300"
+        data-event-field="details" aria-label="Details for {{ comp.name }}"
+        placeholder="Details for the events page (optional): what to expect, who can come">
     <span class="field-status" aria-hidden="true"></span>
     <form class="form-flush" action="{{ url_for('admin_delete_competition', comp_id=comp._id) }}" method="POST"
         data-confirm-delete="event" data-confirm-name="{{ comp.name }}">
@@ -27,9 +35,10 @@
         <input type="search" id="events_filter" class="panel-filter panel-filter--compact" placeholder="Filter events…">
         {% endcall %}
         <p class="form-hint">Click any field to change it; it saves when you leave the field (Enter saves, Esc
-            undoes). The soonest event drives the homepage countdown. Add the RobotEvents link so visitors can
-            find the event page.</p>
-        <div class="event-head" aria-hidden="true"><span>Event</span><span>Location</span><span>When</span><span>Link</span></div>
+            undoes). Everything here is on the <a href="{{ url_for('events_page') }}">events page</a> and its
+            calendar feed. The soonest competition or scrimmage drives the homepage countdown. Add the RobotEvents
+            link so visitors can find the event page.</p>
+        <div class="event-head" aria-hidden="true"><span>Event</span><span>Type</span><span>Location</span><span>When</span><span>Link</span></div>
         <div class="data-list list-events">
             {% for comp in upcoming %}{{ event_row(comp) }}{% else %}
             <p class="list-empty">No upcoming events. Add one below.</p>
@@ -41,6 +50,12 @@
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <label class="visually-hidden" for="f-comp_name">Event name</label>
             <input id="f-comp_name" type="text" name="comp_name" placeholder="Event name" maxlength="200" required>
+            <label class="visually-hidden" for="f-comp_kind">Type</label>
+            <select id="f-comp_kind" name="comp_kind">
+                {% for key, (label, icon) in event_kinds.items() %}
+                <option value="{{ key }}" data-icon="{{ icon }}">{{ label }}</option>
+                {% endfor %}
+            </select>
             <label class="visually-hidden" for="f-comp_location">Location</label>
             <input id="f-comp_location" type="text" name="comp_location" placeholder="Location" maxlength="200"
                 list="dl-event-locations" autocomplete="off">
@@ -51,6 +66,9 @@
             <input id="f-comp_date" type="datetime-local" name="comp_date" required>
             <label class="visually-hidden" for="f-comp_link">Event page link</label>
             <input id="f-comp_link" type="url" name="comp_link" placeholder="https://www.robotevents.com/… (optional)" maxlength="500">
+            <label class="visually-hidden" for="f-comp_details">Details</label>
+            <input id="f-comp_details" class="inline-create-wide" type="text" name="comp_details" maxlength="300"
+                placeholder="Details for the events page (optional)">
             <button type="submit" class="admin-btn admin-btn-success">Add</button>
         </form>
     </div>
