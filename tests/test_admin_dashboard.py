@@ -38,7 +38,7 @@ def test_sponsor_create_then_update(admin, db, uploads):
 
     admin.post('/admin/save-sponsor', data={
         'sponsor_id': str(sponsor['_id']), 'name': 'Acme', 'website': 'https://acme.example',
-        'level': 'Platinum', 'logo': (io.BytesIO(b'img'), 'logo.png'),
+        'level': 'Platinum', 'logo': (io.BytesIO(b'\x89PNG\r\n\x1a\n'), 'logo.png'),
     }, content_type='multipart/form-data')
     assert db['sponsors'].count_documents({}) == 1
     updated = db['sponsors'].find_one({'_id': sponsor['_id']})

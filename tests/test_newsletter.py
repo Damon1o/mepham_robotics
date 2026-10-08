@@ -59,15 +59,32 @@ def test_signup_is_rate_limited(client, db):
 def test_unsubscribe_removes_the_address(client, db):
     client.post('/api/newsletter', json={'email': 'fan@example.com'})
     token = db['newsletter_subscribers'].find_one({})['unsubscribe_token']
-    resp = client.get(f'/unsubscribe/{token}')
+    resp = client.post(f'/unsubscribe/{token}')
     assert resp.status_code == 200
     assert b'unsubscribed' in resp.data
     assert db['newsletter_subscribers'].count_documents({}) == 0
 
 
+def test_opening_the_unsubscribe_link_only_asks(client, db):
+    """Mail scanners fetch every link; a GET must not remove anyone."""
+    client.post('/api/newsletter', json={'email': 'fan@example.com'})
+    token = db['newsletter_subscribers'].find_one({})['unsubscribe_token']
+    resp = client.get(f'/unsubscribe/{token}')
+    assert resp.status_code == 200
+    assert b'Unsubscribe from the newsletter?' in resp.data
+    assert db['newsletter_subscribers'].count_documents({}) == 1
+
+
+def test_one_click_unsubscribe_needs_no_session(raw_client, db):
+    """RFC 8058 one-click posts come from the mail provider, with no CSRF token."""
+    db['newsletter_subscribers'].insert_one({'email': 'fan@example.com', 'unsubscribe_token': 'tok123'})
+    assert raw_client.post('/unsubscribe/tok123').status_code == 200
+    assert db['newsletter_subscribers'].count_documents({}) == 0
+
+
 def test_unsubscribe_with_unknown_token_is_harmless(client, db):
     client.post('/api/newsletter', json={'email': 'fan@example.com'})
-    resp = client.get('/unsubscribe/nope')
+    resp = client.post('/unsubscribe/nope')
     assert resp.status_code == 200
     assert db['newsletter_subscribers'].count_documents({}) == 1
 

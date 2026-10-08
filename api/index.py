@@ -23,7 +23,6 @@ from werkzeug.utils import secure_filename
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
 import requests
-import mimetypes
 
 try:  # package import on Vercel, flat import when run from the api/ directory
     from api import events, robotevents, site_content
@@ -39,6 +38,11 @@ logger = logging.getLogger(__name__)
 # Vercel Blob configuration
 BLOB_READ_WRITE_TOKEN = os.getenv('BLOB_READ_WRITE_TOKEN')
 BLOB_BASE_URL = 'https://blob.vercel-storage.com'
+# Blob calls run inside a request; a stalled store should fail fast, not hang
+# the function until the platform kills it.
+BLOB_TIMEOUT_SECONDS = (5, 30)
+BLOB_CONTENT_TYPES = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif',
+                      'webp': 'image/webp', 'stl': 'model/stl'}
 
 def upload_to_vercel_blob(file, filename=None):
     """Upload a file to Vercel Blob storage"""
@@ -48,8 +52,9 @@ def upload_to_vercel_blob(file, filename=None):
     if filename is None:
         filename = secure_filename(file.filename)
 
-    # Get file content type
-    content_type = file.content_type or mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+    # The type comes from the vetted extension, never the browser's Content-Type
+    # header: a member could otherwise store a ".png" that Blob serves as HTML.
+    content_type = BLOB_CONTENT_TYPES.get(file_extension(filename), 'application/octet-stream')
 
     # Read file data
     file_data = file.read()
@@ -64,7 +69,8 @@ def upload_to_vercel_blob(file, filename=None):
     response = requests.put(
         f'{BLOB_BASE_URL}/{filename}',
         headers=headers,
-        data=file_data
+        data=file_data,
+        timeout=BLOB_TIMEOUT_SECONDS,
     )
 
     if response.status_code == 200:
@@ -93,7 +99,8 @@ def delete_from_vercel_blob(url):
     # Delete from Vercel Blob using DELETE request
     response = requests.delete(
         f'{BLOB_BASE_URL}/{blob_id}',
-        headers=headers
+        headers=headers,
+        timeout=BLOB_TIMEOUT_SECONDS,
     )
 
     if response.status_code != 200:
@@ -133,7 +140,16 @@ def collapse_whitespace(value):
     """Collapse newlines/indentation from wrapped Jinja block text so it's safe inside a single HTML attribute (og:*, twitter:*, meta description)."""
     return ' '.join(str(value).split())
 
-IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
+# No SVG: it can carry script, and Blob would serve it as an active document.
+IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+# The first bytes each image type must start with, so a renamed HTML or script
+# file is refused even when its extension looks right.
+IMAGE_SIGNATURES = {
+    'png': (b'\x89PNG\r\n\x1a\n',),
+    'jpg': (b'\xff\xd8\xff',),
+    'jpeg': (b'\xff\xd8\xff',),
+    'gif': (b'GIF87a', b'GIF89a'),
+}
 
 LEADERSHIP_KEYWORDS = ('captain', 'lead', 'president', 'mentor', 'director')
 
@@ -231,6 +247,17 @@ class UserFacingError(ValueError):
     """An error whose message is written for the admin and safe to show."""
 
 
+def _content_matches(file, ext):
+    """Whether the file's first bytes fit its extension. Types without a signature (STL) pass."""
+    if ext not in IMAGE_SIGNATURES and ext != 'webp':
+        return True
+    head = file.stream.read(12)
+    file.stream.seek(0)
+    if ext == 'webp':
+        return head[:4] == b'RIFF' and head[8:12] == b'WEBP'
+    return head.startswith(IMAGE_SIGNATURES[ext])
+
+
 def checked_upload(file, *segments, allowed, stem='file'):
     """Validate an uploaded file's extension, then store it under a safe key.
 
@@ -242,6 +269,8 @@ def checked_upload(file, *segments, allowed, stem='file'):
         raise UserFacingError(
             f'"{file.filename}" is not an accepted file type '
             f'({", ".join(sorted(allowed))}).')
+    if not _content_matches(file, ext):
+        raise UserFacingError(f'"{file.filename}" is not a real {ext.upper()} file.')
     stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     return upload_to_vercel_blob(file, blob_path(*segments, f'{stem}_{stamp}.{ext}'))
 
@@ -721,8 +750,11 @@ def _current_db_user():
     if 'user' not in session:
         return None
     user = db['users'].find_one({'username': session['user']},
-                                {'role': 1, 'session_version': 1, 'status': 1})
+                                {'role': 1, 'session_version': 1, 'status': 1, 'signed_out': 1})
     if not user or user.get('session_version', 0) != session.get('session_version', 0):
+        return None
+    # A signed-out session stays dead even if someone kept a copy of its cookie.
+    if session.get('sid') and session['sid'] in (user.get('signed_out') or []):
         return None
     # Accounts made before sign-up existed have no status and count as active.
     if user.get('status', 'active') != 'active':
@@ -958,6 +990,9 @@ def _no_referrer(rv):
 CSRF_FIELD = '_csrf_token'
 CSRF_HEADER = 'X-CSRF-Token'
 SAFE_METHODS = {'GET', 'HEAD', 'OPTIONS', 'TRACE'}
+# The secret token in the URL already proves the request is genuine, and mail
+# clients' one-click unsubscribe (RFC 8058) posts without a session.
+CSRF_EXEMPT_ENDPOINTS = {'unsubscribe'}
 
 
 def csrf_token():
@@ -984,6 +1019,8 @@ def _submitted_csrf_token():
 @app.before_request
 def verify_csrf():
     if request.method in SAFE_METHODS or app.config.get('WTF_CSRF_DISABLED'):
+        return None
+    if request.endpoint in CSRF_EXEMPT_ENDPOINTS:
         return None
     expected = session.get(CSRF_FIELD, '')
     submitted = _submitted_csrf_token()
@@ -1588,6 +1625,26 @@ def standards():
 def notebook():
     return render_template('notebook.html', active_page='notebook')
 
+def _find_login_user(identifier):
+    """The account for a typed username or email, matched the way sign-up checks for clashes:
+    usernames ignore case and emails are stored lowercase."""
+    if not identifier:
+        return None
+    # An exact username wins, in case two older accounts differ only by case.
+    return (db['users'].find_one({'username': identifier})
+            or db['users'].find_one({'$or': [
+                {'username': re.compile(f'^{re.escape(identifier)}$', re.IGNORECASE)},
+                {'email': identifier.lower()}]}))
+
+
+def _password_ok(user, password):
+    if bcrypt.checkpw(password.encode('utf-8'), user['password']):
+        return True
+    # Resets used to strip spaces before hashing, so try that form too.
+    stripped = password.strip()
+    return stripped != password and bcrypt.checkpw(stripped.encode('utf-8'), user['password'])
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     next_url = _safe_next(request.values.get('next'))
@@ -1597,7 +1654,8 @@ def login():
 
     if request.method == 'POST':
         identifier = request.form.get('username', '').strip()
-        password = request.form.get('password', '').strip()
+        # Not stripped: sign-up and resets store the password exactly as typed.
+        password = request.form.get('password', '')
         attempt_key = identifier.lower()
         ip = _client_ip()
 
@@ -1607,19 +1665,15 @@ def login():
             return render_template('login.html', active_page='login', error=error,
                                    next=next_url, username=identifier), 429
 
-        user = db['users'].find_one({'$or': [{'username': identifier}, {'email': identifier}]})
-        if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
+        user = _find_login_user(identifier)
+        if user and _password_ok(user, password):
             _clear_attempts(attempt_key, ip)
             # Only someone who knows the password learns the account is waiting.
             if user.get('status', 'active') == 'pending':
                 return render_template('login.html', active_page='login', next=next_url,
                                        username=identifier,
                                        error='Your account is waiting for an admin to approve it.'), 403
-            session.clear()
-            session['user'] = user['username']
-            session['role'] = user.get('role', 'member')
-            session['session_version'] = user.get('session_version', 0)
-            session.permanent = bool(request.form.get('remember'))
+            _start_session(user, request.form.get('remember'))
             return redirect(next_url)
 
         _record_attempt(attempt_key, ip)
@@ -1629,8 +1683,27 @@ def login():
 
     return render_template('login.html', active_page='login', next=next_url)
 
+# Signed-out session ids kept per user. Sessions last at most 30 days, so this
+# only needs to outlive the sign-outs one person makes in that time.
+SIGNED_OUT_KEPT = 100
+
+
+def _start_session(user, remember):
+    session.clear()
+    session['user'] = user['username']
+    session['role'] = user.get('role', 'member')
+    session['session_version'] = user.get('session_version', 0)
+    # The session cookie lives in the browser, so clearing it on sign-out does
+    # nothing to a copy. This id lets sign-out revoke the session server-side.
+    session['sid'] = secrets.token_urlsafe(16)
+    session.permanent = bool(remember)
+
+
 @app.route('/logout', methods=['POST'])
 def logout():
+    if session.get('user') and session.get('sid'):
+        db['users'].update_one({'username': session['user']},
+                               {'$push': {'signed_out': {'$each': [session['sid']], '$slice': -SIGNED_OUT_KEPT}}})
     session.clear()
     return redirect(url_for('index'))
 
@@ -1643,8 +1716,8 @@ def reset_password(token):
         return _no_referrer(resp)
 
     if request.method == 'POST':
-        password = request.form.get('password', '').strip()
-        confirm = request.form.get('confirm_password', '').strip()
+        password = request.form.get('password', '')
+        confirm = request.form.get('confirm_password', '')
         error = None
         if len(password) < PASSWORD_MIN_LENGTH:
             error = f'Password must be at least {PASSWORD_MIN_LENGTH} characters.'
@@ -4264,11 +4337,17 @@ def api_newsletter():
     return jsonify({'ok': True, 'message': "You're on the list."})
 
 
-@app.route('/unsubscribe/<token>')
+@app.route('/unsubscribe/<token>', methods=['GET', 'POST'])
 def unsubscribe(token):
+    """GET asks, POST removes. Mail scanners open every link in a message, so
+    removing on GET quietly unsubscribed people who never clicked."""
+    if request.method == 'GET':
+        found = db['newsletter_subscribers'].count_documents({'unsubscribe_token': token}, limit=1) > 0
+        return _no_referrer(render_template('unsubscribe.html', active_page='unsubscribe',
+                                            confirm=found, removed=False, token=token))
     removed = db['newsletter_subscribers'].delete_one({'unsubscribe_token': token})
-    return render_template('unsubscribe.html', active_page='unsubscribe',
-                           removed=removed.deleted_count > 0)
+    return _no_referrer(render_template('unsubscribe.html', active_page='unsubscribe',
+                                        removed=removed.deleted_count > 0))
 
 
 # Spreadsheets treat a cell starting with one of these as a formula, so an

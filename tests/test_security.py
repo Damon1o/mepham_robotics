@@ -1,9 +1,12 @@
 """Security regressions: CSRF, response headers, upload validation, limits."""
 import datetime
+import io
 
 import pytest
 
 import api.index as app_module
+
+PNG = b'\x89PNG\r\n\x1a\n' + b'0' * 16
 
 
 # --- CSRF -----------------------------------------------------------------
@@ -40,6 +43,32 @@ def test_form_field_carries_csrf_token(client, db):
 
 def test_logout_rejects_get(client):
     assert client.get('/logout').status_code == 405
+
+
+def _signed_in(c):
+    """GET /login bounces a signed-in visitor and shows the form to everyone else."""
+    return c.get('/login').status_code == 302
+
+
+def test_signed_out_cookie_cannot_be_replayed(client, make_user):
+    """A copy of the session cookie taken before sign-out must stop working."""
+    make_user(username='bob', password='bob-password')
+    client.post('/login', data={'username': 'bob', 'password': 'bob-password'})
+    with client.session_transaction() as sess:
+        stolen = dict(sess)
+    client.post('/logout')
+    with client.session_transaction() as sess:
+        sess.update(stolen)
+    assert not _signed_in(client)
+
+
+def test_signing_out_one_device_keeps_the_other(client, make_user):
+    make_user(username='bob', password='bob-password')
+    phone = app_module.app.test_client()
+    for c in (client, phone):
+        c.post('/login', data={'username': 'bob', 'password': 'bob-password'})
+    client.post('/logout')
+    assert _signed_in(phone)
 
 
 def test_logout_clears_session_on_post(client, make_user):
@@ -89,7 +118,7 @@ def test_blob_path_never_returns_empty_segment():
 @pytest.mark.parametrize('filename,ok', [
     ('robot.png', True),
     ('robot.PNG', True),
-    ('robot.svg', True),
+    ('robot.svg', False),
     ('robot.php', False),
     ('robot', False),
     ('robot.png.html', False),
@@ -112,6 +141,7 @@ def test_checked_upload_rejects_bad_extension(monkeypatch):
 def test_checked_upload_uses_a_safe_key(monkeypatch):
     class Fake:
         filename = 'hero.PNG'
+        stream = io.BytesIO(PNG)
 
     captured = {}
     monkeypatch.setattr(app_module, 'upload_to_vercel_blob',
@@ -121,6 +151,80 @@ def test_checked_upload_uses_a_safe_key(monkeypatch):
     assert captured['key'].startswith('teams/77628/he_ro_')
     assert captured['key'].endswith('.png')
     assert '..' not in captured['key']
+
+
+def test_checked_upload_refuses_a_renamed_file(monkeypatch):
+    """An HTML page renamed to .png must not reach Blob."""
+    class Fake:
+        filename = 'photo.png'
+        stream = io.BytesIO(b'<html><script>alert(1)</script>')
+
+    monkeypatch.setattr(app_module, 'upload_to_vercel_blob',
+                        lambda *a, **k: pytest.fail('should not upload'))
+    with pytest.raises(app_module.UserFacingError):
+        app_module.checked_upload(Fake(), 'teams', '1', allowed=app_module.IMAGE_EXTENSIONS)
+
+
+@pytest.mark.parametrize('name,head,ok', [
+    ('a.png', PNG, True),
+    ('a.jpg', b'\xff\xd8\xff\xe0' + b'0' * 8, True),
+    ('a.gif', b'GIF89a' + b'0' * 6, True),
+    ('a.webp', b'RIFF\x00\x00\x00\x00WEBP', True),
+    ('a.webp', b'RIFF\x00\x00\x00\x00WAVE', False),
+    ('a.jpg', PNG, False),
+    ('a.stl', b'solid robot', True),
+])
+def test_content_signature_check(name, head, ok):
+    class Fake:
+        filename = name
+        stream = io.BytesIO(head)
+
+    assert app_module._content_matches(Fake(), app_module.file_extension(name)) is ok
+    assert Fake.stream.tell() == 0
+
+
+def test_blob_upload_ignores_the_browser_content_type(monkeypatch):
+    """The stored type follows the extension, whatever the browser claimed."""
+    sent = {}
+
+    class Response:
+        status_code = 200
+
+        def json(self):
+            return {'url': 'https://x.public.blob.vercel-storage.com/a.png'}
+
+    def fake_put(url, headers, data, timeout):
+        sent.update(headers=headers, timeout=timeout)
+        return Response()
+
+    class Fake:
+        filename = 'a.png'
+        content_type = 'text/html'
+
+        def read(self):
+            return PNG
+
+    monkeypatch.setattr(app_module, 'BLOB_READ_WRITE_TOKEN', 'token')
+    monkeypatch.setattr(app_module.requests, 'put', fake_put)
+    app_module.upload_to_vercel_blob(Fake(), 'teams/1/a.png')
+    assert sent['headers']['Content-Type'] == 'image/png'
+    assert sent['timeout']
+
+
+def test_blob_delete_has_a_timeout(monkeypatch):
+    sent = {}
+
+    class Response:
+        status_code = 200
+
+    def fake_delete(url, headers, timeout):
+        sent['timeout'] = timeout
+        return Response()
+
+    monkeypatch.setattr(app_module, 'BLOB_READ_WRITE_TOKEN', 'token')
+    monkeypatch.setattr(app_module.requests, 'delete', fake_delete)
+    app_module.delete_from_vercel_blob('https://x.public.blob.vercel-storage.com/a.png')
+    assert sent['timeout']
 
 
 def test_upload_size_is_capped():
