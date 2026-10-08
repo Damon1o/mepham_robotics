@@ -10,10 +10,11 @@ document.querySelectorAll('.password-toggle').forEach(button => {
     });
 });
 
-// Any auth form with a confirm field (reset password, sign-up) checks the match live.
+// Any auth form with a confirm field (reset password, sign-up, account) checks the match live.
 const confirmForm = document.querySelector('.auth-form #confirm_password')?.form;
-if (confirmForm) {
-    const password = confirmForm.querySelector('#password');
+const confirmTarget = confirmForm?.querySelector('#password, #new_password');
+if (confirmForm && confirmTarget) {
+    const password = confirmTarget;
     const confirm = confirmForm.querySelector('#confirm_password');
     const checkMatch = () => {
         confirm.setCustomValidity(confirm.value && confirm.value !== password.value ? 'Passwords do not match.' : '');

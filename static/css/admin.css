@@ -2049,6 +2049,19 @@ body:has(.admin-container) #custom-chatbot-container {
     flex-wrap: nowrap;
 }
 
+.two-step-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    color: var(--admin-success);
+    font-weight: 700;
+}
+
+.two-step-chip svg {
+    width: 0.85rem;
+    height: 0.85rem;
+}
+
 .admin-container .role-inline {
     --cs-pad: 1.6rem;
     --cs-chevron-x: 0.55rem;

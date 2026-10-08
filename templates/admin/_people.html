@@ -190,7 +190,9 @@
                 <div class="user-info">
                     <strong class="user-name">{{ user.full_name or user.username }}
                         {% if user.username == session.user %}<span class="you-chip">you</span>{% endif %}</strong>
-                    <small class="user-meta">@{{ user.username }} · {{ user.email or 'no email' }}</small>
+                    <small class="user-meta">@{{ user.username }} · {{ user.email or 'no email' }}
+                        {%- if user.two_step %} · <span class="two-step-chip" title="Signs in with an authenticator code">
+                            <i data-lucide="shield-check" aria-hidden="true"></i> 2-step</span>{% endif %}</small>
                 </div>
                 <div class="data-item-actions">
                     <label class="visually-hidden" for="role-{{ user._id }}">Role for {{ user.username }}</label>
@@ -210,6 +212,13 @@
                         <button type="submit" class="icon-btn" title="Make a password reset link"
                             aria-label="Make a password reset link for {{ user.username }}"><i data-lucide="key-round" aria-hidden="true"></i></button>
                     </form>
+                    {% if user.two_step and user.username != session.user %}
+                    <form action="{{ url_for('admin_two_step_off', id=user._id) }}" method="POST" class="form-flush">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="icon-btn" title="Turn off two-step sign-in (lost phone)"
+                            aria-label="Turn off two-step sign-in for {{ user.username }}"><i data-lucide="shield-off" aria-hidden="true"></i></button>
+                    </form>
+                    {% endif %}
                     {% if user.username != session.user %}
                     <form action="{{ url_for('admin_delete_user', id=user._id) }}" method="POST" class="form-flush"
                         data-confirm-delete="account" data-confirm-name="{{ user.username }}">

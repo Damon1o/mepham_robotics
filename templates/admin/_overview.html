@@ -10,8 +10,12 @@
                 <li class="attention-item attention-item--{{ item.tone }}">
                     <i data-lucide="{{ item.icon }}" aria-hidden="true"></i>
                     <span>{{ item.text }}</span>
+                    {% if item.href %}
+                    <a href="{{ item.href }}" class="admin-btn admin-btn-secondary admin-btn-small">{{ item.action }}</a>
+                    {% else %}
                     <a href="#{{ item.tab }}" class="admin-btn admin-btn-secondary admin-btn-small" data-action="go-tab"
                         data-tab="{{ item.tab }}"{% if item.target %} data-scroll="{{ item.target }}"{% endif %}>{{ item.action }}</a>
+                    {% endif %}
                 </li>
                 {% endfor %}
             </ul>

@@ -25,12 +25,13 @@ from pymongo.errors import DuplicateKeyError
 import requests
 
 try:  # package import on Vercel, flat import when run from the api/ directory
-    from api import events, mail, robotevents, site_content
+    from api import events, mail, robotevents, site_content, totp
 except ImportError:  # pragma: no cover
     import events
     import mail
     import robotevents
     import site_content
+    import totp
 
 load_dotenv()
 
@@ -372,6 +373,12 @@ ACTIVITY_TYPES = {
     'user_update': ('👥', 'User updated', 'people'),
     'user_delete': ('🗑️', 'User deleted', 'people'),
     'password_reset': ('🔑', 'Password reset', 'people'),
+    'password_change': ('🔑', 'Password changed', 'people'),
+    'sign_out_everywhere': ('🚪', 'Signed out everywhere', 'people'),
+    'two_step_on': ('🛡️', 'Two-step sign-in on', 'people'),
+    'two_step_off': ('🛡️', 'Two-step sign-in off', 'people'),
+    'two_step_codes': ('🛡️', 'Backup codes renewed', 'people'),
+    'two_step_backup_used': ('🛡️', 'Backup code used', 'people'),
     'reset_link_generate': ('🔗', 'Reset link generated', 'people'),
     'reset_link_email': ('📧', 'Reset link emailed', 'people'),
     'user_signup': ('🙋', 'Account requested', 'people'),
@@ -683,6 +690,8 @@ SEARCH_PAGES = [
      'safety quiz test workshop lab rules ppe', False),
     ('Engineering Notebook', 'notebook', 'Public engineering notebook — design process and logs',
      'notebook engineering design process testing iteration', True),
+    ('My Account', 'account', 'Change your password, sign out other devices, and set up two-step sign-in',
+     'account password settings security two-step 2fa authenticator sign out devices', True),
     ('Privacy Policy', 'privacy', 'How we handle your data and privacy', 'privacy policy data cookies', False),
     ('Site Credits', 'credits_page', 'Website credits and acknowledgments',
      'credits site acknowledgments technologies', False),
@@ -1697,6 +1706,8 @@ def login():
                 return render_template('login.html', active_page='login', next=next_url,
                                        username=identifier,
                                        error='Your account is waiting for an admin to approve it.'), 403
+            if user.get('totp_secret'):
+                return _begin_two_step(user, request.form.get('remember'), next_url)
             _start_session(user, request.form.get('remember'))
             return redirect(next_url)
 
@@ -1721,6 +1732,77 @@ def _start_session(user, remember):
     # nothing to a copy. This id lets sign-out revoke the session server-side.
     session['sid'] = secrets.token_urlsafe(16)
     session.permanent = bool(remember)
+
+
+# --- Two-step sign-in ----------------------------------------------------------
+# After the password, an account with an authenticator app set up must type a
+# code (or a one-time backup code). The half-signed-in state lives in the
+# session for a few minutes and carries no access of its own.
+TWO_STEP_WINDOW = datetime.timedelta(minutes=5)
+TOTP_ISSUER = 'Mepham Robotics'
+
+
+def _begin_two_step(user, remember, next_url):
+    session.clear()
+    session['two_step'] = {'user_id': str(user['_id']), 'remember': bool(remember), 'next': next_url,
+                           'at': _utcnow().timestamp()}
+    return redirect(url_for('login_two_step'))
+
+
+def _two_step_user():
+    """The account waiting on a code, or None when there is none or it waited too long."""
+    pending = session.get('two_step') or {}
+    started = pending.get('at')
+    if not started or _utcnow().timestamp() - started > TWO_STEP_WINDOW.total_seconds():
+        return None
+    user = _find_by_id('users', pending.get('user_id'))
+    if not user or not user.get('totp_secret') or user.get('status', 'active') != 'active':
+        return None
+    return user
+
+
+def _accept_second_factor(user, code):
+    """Consume a code or backup code for this user. True when it was valid and unused."""
+    step = totp.matching_step(user['totp_secret'], code, after=user.get('totp_last_step'))
+    if step is not None:
+        # Conditional on the stored step, so two requests can't both spend one code.
+        result = db['users'].update_one(
+            {'_id': user['_id'], 'totp_last_step': user.get('totp_last_step')},
+            {'$set': {'totp_last_step': step}})
+        return result.modified_count == 1
+    hashed = totp.hash_backup_code(code)
+    result = db['users'].update_one({'_id': user['_id'], 'totp_backup': hashed},
+                                    {'$pull': {'totp_backup': hashed}})
+    if result.modified_count:
+        log_activity('two_step_backup_used', f"{user['username']} used a backup code",
+                     user=user['username'], details={'username': user['username'],
+                                                     'left': len(user.get('totp_backup') or []) - 1})
+    return result.modified_count == 1
+
+
+@app.route('/login/verify', methods=['GET', 'POST'])
+def login_two_step():
+    user = _two_step_user()
+    if user is None:
+        session.pop('two_step', None)
+        flash('That sign-in took too long. Enter your password again.', 'error')
+        return redirect(url_for('login'))
+    if request.method == 'GET':
+        return render_template('login_verify.html', active_page='login')
+
+    key, ip = f"2fa:{user['username'].lower()}", _client_ip()
+    wait = _lockout_minutes(key, ip)
+    if wait:
+        return render_template('login_verify.html', active_page='login',
+                               error=f'Too many tries. Wait {wait} minute{"s" if wait != 1 else ""}.'), 429
+    if not _accept_second_factor(user, request.form.get('code', '')):
+        _record_attempt(key, ip)
+        return render_template('login_verify.html', active_page='login',
+                               error="That code didn't work. Check the app and try again."), 401
+    _clear_attempts(key, ip)
+    pending = session['two_step']
+    _start_session(user, pending.get('remember'))
+    return redirect(_safe_next(pending.get('next')))
 
 
 @app.route('/logout', methods=['POST'])
@@ -2002,12 +2084,18 @@ def _message_counts():
     return counts
 
 
-def _attention_items(pending, counts, past_events, upcoming, teams, stats_doc, auto):
+def _attention_items(pending, counts, past_events, upcoming, teams, stats_doc, auto, users=()):
     """Short to-do list for the Overview tab: each item says what is off and where to fix it."""
     items = []
 
-    def add(icon, text, tab, action, tone='info', target=''):
-        items.append({'icon': icon, 'text': text, 'tab': tab, 'action': action, 'tone': tone, 'target': target})
+    def add(icon, text, tab, action, tone='info', target='', href=''):
+        items.append({'icon': icon, 'text': text, 'tab': tab, 'action': action, 'tone': tone, 'target': target,
+                      'href': href})
+
+    me = next((u for u in users if u['username'] == session.get('user')), None)
+    if me and not me.get('two_step'):
+        add('shield-alert', 'Your admin account has no two-step sign-in', '', 'Turn it on', 'alert',
+            href=url_for('account', _anchor='two-step'))
 
     def plural(n, word):
         return f'{n} {word}{"s" if n != 1 else ""}'
@@ -2075,7 +2163,11 @@ def admin_dashboard():
     all_users = [dict(u, _id=str(u['_id']), role=u.get('role', 'member'), email=u.get('email', ''),
                       status=u.get('status', 'active'))
                  for u in db['users'].find({}, {'username': 1, 'email': 1, 'role': 1, 'status': 1, 'full_name': 1,
-                                                'requested_team': 1, 'created_at': 1}).sort('username', 1)]
+                                                'requested_team': 1, 'created_at': 1,
+                                                'totp_secret': 1}).sort('username', 1)]
+    for u in all_users:
+        # Only whether it is on; the secret itself never reaches a template.
+        u['two_step'] = bool(u.pop('totp_secret', None))
     users = [u for u in all_users if u['status'] == 'active']
     pending_users = [u for u in all_users if u['status'] == 'pending']
     for u in pending_users:
@@ -2152,7 +2244,7 @@ def admin_dashboard():
         stat_limits=STAT_LIMITS,
         upcoming=upcoming, past_events=past,
         attention=_attention_items(pending_users, message_counts, past, upcoming, current_robot_teams,
-                                   stats_doc, auto),
+                                   stats_doc, auto, users),
         users=users, pending_users=pending_users, board=board, unassigned=unassigned,
         team_choices=team_choices, group_choices=group_choices, group_members=group_members,
         robot_team_of=robot_team_of, claimable=claimable,
@@ -3875,6 +3967,178 @@ def manage_fundraisers():
                            gallery_keys=[], fundraiser_editor=True,
                            group_choices=_group_choices(),
                            can_pick_group=role_at_least(user.get('role', 'member'), 'editor'))
+
+
+# --- Your account ------------------------------------------------------------------
+
+def _account_user():
+    return db['users'].find_one({'username': session['user']})
+
+
+def _render_account(user, status=200, **extra):
+    pending = user.get('totp_pending')
+    return render_template(
+        'account.html', active_page='account', account=user,
+        two_step=bool(user.get('totp_secret')), backup_left=len(user.get('totp_backup') or []),
+        setup_secret=pending,
+        setup_uri=totp.provisioning_uri(pending, user['username'], TOTP_ISSUER) if pending else None,
+        **extra), status
+
+
+def _password_attempt_ok(user, password):
+    """Check the current password for an account change, with the same lockout as sign-in.
+    Returns an error message, or None when the password is right."""
+    key, ip = f"account:{user['username'].lower()}", _client_ip()
+    wait = _lockout_minutes(key, ip)
+    if wait:
+        return f'Too many wrong passwords. Try again in {wait} minute{"s" if wait != 1 else ""}.'
+    if not bcrypt.checkpw(password.encode('utf-8'), user['password']):
+        _record_attempt(key, ip)
+        return 'Your current password is not right.'
+    _clear_attempts(key, ip)
+    return None
+
+
+def _bump_session_version(user):
+    """Sign out every other session for this account and keep this one signed in."""
+    updated = db['users'].find_one_and_update({'_id': user['_id']}, {'$inc': {'session_version': 1}},
+                                              projection={'session_version': 1}, return_document=True)
+    session['session_version'] = updated['session_version']
+
+
+@app.route('/account')
+@login_required
+def account():
+    return _render_account(_account_user())
+
+
+@app.route('/account/password', methods=['POST'])
+@login_required
+def account_password():
+    user = _account_user()
+    password, confirm = request.form.get('new_password', ''), request.form.get('confirm_password', '')
+    error = _password_attempt_ok(user, request.form.get('current_password', ''))
+    if not error and len(password) < PASSWORD_MIN_LENGTH:
+        error = f'Your new password needs at least {PASSWORD_MIN_LENGTH} characters.'
+    elif not error and password != confirm:
+        error = "The new passwords don't match."
+    if error:
+        return _render_account(user, 400, password_error=error)
+    db['users'].update_one({'_id': user['_id']},
+                           {'$set': {'password': bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())}})
+    _bump_session_version(user)
+    db['password_resets'].delete_many({'user_id': user['_id']})
+    log_activity('password_change', f"{user['username']} changed their password",
+                 user=user['username'], details={'username': user['username']})
+    flash('Password changed. Any other devices were signed out.', 'success')
+    return redirect(url_for('account'))
+
+
+@app.route('/account/sign-out-everywhere', methods=['POST'])
+@login_required
+def account_sign_out_everywhere():
+    user = _account_user()
+    db['users'].update_one({'_id': user['_id']}, {'$inc': {'session_version': 1}})
+    log_activity('sign_out_everywhere', f"{user['username']} signed out everywhere",
+                 user=user['username'], details={'username': user['username']})
+    session.clear()
+    flash('Signed out on every device, including this one.', 'success')
+    return redirect(url_for('login'))
+
+
+@app.route('/account/two-step/start', methods=['POST'])
+@login_required
+def account_two_step_start():
+    user = _account_user()
+    if user.get('totp_secret'):
+        return redirect(url_for('account'))
+    # Kept on the account, not in the cookie, until a code proves the app has it.
+    db['users'].update_one({'_id': user['_id']}, {'$set': {'totp_pending': totp.new_secret()}})
+    return redirect(url_for('account', _anchor='two-step'))
+
+
+@app.route('/account/two-step/cancel', methods=['POST'])
+@login_required
+def account_two_step_cancel():
+    db['users'].update_one({'username': session['user']}, {'$unset': {'totp_pending': ''}})
+    return redirect(url_for('account', _anchor='two-step'))
+
+
+def _store_backup_codes(user):
+    codes = totp.new_backup_codes()
+    db['users'].update_one({'_id': user['_id']},
+                           {'$set': {'totp_backup': [totp.hash_backup_code(c) for c in codes]}})
+    return codes
+
+
+@app.route('/account/two-step/confirm', methods=['POST'])
+@login_required
+def account_two_step_confirm():
+    user = _account_user()
+    secret = user.get('totp_pending')
+    if not secret or user.get('totp_secret'):
+        return redirect(url_for('account'))
+    step = totp.matching_step(secret, request.form.get('code', ''))
+    if step is None:
+        return _render_account(user, 400, two_step_error="That code didn't match. Use the newest code the "
+                                                         "app shows and try again.")
+    db['users'].update_one({'_id': user['_id']},
+                           {'$set': {'totp_secret': secret, 'totp_last_step': step},
+                            '$unset': {'totp_pending': ''}})
+    codes = _store_backup_codes(user)
+    # Anyone already signed in elsewhere got in without the code.
+    _bump_session_version(user)
+    log_activity('two_step_on', f"{user['username']} turned on two-step sign-in",
+                 user=user['username'], details={'username': user['username']})
+    return _render_account(_account_user(), backup_codes=codes)
+
+
+@app.route('/account/two-step/backup-codes', methods=['POST'])
+@login_required
+def account_two_step_backup_codes():
+    user = _account_user()
+    if not user.get('totp_secret'):
+        return redirect(url_for('account'))
+    error = _password_attempt_ok(user, request.form.get('current_password', ''))
+    if error:
+        return _render_account(user, 400, two_step_error=error)
+    codes = _store_backup_codes(user)
+    log_activity('two_step_codes', f"{user['username']} made new backup codes",
+                 user=user['username'], details={'username': user['username']})
+    return _render_account(_account_user(), backup_codes=codes)
+
+
+@app.route('/account/two-step/off', methods=['POST'])
+@login_required
+def account_two_step_off():
+    user = _account_user()
+    error = _password_attempt_ok(user, request.form.get('current_password', ''))
+    if error:
+        return _render_account(user, 400, two_step_error=error)
+    db['users'].update_one({'_id': user['_id']},
+                           {'$unset': {'totp_secret': '', 'totp_last_step': '', 'totp_backup': ''}})
+    log_activity('two_step_off', f"{user['username']} turned off two-step sign-in",
+                 user=user['username'], details={'username': user['username']})
+    flash('Two-step sign-in is off.', 'success')
+    return redirect(url_for('account', _anchor='two-step'))
+
+
+@app.route('/admin/users/<id>/two-step-off', methods=['POST'])
+@role_required('admin')
+def admin_two_step_off(id):
+    """For someone who lost their phone and their backup codes."""
+    user = _find_by_id('users', id)
+    if not user:
+        flash('That account no longer exists.', 'error')
+        return _admin_redirect('users')
+    db['users'].update_one({'_id': user['_id']},
+                           {'$unset': {'totp_secret': '', 'totp_last_step': '', 'totp_backup': '',
+                                       'totp_pending': ''}})
+    log_activity('two_step_off', f"Turned off two-step sign-in for {user['username']}",
+                 details={'username': user['username']})
+    flash(f"Two-step sign-in is off for {user['username']}. They can set it up again from their account.",
+          'success')
+    return _admin_redirect('users')
 
 
 @app.route('/my-team')

@@ -100,6 +100,8 @@
 
         <div class="nav-footer">
             {% if 'user' in session %}
+            <a href="{{ url_for('account') }}" class="login-btn{% if active_page == 'account' %} active{% endif %}">
+                My Account</a>
             <form method="POST" action="{{ url_for('logout') }}" class="logout-form">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="login-btn">Logout ({{ session['user'] }})</button>
