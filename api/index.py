@@ -4325,6 +4325,31 @@ CHAT_MESSAGE_MAX = 1000
 CHAT_RATE_LIMIT = 20
 CHAT_RATE_WINDOW = datetime.timedelta(minutes=10)
 CHAT_TIMEOUT_SECONDS = 20
+# Earlier turns sent with each message, so follow-ups like "what about the
+# second one?" make sense. Capped by count and size: every character is paid
+# for upstream, and the browser decides what it sends.
+CHAT_HISTORY_TURNS = 6
+CHAT_HISTORY_CHARS = 6000
+
+
+def chat_history(raw):
+    """The earlier turns worth sending upstream: well-formed, newest kept, within the caps."""
+    if not isinstance(raw, list):
+        return []
+    turns = [{'role': t['role'], 'content': t['content'].strip()} for t in raw[-CHAT_HISTORY_TURNS:]
+             if isinstance(t, dict) and t.get('role') in ('user', 'assistant')
+             and isinstance(t.get('content'), str) and t['content'].strip()]
+    kept, used = [], 0
+    for turn in reversed(turns):
+        used += len(turn['content'])
+        if used > CHAT_HISTORY_CHARS:
+            break
+        kept.append(turn)
+    kept.reverse()
+    # Drop a leading reply: the model should see each answer after its question.
+    while kept and kept[0]['role'] == 'assistant':
+        kept.pop(0)
+    return kept
 CHAT_SYSTEM_PROMPT = (
     "You are Steven, the official AI assistant for the Mepham Robotics Club "
     "(VEX V5 Team 77628). Be helpful, enthusiastic about robotics, and concise."
@@ -4482,6 +4507,7 @@ def api_chat():
                      "Content-Type": "application/json"},
             json={"model": os.getenv('CHATBOT_MODEL', "gpt-4o-mini"),
                   "messages": [{"role": "system", "content": chat_system_prompt()},
+                               *chat_history(data.get('history')),
                                {"role": "user", "content": user_message}]},
             timeout=CHAT_TIMEOUT_SECONDS)
         response.raise_for_status()

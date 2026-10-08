@@ -1166,6 +1166,26 @@ function showToast(message, type = 'info') {
 
     let isTyping = false;
 
+    // The conversation so far, sent with each message so Steven can follow up,
+    // and kept for this tab so it survives moving between pages. The server
+    // trims what it forwards; this only bounds what the tab remembers.
+    const HISTORY_KEY = 'mepham-chat-history';
+    const HISTORY_KEPT = 20;
+    const HISTORY_SENT = 6;
+    let history = [];
+    try {
+        const saved = JSON.parse(sessionStorage.getItem(HISTORY_KEY) || '[]');
+        if (Array.isArray(saved)) history = saved.slice(-HISTORY_KEPT);
+    } catch (err) { /* storage blocked or corrupt: start fresh */ }
+
+    function remember(role, content) {
+        history.push({ role, content });
+        history = history.slice(-HISTORY_KEPT);
+        try {
+            sessionStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        } catch (err) { /* storage blocked: the chat still works for this page */ }
+    }
+
     // marked and DOMPurify only render bot replies, so they are fetched the
     // first time the chat opens instead of on every page. Same pinned
     // versions and SRI hashes as before; the CSP already allows both CDNs.
@@ -1192,11 +1212,24 @@ function showToast(message, type = 'info') {
         return rendererReady;
     }
 
+    // Earlier messages from this tab are drawn the first time the chat opens,
+    // once the markdown renderer has loaded.
+    let restored = false;
+
+    async function restoreHistory() {
+        if (restored) return;
+        restored = true;
+        if (!history.length) return;
+        await loadRenderer();
+        history.forEach(turn => addMessage(turn.content, turn.role === 'assistant' ? 'bot' : 'user'));
+    }
+
     // Toggle Window
     bubble.addEventListener('click', () => {
         windowEl.classList.toggle('active');
         if (windowEl.classList.contains('active')) {
             loadRenderer();
+            restoreHistory();
             input.focus();
         }
     });
@@ -1268,6 +1301,7 @@ function showToast(message, type = 'info') {
         if (!text) return;
 
         // 1. Add User Message
+        await restoreHistory();
         addMessage(text, 'user');
         input.value = '';
 
@@ -1279,7 +1313,7 @@ function showToast(message, type = 'info') {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: jsonHeaders(),
-                body: JSON.stringify({ message: text })
+                body: JSON.stringify({ message: text, history: history.slice(-HISTORY_SENT) })
             });
 
             const data = await response.json().catch(() => ({}));
@@ -1294,6 +1328,9 @@ function showToast(message, type = 'info') {
 
             if (data.reply) {
                 addMessage(data.reply, 'bot');
+                // Only answered turns are remembered, so a failed send can be retried cleanly.
+                remember('user', text);
+                remember('assistant', data.reply);
             } else {
                 addMessage('Sorry, I did not understand that.', 'bot');
             }
