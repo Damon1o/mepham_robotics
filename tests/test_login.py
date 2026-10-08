@@ -27,6 +27,32 @@ def test_login_with_email(client, make_user):
     assert resp.status_code == 302
 
 
+def test_login_ignores_case_in_email_and_username(client, make_user):
+    make_user(username='Alice')
+    assert client.post('/login', data={'username': 'ALICE@Example.com',
+                                       'password': 'correct-horse'}).status_code == 302
+    client.post('/logout')
+    assert client.post('/login', data={'username': 'alice', 'password': 'correct-horse'}).status_code == 302
+
+
+def test_exact_username_wins_over_a_case_twin(client, make_user):
+    make_user(username='Sam', password='upper-password', email='a@example.com')
+    make_user(username='sam', password='lower-password', email='b@example.com')
+    assert client.post('/login', data={'username': 'sam', 'password': 'lower-password'}).status_code == 302
+
+
+def test_password_with_spaces_signs_in_as_typed(client, make_user):
+    """Sign-up stores the password unstripped, so login must not strip it either."""
+    make_user(password='  spaced out  ')
+    assert client.post('/login', data={'username': 'alice', 'password': '  spaced out  '}).status_code == 302
+
+
+def test_password_saved_stripped_still_signs_in(client, make_user):
+    """Older resets stripped the password before hashing."""
+    make_user(password='old-reset-pw')
+    assert client.post('/login', data={'username': 'alice', 'password': 'old-reset-pw '}).status_code == 302
+
+
 def test_bad_password_shows_error(client, make_user):
     make_user()
     resp = client.post('/login', data={'username': 'alice', 'password': 'wrong'})

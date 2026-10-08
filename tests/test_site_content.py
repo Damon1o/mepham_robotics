@@ -186,7 +186,7 @@ def test_gallery_can_mix_built_in_and_uploaded_photos(admin, db):
 
 def test_image_upload_stores_the_file_and_its_size(admin, monkeypatch):
     monkeypatch.setattr(app_module, 'upload_to_vercel_blob', lambda file, key: f'https://blob.example/{key}')
-    resp = admin.post('/admin/api/site/image', data={'file': (io.BytesIO(b'img'), 'photo.webp'),
+    resp = admin.post('/admin/api/site/image', data={'file': (io.BytesIO(b'RIFF\x00\x00\x00\x00WEBPVP8 '), 'photo.webp'),
                                                      'width': '1600', 'height': '900'},
                       content_type='multipart/form-data')
     body = resp.get_json()

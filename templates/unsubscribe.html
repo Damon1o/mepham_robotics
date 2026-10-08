@@ -1,11 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}Unsubscribed | Mepham Robotics{% endblock %}
+{% block title %}{{ 'Unsubscribe' if confirm else 'Unsubscribed' }} | Mepham Robotics{% endblock %}
 {% block meta_description %}Manage your Mepham Robotics newsletter subscription.{% endblock %}
 
 {% block content %}
 <section class="section">
     <div class="error-content">
+        {% if confirm %}
+        <i data-lucide="mail-minus" class="error-emoji"></i>
+        <h1 class="error-message">Unsubscribe from the newsletter?</h1>
+        <p class="error-submessage">
+            You'll stop getting Mepham Robotics newsletter emails. You can resubscribe any time from the footer of
+            any page.
+        </p>
+        <form method="post" action="{{ url_for('unsubscribe', token=token) }}" class="error-actions">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="cta-button cta-primary">Unsubscribe</button>
+            <a href="{{ url_for('index') }}" class="cta-button cta-secondary">Stay subscribed</a>
+        </form>
+        {% else %}
         <i data-lucide="{{ 'mail-check' if removed else 'mail-question' }}" class="error-emoji"></i>
         <h1 class="error-message">{{ "You're unsubscribed" if removed else "Nothing to unsubscribe" }}</h1>
         <p class="error-submessage">
@@ -21,6 +34,7 @@
             <a href="{{ url_for('index') }}" class="cta-button cta-primary">Go Home</a>
             <a href="{{ url_for('contact') }}" class="cta-button cta-secondary">Contact Us</a>
         </div>
+        {% endif %}
     </div>
 </section>
 {% endblock %}

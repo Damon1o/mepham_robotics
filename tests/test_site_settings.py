@@ -95,7 +95,7 @@ def test_only_images_uploaded_here_can_be_used(admin, db):
 
 
 def upload(client):
-    return client.post('/admin/api/site/image', data={'file': (io.BytesIO(b'img'), 'photo.webp'),
+    return client.post('/admin/api/site/image', data={'file': (io.BytesIO(b'RIFF\x00\x00\x00\x00WEBPVP8 '), 'photo.webp'),
                                                       'width': '10', 'height': '10'},
                        content_type='multipart/form-data').get_json()['image']
 
