@@ -55,11 +55,7 @@
                     <label class="auth-remember">
                         <input type="checkbox" name="remember" value="1"> Remember me
                     </label>
-                    {% if mail_configured() %}
-                    <a class="auth-link auth-hint" href="{{ url_for('forgot_password') }}">Forgot password?</a>
-                    {% else %}
                     <span class="auth-hint">Forgot password? Contact a team admin for a reset link.</span>
-                    {% endif %}
                 </div>
                 <button type="submit" class="auth-submit">Sign in</button>
             </form>
