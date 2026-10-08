@@ -26,9 +26,10 @@ import requests
 import mimetypes
 
 try:  # package import on Vercel, flat import when run from the api/ directory
-    from api import events, robotevents, site_content
+    from api import events, mail, robotevents, site_content
 except ImportError:  # pragma: no cover
     import events
+    import mail
     import robotevents
     import site_content
 
@@ -343,6 +344,7 @@ ACTIVITY_TYPES = {
     'user_delete': ('🗑️', 'User deleted', 'people'),
     'password_reset': ('🔑', 'Password reset', 'people'),
     'reset_link_generate': ('🔗', 'Reset link generated', 'people'),
+    'reset_link_email': ('📧', 'Reset link emailed', 'people'),
     'user_signup': ('🙋', 'Account requested', 'people'),
     'user_approve': ('✅', 'Account approved', 'people'),
     'user_reject': ('🚫', 'Account request rejected', 'people'),
@@ -937,6 +939,28 @@ def _public_url(endpoint, **values):
 def _build_reset_link(token):
     """Build the absolute reset-password link for a freshly issued token."""
     return _public_url('reset_password', token=token)
+
+
+def _issue_reset_link(user):
+    """Replace any earlier reset token for this user and return the new link."""
+    _ensure_auth_indexes()
+    token = secrets.token_urlsafe(32)
+    db['password_resets'].delete_many({'user_id': user['_id']})
+    db['password_resets'].insert_one({'user_id': user['_id'], 'token_hash': _hash_token(token),
+                                      'created_at': _utcnow()})
+    return _build_reset_link(token)
+
+
+def _notify_admins(subject, text, reply_to=None):
+    """Email every active admin who has an address. A no-op when email is not set up."""
+    if not mail.configured():
+        return
+    admins = db['users'].find({'role': 'admin', 'status': {'$in': ['active', None]},
+                               'email': {'$nin': ['', None]}}, {'email': 1})
+    mail.send([a['email'] for a in admins], subject, text, reply_to=reply_to)
+
+
+app.jinja_env.globals['mail_configured'] = mail.configured
 
 def _find_reset(token):
     _ensure_auth_indexes()
@@ -1675,6 +1699,40 @@ def reset_password(token):
 
     return _no_referrer(render_template('reset_password.html', active_page='login', invalid=False))
 
+FORGOT_RATE_LIMIT = 5
+FORGOT_ACCOUNT_LIMIT = 3
+FORGOT_RATE_WINDOW = datetime.timedelta(hours=1)
+
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """Email a reset link. Every outcome reads the same, so the form can't be used
+    to find out which usernames or addresses have accounts."""
+    if not mail.configured():
+        return redirect(url_for('login'))
+    if request.method == 'GET':
+        return render_template('forgot_password.html', active_page='login')
+
+    identifier = request.form.get('username', '').strip()
+    if rate_limit('forgot', _client_ip(), FORGOT_RATE_LIMIT, FORGOT_RATE_WINDOW):
+        return render_template('forgot_password.html', active_page='login', username=identifier,
+                               error='Too many reset requests from this network. Try again later.'), 429
+    user = identifier and db['users'].find_one({'$or': [{'username': identifier},
+                                                        {'email': identifier.lower()}]})
+    # Capped per account too, so nobody can flood someone's inbox from many networks.
+    if (user and user.get('email') and user.get('status', 'active') == 'active'
+            and not rate_limit('forgot-account', str(user['_id']), FORGOT_ACCOUNT_LIMIT, FORGOT_RATE_WINDOW)):
+        link = _issue_reset_link(user)
+        mail.send(user['email'], 'Reset your Mepham Robotics password',
+                  f"Hi {user.get('full_name') or user['username']},\n\n"
+                  f"Someone asked to reset the password for {user['username']}. "
+                  f"Choose a new one here (the link works for one hour, once):\n\n{link}\n\n"
+                  "If that wasn't you, ignore this email and your password stays the same.\n")
+        log_activity('reset_link_email', f"Emailed a reset link to {user['username']}",
+                     user=user['username'], details={'username': user['username']})
+    return render_template('forgot_password.html', active_page='login', sent=True)
+
+
 USERNAME_RE = re.compile(r'[A-Za-z0-9_.-]{3,32}')
 SIGNUP_RATE_LIMIT = 5
 SIGNUP_RATE_WINDOW = datetime.timedelta(hours=1)
@@ -1778,6 +1836,10 @@ def signup():
     db['users'].insert_one(user)
     log_activity('user_signup', f'{username} requested an account', user=username,
                  details={'username': username})
+    _notify_admins(f'{username} requested a Mepham Robotics account',
+                   f"{full_name or username} ({user['email']}) asked to join"
+                   + (f" {_team_label(requested)}" if requested else '') + '.\n\n'
+                   f"Approve or reject the request: {_public_url('admin_dashboard', _anchor='users')}\n")
     return render_template('signup.html', active_page='login', submitted=True, teams=teams, form={})
 
 
@@ -2288,12 +2350,7 @@ def admin_generate_reset_link(id):
     if not user:
         flash('That account no longer exists.', 'error')
         return _admin_redirect('users')
-    _ensure_auth_indexes()
-    token = secrets.token_urlsafe(32)
-    db['password_resets'].delete_many({'user_id': user['_id']})
-    db['password_resets'].insert_one({'user_id': user['_id'], 'token_hash': _hash_token(token),
-                                      'created_at': _utcnow()})
-    session['_generated_reset_link'] = _build_reset_link(token)
+    session['_generated_reset_link'] = _issue_reset_link(user)
     session['_generated_reset_link_user'] = user['username']
     flash(f'Reset link generated for {user["username"]}. Copy it below.', 'success')
     log_activity('reset_link_generate', f'Generated reset link for {user["username"]}',
@@ -2665,6 +2722,11 @@ def admin_api_approve_user(id):
     log_activity('user_approve', f"Approved {user['username']} as {role}"
                  + (f" on {_team_label(team)}" if team else ''),
                  details={'username': user['username'], 'role': role})
+    if user.get('email'):
+        mail.send(user['email'], 'Your Mepham Robotics account is ready',
+                  f"Hi {user.get('full_name') or user['username']},\n\n"
+                  'An admin approved your account' + (f" and added you to {_team_label(team)}" if team else '')
+                  + f".\n\nSign in as {user['username']}: {_public_url('login')}\n")
     return jsonify({'ok': True, 'member': card, 'team_id': str(team['_id']) if team else None,
                     'user': {'_id': id, 'username': user['username'], 'role': role}})
 
@@ -4179,6 +4241,11 @@ def api_contact():
         'ip': ip,
         'user_agent': request.headers.get('User-Agent', '')[:200],
     })
+    _notify_admins(f"New {cleaned['topic']} message from {cleaned['name']}",
+                   f"{cleaned['name']} <{cleaned['email']}> wrote:\n\n{cleaned['message']}\n\n"
+                   f"Reply to this email to answer them, or see every message: "
+                   f"{_public_url('admin_dashboard', _anchor='messages')}\n",
+                   reply_to=cleaned['email'])
     return jsonify({'ok': True})
 
 CHAT_MESSAGE_MAX = 1000
