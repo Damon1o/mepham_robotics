@@ -57,8 +57,8 @@
     {%- if in_list %} data-item="{{ field.key }}" aria-label="{{ field.label }}"{% else %} data-value{% endif %}>
 {%- elif kind == 'time' -%}
 <input id="{{ id }}" type="time" value="{{ value }}" data-value>
-{%- elif kind == 'datetime' -%}
-<input id="{{ id }}" type="datetime-local" value="{{ value }}"
+{%- elif kind in ('date', 'datetime') -%}
+<input id="{{ id }}" type="{{ 'date' if kind == 'date' else 'datetime-local' }}" value="{{ value }}"
     {%- if in_list %} data-item="{{ field.key }}" aria-label="{{ field.label }}"{% else %} data-value{% endif %}
     {%- if field.required %} required{% endif %}>
 {% if not in_list %}<button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-action="clear-value"{% if not value %} hidden{% endif %}>Clear</button>{% endif %}
@@ -212,7 +212,7 @@
                     {%- elif photo_list %} data-drop="event" data-drop-multiple data-drop-accept="image/png,image/jpeg,image/webp,image/gif"
                     data-drop-label="Drop photos to add them" data-drop-label-many="Drop {n} photos to add them"{% endif %}>
                     <div class="setting-label">
-                        {% if field.kind in ('text', 'email', 'url', 'link', 'textarea', 'rich', 'time', 'datetime', 'toggle', 'number')
+                        {% if field.kind in ('text', 'email', 'url', 'link', 'textarea', 'rich', 'time', 'date', 'datetime', 'toggle', 'number')
                               or (field.kind == 'choice' and field.choices|length > 5) %}
                         <label for="{{ id }}" id="{{ id }}-label">{{ field.label }}</label>
                         {% else %}

@@ -43,7 +43,8 @@ def kind_of(event):
 def _item(source, kind, name, start, end, **extra):
     label, icon = ALL_KINDS[kind]
     item = {'source': source, 'id': '', 'kind': kind, 'label': label, 'icon': icon, 'name': name,
-            'start': start, 'end': end, 'location': '', 'link': '', 'link_label': '', 'details': ''}
+            'start': start, 'end': end, 'location': '', 'link': '', 'link_label': '', 'details': '',
+            'all_day': False}
     item.update({k: v or '' for k, v in extra.items()})
     return item
 
@@ -80,6 +81,20 @@ def fundraiser_items(entries):
         items.append(_item('fundraiser', 'fundraiser', entry['name'], start, end, id=f'fundraiser-{n}',
                            location=entry.get('location'), link=entry.get('link_url'),
                            link_label=entry.get('link_label'), details=entry.get('description')))
+    return items
+
+
+def history_items(history):
+    """Past fundraisers typed in by date only: all-day items."""
+    items = []
+    for n, row in enumerate(history or ()):
+        start = _moment(f"{row.get('date')}T00:00")
+        if not row.get('name') or not start:
+            continue
+        item = _item('fundraiser', 'fundraiser', row['name'], start, start.replace(hour=23, minute=59),
+                     id=f'past-fundraiser-{n}', details=row.get('description'))
+        item['all_day'] = True
+        items.append(item)
     return items
 
 
@@ -176,8 +191,11 @@ def _stamp(moment):
 
 def google_url(item, timezone):
     """A Google Calendar "add event" link, in club time."""
-    params = {'action': 'TEMPLATE', 'text': item['name'],
-              'dates': f"{_stamp(item['start'])}/{_stamp(item['end'])}", 'ctz': timezone}
+    if item['all_day']:
+        dates = f"{item['start']:%Y%m%d}/{item['end'].date() + datetime.timedelta(days=1):%Y%m%d}"
+    else:
+        dates = f"{_stamp(item['start'])}/{_stamp(item['end'])}"
+    params = {'action': 'TEMPLATE', 'text': item['name'], 'dates': dates, 'ctz': timezone}
     details = '\n\n'.join(p for p in (item['details'], item['link']) if p)
     if details:
         params['details'] = details
@@ -212,9 +230,13 @@ def _fold(line):
 
 
 def _vevent(item, uid, timezone, now, rrule=None):
-    lines = ['BEGIN:VEVENT', f'UID:{uid}', f'DTSTAMP:{now.strftime("%Y%m%dT%H%M%SZ")}',
-             f'DTSTART;TZID={timezone}:{_stamp(item["start"])}',
-             f'DTEND;TZID={timezone}:{_stamp(item["end"])}',
+    if item['all_day']:
+        # DTEND of an all-day event is the day after (exclusive).
+        when = [f'DTSTART;VALUE=DATE:{item["start"]:%Y%m%d}',
+                f'DTEND;VALUE=DATE:{item["end"].date() + datetime.timedelta(days=1):%Y%m%d}']
+    else:
+        when = [f'DTSTART;TZID={timezone}:{_stamp(item["start"])}', f'DTEND;TZID={timezone}:{_stamp(item["end"])}']
+    lines = ['BEGIN:VEVENT', f'UID:{uid}', f'DTSTAMP:{now.strftime("%Y%m%dT%H%M%SZ")}', *when,
              f'SUMMARY:{_ics_text(item["name"])}',
              f'CATEGORIES:{_ics_text(item["label"])}']
     if rrule:

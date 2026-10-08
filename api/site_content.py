@@ -100,6 +100,7 @@ RESOURCE_SHELVES = {
 }
 RESOURCES_MAX = 60
 FUNDRAISERS_MAX = 20
+HISTORY_MAX = 60
 MONEY_MAX = 1_000_000
 
 
@@ -107,7 +108,7 @@ class Field:
     """One editable value.
 
     kind: text | textarea | rich | url | link | email | toggle | choice | time | days |
-          number | datetime | image | list
+          number | date | datetime | image | list
     rich text allows **bold**, [label](link) and blank-line paragraphs; nothing else.
     `items` describes a list row as a tuple of Fields (kind list only).
     Text may use placeholders like {room} or {tagline}; see TOKENS.
@@ -276,7 +277,21 @@ SECTIONS = (
             Field('featured', 'toggle', 'Pin as next', False),
             Field('hidden', 'toggle', 'Draft (hidden)', False),
         ), max_items=FUNDRAISERS_MAX, group='Fundraisers',
-            hint='Past fundraisers drop off the homepage on their own.'),
+            hint='Past fundraisers drop off the homepage on their own and move to the track record below.'),
+        Field('show_history', 'toggle', 'Show past fundraisers', True, group='Past fundraisers',
+              hint='A track record on the Donate page: what each fundraiser raised, and the total.'),
+        Field('history_heading', 'text', 'Heading', 'Our Fundraising Track Record', max=60,
+              group='Past fundraisers'),
+        Field('history', 'list', 'Earlier fundraisers', [], items=(
+            Field('name', 'text', 'Name', '', max=80, required=True),
+            Field('date', 'date', 'Date', '', required=True),
+            Field('raised', 'number', 'Raised ($)', None, min_value=0, max_value=MONEY_MAX),
+            Field('goal', 'number', 'Goal ($)', None, min_value=0, max_value=MONEY_MAX),
+            Field('description', 'textarea', 'What it paid for', '', max=300),
+            Field('image', 'image', 'Photo', None),
+        ), max_items=HISTORY_MAX, group='Past fundraisers',
+            hint='Fundraisers from before this list existed. Ones that ended in the list above are counted '
+                 'automatically, so there is no need to add them again.'),
         Field('owner_group', 'text', 'Fundraising group', 'fundraising', max=40, pattern=r'[a-z0-9]+(?:-[a-z0-9]+)*',
               group='Who can edit', hint='Everyone on this group can edit this page. Editors and admins always can.'),
     ), role='fundraisers', page='index', blurb='Homepage fundraisers'),
@@ -706,6 +721,14 @@ def clean_value(field, value):
         if not field.min_value <= value <= field.max_value:
             raise ContentError(f'{field.label} must be between {field.min_value} and {field.max_value}.')
         return value
+    if kind == 'date':
+        value = _text(value, field)
+        if value:
+            try:
+                datetime.datetime.strptime(value, '%Y-%m-%d')
+            except ValueError:
+                raise ContentError(f'{field.label} must be a date.') from None
+        return value
     if kind == 'datetime':
         value = _text(value, field)
         if value:
@@ -1037,3 +1060,40 @@ def fundraiser_cards(entries, now, limit):
                           days_away=(start.date() - now.date()).days))
     cards.sort(key=lambda c: (not c.get('featured'), c['start']))
     return cards[:limit]
+
+
+def past_fundraisers(entries, history, now):
+    """Finished fundraisers, newest first, and the dollars they raised in total.
+
+    Rows typed into the history list come with ones from the main list that have
+    ended (drafts excluded), so nothing is entered twice. A row in both, by name and
+    day, is shown once, taking the history copy. Each row gains `day` (a date) and
+    `percent` (None without a goal).
+    """
+    rows, seen = [], set()
+    for row in history or []:
+        day = _moment(f"{row.get('date')}T00:00")
+        if row.get('name') and day:
+            rows.append(dict(row, day=day.date()))
+    for entry in entries or []:
+        start = _moment(entry.get('starts'))
+        if entry.get('hidden') or not entry.get('name') or not start:
+            continue
+        end = _moment(entry.get('ends'))
+        if not end or end < start:
+            end = start.replace(hour=23, minute=59)
+        if end < now:
+            rows.append({'name': entry['name'], 'day': start.date(), 'raised': entry.get('raised'),
+                         'goal': entry.get('goal'), 'description': entry.get('description') or '',
+                         'image': entry.get('image')})
+    out = []
+    for row in rows:
+        key = (row['name'].strip().lower(), row['day'])
+        if key in seen:
+            continue
+        seen.add(key)
+        goal, raised = row.get('goal'), row.get('raised')
+        out.append(dict(row, percent=min(100, round(100 * (raised or 0) / goal)) if goal and raised is not None
+                        else None))
+    out.sort(key=lambda r: r['day'], reverse=True)
+    return out, sum(r.get('raised') or 0 for r in out)

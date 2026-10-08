@@ -1228,6 +1228,7 @@ def _calendar_sources(since):
         {'date': {'$gte': since - datetime.timedelta(days=1)}}).sort('date', 1)]
     if site().events.show_fundraisers:
         items += events.fundraiser_items(site().fundraisers.entries)
+        items += events.history_items(site().fundraisers.history)
     return events.sort_items(i for i in items if i and i['end'] >= since)
 
 
@@ -1329,9 +1330,13 @@ def donate():
     # The contact page has always shown its own address; the donation fallback
     # used CONTACT_EMAIL. Once an admin sets the club email, both use it.
     email = content.general.contact_email if content.is_custom('general.contact_email') else CONTACT_EMAIL
+    fundraisers = content.fundraisers
+    past, raised = (site_content.past_fundraisers(fundraisers.entries, fundraisers.history, club_now())
+                    if fundraisers.show_history else ([], 0))
     return render_template('donate.html', active_page='donate',
                            givebutter_campaign_id=content.donate.givebutter_id,
-                           contact_email=email, sponsors=load_sponsors())
+                           contact_email=email, sponsors=load_sponsors(),
+                           past_fundraisers=past, past_raised=raised)
 
 # Journey dates are free text; these are the shapes people type into that box.
 LOOSE_DATE_FORMATS = ('%Y-%m-%d', '%m/%d/%Y', '%b %d, %Y', '%B %d, %Y', '%b %d %Y', '%B %d %Y',

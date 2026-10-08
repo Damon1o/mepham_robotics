@@ -16,7 +16,9 @@
 
 {#- "Sat, Oct 12 · 9:00 AM", "3:00–5:00 PM" for a meeting, "Oct 12 – Oct 14" across days. -#}
 {% macro when(item, with_day=True) -%}
-{%- if item.end.date() != item.start.date() -%}
+{%- if item.all_day -%}
+{% if with_day %}{{ item.start.strftime('%a, %b ') ~ item.start.day }}{% else %}All day{% endif %}
+{%- elif item.end.date() != item.start.date() -%}
 {{ item.start.strftime('%a, %b ') ~ item.start.day }} – {{ item.end.strftime('%a, %b ') ~ item.end.day }}
 {%- elif item.source == 'meeting' -%}
 {{ clock(item.start) }}–{{ clock(item.end) }}
