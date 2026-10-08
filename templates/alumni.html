@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% set al = site.alumni %}
+{% block title %}{{ al.hero_title }} | {{ site.general.short_name }}{% endblock %}
+{% block meta_description %}{{ al.meta_description }}{% endblock %}
+
+{% block page_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/alumni.css') }}">
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/alumni.js') }}" defer></script>
+{% endblock %}
+
+{% from "partials/site_macros.html" import hero_attrs, site_photo %}
+
+{% macro link_attrs(url) -%}
+href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{% endif %}
+{%- endmacro %}
+
+{#- One alum: photo or initials, where they went, what they said. -#}
+{% macro card(p) -%}
+{%- set path = paths.get(p.path) or paths['other'] -%}
+<li class="al-card al-p-{{ p.path if p.path in paths else 'other' }}" data-alum data-path="{{ p.path if p.path in paths else 'other' }}"
+    data-search="{{ [p.name, p.school, p.study, p.now, p.team, p.class_year|string]|join(' ')|lower }}">
+    <div class="al-card-head">
+        <div class="al-avatar" aria-hidden="true">
+            {%- if p.photo %}{{ site_photo({'image': p.photo}, '64px', decorative=True) }}{% else %}{{ p.initials }}{% endif -%}
+        </div>
+        <div class="al-card-who">
+            <h4>{{ p.name }}</h4>
+            <p class="al-card-class">Class of {{ p.class_year }}{% if p.team %} · {{ p.team }}{% endif %}</p>
+        </div>
+        {% if p.link %}
+        <a class="al-card-link" href="{{ p.link }}" target="_blank" rel="noopener" aria-label="{{ p.name }} online">
+            <i data-lucide="{{ 'linkedin' if 'linkedin.com' in p.link else 'arrow-up-right' }}" aria-hidden="true"></i></a>
+        {% endif %}
+    </div>
+    <ul class="al-card-facts">
+        {% if p.school %}<li><i data-lucide="graduation-cap" aria-hidden="true"></i><span>{{ p.school }}{% if p.study %}<small>{{ p.study }}</small>{% endif %}</span></li>
+        {% elif p.study %}<li><i data-lucide="book-open" aria-hidden="true"></i><span>{{ p.study }}</span></li>{% endif %}
+        {% if p.now %}<li><i data-lucide="briefcase" aria-hidden="true"></i><span>{{ p.now }}</span></li>{% endif %}
+    </ul>
+    {% if p.quote %}<blockquote class="al-card-quote">{{ p.quote }}</blockquote>{% endif %}
+    <span class="al-badge"><i data-lucide="{{ path[1] }}" aria-hidden="true"></i>{{ path[0] }}</span>
+</li>
+{%- endmacro %}
+
+{% block content %}
+<div {{ hero_attrs(al.hero_image) }}>
+    <div class="hero-content">
+        <h1>{{ al.hero_title }}</h1>
+        {% if al.hero_tagline %}<p>{{ al.hero_tagline }}</p>{% endif %}
+    </div>
+    <div class="scroll-indicator"></div>
+</div>
+
+<nav class="breadcrumb">
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="separator">›</span>
+    <span class="current">{{ al.hero_title }}</span>
+</nav>
+
+<div class="al">
+    <!-- INTRO AND NUMBERS -->
+    <section class="al-intro fade-in-section" aria-labelledby="al-intro-heading">
+        <div>
+            <p class="al-kicker"><i data-lucide="graduation-cap" aria-hidden="true"></i> Alumni network</p>
+            <h2 id="al-intro-heading">{{ al.intro_heading }}</h2>
+            {% if al.intro_body %}<p class="al-lede">{{ al.intro_body }}</p>{% endif %}
+        </div>
+        {% if al.show_stats and view.count %}
+        <dl class="al-stats">
+            <div><dt>Alumni</dt><dd>{{ view.count }}</dd></div>
+            {% if view.school_count %}<div><dt>{{ 'School' if view.school_count == 1 else 'Schools' }} &amp; next steps</dt><dd>{{ view.school_count }}</dd></div>{% endif %}
+            <div><dt>In STEM</dt><dd>{{ view.stem_percent }}<small>%</small></dd></div>
+            <div><dt>Graduating {{ 'class' if view.class_count == 1 else 'classes' }}</dt><dd>{{ view.class_count }}</dd></div>
+        </dl>
+        {% endif %}
+    </section>
+
+    {% if view.count %}
+    <!-- PATHWAYS: a share bar whose legend filters the wall -->
+    <section class="al-paths fade-in-section" aria-labelledby="al-paths-heading">
+        <h3 id="al-paths-heading" class="al-heading">Where they went</h3>
+        <div class="al-bar" aria-hidden="true">
+            {% for key, name, icon, count, percent in view.paths %}
+            <span class="al-p-{{ key }}" style="--share: {{ count }}" title="{{ name }}: {{ count }}"></span>
+            {% endfor %}
+        </div>
+        <div class="al-chips" role="group" aria-label="Filter by pathway">
+            <button type="button" class="al-chip" data-path-filter="" aria-pressed="true">Everyone <span>{{ view.count }}</span></button>
+            {% for key, name, icon, count, percent in view.paths %}
+            <button type="button" class="al-chip al-p-{{ key }}" data-path-filter="{{ key }}" aria-pressed="false">
+                <i class="al-dot" aria-hidden="true"></i>{{ name }} <span>{{ percent }}%</span></button>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- THE WALL -->
+    <section class="al-wall" aria-labelledby="al-wall-heading">
+        <div class="al-wall-bar">
+            <h3 id="al-wall-heading" class="al-heading">Class by class</h3>
+            <label class="al-search">
+                <i data-lucide="search" aria-hidden="true"></i>
+                <span class="visually-hidden">Search alumni</span>
+                <input type="search" placeholder="Name, school, major…" data-alumni-search autocomplete="off">
+            </label>
+        </div>
+        <p class="al-count" role="status" aria-live="polite" data-alumni-count></p>
+        {% for year, people in view.classes %}
+        <div class="al-class" data-class>
+            <h4 class="al-class-year"><span>Class of</span> {{ year }} <small>{{ people|length }}</small></h4>
+            <ul class="al-grid">
+                {% for p in people %}{{ card(p) }}{% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+        <p class="al-none" data-alumni-none hidden>No one matches that yet. Try another search or pathway.</p>
+    </section>
+
+    {% if view.schools|length > 1 %}
+    <!-- SCHOOLS -->
+    <section class="al-schools fade-in-section" aria-labelledby="al-schools-heading">
+        <h3 id="al-schools-heading" class="al-heading">Where they enrolled</h3>
+        <ul class="al-school-list">
+            {% for name, count in view.schools %}
+            <li>{{ name }}{% if count > 1 %} <span>×{{ count }}</span>{% endif %}</li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+    {% else %}
+    <section class="al-empty fade-in-section">
+        <i data-lucide="sprout" aria-hidden="true"></i>
+        <h3>The wall is just getting started</h3>
+        <p>Our first alumni are heading out into the world. If you were part of the club, tell us where you landed.</p>
+    </section>
+    {% endif %}
+
+    <!-- JOIN AND GIVE -->
+    <section class="al-bands" aria-label="Join or support the club">
+        <div class="al-band al-band--join fade-in-section">
+            <i data-lucide="rocket" class="al-band-icon" aria-hidden="true"></i>
+            <h2>{{ al.join_heading }}</h2>
+            {% if al.join_body %}<p>{{ al.join_body }}</p>{% endif %}
+            <a class="al-btn al-btn--gold" {{ link_attrs(al.join_url) }}>{{ al.join_button }} <i data-lucide="arrow-right" aria-hidden="true"></i></a>
+        </div>
+        <div class="al-band al-band--give fade-in-section">
+            <i data-lucide="heart-handshake" class="al-band-icon" aria-hidden="true"></i>
+            <h2>{{ al.give_heading }}</h2>
+            {% if al.give_body %}<p>{{ al.give_body }}</p>{% endif %}
+            <a class="al-btn al-btn--primary" {{ link_attrs(al.give_url) }}>{{ al.give_button }} <i data-lucide="arrow-right" aria-hidden="true"></i></a>
+        </div>
+    </section>
+
+    {% if al.update_show %}
+    <!-- ALUMNI UPDATE: goes to the Messages inbox, tagged alumni -->
+    <section id="update" class="al-update fade-in-section" aria-labelledby="al-update-heading">
+        <div>
+            <p class="al-kicker"><i data-lucide="send" aria-hidden="true"></i> Stay in touch</p>
+            <h2 id="al-update-heading">{{ al.update_heading }}</h2>
+            {% if al.update_body %}<p class="al-lede">{{ al.update_body }}</p>{% endif %}
+        </div>
+        <form class="al-form" data-alumni-form novalidate>
+            <label>Your name<input type="text" name="name" maxlength="100" autocomplete="name" required></label>
+            <label>Email<input type="email" name="email" maxlength="200" autocomplete="email" required></label>
+            <label>Class of<input type="text" name="class_year" inputmode="numeric" maxlength="4" placeholder="{{ this_year }}"></label>
+            <label class="al-form-wide">Where are you now?
+                <textarea name="message" rows="4" maxlength="1500" required
+                    placeholder="College, major, job, what you're building… and whether we can list you on this page."></textarea></label>
+            <input type="text" name="website" class="visually-hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <div class="al-form-foot">
+                <button type="submit" class="al-btn al-btn--primary">Send update <i data-lucide="send" aria-hidden="true"></i></button>
+                <p class="al-form-status" role="status" aria-live="polite" data-alumni-status></p>
+            </div>
+        </form>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

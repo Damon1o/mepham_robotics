@@ -62,6 +62,7 @@ CONSTRUCTION_PAGES = {
     'about': 'About',
     'achievements': 'Achievements',
     'events_page': 'Events',
+    'alumni': 'Alumni',
     'contact': 'Contact',
     'donate': 'Donate',
     'team_page': 'Team pages',
@@ -99,6 +100,19 @@ RESOURCE_SHELVES = {
     'team': ('Team documents', 'users'),
 }
 RESOURCES_MAX = 60
+# Alumni page pathways: key -> (name, lucide icon), in the order the page shows them.
+ALUMNI_PATHS = {
+    'engineering': ('Engineering', 'cog'),
+    'computing': ('Computer science', 'code'),
+    'science': ('Science & medicine', 'microscope'),
+    'business': ('Business & law', 'briefcase'),
+    'arts': ('Arts & design', 'palette'),
+    'service': ('Military & service', 'shield'),
+    'trades': ('Trades & work', 'hammer'),
+    'other': ('Something else', 'compass'),
+}
+STEM_PATHS = ('engineering', 'computing', 'science')
+ALUMNI_MAX = 300
 FUNDRAISERS_MAX = 20
 HISTORY_MAX = 60
 MONEY_MAX = 1_000_000
@@ -587,6 +601,54 @@ SECTIONS = (
         Field('show_calculator', 'toggle', 'Show the drivetrain calculator', True, group='Tools',
               hint='Motor cartridge, gears and wheels in; speed and pushing power out.'),
     ), page='resources', blurb='Library, this week, tools'),
+
+    Section('alumni', 'Alumni page', 'graduation-cap', (
+        Field('hero_title', 'text', 'Big title', 'Alumni', max=40, required=True, group='Top of the page'),
+        Field('hero_tagline', 'text', 'Tagline', 'Where our builders, coders and drivers went next', max=80,
+              group='Top of the page'),
+        Field('hero_image', 'image', 'Background photo', None, group='Top of the page'),
+        Field('intro_heading', 'text', 'Heading', 'From the shop to everywhere', max=60, group='Introduction'),
+        Field('intro_body', 'textarea', 'Text',
+              'Every season, members leave {short_name} with real engineering, teamwork and competition '
+              'experience. Here is where they took it.', max=400, group='Introduction'),
+        Field('show_stats', 'toggle', 'Show the numbers', True, group='Introduction',
+              hint='Alumni, schools, share in STEM and graduating classes, worked out from the list.'),
+        Field('people', 'list', 'Alumni', [], items=(
+            Field('name', 'text', 'Name', '', max=60, required=True),
+            Field('class_year', 'number', 'Class of', None, required=True, min_value=1950, max_value=2100),
+            Field('path', 'choice', 'Pathway', 'engineering', choices={k: v[0] for k, v in ALUMNI_PATHS.items()}),
+            Field('school', 'text', 'College or next step', '', max=80),
+            Field('study', 'text', 'Studying', '', max=80),
+            Field('now', 'text', 'Where they are now', '', max=100),
+            Field('team', 'text', 'Team or role in the club', '', max=60),
+            Field('quote', 'textarea', 'Looking back', '', max=280),
+            Field('photo', 'image', 'Photo', None),
+            Field('link', 'url', 'LinkedIn or portfolio', '', max=300),
+            Field('hidden', 'toggle', 'Draft (hidden)', False),
+        ), max_items=ALUMNI_MAX, group='Alumni',
+            hint='Only list people who said yes. Updates sent from the page arrive in Messages, tagged alumni.',
+            hint_link=('Messages', 'messages')),
+        Field('update_show', 'toggle', 'Show the update form', True, group='Send an update'),
+        Field('update_heading', 'text', 'Heading', 'Are you an alum?', max=60, group='Send an update'),
+        Field('update_body', 'textarea', 'Text',
+              "Tell us where you landed and what you're up to. We'll add you to the wall.", max=300,
+              group='Send an update'),
+        Field('join_heading', 'text', 'Heading', 'Your path starts here', max=60, group='Join and give'),
+        Field('join_body', 'textarea', 'Text',
+              '{school_short} students can join any time, no experience needed. Every name on this page started '
+              'in {room}.', max=300, group='Join and give'),
+        Field('join_button', 'text', 'Button', 'Join the Club', max=24, group='Join and give'),
+        Field('join_url', 'link', 'Button link', '/contact', max=300, group='Join and give'),
+        Field('give_heading', 'text', 'Heading', 'Fund the next class', max=60, group='Join and give'),
+        Field('give_body', 'textarea', 'Text',
+              'Parts, travel and entry fees are what put the next class of alumni on this wall.', max=300,
+              group='Join and give'),
+        Field('give_button', 'text', 'Button', 'Donate', max=24, group='Join and give'),
+        Field('give_url', 'link', 'Button link', '/donate', max=300, group='Join and give'),
+        Field('meta_description', 'textarea', 'Search description',
+              'Where Mepham Robotics alumni went next: the colleges, majors and careers of former VEX Robotics '
+              'team members.', max=200, group='Search & sharing'),
+    ), page='alumni', blurb='Alumni wall, numbers, join and give'),
 
     Section('footer', 'Footer', 'panel-bottom', (
         Field('newsletter_heading', 'text', 'Newsletter heading', 'Stay Updated', max=40),
@@ -1097,3 +1159,36 @@ def past_fundraisers(entries, history, now):
                         else None))
     out.sort(key=lambda r: r['day'], reverse=True)
     return out, sum(r.get('raised') or 0 for r in out)
+
+
+def alumni_view(people):
+    """The alumni wall: who is listed, grouped by class, and the numbers above it.
+
+    Drafts and rows without a name or class are left out. Returns people (newest
+    class first, then by name; each gains `initials`), classes as [(year, rows)],
+    paths as [(key, name, icon, count, percent)], schools as [(name, count)] most
+    common first, and count, school_count, class_count and stem_percent.
+    """
+    rows = [dict(p, initials=''.join(w[0] for w in p['name'].split()[:2]).upper())
+            for p in people or [] if not p.get('hidden') and (p.get('name') or '').strip() and p.get('class_year')]
+    rows.sort(key=lambda p: (-p['class_year'], p['name'].lower()))
+    classes, counts, schools = {}, {}, {}
+    for row in rows:
+        classes.setdefault(row['class_year'], []).append(row)
+        path = row.get('path') if row.get('path') in ALUMNI_PATHS else 'other'
+        counts[path] = counts.get(path, 0) + 1
+        school = (row.get('school') or '').strip()
+        if school:
+            schools[school] = schools.get(school, 0) + 1
+    total = len(rows)
+    return {
+        'people': rows,
+        'classes': list(classes.items()),
+        'paths': [(k, name, icon, counts[k], round(100 * counts[k] / total))
+                  for k, (name, icon) in ALUMNI_PATHS.items() if counts.get(k)],
+        'schools': sorted(schools.items(), key=lambda s: (-s[1], s[0].lower())),
+        'count': total,
+        'school_count': len(schools),
+        'class_count': len(classes),
+        'stem_percent': round(100 * sum(counts.get(k, 0) for k in STEM_PATHS) / total) if total else 0,
+    }

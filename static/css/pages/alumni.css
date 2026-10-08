@@ -1,0 +1,808 @@
+/* Page styles: Alumni (/alumni)
+   ------------------------------------------------------------------
+   Hero, then one .al column:
+
+     1. Shared: tokens, pathway colours, buttons, headings
+     2. Intro and numbers
+     3. Pathway bar and filter chips
+     4. The wall: search, classes, cards
+     5. Schools
+     6. Join and give bands
+     7. Update form
+     8. Dark mode
+     9. Responsive
+    10. Reduced motion
+   ------------------------------------------------------------------ */
+
+/* ================================================================
+   1. SHARED
+   ================================================================ */
+
+.al {
+    --al-ink: #1a1414;
+    --al-muted: #6b5f5f;
+    --al-paper: #ffffff;
+    --al-rule: rgba(128, 0, 0, 0.12);
+    --al-soft: #fbf6f6;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 5rem;
+    display: grid;
+    gap: 3rem;
+    color: var(--al-ink);
+}
+
+.al [hidden] {
+    display: none !important;
+}
+
+/* One colour per pathway, used by the bar, chips, avatars and badges. */
+.al-p-engineering { --p: #800000; }
+.al-p-computing { --p: #1b6f8a; }
+.al-p-science { --p: #2f7d4f; }
+.al-p-business { --p: #b07d00; }
+.al-p-arts { --p: #6b4aa6; }
+.al-p-service { --p: #3d5a80; }
+.al-p-trades { --p: #a0522d; }
+.al-p-other { --p: #857676; }
+
+.al-kicker {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.75rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.al-kicker svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.al h2,
+.al h3,
+.al h4 {
+    width: auto;
+    margin: 0;
+    text-align: left;
+    color: var(--al-ink);
+}
+
+/* The global h2 underline belongs to centered page headings. */
+.al h2::after {
+    display: none;
+}
+
+.al h2 {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+}
+
+.al-heading {
+    margin-bottom: 1rem !important;
+    font-size: 1.5rem;
+}
+
+.al-lede {
+    max-width: 60ch;
+    margin: 0.75rem 0 0;
+    color: var(--al-muted);
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+
+.al-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+    padding: 0.6rem 1.25rem;
+    border: 1.5px solid var(--maroon-dark);
+    border-radius: 999px;
+    background: var(--al-paper);
+    color: var(--maroon-dark);
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.al-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.al-btn:active {
+    transform: scale(0.97);
+}
+
+.al-btn:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+.al-btn--primary {
+    background: var(--maroon-dark);
+    color: #fff;
+}
+
+.al-btn--primary:hover {
+    background: #5e0000;
+}
+
+.al-btn--gold {
+    border-color: var(--accent-gold);
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+.al-btn--gold:hover {
+    background: #fff;
+    color: var(--ink-on-gold);
+}
+
+/* ================================================================
+   2. INTRO AND NUMBERS
+   ================================================================ */
+
+.al-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: center;
+}
+
+.al-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 0;
+}
+
+.al-stats div {
+    padding: 1.25rem 1.4rem;
+    border: 1px solid var(--al-rule);
+    border-radius: 18px;
+    background: var(--al-paper);
+    box-shadow: 0 10px 24px rgba(80, 0, 0, 0.05);
+}
+
+.al-stats dt {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--al-muted);
+}
+
+.al-stats dd {
+    margin: 0.35rem 0 0;
+    font-size: 2.4rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--maroon-dark);
+    font-variant-numeric: tabular-nums;
+}
+
+.al-stats dd small {
+    font-size: 1.2rem;
+}
+
+/* ================================================================
+   3. PATHWAY BAR AND FILTER CHIPS
+   ================================================================ */
+
+.al-bar {
+    display: flex;
+    gap: 3px;
+    height: 14px;
+    margin-bottom: 1.1rem;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.al-bar span {
+    flex: var(--share) 1 0;
+    background: var(--p);
+}
+
+.al-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.al-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.5rem;
+    padding: 0.45rem 0.95rem;
+    border: 1.5px solid var(--al-rule);
+    border-radius: 999px;
+    background: var(--al-paper);
+    color: var(--al-ink);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.al-chip span {
+    color: var(--al-muted);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.al-chip:hover {
+    border-color: var(--p, var(--maroon-dark));
+}
+
+.al-chip[aria-pressed="true"] {
+    border-color: var(--p, var(--maroon-dark));
+    background: color-mix(in srgb, var(--p, var(--maroon-dark)) 12%, var(--al-paper));
+}
+
+.al-dot {
+    display: inline-block;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--p);
+}
+
+/* ================================================================
+   4. THE WALL
+   ================================================================ */
+
+.al-wall-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.al-wall-bar .al-heading {
+    margin-bottom: 0 !important;
+}
+
+.al-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: min(100%, 320px);
+    padding: 0 1rem;
+    border: 1.5px solid var(--al-rule);
+    border-radius: 999px;
+    background: var(--al-paper);
+}
+
+.al-search:focus-within {
+    border-color: var(--maroon-dark);
+}
+
+.al-search svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    color: var(--al-muted);
+}
+
+.al-search input {
+    flex: 1;
+    min-width: 0;
+    min-height: 2.6rem;
+    border: 0;
+    background: transparent;
+    color: var(--al-ink);
+    font: inherit;
+    outline: none;
+}
+
+.al-count {
+    min-height: 1.2em;
+    margin: 0.5rem 0 1rem;
+    color: var(--al-muted);
+    font-size: 0.9rem;
+}
+
+.al-class + .al-class {
+    margin-top: 2.25rem;
+}
+
+.al-class-year {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 1rem !important;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--al-rule);
+    font-size: 1.6rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.al-class-year span {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.al-class-year small {
+    margin-left: auto;
+    color: var(--al-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.al-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.al-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1.25rem;
+    border: 1px solid var(--al-rule);
+    border-top: 4px solid var(--p);
+    border-radius: 18px;
+    background: var(--al-paper);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.al-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(80, 0, 0, 0.08);
+}
+
+.al-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.al-avatar {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 50%;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--p) 14%, var(--al-paper));
+    color: var(--p);
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.al-avatar picture,
+.al-avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.al-card-who {
+    flex: 1;
+    min-width: 0;
+}
+
+.al-card-who h4 {
+    font-size: 1.05rem;
+    line-height: 1.25;
+}
+
+.al-card-class {
+    margin: 0.15rem 0 0;
+    color: var(--al-muted);
+    font-size: 0.85rem;
+}
+
+.al-card-link {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    color: var(--al-muted);
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.al-card-link:hover {
+    background: var(--al-soft);
+    color: var(--maroon-dark);
+}
+
+.al-card-link svg {
+    width: 1.05rem;
+    height: 1.05rem;
+}
+
+.al-card-facts {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.93rem;
+}
+
+.al-card-facts li {
+    display: flex;
+    gap: 0.55rem;
+    line-height: 1.4;
+}
+
+.al-card-facts svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.15rem;
+    color: var(--p);
+}
+
+.al-card-facts small {
+    display: block;
+    color: var(--al-muted);
+    font-size: 0.85rem;
+}
+
+.al-card-quote {
+    margin: 0;
+    padding: 0.7rem 0.9rem;
+    border-left: 3px solid var(--p);
+    border-radius: 0 10px 10px 0;
+    background: var(--al-soft);
+    font-size: 0.92rem;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+.al-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    align-self: flex-start;
+    margin-top: auto;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--p) 12%, transparent);
+    color: var(--p);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.al-badge svg {
+    width: 0.85rem;
+    height: 0.85rem;
+}
+
+.al-none,
+.al-empty {
+    padding: 2.5rem 1.5rem;
+    border: 1.5px dashed var(--al-rule);
+    border-radius: 18px;
+    color: var(--al-muted);
+    text-align: center;
+}
+
+.al-empty svg {
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--maroon-light);
+}
+
+.al-empty h3 {
+    margin: 0.75rem 0 0.4rem;
+    text-align: center;
+}
+
+.al-empty p {
+    max-width: 48ch;
+    margin: 0 auto;
+}
+
+/* ================================================================
+   5. SCHOOLS
+   ================================================================ */
+
+.al-school-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.al-school-list li {
+    padding: 0.55rem 1rem;
+    border: 1px solid var(--al-rule);
+    border-radius: 12px;
+    background: var(--al-paper);
+    font-weight: 600;
+}
+
+.al-school-list span {
+    margin-left: 0.2rem;
+    color: var(--maroon-light);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ================================================================
+   6. JOIN AND GIVE BANDS
+   ================================================================ */
+
+.al-bands {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.al-band {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 2rem 2.25rem;
+    border-radius: 24px;
+}
+
+.al-band h2 {
+    font-size: 1.5rem;
+}
+
+.al-band p {
+    margin: 0 0 0.5rem;
+    line-height: 1.55;
+}
+
+.al-band .al-btn {
+    margin-top: auto;
+}
+
+.al-band-icon {
+    width: 2.6rem;
+    height: 2.6rem;
+}
+
+.al-band--join {
+    background: linear-gradient(135deg, #800000 0%, #5e0000 100%);
+    color: #fff;
+    box-shadow: 0 18px 40px rgba(80, 0, 0, 0.18);
+}
+
+.al-band--join h2 {
+    color: #fff;
+}
+
+.al-band--join p {
+    opacity: 0.9;
+}
+
+.al-band--join .al-band-icon {
+    color: var(--accent-gold);
+}
+
+.al-band--give {
+    border: 1px solid var(--al-rule);
+    background: var(--al-soft);
+}
+
+.al-band--give .al-band-icon {
+    color: var(--maroon-dark);
+}
+
+/* ================================================================
+   7. UPDATE FORM
+   ================================================================ */
+
+.al-update {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 2.5rem;
+    align-items: start;
+}
+
+.al-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 1.75rem;
+    border: 1px solid var(--al-rule);
+    border-radius: 20px;
+    background: var(--al-paper);
+}
+
+.al-form label {
+    display: grid;
+    gap: 0.35rem;
+    color: var(--al-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.al-form-wide,
+.al-form-foot {
+    grid-column: 1 / -1;
+}
+
+.al-form input,
+.al-form textarea {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.6rem 0.85rem;
+    border: 1.5px solid var(--al-rule);
+    border-radius: 12px;
+    background: var(--al-soft);
+    color: var(--al-ink);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 400;
+    box-sizing: border-box;
+}
+
+.al-form textarea {
+    resize: vertical;
+}
+
+.al-form input:focus,
+.al-form textarea:focus {
+    border-color: var(--maroon-dark);
+    outline: none;
+}
+
+.al-form .has-error {
+    border-color: #c0392b;
+}
+
+.al-form-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+}
+
+.al-form-status {
+    margin: 0;
+    font-size: 0.92rem;
+}
+
+.al-form-status.is-ok {
+    color: #2f7d4f;
+}
+
+.al-form-status.is-error {
+    color: #c0392b;
+}
+
+/* ================================================================
+   8. DARK MODE
+   ================================================================ */
+
+[data-theme="dark"] .al {
+    --al-ink: #f1e9e9;
+    --al-muted: #b3a5a5;
+    --al-paper: #1e1a1a;
+    --al-rule: rgba(255, 255, 255, 0.1);
+    --al-soft: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .al-p-engineering { --p: #e07a7c; }
+[data-theme="dark"] .al-p-computing { --p: #5fb7d4; }
+[data-theme="dark"] .al-p-science { --p: #6fcf97; }
+[data-theme="dark"] .al-p-business { --p: #e8bd45; }
+[data-theme="dark"] .al-p-arts { --p: #b39ae6; }
+[data-theme="dark"] .al-p-service { --p: #8fb3e0; }
+[data-theme="dark"] .al-p-trades { --p: #e09a6b; }
+[data-theme="dark"] .al-p-other { --p: #a99a9a; }
+
+[data-theme="dark"] .al-kicker,
+[data-theme="dark"] .al-class-year span,
+[data-theme="dark"] .al-school-list span {
+    color: #e8bd45;
+}
+
+[data-theme="dark"] .al-stats dd,
+[data-theme="dark"] .al-band--give .al-band-icon {
+    color: #e07a7c;
+}
+
+[data-theme="dark"] .al-band--join {
+    background: linear-gradient(135deg, #5e1a1b 0%, #3a0c0c 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .al-btn--primary {
+    border-color: #a32a2c;
+    background: #a32a2c;
+}
+
+[data-theme="dark"] .al-card-link:hover {
+    color: #e07a7c;
+}
+
+[data-theme="dark"] .al-form-status.is-ok {
+    color: #6fcf97;
+}
+
+[data-theme="dark"] .al-form-status.is-error,
+[data-theme="dark"] .al-form .has-error {
+    color: #f0a08f;
+    border-color: #f0a08f;
+}
+
+/* ================================================================
+   9. RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 900px) {
+    .al-intro,
+    .al-update,
+    .al-bands {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .al-intro,
+    .al-update {
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .al {
+        padding: 2rem 1rem 4rem;
+        gap: 2.5rem;
+    }
+
+    .al-stats dd {
+        font-size: 2rem;
+    }
+
+    .al-search {
+        width: 100%;
+    }
+
+    .al-band {
+        padding: 1.5rem;
+    }
+
+    .al-form {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 1.25rem;
+    }
+}
+
+/* ================================================================
+   10. REDUCED MOTION
+   ================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .al-card,
+    .al-btn,
+    .al-chip {
+        transition: none;
+    }
+
+    .al-card:hover {
+        transform: none;
+    }
+}

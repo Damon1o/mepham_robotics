@@ -634,6 +634,8 @@ SEARCH_PAGES = [
      'awards achievements competitions results trophies seasons', False),
     ('Events', 'events_page', 'Calendar of competitions, outreach, fundraisers and meetings',
      'events calendar schedule competitions tournaments outreach meetings dates subscribe ics', False),
+    ('Alumni', 'alumni', 'Where past members went: colleges, majors and careers',
+     'alumni graduates former members college university majors careers class of where are they now', False),
     ('Donate', 'donate', 'Support our team through sponsorship and donations',
      'donate sponsor support fundraising givebutter tiers', False),
     ('Contact', 'contact', 'Get in touch — contact form, meeting schedule, and FAQ',
@@ -661,7 +663,7 @@ def search_index(teams):
     signed_in = 'user' in session
     pages = [{'title': title, 'url': url_for(endpoint), 'desc': desc, 'keywords': keywords, 'members': members}
              for title, endpoint, desc, keywords, members in SEARCH_PAGES if signed_in or not members]
-    pages[6:6] = [_search_entry(t) for t in teams]
+    pages[7:7] = [_search_entry(t) for t in teams]
     return pages
 
 
@@ -861,7 +863,7 @@ CONTACT_NAME_MAX = 100
 CONTACT_EMAIL_MAX = 254
 CONTACT_MESSAGE_MAX = 4000
 # Topics the contact form offers. Anything else is stored as 'general'.
-CONTACT_TOPICS = ('join', 'sponsor', 'general')
+CONTACT_TOPICS = ('join', 'sponsor', 'general', 'alumni')
 _contact_indexes_ready = False
 
 def _ensure_contact_indexes():
@@ -1313,6 +1315,13 @@ def event_ics(event_id):
         abort(404)
     return _ics_response(events.ics_calendar(item['name'], [item], request.host, CLUB_TIMEZONE,
                                              datetime.datetime.now(datetime.timezone.utc)), 'event.ics')
+
+
+@app.route('/alumni')
+def alumni():
+    content = site().alumni
+    return render_template('alumni.html', active_page='alumni', view=site_content.alumni_view(content.people),
+                           paths=site_content.ALUMNI_PATHS, this_year=club_now().year)
 
 
 @app.route('/contact')
@@ -4191,7 +4200,9 @@ def chat_system_prompt():
              f"Signed-in members have the {content.resources.hero_title} at /resources: this week's meeting and next "
              "competition, the team's links and guides, and a drivetrain calculator.",
              "Every competition, outreach event, fundraiser and meeting is on the events page at /events, "
-             "which also offers a calendar feed to subscribe to."]
+             "which also offers a calendar feed to subscribe to.",
+             "The alumni page at /alumni shows where former members went to college and work; alumni can send "
+             "their own update from that page."]
     try:
         coming = [i for i in _calendar_sources(club_now()) if i['source'] == 'event'][:5]
     except Exception:
@@ -4345,6 +4356,7 @@ STATIC_PUBLIC_PAGES = [
     ('about', 0.8, 'monthly'),
     ('achievements', 0.8, 'weekly'),
     ('events_page', 0.8, 'daily'),
+    ('alumni', 0.6, 'monthly'),
     ('donate', 0.7, 'monthly'),
     ('contact', 0.6, 'monthly'),
     ('safety_quiz', 0.5, 'yearly'),
@@ -4422,6 +4434,7 @@ def llms_txt():
               f"- [Achievements]({_public_url('achievements')}): every award, the competition log and live results",
               f"- [Events]({_public_url('events_page')}): competitions, outreach, fundraisers and meetings, "
               f"with a calendar feed at {_public_url('events_ics')}",
+              f"- [Alumni]({_public_url('alumni')}): where former members went to college and work",
               f"- [Support us]({_public_url('donate')}): donations and sponsorship levels",
               f"- [Contact]({_public_url('contact')}): join the club, sponsor us, or invite us to an event"]
     lines += [f"- [Team {t['team_number']}]({_public_url('team_page', team_number=t['team_number'])}): "
