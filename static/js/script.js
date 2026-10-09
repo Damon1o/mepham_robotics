@@ -805,20 +805,6 @@ function showToast(message, type = 'info') {
 })();
 
 
-// --- ACTIVE NAV HIGHLIGHTING ---
-(function initActiveNav() {
-    const currentPath = window.location.pathname;
-    const navLinks = document.querySelectorAll('.sidenav a');
-
-    navLinks.forEach(link => {
-        const href = link.getAttribute('href');
-        if (href === currentPath || (href === '/' && currentPath === '/')) {
-            link.style.color = '#ffd700';
-            link.style.borderLeftColor = '#ffd700';
-        }
-    });
-})();
-
 // --- FAQ ACCORDION ---
 (function initFAQ() {
     const faqItems = document.querySelectorAll('.faq-item');

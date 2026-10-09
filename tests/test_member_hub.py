@@ -151,7 +151,7 @@ def test_robots_keeps_crawlers_off_members_only_pages(client):
 
 def test_nav_footer_and_breadcrumbs_name_the_hub(member):
     page = member.get('/glossary').get_data(as_text=True)
-    assert len(re.findall(r'href="/resources"[^>]*>Member Hub</a>', page)) == 3
+    assert len(re.findall(r'href="/resources"[^>]*>(?:(?!</a>).)*Member Hub', page, re.S)) == 3
     assert '>Resources</a>' not in page
 
 
