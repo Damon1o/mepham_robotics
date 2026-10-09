@@ -50,64 +50,98 @@
             data-lucide="menu"></i> MENU</button>
     <div id="overlay" class="overlay" data-nav-toggle></div>
 
-    <div id="mySidenav" class="sidenav" aria-label="Main navigation">
-        <button class="close-btn" data-nav-toggle aria-label="Close navigation">&times;</button>
+    <div id="mySidenav" class="sidenav">
+        <div class="nav-head">
+            <a href="{{ url_for('index') }}" class="nav-brand">
+                <img src="{{ url_for('static', filename='assets/icons/nav-crest.webp') }}" alt="" width="160"
+                    height="180" loading="lazy" decoding="async">
+                <span class="nav-brand-text">
+                    <strong>{{ site.general.short_name }}</strong>
+                    <small>{{ site.general.tagline }}</small>
+                </span>
+            </a>
+            <button class="close-btn" data-nav-toggle aria-label="Close navigation"><i data-lucide="x"
+                    aria-hidden="true"></i></button>
+        </div>
 
-        <div class="nav-links">
-            <a href="{{ url_for('index') }}" {% if active_page=='index' %} class="active" {% endif %}>Home</a>
-            <a href="{{ url_for('about') }}" {% if active_page=='about' %} class="active" {% endif %}>About</a>
+        {% macro nav_link(href, icon, label, is_active) -%}
+        <a href="{{ href }}" class="nav-link{% if is_active %} active{% endif %}" {% if is_active %}aria-current="page"{% endif %}>
+            <span class="nav-icon"><i data-lucide="{{ icon }}" aria-hidden="true"></i></span>
+            <span class="nav-label">{{ label }}</span>
+        </a>
+        {%- endmacro %}
 
-            <button class="dropdown-btn" data-dropdown-toggle aria-controls="teamDropdown"
-                aria-expanded="false">Team</button>
-            <div id="teamDropdown" class="dropdown-container">
-                {% for n_team in nav_teams %}
-                {% if loop.first and n_team is not group %}
-                <span class="dropdown-label" role="presentation">Competing Teams</span>
-                {% endif %}
-                {% if n_team is group and loop.previtem is not group %}
-                <span class="dropdown-label" role="presentation">Groups</span>
-                {% endif %}
-                <a href="{{ url_for('team_page', team_number=n_team.team_number) }}" {% if
-                    active_page==n_team.team_number %} class="active" {% endif %}>{{ n_team.title or
-                    n_team.team_number if n_team is group else n_team.team_number }}</a>
-                {% endfor %}
+        <nav class="nav-links" aria-label="Main navigation">
+            <p class="nav-section">Explore</p>
+            {{ nav_link(url_for('index'), 'house', 'Home', active_page == 'index') }}
+            {{ nav_link(url_for('about'), 'anchor', 'About', active_page == 'about') }}
+
+            {% set on_team_page = nav_teams|selectattr('team_number', 'equalto', active_page)|list %}
+            <button class="dropdown-btn nav-link{% if on_team_page %} active{% endif %}" data-dropdown-toggle
+                aria-controls="teamDropdown" aria-expanded="{{ 'true' if on_team_page else 'false' }}">
+                <span class="nav-icon"><i data-lucide="users" aria-hidden="true"></i></span>
+                <span class="nav-label">Teams</span>
+                <i class="dropdown-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
+            <div id="teamDropdown" class="dropdown-container{% if on_team_page %} active{% endif %}">
+                <div class="dropdown-inner">
+                    {% for n_team in nav_teams %}
+                    {% if loop.first and n_team is not group %}
+                    <span class="dropdown-label" role="presentation">Competing Teams</span>
+                    {% endif %}
+                    {% if n_team is group and loop.previtem is not group %}
+                    <span class="dropdown-label" role="presentation">Groups</span>
+                    {% endif %}
+                    <a href="{{ url_for('team_page', team_number=n_team.team_number) }}" class="team-chip{% if n_team is group %} team-chip-group{% endif %}{% if active_page == n_team.team_number %} active{% endif %}" {% if active_page == n_team.team_number %}aria-current="page"{% endif %}>{{ n_team.title or
+                        n_team.team_number if n_team is group else n_team.team_number }}</a>
+                    {% endfor %}
+                </div>
             </div>
 
-            <a href="{{ url_for('achievements') }}" {% if active_page=='achievements' %} class="active" {% endif
-                %}>Achievements</a>
-            <a href="{{ url_for('events_page') }}" {% if active_page=='events' %} class="active" {% endif %}>Events</a>
-            <a href="{{ url_for('alumni') }}" {% if active_page=='alumni' %} class="active" {% endif %}>Alumni</a>
-            <a href="{{ url_for('donate') }}" {% if active_page=='donate' %} class="active" {% endif %}>Donate</a>
-            <a href="{{ url_for('contact') }}" {% if active_page=='contact' %} class="active" {% endif %}>Contact</a>
+            {{ nav_link(url_for('achievements'), 'trophy', 'Achievements', active_page == 'achievements') }}
+            {{ nav_link(url_for('events_page'), 'calendar-days', 'Events', active_page == 'events') }}
+            {{ nav_link(url_for('alumni'), 'graduation-cap', 'Alumni', active_page == 'alumni') }}
+
+            <p class="nav-section">Get involved</p>
+            {{ nav_link(url_for('donate'), 'heart-handshake', 'Donate', active_page == 'donate') }}
+            {{ nav_link(url_for('contact'), 'message-circle', 'Contact', active_page == 'contact') }}
 
             {% if 'user' in session %}
+            <p class="nav-section">Members</p>
             {% if session.get('role') in ('editor', 'admin') %}
-            <a href="{{ url_for('my_team') }}" {% if active_page=='my_team' %} class="active" {% endif %}>Team Pages</a>
+            {{ nav_link(url_for('my_team'), 'pencil-ruler', 'Team Pages', active_page == 'my_team') }}
             {% else %}
             {% set team_link = my_team_url() %}
             {% if team_link %}
-            <a href="{{ team_link }}" {% if active_page=='my_team' %} class="active" {% endif %}>My Team</a>
+            {{ nav_link(team_link, 'bot', 'My Team', active_page == 'my_team') }}
             {% endif %}
             {% endif %}
-            <a href="{{ url_for('resources') }}" {% if active_page in ('resources', 'glossary', 'standards', 'branding', 'notebook') %} class="active" {% endif %}>{{ site.resources.hero_title }}</a>
+            {{ nav_link(url_for('resources'), 'book-open', site.resources.hero_title, active_page in ('resources', 'glossary', 'standards', 'branding', 'notebook')) }}
+            {% if session.get('role') == 'admin' %}
+            {{ nav_link(url_for('admin_dashboard'), 'shield', 'Admin Panel', active_page == 'admin') }}
             {% endif %}
-
-            {% if 'user' in session and session.get('role') == 'admin' %}
-            <a href="{{ url_for('admin_dashboard') }}" {% if active_page=='admin' %} class="active" {% endif %}>Admin
-                Panel</a>
             {% endif %}
-        </div>
+        </nav>
 
         <div class="nav-footer">
             {% if 'user' in session %}
-            <a href="{{ url_for('account') }}" class="login-btn{% if active_page == 'account' %} active{% endif %}">
-                My Account</a>
-            <form method="POST" action="{{ url_for('logout') }}" class="logout-form">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="login-btn">Logout ({{ session['user'] }})</button>
-            </form>
+            <div class="nav-user">
+                <span class="nav-avatar" aria-hidden="true">{{ session['user'][:1]|upper }}</span>
+                <span class="nav-user-text">
+                    <strong>{{ session['user'] }}</strong>
+                    <small>{{ (session.get('role') or 'member')|capitalize }}</small>
+                </span>
+            </div>
+            <div class="nav-user-actions">
+                <a href="{{ url_for('account') }}" class="nav-pill{% if active_page == 'account' %} active{% endif %}" {% if active_page == 'account' %}aria-current="page"{% endif %}>
+                    <i data-lucide="user-cog" aria-hidden="true"></i> Account</a>
+                <form method="POST" action="{{ url_for('logout') }}" class="logout-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="nav-pill"><i data-lucide="log-out" aria-hidden="true"></i> Log out</button>
+                </form>
+            </div>
             {% else %}
-            <a href="{{ url_for('login') }}" class="login-btn">Member Login</a>
+            <a href="{{ url_for('login') }}" class="nav-login"><i data-lucide="log-in" aria-hidden="true"></i> Member Login</a>
             {% endif %}
         </div>
     </div>
