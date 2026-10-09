@@ -1,5 +1,4 @@
 """Your account page: password change, sign out everywhere, and two-step sign-in."""
-import time
 
 import bcrypt
 import pytest

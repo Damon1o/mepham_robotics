@@ -2,7 +2,6 @@
 import datetime
 
 import pytest
-from bson import ObjectId
 
 
 @pytest.fixture
