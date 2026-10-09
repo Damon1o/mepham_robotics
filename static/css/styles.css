@@ -153,7 +153,7 @@ body::before {
     scrollbar-width: thin;
     scrollbar-color: #ffd700 transparent;
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    padding-top: 100px;
+    padding-top: 80px;
     transform: translateX(-100%);
     box-shadow: 8px 0 32px rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(10px);
@@ -178,7 +178,7 @@ body::before {
 
 .nav-footer {
     margin-top: auto;
-    padding-bottom: 40px;
+    padding-bottom: 24px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(0, 0, 0, 0.1);
 }
@@ -202,9 +202,9 @@ body::before {
 
 .sidenav a,
 .dropdown-btn {
-    padding: 18px 30px;
+    padding: 11px 26px;
     text-decoration: none;
-    font-size: 1.2rem;
+    font-size: 1.02rem;
     color: var(--accent-light);
     display: block;
     transition: all var(--transition-base);
@@ -230,7 +230,7 @@ body::before {
 .dropdown-btn:hover {
     color: var(--accent-gold);
     border-left-color: var(--accent-gold);
-    padding-left: 35px;
+    padding-left: 31px;
 }
 
 .sidenav a:hover::before,
@@ -276,9 +276,9 @@ body::before {
 .dropdown-btn::after {
     content: '▾';
     position: absolute;
-    right: 30px;
+    right: 26px;
     transition: transform var(--transition-base);
-    font-size: 1.2rem;
+    font-size: 1rem;
 }
 
 .dropdown-btn.active::after {
@@ -297,16 +297,22 @@ body::before {
 }
 
 .dropdown-container a {
-    font-size: 1.05rem;
-    padding-left: 50px;
+    font-size: 0.92rem;
+    padding-block: 8px;
+    padding-left: 44px;
     opacity: 0.9;
+}
+
+/* Nudge right on hover like top-level links, instead of jumping back to their indent. */
+.sidenav .dropdown-container a:hover {
+    padding-left: 49px;
 }
 
 /* Divides robot teams from groups (Media, Fundraising, ...) in the Team menu. */
 .dropdown-label {
     display: block;
     margin-top: 0.35rem;
-    padding: 0.6rem 20px 0.2rem 50px;
+    padding: 0.6rem 20px 0.2rem 44px;
     border-top: 1px solid rgba(255, 255, 255, 0.15);
     color: var(--accent-gold);
     font-size: 0.72rem;
@@ -3661,8 +3667,8 @@ textarea:focus-visible,
     align-items: center;
     gap: 10px;
     width: 100%;
-    padding: 18px 30px;
-    font-size: 1.2rem;
+    padding: 11px 26px;
+    font-size: 1.02rem;
     font-family: var(--font-body);
     color: var(--accent-light);
     background: none;
@@ -3677,7 +3683,7 @@ textarea:focus-visible,
 .nav-footer .login-btn:hover {
     color: var(--accent-gold);
     border-left-color: var(--accent-gold);
-    padding-left: 35px;
+    padding-left: 31px;
 }
 
 
@@ -4234,11 +4240,15 @@ summary,
     }
 
     .sidenav {
-        padding-top: 72px;
+        padding-top: 64px;
     }
 
     .sidenav a,
     .dropdown-btn {
-        padding-block: 12px;
+        padding-block: 9px;
+    }
+
+    .dropdown-container a {
+        padding-block: 7px;
     }
 }
