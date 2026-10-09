@@ -4,7 +4,6 @@ import re
 
 import pytest
 
-import api.index as app_module
 
 
 @pytest.fixture
