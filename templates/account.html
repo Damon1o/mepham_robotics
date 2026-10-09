@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Your Account | Mepham Robotics{% endblock %}
+{% block meta_description %}Change your password, sign out other devices and set up two-step sign-in.{% endblock %}
+
+{% block page_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/login.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/account.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="account-page">
+    <header class="account-head">
+        <div class="account-avatar" aria-hidden="true">{{ (account.full_name or account.username)|initials }}</div>
+        <div>
+            <h1 class="account-title">{{ account.full_name or account.username }}</h1>
+            <p class="account-meta">@{{ account.username }} · {{ account.email or 'no email on file' }} ·
+                <span class="account-role">{{ account.role or 'member' }}</span></p>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <p class="auth-flash auth-flash--{{ category }}" role="status">{{ message }}</p>
+    {% endfor %}
+    {% endwith %}
+
+    <div class="account-grid">
+        <section class="auth-card account-card" id="two-step" aria-labelledby="two_step_title">
+            <div class="auth-panel">
+                <h2 class="auth-title account-card-title" id="two_step_title">
+                    <i data-lucide="{{ 'shield-check' if two_step else 'shield' }}" aria-hidden="true"></i>
+                    Two-step sign-in
+                    <span class="account-state {{ 'is-on' if two_step else 'is-off' }}">{{ 'On' if two_step else 'Off' }}</span>
+                </h2>
+                {% if two_step_error %}
+                <p class="auth-error" role="alert">{{ two_step_error }}</p>
+                {% endif %}
+
+                {% if backup_codes %}
+                <div class="backup-codes" role="status">
+                    <p class="auth-notice">Save these backup codes somewhere safe. Each one signs you in once if
+                        your phone is lost. They won't be shown again.</p>
+                    <ol class="backup-code-list">
+                        {% for code in backup_codes %}<li><code>{{ code }}</code></li>{% endfor %}
+                    </ol>
+                    <button type="button" class="account-btn" data-copy-codes="{{ backup_codes|join('\n') }}">
+                        <i data-lucide="copy" aria-hidden="true"></i> <span>Copy codes</span></button>
+                </div>
+                {% endif %}
+
+                {% if two_step %}
+                <p class="auth-intro">Signing in asks for a code from your authenticator app after your password.
+                    {{ backup_left }} backup code{{ 's' if backup_left != 1 }} left.</p>
+                {% if backup_left < 3 and not backup_codes %}
+                <p class="auth-error" role="status">You're almost out of backup codes. Make new ones so a lost phone
+                    can't lock you out.</p>
+                {% endif %}
+                <form class="auth-form" method="POST" action="{{ url_for('account_two_step_backup_codes') }}" data-native-submit>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="username" value="{{ account.username }}" autocomplete="username"
+                        class="visually-hidden" tabindex="-1" aria-hidden="true" readonly>
+                    <div class="form-group">
+                        <label for="codes_password">Current password</label>
+                        <input type="password" id="codes_password" name="current_password" required
+                            autocomplete="current-password">
+                    </div>
+                    <div class="account-actions">
+                        <button type="submit" class="account-btn">New backup codes</button>
+                        <button type="submit" class="account-btn account-btn--danger"
+                            formaction="{{ url_for('account_two_step_off') }}">Turn off</button>
+                    </div>
+                </form>
+                {% elif setup_secret %}
+                <ol class="setup-steps">
+                    <li>Open an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password…) and
+                        scan this code.
+                        <div class="setup-qr" data-qr="{{ setup_uri }}" role="img"
+                            aria-label="QR code for setting up two-step sign-in"></div>
+                        <details class="setup-manual">
+                            <summary>Can't scan? Type this key instead</summary>
+                            <code class="setup-key">{{ setup_secret }}</code>
+                        </details>
+                    </li>
+                    <li>Type the 6-digit code the app shows.</li>
+                </ol>
+                <form class="auth-form" method="POST" action="{{ url_for('account_two_step_confirm') }}" data-native-submit>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="setup_code">Code from the app</label>
+                        <input type="text" id="setup_code" name="code" required inputmode="numeric" maxlength="7"
+                            autocomplete="one-time-code" class="auth-code-input" pattern="[0-9 ]*">
+                    </div>
+                    <div class="account-actions">
+                        <button type="submit" class="auth-submit">Turn on</button>
+                        <button type="submit" class="account-btn" formaction="{{ url_for('account_two_step_cancel') }}"
+                            formnovalidate>Cancel</button>
+                    </div>
+                </form>
+                {% else %}
+                <p class="auth-intro">Add a code from your phone to every sign-in, so a leaked password alone can't
+                    get into your account.{% if account.role == 'admin' %} Strongly recommended for admins.{% endif %}</p>
+                <form method="POST" action="{{ url_for('account_two_step_start') }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="auth-submit">Set up two-step sign-in</button>
+                </form>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="auth-card account-card" aria-labelledby="password_title">
+            <div class="auth-panel">
+                <h2 class="auth-title account-card-title" id="password_title">
+                    <i data-lucide="key-round" aria-hidden="true"></i> Password</h2>
+                <p class="auth-intro">Changing it signs out your other devices.</p>
+                {% if password_error %}
+                <p class="auth-error" role="alert">{{ password_error }}</p>
+                {% endif %}
+                <form class="auth-form" method="POST" action="{{ url_for('account_password') }}" data-native-submit>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="username" value="{{ account.username }}" autocomplete="username"
+                        class="visually-hidden" tabindex="-1" aria-hidden="true" readonly>
+                    <div class="form-group">
+                        <label for="current_password">Current password</label>
+                        <input type="password" id="current_password" name="current_password" required
+                            autocomplete="current-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="new_password">New password</label>
+                        <div class="password-field">
+                            <input type="password" id="new_password" name="new_password" required minlength="8"
+                                autocomplete="new-password">
+                            <button type="button" class="password-toggle" aria-controls="new_password"
+                                aria-label="Show password" aria-pressed="false">
+                                <i data-lucide="eye" class="icon-show"></i>
+                                <i data-lucide="eye-off" class="icon-hide"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm new password</label>
+                        <input type="password" id="confirm_password" name="confirm_password" required minlength="8"
+                            autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="auth-submit">Change password</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="auth-card account-card" aria-labelledby="devices_title">
+            <div class="auth-panel">
+                <h2 class="auth-title account-card-title" id="devices_title">
+                    <i data-lucide="monitor-smartphone" aria-hidden="true"></i> Devices</h2>
+                <p class="auth-intro">Used a shared computer, or lost a phone? Sign out everywhere you're signed in,
+                    including here.</p>
+                <form method="POST" action="{{ url_for('account_sign_out_everywhere') }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="account-btn account-btn--danger">
+                        <i data-lucide="log-out" aria-hidden="true"></i> Sign out everywhere</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</section>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/login.js') }}" defer></script>
+{% if setup_uri %}
+<script src="{{ url_for('static', filename='js/vendor/qrcode.min.js') }}" defer></script>
+{% endif %}
+<script src="{{ url_for('static', filename='js/account.js') }}" defer></script>
+{% endblock %}

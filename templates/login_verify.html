@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Two-Step Sign-In | Mepham Robotics{% endblock %}
+{% block meta_description %}Enter the code from your authenticator app to finish signing in.{% endblock %}
+
+{% block page_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/login.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="auth-section">
+    <div class="auth-card">
+        <div class="auth-panel">
+            <h1 class="auth-title">One more step</h1>
+            <p class="auth-intro">Open your authenticator app and type the 6-digit code for Mepham Robotics.</p>
+            {% if error %}
+            <p class="auth-error" role="alert">{{ error }}</p>
+            {% endif %}
+            <form id="verifyForm" class="auth-form" method="POST" data-native-submit>
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="code">Code</label>
+                    <input type="text" id="code" name="code" required autofocus autocomplete="one-time-code"
+                        inputmode="text" maxlength="12" spellcheck="false" autocapitalize="none"
+                        class="auth-code-input" aria-describedby="code_hint">
+                    <small id="code_hint" class="auth-field-hint">No phone? Type one of your backup codes
+                        instead. Each works once.</small>
+                </div>
+                <button type="submit" class="auth-submit">Verify</button>
+            </form>
+            <p class="auth-back"><a href="{{ url_for('login') }}" class="auth-link">Start over</a></p>
+        </div>
+    </div>
+</section>
+{% endblock %}
