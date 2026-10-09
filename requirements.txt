@@ -6,3 +6,6 @@ pymongo[srv]==4.12.*
 python-dotenv==1.1.*
 bcrypt==4.3.*
 requests==2.32.*
+# zoneinfo reads the OS time zone database, which serverless images may not
+# ship; without it club time silently falls back to UTC.
+tzdata
