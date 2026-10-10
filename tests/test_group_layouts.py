@@ -136,3 +136,24 @@ def test_group_layout_site_default_and_fallback(db, media, monkeypatch):
         assert app_module.team_layout({'kind': 'group'}) == 'other'
         assert app_module.team_layout({'kind': 'group', 'layout': 'mission'}) == 'mission'
         assert app_module.team_layout({'kind': 'group', 'layout': 'gone'}) == 'other'
+
+
+def render_as(client, db, team, layout):
+    db['teams'].update_one({'_id': team['_id']}, {'$set': {'layout': layout}})
+    return client.get(f"/team/{team['team_number']}").data.decode()
+
+
+def test_yearbook_puts_leads_first_then_the_wall(client, db, media):
+    body = render_as(client, db, media, 'yearbook')
+    assert 'data-layout="yearbook"' in body and 'group-layouts/yearbook.css' in body
+    assert body.index('Leads the group') < body.index('class="gy-wall"') < body.index('class="gy-checklist"')
+    assert body.index('Grace Hopper') < body.index('Ada Byron')
+    assert 'data-progress="40"' in body
+
+
+def test_yearbook_without_people_falls_back_to_mission_board(client, db):
+    team = {'kind': 'group', 'team_number': 'fund', 'title': 'Fundraising', 'layout': 'yearbook',
+            'goals': [{'name': 'Bake sale', 'progress': 10}]}
+    team['_id'] = db['teams'].insert_one(team).inserted_id
+    body = client.get('/team/fund').data.decode()
+    assert 'class="gm-goal-grid"' in body and 'gy-wall' not in body

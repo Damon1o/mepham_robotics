@@ -60,6 +60,7 @@ DEFAULT_TEAM_LAYOUT = 'classic'
 # robot: templates/group_layouts/<key>.html and static/css/pages/group-layouts/<key>.css.
 GROUP_LAYOUTS = {
     'mission': 'Mission Board',
+    'yearbook': 'Yearbook',
 }
 DEFAULT_GROUP_LAYOUT = 'mission'
 # Public pages that can be put under construction: view endpoint -> name in the picker.

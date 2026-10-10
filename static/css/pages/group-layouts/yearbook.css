@@ -1,0 +1,278 @@
+/* Group page layout G2: Yearbook. Loaded after group.css. */
+
+.gy-people,
+.gy-goals {
+    padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.gy-goals {
+    background: var(--bg-light);
+}
+
+/* --- PORTRAITS --- */
+
+/* Square photos, like a yearbook page, instead of the round faces. */
+.gy-portrait {
+    display: block;
+    aspect-ratio: 1;
+    width: 100%;
+    border: 3px solid var(--text-dark);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--maroon-dark);
+}
+
+.gy-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.gy-portrait-initials {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: clamp(1.8rem, 5vw, 2.6rem);
+    color: var(--accent-gold);
+    background:
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0 10px, transparent 10px 20px),
+        var(--maroon-dark);
+}
+
+/* --- LEADS --- */
+
+.gy-leads {
+    list-style: none;
+    max-width: 1120px;
+    margin: 0 auto var(--spacing-lg);
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr));
+    gap: var(--spacing-md);
+}
+
+.gy-lead {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: var(--spacing-md);
+    align-items: center;
+    padding: var(--spacing-sm);
+    background: #fff;
+    border: 3px solid var(--text-dark);
+    border-radius: 16px;
+    box-shadow: 8px 8px 0 var(--accent-gold);
+}
+
+.gy-lead .gy-portrait {
+    border-color: var(--maroon-dark);
+}
+
+.gy-lead-body {
+    display: grid;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.gy-lead-tag {
+    justify-self: start;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: var(--maroon-dark);
+    color: var(--accent-gold);
+}
+
+.gy-lead h3 {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    line-height: 1.1;
+    color: var(--maroon-dark);
+    margin: 0;
+}
+
+.gy-roles {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+/* --- THE WALL --- */
+
+.gy-wall {
+    list-style: none;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(46%, 170px), 1fr));
+    gap: var(--spacing-md);
+}
+
+.gy-tile {
+    text-align: center;
+}
+
+.gy-tile .gy-portrait {
+    box-shadow: 5px 5px 0 rgba(148, 69, 71, 0.25);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.gy-tile:hover .gy-portrait {
+    transform: translate(-3px, -3px);
+    box-shadow: 8px 8px 0 rgba(148, 69, 71, 0.3);
+}
+
+.gy-tile h3 {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: var(--text-dark);
+    margin: 0.7rem 0 0.1rem;
+}
+
+.gy-tile .gy-roles {
+    font-size: 0.85rem;
+}
+
+.gy-on {
+    margin: 0.2rem 0 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+/* --- CHECKLIST --- */
+
+.gy-checklist {
+    list-style: none;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0;
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.gy-check {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.5rem var(--spacing-sm);
+    align-items: start;
+}
+
+.gy-box {
+    width: 30px;
+    height: 30px;
+    margin-top: 0.1rem;
+    border: 3px solid var(--text-dark);
+    border-radius: 8px;
+    background: #fff;
+    display: grid;
+    place-items: center;
+}
+
+.gy-check--done .gy-box {
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+.gy-box svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 3.5;
+}
+
+.gy-check-body {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.gy-check h3 {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.gy-check-note {
+    margin: 0;
+    font-size: 0.92rem;
+    color: #444;
+}
+
+.gy-check .progress-bar {
+    height: 14px;
+    border-radius: 7px;
+}
+
+.gy-check-pct {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: var(--maroon-dark);
+    padding-top: 0.2rem;
+    min-width: 4ch;
+    text-align: right;
+}
+
+.gy-check .g-owners {
+    grid-column: 2 / -1;
+}
+
+/* --- DARK THEME --- */
+
+[data-theme="dark"] .gy-goals {
+    background: #151515;
+}
+
+[data-theme="dark"] .gy-lead {
+    background: #1e1e1e;
+    border-color: #444;
+}
+
+[data-theme="dark"] .gy-portrait,
+[data-theme="dark"] .gy-box {
+    border-color: #555;
+}
+
+[data-theme="dark"] .gy-box {
+    background: #1e1e1e;
+}
+
+[data-theme="dark"] .gy-check--done .gy-box {
+    background: var(--accent-gold);
+}
+
+[data-theme="dark"] .gy-lead h3,
+[data-theme="dark"] .gy-on,
+[data-theme="dark"] .gy-check-pct {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .gy-tile h3,
+[data-theme="dark"] .gy-check h3 {
+    color: #f1f1f1;
+}
+
+[data-theme="dark"] .gy-roles,
+[data-theme="dark"] .gy-check-note {
+    color: #c4c4c4;
+}
+
+@media (max-width: 520px) {
+    .gy-lead {
+        grid-template-columns: 96px minmax(0, 1fr);
+        gap: var(--spacing-sm);
+    }
+
+    .gy-lead h3 {
+        font-size: 1.3rem;
+    }
+}
