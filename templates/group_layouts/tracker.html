@@ -1,0 +1,80 @@
+{#- G3 Goal Tracker: the goals as a board. One band for the whole season's progress,
+    then a column each for not started, in progress and done, every card naming who
+    is on it. The people close the page as a who's-on-what list. A group with no
+    goals yet gets the Mission Board instead. -#}
+{% from "partials/group/macros.html" import face, owners %}
+{% if board.goals %}
+{% include "partials/group/head.html" %}
+{% include "partials/team/season_switcher.html" %}
+
+<section class="gt-tracker fade-in-section" aria-labelledby="gt-h">
+    <div class="gt-summary">
+        <h2 id="gt-h">Season progress</h2>
+        <p class="gt-overall"><strong>{{ board.overall }}%</strong> across {{ board.goals|length }} {{ 'goal' if board.goals|length == 1 else 'goals' }}</p>
+        <div class="progress-bar gt-bar" role="progressbar" aria-label="Season progress"
+            aria-valuenow="{{ board.overall }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-fill" data-progress="{{ board.overall }}"></div>
+        </div>
+    </div>
+
+    <div class="gt-board">
+        {% for status, title in [('todo', 'Up next'), ('active', 'In progress'), ('done', 'Done')] %}
+        {% set column = board.goals|selectattr('status', 'equalto', status)|list %}
+        <section class="gt-col gt-col--{{ status }}" aria-labelledby="gt-col-{{ status }}">
+            <h3 id="gt-col-{{ status }}">{{ title }} <span class="gt-count">{{ column|length }}</span></h3>
+            {% if column %}
+            <ul class="gt-cards">
+                {% for goal in column %}
+                <li class="gt-card">
+                    <h4>{{ goal.name }}</h4>
+                    {% if goal.note %}<p class="gt-note">{{ goal.note }}</p>{% endif %}
+                    {% if status == 'active' %}
+                    <div class="gt-mini" role="progressbar" aria-label="{{ goal.name }}" aria-valuenow="{{ goal.progress }}"
+                        aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-fill" data-progress="{{ goal.progress }}"></div>
+                        <span>{{ goal.progress }}%</span>
+                    </div>
+                    {% endif %}
+                    {% if goal.owners %}{{ owners(goal) }}{% else %}<p class="gt-open">Nobody on it yet</p>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="gt-empty">{{ {'todo': 'Everything is under way.', 'active': 'Nothing in progress right now.', 'done': 'First one coming soon.'}[status] }}</p>
+            {% endif %}
+        </section>
+        {% endfor %}
+    </div>
+</section>
+
+{% if board.people %}
+<section id="team" class="gt-people fade-in-section" aria-labelledby="gt-people-h">
+    <div class="g-section-head">
+        <h2 id="gt-people-h">Who's on what</h2>
+        <p class="g-section-note">{{ board.people|length }} {{ 'person' if board.people|length == 1 else 'people' }}</p>
+    </div>
+    <ul class="gt-roster">
+        {% for person in board.people %}
+        <li class="gt-person">
+            {{ face(person) }}
+            <div class="gt-person-body">
+                <h3>{{ person.name }}{% if person.lead %} <span class="gt-lead">Lead</span>{% endif %}</h3>
+                {% set roles = person|member_roles %}
+                {% if roles %}<p class="gt-roles">{{ roles|join(' · ') }}</p>{% endif %}
+            </div>
+            {% if person.goals %}
+            <ul class="g-goal-tags" aria-label="Goals {{ person.name }} is on">
+                {% for goal in person.goals %}<li class="g-goal-tag g-goal-tag--{{ goal.status }}">{{ goal.name }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+{% include "partials/team/join_cta.html" %}
+{% include "partials/team/journey.html" %}
+{% else %}
+{% include "group_layouts/mission.html" %}
+{% endif %}
