@@ -792,6 +792,22 @@ select[data-member-field] {
         var(--maroon-dark);
 }
 
+/* Chapters: a paper header with a big title, then numbered chapters down the page. */
+.layout-thumb .lt-paper {
+    flex-grow: 1.4;
+    background:
+        linear-gradient(var(--maroon-dark), var(--maroon-dark)) left 4px top 30% / 60% 26% no-repeat,
+        linear-gradient(var(--admin-line-strong), var(--admin-line-strong)) left 4px bottom 18% / 80% 10% no-repeat,
+        #fbf6ee;
+}
+
+.layout-thumb .lt-chapters {
+    flex-grow: 3;
+    background:
+        repeating-linear-gradient(180deg, var(--maroon-dark) 0 14%, transparent 14% 33.3%) left 2px top / 16% 100% no-repeat,
+        repeating-linear-gradient(180deg, var(--admin-line-strong) 0 9%, transparent 9% 17%, var(--admin-line-strong) 17% 21%, transparent 21% 33.3%) right top / 76% 100% no-repeat;
+}
+
 /* A row of round faces. */
 .layout-thumb .lt-faces {
     flex-grow: 1.1;

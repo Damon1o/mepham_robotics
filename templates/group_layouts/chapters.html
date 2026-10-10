@@ -1,0 +1,65 @@
+{#- G5 Chapters: the season told like a story. The mission as a pull quote, the cast
+    in one strip of faces, then each goal as a numbered chapter starring the people
+    who own it. A group with no goals yet gets the Mission Board instead. -#}
+{% from "partials/group/macros.html" import face, status_label %}
+{% if board.goals %}
+<header class="gc-head">
+    <div class="gc-head-inner">
+        <span class="g-eyebrow">The {{ team_name }} group{% if active_season %} · {{ active_season }}{% endif %}</span>
+        <h1>{{ team_name }}</h1>
+        <blockquote class="gc-quote">{{ team.tagline or site.teams.default_tagline }}</blockquote>
+    </div>
+</header>
+{% include "partials/team/breadcrumb.html" %}
+{% include "partials/team/season_switcher.html" %}
+
+{% if board.people %}
+<section id="team" class="gc-cast fade-in-section" aria-labelledby="gc-cast-h">
+    <h2 id="gc-cast-h" class="gc-label">The cast · {{ board.people|length }}</h2>
+    <ul class="gc-cast-strip">
+        {% for person in board.people %}
+        <li class="gc-member{{ ' gc-member--lead' if person.lead }}">
+            {{ face(person, 'lg') }}
+            <strong>{{ person.name }}</strong>
+            {% set roles = person|member_roles %}
+            {% if roles %}<span>{{ roles|first }}</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+<section class="gc-story fade-in-section" aria-labelledby="gc-story-h">
+    <h2 id="gc-story-h" class="gc-label">{{ board.goals|length }} {{ 'chapter' if board.goals|length == 1 else 'chapters' }} · {{ board.overall }}% written</h2>
+    <ol class="gc-chapters">
+        {% for goal in board.goals %}
+        <li class="gc-chapter gc-chapter--{{ goal.status }}">
+            <span class="gc-num" aria-hidden="true">{{ '%02d'|format(loop.index) }}</span>
+            <div class="gc-chapter-body">
+                <span class="gc-status">{{ status_label(goal.status) }}</span>
+                <h3>{{ goal.name }}</h3>
+                {% if goal.note %}<p class="gc-deck">{{ goal.note }}</p>{% endif %}
+                <div class="gc-line" role="progressbar" aria-label="{{ goal.name }}" aria-valuenow="{{ goal.progress }}"
+                    aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-fill" data-progress="{{ goal.progress }}"></div>
+                </div>
+                <p class="gc-starring">
+                    {% if goal.owners %}
+                    <span class="gc-starring-label">Starring</span>
+                    {% for m in goal.owners %}<span class="gc-star">{{ face(m, 'sm') }} {{ m.name }}</span>{% endfor %}
+                    {% else %}
+                    <span class="gc-starring-label">Role open</span> <span class="gc-open">this chapter needs a lead</span>
+                    {% endif %}
+                    <span class="gc-pct">{{ goal.progress }}%</span>
+                </p>
+            </div>
+        </li>
+        {% endfor %}
+    </ol>
+</section>
+
+{% include "partials/team/journey.html" %}
+{% include "partials/team/join_cta.html" %}
+{% else %}
+{% include "group_layouts/mission.html" %}
+{% endif %}

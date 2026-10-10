@@ -63,6 +63,7 @@ GROUP_LAYOUTS = {
     'yearbook': 'Yearbook',
     'tracker': 'Goal Tracker',
     'huddle': 'Huddle',
+    'chapters': 'Chapters',
 }
 DEFAULT_GROUP_LAYOUT = 'mission'
 # Public pages that can be put under construction: view endpoint -> name in the picker.

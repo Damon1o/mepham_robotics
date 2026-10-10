@@ -1,0 +1,292 @@
+/* Group page layout G5: Chapters. Loaded after group.css. A printed-page feel:
+   warm paper, big numerals, thin rules, no photo banner. */
+
+.team-layout--chapters {
+    --gc-paper: #fbf6ee;
+    --gc-rule: #1a1a1a;
+    background: var(--gc-paper);
+}
+
+/* --- HEADER --- */
+
+.gc-head {
+    padding: 7rem var(--spacing-md) var(--spacing-lg);
+    border-bottom: 3px double var(--gc-rule);
+}
+
+.gc-head-inner {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.gc-head .g-eyebrow {
+    color: var(--maroon-light);
+}
+
+.gc-head h1 {
+    font-family: var(--font-display);
+    font-size: clamp(3.2rem, 11vw, 7rem);
+    line-height: 0.95;
+    letter-spacing: -2px;
+    color: var(--maroon-dark);
+    margin: 0.3rem 0 var(--spacing-md);
+}
+
+.gc-quote {
+    position: relative;
+    margin: 0;
+    padding-left: clamp(2.2rem, 5vw, 3.4rem);
+    font-size: clamp(1.25rem, 2.8vw, 1.75rem);
+    line-height: 1.35;
+    color: var(--text-dark);
+}
+
+.gc-quote::before {
+    content: '\201C';
+    position: absolute;
+    left: 0;
+    top: -0.35em;
+    font-family: Georgia, serif;
+    font-size: 3.2em;
+    line-height: 1;
+    color: var(--accent-gold);
+    -webkit-text-stroke: 1.5px var(--maroon-dark);
+}
+
+/* --- SMALL LABELS --- */
+
+/* Section labels are small caps over a rule, not the site's big centred h2. */
+.gc-label {
+    max-width: 900px;
+    margin: 0 auto var(--spacing-md);
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--gc-rule);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--text-dark);
+}
+
+.gc-label::after {
+    content: none;
+}
+
+/* --- THE CAST --- */
+
+.gc-cast {
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-md);
+}
+
+.gc-cast-strip {
+    list-style: none;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 0 var(--spacing-sm);
+    display: flex;
+    gap: var(--spacing-md);
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+}
+
+.gc-member {
+    flex: 0 0 104px;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.15rem;
+}
+
+.gc-member .g-face--lg {
+    width: 84px;
+    height: 84px;
+    font-size: 1.4rem;
+    margin-bottom: 0.4rem;
+}
+
+.gc-member--lead .g-face--lg {
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 0 3px var(--maroon-dark);
+}
+
+.gc-member strong {
+    font-size: 0.92rem;
+    line-height: 1.2;
+    color: var(--text-dark);
+}
+
+.gc-member span {
+    font-size: 0.75rem;
+    color: var(--text-light);
+}
+
+/* --- CHAPTERS --- */
+
+.gc-story {
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-xl);
+}
+
+.gc-chapters {
+    list-style: none;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0;
+}
+
+.gc-chapter {
+    display: grid;
+    grid-template-columns: clamp(4.5rem, 14vw, 8rem) minmax(0, 1fr);
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg) 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+}
+
+.gc-num {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: clamp(3rem, 10vw, 5.5rem);
+    line-height: 0.85;
+    color: transparent;
+    -webkit-text-stroke: 2px var(--maroon-dark);
+}
+
+/* A finished chapter's numeral is filled in. */
+.gc-chapter--done .gc-num {
+    color: var(--accent-gold);
+}
+
+.gc-chapter-body {
+    display: grid;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.gc-status {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.gc-chapter h3 {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 4vw, 2.3rem);
+    line-height: 1.1;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.gc-deck {
+    margin: 0;
+    font-size: 1.08rem;
+    line-height: 1.5;
+    color: #3d3d3d;
+    max-width: 60ch;
+}
+
+.gc-line {
+    height: 6px;
+    margin-top: 0.3rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.gc-line .progress-fill {
+    border-radius: 3px;
+}
+
+.gc-starring {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.9rem;
+    margin: 0;
+    font-size: 0.92rem;
+}
+
+.gc-starring-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+
+.gc-star {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.gc-open {
+    font-style: italic;
+    color: var(--maroon-light);
+}
+
+.gc-pct {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: var(--maroon-dark);
+}
+
+/* --- DARK THEME --- */
+
+[data-theme="dark"] .team-layout--chapters {
+    --gc-paper: #17130f;
+    --gc-rule: #8a7f74;
+}
+
+[data-theme="dark"] .gc-head h1,
+[data-theme="dark"] .gc-pct {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .gc-quote,
+[data-theme="dark"] .gc-label,
+[data-theme="dark"] .gc-chapter h3,
+[data-theme="dark"] .gc-member strong,
+[data-theme="dark"] .gc-star {
+    color: #f1f1f1;
+}
+
+[data-theme="dark"] .gc-deck {
+    color: #cfc7bd;
+}
+
+[data-theme="dark"] .gc-member span,
+[data-theme="dark"] .gc-starring-label {
+    color: #a99f95;
+}
+
+[data-theme="dark"] .gc-num {
+    -webkit-text-stroke-color: #d4a0a1;
+}
+
+[data-theme="dark"] .gc-chapter {
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="dark"] .gc-line {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 600px) {
+    .gc-head {
+        padding-top: 6rem;
+    }
+
+    .gc-chapter {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.4rem;
+    }
+}

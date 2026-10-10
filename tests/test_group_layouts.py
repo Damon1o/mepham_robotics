@@ -200,3 +200,20 @@ def test_huddle_without_people_falls_back_to_mission_board(client, db, media):
     db['teams'].update_one({'_id': media['_id']}, {'$set': {'members': []}})
     body = render_as(client, db, media, 'huddle')
     assert 'class="gm-goal-grid"' in body and 'gh-cards' not in body
+
+
+def test_chapters_tell_each_goal_with_its_cast(client, db, media):
+    body = render_as(client, db, media, 'chapters')
+    assert 'data-layout="chapters"' in body and 'group-layouts/chapters.css' in body
+    assert 'The cast · 2' in body and '3 chapters · 47% written' in body
+    reels = body[body.index('Weekly reels'):body.index('Photo every event')]
+    assert 'Starring' in reels and 'Ada Byron' in reels
+    logo = body[body.index('New logo'):]
+    assert 'this chapter needs a lead' in logo
+    assert 'g-head' not in body  # its own paper header, no photo banner
+
+
+def test_chapters_without_goals_falls_back_to_mission_board(client, db, media):
+    db['teams'].update_one({'_id': media['_id']}, {'$set': {'goals': []}})
+    body = render_as(client, db, media, 'chapters')
+    assert 'class="gm-people-grid"' in body and 'gc-chapters' not in body
