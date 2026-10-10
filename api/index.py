@@ -1518,6 +1518,7 @@ def team_layout(team):
 
 @app.route('/team/<team_number>')
 def team_page(team_number):
+    _reconcile_profiles()
     docs = list(db['teams'].find({'team_number': team_number}))
     if not docs:
         flash(f"Team {team_number} not found.", "error")
@@ -1709,6 +1710,8 @@ def login():
                 return render_template('login.html', active_page='login', next=next_url,
                                        username=identifier,
                                        error='Your account is waiting for an admin to approve it.'), 403
+            if next_url == url_for('index'):
+                next_url = _start_page_url(user)
             if user.get('totp_secret'):
                 return _begin_two_step(user, request.form.get('remember'), next_url)
             _start_session(user, request.form.get('remember'))
@@ -2113,6 +2116,7 @@ def _attention_items(pending, counts, past_events, upcoming, teams, stats_doc, a
 @role_required('admin')
 def admin_dashboard():
     _ensure_member_ids()
+    _reconcile_profiles()
     _ensure_award_order()
     auto = refresh_auto_stats() or {}
     stats_doc = db['site_metadata'].find_one({'_id': 'global_stats'}) or {}
@@ -2140,8 +2144,8 @@ def admin_dashboard():
     all_users = [dict(u, _id=str(u['_id']), role=u.get('role', 'member'), email=u.get('email', ''),
                       status=u.get('status', 'active'))
                  for u in db['users'].find({}, {'username': 1, 'email': 1, 'role': 1, 'status': 1, 'full_name': 1,
-                                                'requested_team': 1, 'created_at': 1,
-                                                'totp_secret': 1}).sort('username', 1)]
+                                                'requested_team': 1, 'created_at': 1, 'photo': 1,
+                                                'avatar_tone': 1, 'totp_secret': 1}).sort('username', 1)]
     for u in all_users:
         # Only whether it is on; the secret itself never reaches a template.
         u['two_step'] = bool(u.pop('totp_secret', None))
@@ -2330,9 +2334,10 @@ def _team_blob_urls(team):
 
 
 def _blob_still_used(url):
-    """True when another team document (another season, say) still shows this file."""
+    """True when a team document (another season, say) or an account still shows this file."""
     return bool(db['teams'].find_one({'$or': [{'hero_image': url}, {'stl_path': url}, {'members.photo': url}]},
-                                     {'_id': 1}))
+                                     {'_id': 1})
+                or db['users'].find_one({'$or': [{'photo': url}, {'roster_card.photo': url}]}, {'_id': 1}))
 
 
 def _delete_blobs(urls, why):
@@ -2445,6 +2450,8 @@ def admin_update_user(id):
     if security_relevant:
         update_ops['$inc'] = {'session_version': 1}
     db['users'].update_one({'_id': user['_id']}, update_ops)
+    if 'full_name' in changes or ('username' in changes and not full_name):
+        _sync_profile(dict(user, username=username), full_name=full_name)
 
     # Keep the current session in sync when admins edit themselves
     if session.get('user') == user['username']:
@@ -2783,6 +2790,113 @@ def _on_any_roster(user_id):
     return db['teams'].find_one({'members.user_id': user_id}, {'_id': 1}) is not None
 
 
+# --- Profile sync ---
+# The account holds a person's name and photo. Every roster card linked to it
+# (each team and group, every season) and the card parked on the account keep a
+# copy, so team pages still render from one document.
+
+def _display_name(user):
+    return user.get('full_name') or user.get('username', '')
+
+
+def _sync_profile(user, full_name=None, photo=None, delete_old=True):
+    """Set the account's name and/or photo and copy them onto every linked roster card.
+
+    Pass only what changed. full_name '' clears the account's name (cards then
+    show the username); photo '' clears the photo. Photos nothing shows any
+    more are deleted from storage.
+    """
+    uid = str(user['_id'])
+    sets, unsets, card = {}, {}, {}
+    if full_name is not None:
+        (sets if full_name else unsets)['full_name'] = full_name
+        card['name'] = full_name or user.get('username', '')
+    if photo is not None:
+        (sets if photo else unsets)['photo'] = photo
+        card['photo'] = photo
+    if not card:
+        return
+    old = {user.get('photo')} if photo is not None else set()
+    parked = user.get('roster_card')
+    if isinstance(parked, dict):
+        old.add(parked.get('photo') if photo is not None else None)
+        sets['roster_card'] = dict(parked, **card)
+    update = {}
+    if sets:
+        update['$set'] = sets
+    if unsets:
+        update['$unset'] = unsets
+    db['users'].update_one({'_id': user['_id']}, update)
+    _ensure_member_ids()
+    for team in db['teams'].find({'members.user_id': uid}, {'members': 1}):
+        for m in team.get('members') or []:
+            if str(m.get('user_id') or '') != uid:
+                continue
+            if photo is not None:
+                old.add(m.get('photo'))
+            # One card at a time by its id, so an edit to anyone else's card in between is kept.
+            db['teams'].update_one({'_id': team['_id'], 'members.member_id': m.get('member_id')},
+                                   {'$set': {f'members.$.{k}': v for k, v in card.items()}})
+    if delete_old:
+        _delete_blobs([u for u in old if isinstance(u, str) and u.startswith('http') and u != photo],
+                      'a replaced profile photo')
+
+
+def _adopt_card(user, card, delete_old=True):
+    """After a card is linked to an account, make them agree.
+
+    The account wins where it has a name or photo; where it has none, it takes
+    the card's (an admin often names and photographs a roster card first).
+    """
+    user = db['users'].find_one({'_id': user['_id']}) or user
+    name = user.get('full_name') or (card.get('name') if card.get('name') != user.get('username') else '')
+    _sync_profile(user, full_name=name or '', photo=user.get('photo') or card.get('photo') or '',
+                  delete_old=delete_old)
+
+
+# Accounts and cards saved before names and photos were kept in step get one catch-up.
+PROFILE_SYNC_MARK = 'profile_sync_v1'
+_profiles_reconciled = False
+
+
+def _reconcile_profiles():
+    """Bring every linked account and its cards into step, once per database.
+
+    Same rule as linking a card: the account's name and photo win, and an account
+    without one takes it from its newest season's card. Nothing is deleted from
+    storage here, since older seasons may have shown a different photo on purpose.
+    """
+    global _profiles_reconciled
+    if _profiles_reconciled:
+        return
+    _profiles_reconciled = True
+    try:
+        if not db['site_metadata'].find_one({'_id': PROFILE_SYNC_MARK}, {'_id': 1}):
+            _catch_up_profiles()
+    except Exception:
+        # A catch-up must never take a page down; it runs again after the next restart.
+        logger.exception('Profile catch-up failed')
+
+
+def _catch_up_profiles():
+    newest = {}
+    for team in db['teams'].find({'members.user_id': {'$nin': ['', None]}}, {'members': 1, 'season': 1}):
+        for m in team.get('members') or []:
+            uid = str(m.get('user_id') or '')
+            if ObjectId.is_valid(uid) and (team.get('season') or '') >= newest.get(uid, ('', None))[0]:
+                newest[uid] = (team.get('season') or '', m)
+    for uid, (_, card) in newest.items():
+        user = db['users'].find_one({'_id': ObjectId(uid)})
+        if user:
+            _adopt_card(user, card, delete_old=False)
+    db['site_metadata'].update_one({'_id': PROFILE_SYNC_MARK}, {'$set': {'at': _utcnow()}}, upsert=True)
+
+
+def _linked_account(member):
+    uid = str(member.get('user_id') or '')
+    return db['users'].find_one({'_id': ObjectId(uid)}) if ObjectId.is_valid(uid) else None
+
+
 def _card_for_user(user):
     """The roster entry an account gets when placed on a team.
 
@@ -2793,8 +2907,8 @@ def _card_for_user(user):
     parked = user.get('roster_card')
     if isinstance(parked, dict) and parked.get('member_id'):
         return dict(parked, user_id=str(user['_id']))
-    return {'member_id': _new_member_id(), 'name': user.get('full_name') or user.get('username', ''),
-            'role': 'Member', 'user_id': str(user['_id']), 'photo': ''}
+    return {'member_id': _new_member_id(), 'name': _display_name(user),
+            'role': 'Member', 'user_id': str(user['_id']), 'photo': user.get('photo') or ''}
 
 
 def _place_user_on_team(user, team):
@@ -2803,7 +2917,9 @@ def _place_user_on_team(user, team):
     member = _card_for_user(user)
     db['teams'].update_one({'_id': team['_id']}, {'$push': {'members': member}})
     db['users'].update_one({'_id': user['_id']}, {'$unset': {'roster_card': ''}})
-    return member
+    _adopt_card(user, member)
+    team = db['teams'].find_one({'_id': team['_id']}, {'members': 1})
+    return next((m for m in team.get('members', []) if m.get('member_id') == member['member_id']), member)
 
 
 # --- Approvals and roles ---
@@ -2826,6 +2942,8 @@ def _link_card(team, member_id, user):
     db['teams'].update_one({'_id': team['_id'], 'members.member_id': member_id},
                            {'$set': {'members.$.user_id': uid}})
     db['users'].update_one({'_id': user['_id']}, {'$unset': {'roster_card': ''}})
+    team = db['teams'].find_one({'_id': team['_id']})
+    _adopt_card(user, next(m for m in team.get('members', []) if m.get('member_id') == member_id))
     team = db['teams'].find_one({'_id': team['_id']})
     return next(m for m in team.get('members', []) if m.get('member_id') == member_id)
 
@@ -3947,6 +4065,17 @@ def _account_user():
     return db['users'].find_one({'username': session['user']})
 
 
+# Colours someone can pick for their initials avatar. The first is the default.
+AVATAR_TONES = ('gold', 'maroon', 'rose', 'teal', 'navy', 'plum', 'forest', 'slate')
+# Where sign-in lands when no page asked for it: endpoint -> label.
+START_PAGES = {'index': 'Home', 'resources': 'Member Hub', 'my_team': 'My team', 'events_page': 'Events'}
+
+
+def _start_page_url(user):
+    page = user.get('start_page')
+    return url_for(page) if page in START_PAGES else url_for('index')
+
+
 # Account events shown on the account page's activity list.
 ACCOUNT_ACTIVITY_TYPES = ('password_change', 'password_reset', 'reset_link_generate', 'sign_out_everywhere',
                           'two_step_on', 'two_step_off', 'two_step_codes', 'two_step_backup_used',
@@ -4020,6 +4149,9 @@ def short_date(value):
 
 
 def _render_account(user, status=200, **extra):
+    if not _profiles_reconciled:
+        _reconcile_profiles()
+        user = _account_user()
     pending = user.get('totp_pending')
     two_step, backup_left = bool(user.get('totp_secret')), len(user.get('totp_backup') or [])
     checks = _security_checks(user, two_step, backup_left)
@@ -4031,6 +4163,7 @@ def _render_account(user, status=200, **extra):
         checks=checks, checks_done=sum(1 for c in checks if c[0]),
         devices=_device_rows(user), activity=_account_activity(user), rosters=_own_rosters(),
         full_name_max=FULL_NAME_MAX, password_min=PASSWORD_MIN_LENGTH,
+        avatar_tones=AVATAR_TONES, start_pages=START_PAGES, photo_types=sorted(MEMBER_UPLOAD_EXTENSIONS),
         **extra), status
 
 
@@ -4094,9 +4227,12 @@ def account_profile():
     full_name = collapse_whitespace(request.form.get('full_name', ''))
     email = request.form.get('email', '').strip().lower()
     old_email = (user.get('email') or '').lower()
+    tone = request.form.get('avatar_tone', user.get('avatar_tone') or AVATAR_TONES[0])
     error = None
     if len(full_name) > FULL_NAME_MAX:
         error = f'Your name must be {FULL_NAME_MAX} characters or fewer.'
+    elif tone not in AVATAR_TONES:
+        error = 'Pick one of the listed colours.'
     elif email != old_email:
         # The email is where an admin reaches you, so changing it takes the password.
         error = (_validate_account(user['username'], email, '', existing=user,
@@ -4109,19 +4245,70 @@ def account_profile():
         changes['full_name'] = full_name
     if email != old_email:
         changes['email'] = email
+    if tone != (user.get('avatar_tone') or AVATAR_TONES[0]):
+        changes['avatar_tone'] = tone
     if not changes:
         flash('Nothing changed.', 'info')
         return redirect(url_for('account', _anchor='profile'))
-    update = {}
-    if any(changes.values()):
-        update['$set'] = {k: v for k, v in changes.items() if v}
-    if not all(changes.values()):
-        update['$unset'] = {k: '' for k, v in changes.items() if not v}
-    db['users'].update_one({'_id': user['_id']}, update)
+    if 'email' in changes or 'avatar_tone' in changes:
+        db['users'].update_one({'_id': user['_id']},
+                               {'$set': {k: changes[k] for k in ('email', 'avatar_tone') if k in changes}})
+    if 'full_name' in changes:
+        # The name shows on every roster card linked to this account, so it changes there too.
+        _sync_profile(user, full_name=full_name)
     log_activity('profile_update', f"{user['username']} updated their profile", user=user['username'],
                  details={'username': user['username'], 'fields': sorted(changes)})
     flash('Profile saved.', 'success')
     return redirect(url_for('account', _anchor='profile'))
+
+
+@app.route('/account/photo', methods=['POST'])
+@login_required
+def account_photo():
+    user = _account_user()
+    file = request.files.get('photo')
+    if not file or not file.filename:
+        flash('Choose a photo to upload.', 'error')
+        return redirect(url_for('account', _anchor='profile'))
+    try:
+        url = checked_upload(file, 'users', user['username'], allowed=MEMBER_UPLOAD_EXTENSIONS, stem='photo')
+    except UserFacingError as e:
+        flash(str(e), 'error')
+        return redirect(url_for('account', _anchor='profile'))
+    except Exception:
+        logger.exception('Profile photo upload failed')
+        flash('Upload failed. Try again in a moment.', 'error')
+        return redirect(url_for('account', _anchor='profile'))
+    _sync_profile(user, photo=url)
+    log_activity('profile_update', f"{user['username']} changed their photo", user=user['username'],
+                 details={'username': user['username'], 'fields': ['photo']})
+    flash('Photo updated everywhere you appear.', 'success')
+    return redirect(url_for('account', _anchor='profile'))
+
+
+@app.route('/account/photo/remove', methods=['POST'])
+@login_required
+def account_photo_remove():
+    user = _account_user()
+    if user.get('photo'):
+        _sync_profile(user, photo='')
+        log_activity('profile_update', f"{user['username']} removed their photo", user=user['username'],
+                     details={'username': user['username'], 'fields': ['photo']})
+        flash('Photo removed.', 'success')
+    return redirect(url_for('account', _anchor='profile'))
+
+
+@app.route('/account/preferences', methods=['POST'])
+@login_required
+def account_preferences():
+    user = _account_user()
+    page = request.form.get('start_page', '')
+    if page not in START_PAGES:
+        flash('Pick one of the listed pages.', 'error')
+        return redirect(url_for('account', _anchor='preferences'))
+    db['users'].update_one({'_id': user['_id']}, {'$set': {'start_page': page}})
+    flash(f'You will land on {START_PAGES[page]} after signing in.', 'success')
+    return redirect(url_for('account', _anchor='preferences'))
 
 
 @app.route('/account/devices/<key>/sign-out', methods=['POST'])
@@ -4280,6 +4467,7 @@ def my_team():
 @login_required
 def manage_team(team_id):
     _ensure_member_ids()
+    _reconcile_profiles()
     user = _session_user()
     team = _find_team(team_id)
     if not team:
@@ -4498,8 +4686,13 @@ def api_team_member(team_id, member_id):
                 raise UserFacingError('Pick a listed sub-team.')
     except UserFacingError as e:
         return _json_error(str(e))
-    db['teams'].update_one({'_id': team['_id'], 'members.member_id': member_id},
-                           {'$set': {f'members.$.{field}': value}})
+    account = _linked_account(member) if field == 'name' else None
+    if account:
+        # Renaming a linked card renames the person everywhere they appear.
+        _sync_profile(account, full_name=value)
+    else:
+        db['teams'].update_one({'_id': team['_id'], 'members.member_id': member_id},
+                               {'$set': {f'members.$.{field}': value}})
     _team_edit_log(team, user, f"{member.get('name')}'s {label.lower()}", member.get(field), value)
     return jsonify({'ok': True, 'value': value})
 
@@ -4549,8 +4742,13 @@ def api_team_image(team_id):
             if not can_admin and member_id != own:
                 return _json_error('You can only change your own photo.', 403)
             old = member.get('photo')
-            db['teams'].update_one({'_id': team['_id'], 'members.member_id': member_id},
-                                   {'$set': {'members.$.photo': ''}})
+            account = _linked_account(member)
+            if account:
+                _sync_profile(account, photo='')
+                old = None
+            else:
+                db['teams'].update_one({'_id': team['_id'], 'members.member_id': member_id},
+                                       {'$set': {'members.$.photo': ''}})
         else:
             key = 'hero_image' if kind == 'hero_image' else 'stl_path'
             old = team.get(key)
@@ -4564,6 +4762,7 @@ def api_team_image(team_id):
     files = request.files
     try:
         if files.get('hero_image') and files['hero_image'].filename:
+            member = None
             url = checked_upload(files['hero_image'], 'teams', team['team_number'],
                                  allowed=MEMBER_UPLOAD_EXTENSIONS, stem='hero')
             old, update, what = team.get('hero_image'), {'$set': {'hero_image': url}}, 'hero image'
@@ -4571,6 +4770,7 @@ def api_team_image(team_id):
         elif files.get('stl_file') and files['stl_file'].filename:
             if not can_admin:
                 return _json_error('Only editors and admins can upload the CAD model.', 403)
+            member = None
             url = checked_upload(files['stl_file'], 'teams', team['team_number'], allowed={'stl'}, stem='model')
             old, update, what = team.get('stl_path'), {'$set': {'stl_path': url}}, 'CAD model'
             query = {'_id': team['_id']}
@@ -4593,9 +4793,14 @@ def api_team_image(team_id):
         logger.exception('Team image upload failed')
         return _json_error('Upload failed. Try again in a moment.', 502)
 
-    db['teams'].update_one(query, update)
-    if isinstance(old, str) and old.startswith('http'):
-        _delete_blobs([old], 'a replaced image')
+    account = _linked_account(member) if what == 'a photo' else None
+    if account:
+        # A linked member's photo is their profile photo, on every roster and their account.
+        _sync_profile(account, photo=url)
+    else:
+        db['teams'].update_one(query, update)
+        if isinstance(old, str) and old.startswith('http'):
+            _delete_blobs([old], 'a replaced image')
     _team_edit_log(team, user, what)
     return jsonify({'ok': True, 'url': get_image_url(url)})
 
@@ -4892,7 +5097,7 @@ def api_chat():
 
 @app.context_processor
 def inject_user():
-    return dict(current_user=session.get('user'))
+    return dict(current_user=session.get('user'), current_account=_session_user)
 
 STATIC_PUBLIC_PAGES = [
     ('index', 1.0, 'daily'),

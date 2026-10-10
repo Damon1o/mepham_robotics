@@ -1,4 +1,5 @@
 {% from "admin/_macros.html" import card_head, empty %}
+{% from "partials/avatar.html" import avatar with context %}
 
 {#- Move-to menu for a roster card in `col` (None: an Unassigned account). Teams move the person;
     groups add them, skipping groups they are already in. Keep in step with Roster.refreshMenu in admin.js. -#}
@@ -24,7 +25,7 @@
         <div class="approval-list">
             {% for u in pending_users %}
             <article class="approval-item" data-user-id="{{ u._id }}">
-                <div class="user-avatar" aria-hidden="true">{{ (u.full_name or u.username)|initials }}</div>
+                {{ avatar(u, 'user-avatar') }}
                 <div class="approval-who">
                     <strong data-display-name>{{ u.full_name or u.username }}</strong>
                     <small>@{{ u.username }} · {{ u.email }}{% if u.requested_ago %} · asked {{ u.requested_ago }}{% endif %}</small>
@@ -126,7 +127,7 @@
                 <ul class="roster-drop" role="list" data-animated-list=".roster-card" data-animated-list-rows="3">
                     {% for u in unassigned %}
                     <li class="roster-card" draggable="true" data-user-id="{{ u._id }}" data-name="{{ u.full_name or u.username }}">
-                        <span class="roster-avatar" aria-hidden="true">{{ (u.full_name or u.username)|initials }}</span>
+                        {{ avatar(u, 'roster-avatar') }}
                         <span class="roster-text">
                             <strong>{{ u.full_name or u.username }}</strong>
                             <small data-card-meta>@{{ u.username }} · {{ u.role }}</small>
@@ -186,7 +187,7 @@
         <div class="data-list user-list">
             {% for user in users %}
             <div class="data-item user-item" data-role="{{ user.role }}">
-                <div class="user-avatar" aria-hidden="true">{{ (user.full_name or user.username)|initials }}</div>
+                {{ avatar(user, 'user-avatar') }}
                 <div class="user-info">
                     <strong class="user-name">{{ user.full_name or user.username }}
                         {% if user.username == session.user %}<span class="you-chip">you</span>{% endif %}</strong>

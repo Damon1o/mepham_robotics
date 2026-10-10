@@ -118,12 +118,13 @@
     height: 5.5rem;
     border: 3px solid var(--acct-edge);
     border-radius: 50%;
-    background: var(--accent-gold);
-    color: var(--ink-on-gold);
+    background: var(--avatar-bg, var(--accent-gold));
+    color: var(--avatar-ink, var(--ink-on-gold));
     font-family: var(--font-display);
     font-size: 2rem;
     font-weight: 700;
     box-shadow: 4px 4px 0 var(--acct-edge);
+    overflow: hidden;
 }
 
 .acct-hero-text {
@@ -745,6 +746,164 @@
     color: var(--accent-gold);
 }
 
+/* Profile photo: the circle is also the drop target. */
+.acct-photo {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 2px dashed var(--acct-rule);
+    border-radius: 14px;
+    background: var(--acct-soft);
+}
+
+.acct-photo-drop {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    flex: none;
+    margin: 0;
+    border-radius: 14px;
+}
+
+.acct-photo-preview {
+    display: grid;
+    place-items: center;
+    width: 6rem;
+    height: 6rem;
+    border: 3px solid var(--acct-edge);
+    border-radius: 50%;
+    background: var(--avatar-bg, var(--accent-gold));
+    color: var(--avatar-ink, var(--ink-on-gold));
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    box-shadow: 4px 4px 0 var(--acct-shadow);
+    overflow: hidden;
+    transition: transform var(--transition-fast);
+}
+
+.acct-photo-drop.is-over .acct-photo-preview {
+    transform: scale(1.06);
+    outline: 3px dashed var(--accent-gold);
+    outline-offset: 4px;
+}
+
+.acct-photo-drop.is-uploading .acct-photo-preview {
+    opacity: 0.5;
+}
+
+.acct-photo-pick {
+    cursor: pointer;
+}
+
+.acct-photo-pick:focus-within .account-btn {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 2px;
+}
+
+.acct-photo-text {
+    display: grid;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.acct-photo-text small {
+    color: var(--acct-muted);
+}
+
+.acct-photo-text form {
+    margin: 0;
+}
+
+.acct-link-btn {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--maroon-dark);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+/* Avatar colour swatches, each a mini avatar in its colour. */
+.acct-tones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    border: 0;
+}
+
+.acct-tones legend,
+.acct-theme legend {
+    margin-bottom: 0.6rem;
+    padding: 0;
+    font-weight: 700;
+}
+
+.acct-tones legend small,
+.acct-theme legend small {
+    margin-left: 0.3rem;
+    color: var(--acct-muted);
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+.acct-tone {
+    position: relative;
+    cursor: pointer;
+}
+
+.acct-tone input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.acct-tone span[aria-hidden] {
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    border: 2px solid var(--acct-edge);
+    border-radius: 50%;
+    background: var(--avatar-bg);
+    color: var(--avatar-ink);
+    font-size: 0.85rem;
+    font-weight: 700;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.acct-tone:hover span[aria-hidden] {
+    transform: translateY(-2px);
+}
+
+.acct-tone input:checked + span {
+    box-shadow: 0 0 0 3px var(--acct-paper), 0 0 0 6px var(--acct-edge);
+}
+
+.acct-tone input:focus-visible + span {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 5px;
+}
+
+.acct-pref {
+    margin: 0;
+}
+
+.acct-pref + .acct-theme,
+.acct-theme + .acct-theme {
+    margin-top: 1.5rem;
+}
+
 /* ================================================================
    8. TWO-STEP
    ================================================================ */
@@ -1136,6 +1295,7 @@
 }
 
 [data-theme="dark"] .acct-panel-title,
+[data-theme="dark"] .acct-link-btn,
 [data-theme="dark"] .acct-danger b,
 [data-theme="dark"] .account-btn--danger,
 [data-theme="dark"] .setup-manual summary,
@@ -1290,6 +1450,11 @@
     .acct-checks,
     .acct-fields {
         grid-template-columns: 1fr;
+    }
+
+    .acct-photo {
+        flex-direction: column;
+        text-align: center;
     }
 
     .acct-howto {
