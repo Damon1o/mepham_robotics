@@ -117,8 +117,9 @@
 
 /* --- UP FOR GRABS --- */
 
+/* Same outer edges as the person cards above it. */
 .gh-grabs {
-    max-width: 1180px;
+    width: min(1120px, 100% - 2 * var(--spacing-md));
     margin: 0 auto var(--spacing-xl);
     padding: var(--spacing-lg) var(--spacing-md);
     background: var(--maroon-dark);
@@ -222,11 +223,6 @@
 }
 
 @media (max-width: 760px) {
-    .gh-grabs {
-        margin-left: var(--spacing-sm);
-        margin-right: var(--spacing-sm);
-    }
-
     .gh-grabs-inner {
         grid-template-columns: minmax(0, 1fr);
     }

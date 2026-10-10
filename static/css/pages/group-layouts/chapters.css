@@ -5,6 +5,9 @@
     --gc-paper: #fbf6ee;
     --gc-rule: #1a1a1a;
     background: var(--gc-paper);
+    /* Run the paper down to the footer, over the footer's top margin. */
+    padding-bottom: var(--spacing-xl);
+    margin-bottom: calc(-1 * var(--spacing-xl));
 }
 
 /* --- HEADER --- */
@@ -119,7 +122,7 @@
     color: var(--text-dark);
 }
 
-.gc-member span {
+.gc-member-role {
     font-size: 0.75rem;
     color: var(--text-light);
 }
@@ -263,7 +266,7 @@
     color: #cfc7bd;
 }
 
-[data-theme="dark"] .gc-member span,
+[data-theme="dark"] .gc-member-role,
 [data-theme="dark"] .gc-starring-label {
     color: #a99f95;
 }
