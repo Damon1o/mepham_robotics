@@ -4,7 +4,7 @@ import bcrypt
 import pytest
 
 import api.index as app_module
-from api import totp
+from api import devices, totp
 
 
 def _sign_in(client, username='alice', password='correct-horse'):
@@ -311,3 +311,163 @@ def test_members_cannot_turn_off_two_step_for_others(client, db, make_user, two_
     _sign_in(client, 'bob', 'bob-password')
     client.post(f"/admin/users/{two_step_user['user']['_id']}/two-step-off")
     assert db['users'].find_one({'_id': two_step_user['user']['_id']}).get('totp_secret')
+
+
+# --- Profile ----------------------------------------------------------------------------------------
+
+def test_profile_saves_a_name_without_the_password(client, db, member):
+    resp = client.post('/account/profile', data={'full_name': '  Alice   Liddell ', 'email': 'alice@example.com'})
+    assert resp.status_code == 302
+    assert db['users'].find_one({'_id': member['_id']})['full_name'] == 'Alice Liddell'
+    assert 'Alice Liddell' in client.get('/account').get_data(as_text=True)
+
+
+def test_profile_can_clear_the_name(client, db, member):
+    db['users'].update_one({'_id': member['_id']}, {'$set': {'full_name': 'Old Name'}})
+    client.post('/account/profile', data={'full_name': '', 'email': 'alice@example.com'})
+    assert 'full_name' not in db['users'].find_one({'_id': member['_id']})
+
+
+def test_new_email_needs_the_password(client, db, member):
+    resp = client.post('/account/profile', data={'email': 'new@example.com', 'current_password': 'wrong'})
+    assert resp.status_code == 400
+    assert 'current password is not right' in resp.get_data(as_text=True)
+    assert db['users'].find_one({'_id': member['_id']})['email'] == 'alice@example.com'
+
+    resp = client.post('/account/profile', data={'email': 'New@Example.com', 'current_password': 'correct-horse'})
+    assert resp.status_code == 302
+    assert db['users'].find_one({'_id': member['_id']})['email'] == 'new@example.com'
+
+
+@pytest.mark.parametrize('email,message', [('not-an-email', 'valid email'), ('', 'valid email'),
+                                           ('bob@example.com', 'already registered')])
+def test_bad_emails_are_refused(client, db, make_user, member, email, message):
+    make_user(username='bob', password='bob-password', email='bob@example.com')
+    resp = client.post('/account/profile', data={'email': email, 'current_password': 'correct-horse'})
+    assert resp.status_code == 400
+    assert message in resp.get_data(as_text=True)
+    assert db['users'].find_one({'_id': member['_id']})['email'] == 'alice@example.com'
+
+
+def test_profile_name_has_a_length_limit(client, db, member):
+    resp = client.post('/account/profile', data={'full_name': 'x' * (app_module.FULL_NAME_MAX + 1),
+                                                 'email': 'alice@example.com'})
+    assert resp.status_code == 400
+    assert 'full_name' not in db['users'].find_one({'_id': member['_id']})
+
+
+def test_profile_change_shows_in_activity(client, member):
+    client.post('/account/profile', data={'full_name': 'Alice L', 'email': 'alice@example.com'})
+    assert 'Profile updated' in client.get('/account').get_data(as_text=True)
+
+
+# --- Devices ------------------------------------------------------------------------------------------
+
+PHONE_UA = ('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 '
+            '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')
+WINDOWS_UA = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+              'Chrome/126.0 Safari/537.36 Edg/126.0')
+
+
+@pytest.mark.parametrize('agent,label,kind', [
+    (PHONE_UA, 'Safari on iPhone', 'phone'),
+    (WINDOWS_UA, 'Edge on Windows', 'computer'),
+    ('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36',
+     'Chrome on Android', 'phone'),
+    ('Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0', 'Firefox on Linux', 'computer'),
+    ('', 'Unknown browser', 'computer'),
+])
+def test_devices_are_named_from_the_user_agent(agent, label, kind):
+    assert devices.describe(agent) == (label, kind)
+
+
+def _sign_in_as(client, agent):
+    return client.post('/login', data={'username': 'alice', 'password': 'correct-horse'},
+                       headers={'User-Agent': agent})
+
+
+def _sessions(db, username='alice'):
+    return db['users'].find_one({'username': username}).get('sessions', [])
+
+
+def test_signed_in_devices_are_listed_without_session_ids(client, db, make_user):
+    make_user()
+    _sign_in_as(client, WINDOWS_UA)
+    phone = app_module.app.test_client()
+    _sign_in_as(phone, PHONE_UA)
+    page = client.get('/account').get_data(as_text=True)
+    assert 'Edge on Windows' in page and 'Safari on iPhone' in page
+    assert 'This device' in page
+    for entry in _sessions(db):
+        assert entry['sid'] not in page
+
+
+def test_signing_out_another_device(client, db, make_user):
+    make_user()
+    _sign_in_as(client, WINDOWS_UA)
+    phone = app_module.app.test_client()
+    _sign_in_as(phone, PHONE_UA)
+    key = next(s['key'] for s in _sessions(db) if 'iPhone' in s['agent'])
+    assert client.post(f'/account/devices/{key}/sign-out').status_code == 302
+    assert _signed_in(client)
+    assert not _signed_in(phone)
+    page = client.get('/account').get_data(as_text=True)
+    assert 'Signed out Safari on iPhone.' in page
+    assert len(_sessions(db)) == 1 and 'Edg/' in _sessions(db)[0]['agent']
+    assert 'Device signed out' in page
+
+
+def test_signing_out_this_device_from_the_list(client, db, member):
+    key = _sessions(db)[0]['key']
+    resp = client.post(f'/account/devices/{key}/sign-out')
+    assert resp.location.endswith('/login')
+    assert not _signed_in(client)
+
+
+def test_someone_elses_device_key_does_nothing(client, db, make_user, member):
+    make_user(username='bob', password='bob-password', email='bob@example.com')
+    bob = app_module.app.test_client()
+    _sign_in(bob, 'bob', 'bob-password')
+    client.post(f"/account/devices/{_sessions(db, 'bob')[0]['key']}/sign-out")
+    assert _signed_in(bob)
+
+
+def test_password_change_keeps_only_this_device_listed(client, db, member):
+    other = app_module.app.test_client()
+    _sign_in_as(other, PHONE_UA)
+    client.post('/account/password', data={'current_password': 'correct-horse',
+                                           'new_password': 'brand-new-pw', 'confirm_password': 'brand-new-pw'})
+    page = client.get('/account').get_data(as_text=True)
+    assert 'This device' in page
+    assert 'Safari on iPhone' not in page
+    assert db['users'].find_one({'_id': member['_id']}).get('password_changed')
+
+
+def test_logout_drops_the_device(client, db, member):
+    client.post('/logout')
+    assert _sessions(db) == []
+
+
+def test_last_active_time_is_updated_now_and_then(client, db, member, monkeypatch):
+    first = _sessions(db)[0]['seen']
+    later = app_module._utcnow() + app_module.SESSION_SEEN_EVERY * 2
+    monkeypatch.setattr(app_module, '_utcnow', lambda: later)
+    client.get('/account')
+    assert _sessions(db)[0]['seen'] > first
+
+
+def test_device_list_is_capped(client, db, member):
+    for _ in range(app_module.SESSIONS_KEPT + 3):
+        _sign_in(app_module.app.test_client())
+    assert len(_sessions(db)) == app_module.SESSIONS_KEPT
+
+
+# --- Checkup ----------------------------------------------------------------------------------------------
+
+def test_checkup_counts_what_is_done(client, db, member):
+    # Only the email counts at first: no two-step, and no date to call the password fresh.
+    assert 'Security checkup: 1 of 4 done' in client.get('/account').get_data(as_text=True)
+    _turn_on_two_step(client, db, member)
+    client.post('/account/password', data={'current_password': 'correct-horse',
+                                           'new_password': 'brand-new-pw', 'confirm_password': 'brand-new-pw'})
+    assert 'Security checkup: 4 of 4 done' in client.get('/account').get_data(as_text=True)

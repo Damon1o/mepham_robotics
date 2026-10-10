@@ -1,41 +1,225 @@
 {% extends "base.html" %}
 
 {% block title %}Your Account | Mepham Robotics{% endblock %}
-{% block meta_description %}Change your password, sign out other devices and set up two-step sign-in.{% endblock %}
+{% block meta_description %}Edit your profile, change your password, see where you're signed in and set up two-step sign-in.{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/login.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/account.css') }}">
 {% endblock %}
 
+{% macro panel_head(icon, title, id, blurb) -%}
+<header class="acct-panel-head">
+    <span class="acct-panel-icon" aria-hidden="true"><i data-lucide="{{ icon }}"></i></span>
+    <div>
+        <h2 class="acct-panel-title" id="{{ id }}">{{ title }}</h2>
+        {% if blurb %}<p class="acct-panel-blurb">{{ blurb }}</p>{% endif %}
+    </div>
+    {{ caller() if caller }}
+</header>
+{%- endmacro %}
+
+{% macro username_field() -%}
+{# Lets password managers file the password under the right account. #}
+<input type="text" name="username" value="{{ account.username }}" autocomplete="username"
+    class="visually-hidden" tabindex="-1" aria-hidden="true" readonly>
+{%- endmacro %}
+
+{% set name = account.full_name or account.username %}
+{% set score = (checks_done * 100 / (checks|length))|round|int %}
+
 {% block content %}
-<section class="account-page">
-    <header class="account-head">
-        <div class="account-avatar" aria-hidden="true">{{ (account.full_name or account.username)|initials }}</div>
-        <div>
-            <h1 class="account-title">{{ account.full_name or account.username }}</h1>
-            <p class="account-meta">@{{ account.username }} · {{ account.email or 'no email on file' }} ·
-                <span class="account-role">{{ account.role or 'member' }}</span></p>
+<div class="acct">
+    <section class="acct-hero" aria-labelledby="acct_name">
+        <div class="acct-hero-id">
+            <div class="acct-avatar" aria-hidden="true">{{ name|initials }}</div>
+            <div class="acct-hero-text">
+                <p class="acct-kicker">My account</p>
+                <h1 class="acct-name" id="acct_name">{{ name }}</h1>
+                <p class="acct-handle">
+                    <span>@{{ account.username }}</span>
+                    <span class="acct-role acct-role--{{ account.role or 'member' }}">{{ account.role or 'member' }}</span>
+                    {% if account.created_at %}<span class="acct-since">
+                        <i data-lucide="calendar" aria-hidden="true"></i> Joined {{ account.created_at.strftime('%B %Y') }}</span>{% endif %}
+                </p>
+                {% if rosters %}
+                <ul class="acct-rosters" aria-label="Your teams">
+                    {% for t in rosters %}
+                    <li><a href="{{ url_for('manage_team', team_id=t._id|string) }}" class="acct-roster">
+                        <i data-lucide="{{ 'users' if t.kind == 'group' else 'bot' }}" aria-hidden="true"></i>
+                        {{ t.title if t.kind == 'group' else t.team_number }}{% if t.nickname and t.kind != 'group' %}
+                        <small>{{ t.nickname }}</small>{% endif %}</a></li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
         </div>
-    </header>
+        <a class="acct-score {{ 'is-full' if checks_done == checks|length }}" href="#checkup"
+            aria-label="Security checkup: {{ checks_done }} of {{ checks|length }} done">
+            <span class="acct-score-ring" aria-hidden="true">
+                <svg viewBox="0 0 36 36">
+                    <circle class="acct-score-track" cx="18" cy="18" r="15.5" pathLength="100"></circle>
+                    <circle class="acct-score-fill" cx="18" cy="18" r="15.5" pathLength="100"
+                        stroke-dasharray="{{ score }} 100"></circle>
+                </svg>
+                <span><b>{{ checks_done }}</b>/{{ checks|length }}</span>
+            </span>
+            <span class="acct-score-label">Security <br>checkup</span>
+        </a>
+    </section>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-    <p class="auth-flash auth-flash--{{ category }}" role="status">{{ message }}</p>
-    {% endfor %}
+    {% if messages %}
+    <div class="acct-flashes">
+        {% for category, message in messages %}
+        <p class="auth-flash auth-flash--{{ category }}" role="status">{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
     {% endwith %}
 
-    <div class="account-grid">
-        <section class="auth-card account-card" id="two-step" aria-labelledby="two_step_title">
-            <div class="auth-panel">
-                <h2 class="auth-title account-card-title" id="two_step_title">
-                    <i data-lucide="{{ 'shield-check' if two_step else 'shield' }}" aria-hidden="true"></i>
-                    Two-step sign-in
-                    <span class="account-state {{ 'is-on' if two_step else 'is-off' }}">{{ 'On' if two_step else 'Off' }}</span>
-                </h2>
-                {% if two_step_error %}
-                <p class="auth-error" role="alert">{{ two_step_error }}</p>
+    <div class="acct-layout">
+        <nav class="acct-nav" aria-label="Account sections">
+            <ul>
+                <li><a href="#checkup" data-acct-link><i data-lucide="gauge" aria-hidden="true"></i> Checkup</a></li>
+                <li><a href="#profile" data-acct-link><i data-lucide="id-card" aria-hidden="true"></i> Profile</a></li>
+                <li><a href="#password" data-acct-link><i data-lucide="key-round" aria-hidden="true"></i> Password</a></li>
+                <li><a href="#two-step" data-acct-link><i data-lucide="shield-check" aria-hidden="true"></i> Two-step
+                    <span class="acct-dot {{ 'is-on' if two_step else 'is-off' }}" aria-label="{{ 'On' if two_step else 'Off' }}"></span></a></li>
+                <li><a href="#devices" data-acct-link><i data-lucide="monitor-smartphone" aria-hidden="true"></i> Devices
+                    <span class="acct-count">{{ devices|length }}</span></a></li>
+                <li><a href="#activity" data-acct-link><i data-lucide="history" aria-hidden="true"></i> Activity</a></li>
+                <li><a href="#preferences" data-acct-link><i data-lucide="sliders-horizontal" aria-hidden="true"></i> Preferences</a></li>
+            </ul>
+        </nav>
+
+        <div class="acct-panels">
+            {# --- Checkup ------------------------------------------------------------ #}
+            <section class="acct-panel" id="checkup" aria-labelledby="checkup_title">
+                {% call panel_head('gauge', 'Security checkup', 'checkup_title',
+                    'All done. Nice work.' if checks_done == checks|length
+                    else 'A few minutes here keeps your account yours.') %}{% endcall %}
+                <ul class="acct-checks">
+                    {% for done, label, hint, anchor in checks %}
+                    <li>
+                        <a class="acct-check {{ 'is-done' if done }}" href="#{{ anchor }}">
+                            <span class="acct-check-mark" aria-hidden="true">
+                                <i data-lucide="{{ 'check' if done else 'circle-alert' }}"></i></span>
+                            <span class="acct-check-text">
+                                <b>{{ label }}</b>
+                                <small>{{ hint }}</small>
+                            </span>
+                            <span class="visually-hidden">{{ 'Done' if done else 'To do' }}</span>
+                            <i data-lucide="chevron-right" class="acct-check-go" aria-hidden="true"></i>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            {# --- Profile ------------------------------------------------------------ #}
+            {% set pf = profile_form or {} %}
+            <section class="acct-panel" id="profile" aria-labelledby="profile_title">
+                {% call panel_head('id-card', 'Profile', 'profile_title',
+                    'How you show up to admins and coaches.') %}{% endcall %}
+                {% if profile_error %}<p class="auth-error" role="alert">{{ profile_error }}</p>{% endif %}
+                <form class="auth-form acct-form" method="POST" action="{{ url_for('account_profile') }}"
+                    data-native-submit data-profile-form>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    {{ username_field() }}
+                    <div class="acct-fields">
+                        <div class="form-group">
+                            <label for="full_name">Full name</label>
+                            <input type="text" id="full_name" name="full_name" maxlength="{{ full_name_max }}"
+                                autocomplete="name" value="{{ pf.full_name if 'full_name' in pf else account.full_name or '' }}"
+                                placeholder="First and last name">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" required autocomplete="email"
+                                value="{{ pf.email if 'email' in pf else account.email or '' }}"
+                                data-original="{{ account.email or '' }}">
+                        </div>
+                        <div class="form-group acct-field-static">
+                            <span class="acct-static-label">Username</span>
+                            <span class="acct-static-value"><i data-lucide="at-sign" aria-hidden="true"></i>{{ account.username }}</span>
+                            <small class="auth-field-hint">Ask an admin if this needs to change.</small>
+                        </div>
+                        <div class="form-group acct-field-static">
+                            <span class="acct-static-label">Role</span>
+                            <span class="acct-static-value acct-static-value--cap"><i data-lucide="badge-check" aria-hidden="true"></i>{{ account.role or 'member' }}</span>
+                            <small class="auth-field-hint">Set by the club's admins.</small>
+                        </div>
+                    </div>
+                    <div class="form-group acct-reveal" data-email-password {% if not pf.email or pf.email == account.email %}hidden{% endif %}>
+                        <label for="profile_password">Current password</label>
+                        <input type="password" id="profile_password" name="current_password" autocomplete="current-password">
+                        <small class="auth-field-hint">Changing your email needs your password.</small>
+                    </div>
+                    <div class="acct-actions">
+                        <button type="submit" class="account-btn account-btn--primary">
+                            <i data-lucide="save" aria-hidden="true"></i> Save profile</button>
+                    </div>
+                </form>
+            </section>
+
+            {# --- Password ----------------------------------------------------------- #}
+            <section class="acct-panel" id="password" aria-labelledby="password_title">
+                {% call panel_head('key-round', 'Password', 'password_title',
+                    'Changing it signs out your other devices.') %}
+                {% if account.password_changed %}
+                <span class="acct-tag">Changed {{ account.password_changed|ago|lower }}</span>
                 {% endif %}
+                {% endcall %}
+                {% if password_error %}<p class="auth-error" role="alert">{{ password_error }}</p>{% endif %}
+                <form class="auth-form acct-form" method="POST" action="{{ url_for('account_password') }}" data-native-submit>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    {{ username_field() }}
+                    <div class="form-group">
+                        <label for="current_password">Current password</label>
+                        <input type="password" id="current_password" name="current_password" required
+                            autocomplete="current-password">
+                    </div>
+                    <div class="acct-fields">
+                        <div class="form-group">
+                            <label for="new_password">New password</label>
+                            <div class="password-field">
+                                <input type="password" id="new_password" name="new_password" required
+                                    minlength="{{ password_min }}" autocomplete="new-password"
+                                    aria-describedby="strength_label">
+                                <button type="button" class="password-toggle" aria-controls="new_password"
+                                    aria-label="Show password" aria-pressed="false">
+                                    <i data-lucide="eye" class="icon-show"></i>
+                                    <i data-lucide="eye-off" class="icon-hide"></i>
+                                </button>
+                            </div>
+                            <div class="acct-strength" data-strength="0" data-min="{{ password_min }}">
+                                <span class="acct-strength-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                                <small id="strength_label" class="acct-strength-label" aria-live="polite">At least {{ password_min }} characters</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm_password">Confirm new password</label>
+                            <input type="password" id="confirm_password" name="confirm_password" required
+                                minlength="{{ password_min }}" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <p class="acct-tip"><i data-lucide="lightbulb" aria-hidden="true"></i>
+                        Three or four random words beat one clever word with symbols.</p>
+                    <div class="acct-actions">
+                        <button type="submit" class="account-btn account-btn--primary">
+                            <i data-lucide="key-round" aria-hidden="true"></i> Change password</button>
+                    </div>
+                </form>
+            </section>
+
+            {# --- Two-step -------------------------------------------------------------- #}
+            <section class="acct-panel" id="two-step" aria-labelledby="two_step_title">
+                {% call panel_head('shield-check' if two_step else 'shield', 'Two-step sign-in', 'two_step_title',
+                    'A code from your phone after your password, so a leaked password alone gets nobody in.') %}
+                <span class="account-state {{ 'is-on' if two_step else 'is-off' }}">{{ 'On' if two_step else 'Off' }}</span>
+                {% endcall %}
+                {% if two_step_error %}<p class="auth-error" role="alert">{{ two_step_error }}</p>{% endif %}
 
                 {% if backup_codes %}
                 <div class="backup-codes" role="status">
@@ -44,37 +228,52 @@
                     <ol class="backup-code-list">
                         {% for code in backup_codes %}<li><code>{{ code }}</code></li>{% endfor %}
                     </ol>
-                    <button type="button" class="account-btn" data-copy-codes="{{ backup_codes|join('\n') }}">
-                        <i data-lucide="copy" aria-hidden="true"></i> <span>Copy codes</span></button>
+                    <div class="acct-actions">
+                        <button type="button" class="account-btn" data-copy-codes="{{ backup_codes|join('\n') }}">
+                            <i data-lucide="copy" aria-hidden="true"></i> <span>Copy</span></button>
+                        <button type="button" class="account-btn" data-download-codes="{{ backup_codes|join('\n') }}"
+                            data-account="{{ account.username }}">
+                            <i data-lucide="download" aria-hidden="true"></i> <span>Download .txt</span></button>
+                        <button type="button" class="account-btn" data-print-codes>
+                            <i data-lucide="printer" aria-hidden="true"></i> <span>Print</span></button>
+                    </div>
                 </div>
                 {% endif %}
 
                 {% if two_step %}
-                <p class="auth-intro">Signing in asks for a code from your authenticator app after your password.
-                    {{ backup_left }} backup code{{ 's' if backup_left != 1 }} left.</p>
+                <div class="acct-meter" role="img" aria-label="{{ backup_left }} backup codes left">
+                    <span class="acct-meter-label"><i data-lucide="life-buoy" aria-hidden="true"></i>
+                        {{ backup_left }} backup code{{ 's' if backup_left != 1 }} left</span>
+                    <span class="acct-meter-pips" aria-hidden="true">
+                        {% for i in range(10) %}<i class="{{ 'is-full' if i < backup_left }}"></i>{% endfor %}
+                    </span>
+                </div>
                 {% if backup_left < 3 and not backup_codes %}
                 <p class="auth-error" role="status">You're almost out of backup codes. Make new ones so a lost phone
                     can't lock you out.</p>
                 {% endif %}
-                <form class="auth-form" method="POST" action="{{ url_for('account_two_step_backup_codes') }}" data-native-submit>
+                <form class="auth-form acct-form" method="POST" action="{{ url_for('account_two_step_backup_codes') }}" data-native-submit>
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="text" name="username" value="{{ account.username }}" autocomplete="username"
-                        class="visually-hidden" tabindex="-1" aria-hidden="true" readonly>
+                    {{ username_field() }}
                     <div class="form-group">
                         <label for="codes_password">Current password</label>
                         <input type="password" id="codes_password" name="current_password" required
                             autocomplete="current-password">
+                        <small class="auth-field-hint">Needed for new backup codes or to turn two-step off.</small>
                     </div>
-                    <div class="account-actions">
-                        <button type="submit" class="account-btn">New backup codes</button>
+                    <div class="acct-actions">
+                        <button type="submit" class="account-btn">
+                            <i data-lucide="refresh-cw" aria-hidden="true"></i> New backup codes</button>
                         <button type="submit" class="account-btn account-btn--danger"
-                            formaction="{{ url_for('account_two_step_off') }}">Turn off</button>
+                            formaction="{{ url_for('account_two_step_off') }}">
+                            <i data-lucide="shield-off" aria-hidden="true"></i> Turn off</button>
                     </div>
                 </form>
                 {% elif setup_secret %}
                 <ol class="setup-steps">
-                    <li>Open an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password…) and
-                        scan this code.
+                    <li>
+                        <b>Scan this code</b> with an authenticator app (Google Authenticator, Microsoft
+                        Authenticator, 1Password…).
                         <div class="setup-qr" data-qr="{{ setup_uri }}" role="img"
                             aria-label="QR code for setting up two-step sign-in"></div>
                         <details class="setup-manual">
@@ -82,86 +281,119 @@
                             <code class="setup-key">{{ setup_secret }}</code>
                         </details>
                     </li>
-                    <li>Type the 6-digit code the app shows.</li>
+                    <li><b>Type the 6-digit code</b> the app shows.
+                        <form class="auth-form acct-form" method="POST" action="{{ url_for('account_two_step_confirm') }}" data-native-submit>
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <div class="form-group">
+                                <label for="setup_code" class="visually-hidden">Code from the app</label>
+                                <input type="text" id="setup_code" name="code" required inputmode="numeric" maxlength="7"
+                                    autocomplete="one-time-code" class="auth-code-input" pattern="[0-9 ]*"
+                                    placeholder="123 456">
+                            </div>
+                            <div class="acct-actions">
+                                <button type="submit" class="account-btn account-btn--primary">
+                                    <i data-lucide="shield-check" aria-hidden="true"></i> Turn on</button>
+                                <button type="submit" class="account-btn" formaction="{{ url_for('account_two_step_cancel') }}"
+                                    formnovalidate>Cancel</button>
+                            </div>
+                        </form>
+                    </li>
                 </ol>
-                <form class="auth-form" method="POST" action="{{ url_for('account_two_step_confirm') }}" data-native-submit>
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <div class="form-group">
-                        <label for="setup_code">Code from the app</label>
-                        <input type="text" id="setup_code" name="code" required inputmode="numeric" maxlength="7"
-                            autocomplete="one-time-code" class="auth-code-input" pattern="[0-9 ]*">
-                    </div>
-                    <div class="account-actions">
-                        <button type="submit" class="auth-submit">Turn on</button>
-                        <button type="submit" class="account-btn" formaction="{{ url_for('account_two_step_cancel') }}"
-                            formnovalidate>Cancel</button>
-                    </div>
-                </form>
                 {% else %}
-                <p class="auth-intro">Add a code from your phone to every sign-in, so a leaked password alone can't
-                    get into your account.{% if account.role == 'admin' %} Strongly recommended for admins.{% endif %}</p>
-                <form method="POST" action="{{ url_for('account_two_step_start') }}">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="auth-submit">Set up two-step sign-in</button>
-                </form>
+                <div class="acct-callout">
+                    <ol class="acct-howto">
+                        <li><i data-lucide="smartphone" aria-hidden="true"></i> Get an authenticator app</li>
+                        <li><i data-lucide="scan-line" aria-hidden="true"></i> Scan a QR code</li>
+                        <li><i data-lucide="file-key" aria-hidden="true"></i> Save your backup codes</li>
+                    </ol>
+                    {% if account.role == 'admin' %}<p class="acct-callout-note">Strongly recommended for admins.</p>{% endif %}
+                    <form method="POST" action="{{ url_for('account_two_step_start') }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="account-btn account-btn--primary">
+                            <i data-lucide="shield-plus" aria-hidden="true"></i> Set up two-step sign-in</button>
+                    </form>
+                </div>
                 {% endif %}
-            </div>
-        </section>
+            </section>
 
-        <section class="auth-card account-card" aria-labelledby="password_title">
-            <div class="auth-panel">
-                <h2 class="auth-title account-card-title" id="password_title">
-                    <i data-lucide="key-round" aria-hidden="true"></i> Password</h2>
-                <p class="auth-intro">Changing it signs out your other devices.</p>
-                {% if password_error %}
-                <p class="auth-error" role="alert">{{ password_error }}</p>
-                {% endif %}
-                <form class="auth-form" method="POST" action="{{ url_for('account_password') }}" data-native-submit>
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="text" name="username" value="{{ account.username }}" autocomplete="username"
-                        class="visually-hidden" tabindex="-1" aria-hidden="true" readonly>
-                    <div class="form-group">
-                        <label for="current_password">Current password</label>
-                        <input type="password" id="current_password" name="current_password" required
-                            autocomplete="current-password">
-                    </div>
-                    <div class="form-group">
-                        <label for="new_password">New password</label>
-                        <div class="password-field">
-                            <input type="password" id="new_password" name="new_password" required minlength="8"
-                                autocomplete="new-password">
-                            <button type="button" class="password-toggle" aria-controls="new_password"
-                                aria-label="Show password" aria-pressed="false">
-                                <i data-lucide="eye" class="icon-show"></i>
-                                <i data-lucide="eye-off" class="icon-hide"></i>
-                            </button>
+            {# --- Devices ------------------------------------------------------------------ #}
+            <section class="acct-panel" id="devices" aria-labelledby="devices_title">
+                {% call panel_head('monitor-smartphone', 'Where you\'re signed in', 'devices_title',
+                    'Don\'t recognise one? Sign it out and change your password.') %}{% endcall %}
+                {% if devices %}
+                <ul class="acct-devices">
+                    {% for d in devices %}
+                    <li class="acct-device {{ 'is-current' if d.current }}">
+                        <span class="acct-device-icon" aria-hidden="true">
+                            <i data-lucide="{{ {'phone': 'smartphone', 'tablet': 'tablet'}.get(d.kind, 'monitor') }}"></i></span>
+                        <div class="acct-device-text">
+                            <b>{{ d.label }}{% if d.current %} <span class="acct-tag acct-tag--live">This device</span>{% endif %}</b>
+                            <small>
+                                {% if d.current %}Active now{% else %}Active {{ d.seen|ago|lower }}{% endif %}
+                                · Signed in {{ d.started|short_date }}{% if d.ip %} · {{ d.ip }}{% endif %}
+                                {% if d.remember %} · Remembered{% endif %}
+                            </small>
                         </div>
+                        <form method="POST" action="{{ url_for('account_device_sign_out', key=d.key) }}">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="account-btn account-btn--small"
+                                aria-label="Sign out {{ d.label }}{{ ' (this device)' if d.current }}">
+                                <i data-lucide="log-out" aria-hidden="true"></i> Sign out</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="acct-empty">Devices show up here the next time they sign in.</p>
+                {% endif %}
+                <div class="acct-danger">
+                    <div>
+                        <b>Sign out everywhere</b>
+                        <small>Used a shared computer or lost a phone? This signs out every device, including this one.</small>
                     </div>
-                    <div class="form-group">
-                        <label for="confirm_password">Confirm new password</label>
-                        <input type="password" id="confirm_password" name="confirm_password" required minlength="8"
-                            autocomplete="new-password">
-                    </div>
-                    <button type="submit" class="auth-submit">Change password</button>
-                </form>
-            </div>
-        </section>
+                    <form method="POST" action="{{ url_for('account_sign_out_everywhere') }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="account-btn account-btn--danger">
+                            <i data-lucide="log-out" aria-hidden="true"></i> Sign out everywhere</button>
+                    </form>
+                </div>
+            </section>
 
-        <section class="auth-card account-card" aria-labelledby="devices_title">
-            <div class="auth-panel">
-                <h2 class="auth-title account-card-title" id="devices_title">
-                    <i data-lucide="monitor-smartphone" aria-hidden="true"></i> Devices</h2>
-                <p class="auth-intro">Used a shared computer, or lost a phone? Sign out everywhere you're signed in,
-                    including here.</p>
-                <form method="POST" action="{{ url_for('account_sign_out_everywhere') }}">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="account-btn account-btn--danger">
-                        <i data-lucide="log-out" aria-hidden="true"></i> Sign out everywhere</button>
-                </form>
-            </div>
-        </section>
+            {# --- Activity ------------------------------------------------------------------ #}
+            <section class="acct-panel" id="activity" aria-labelledby="activity_title">
+                {% call panel_head('history', 'Recent activity', 'activity_title',
+                    'Security changes to your account. Something you didn\'t do? Tell an admin.') %}{% endcall %}
+                {% if activity %}
+                <ol class="acct-timeline">
+                    {% for a in activity %}
+                    <li class="acct-event acct-event--{{ a.type }}">
+                        <b>{{ a.title }}</b>
+                        <small><time datetime="{{ a.when.isoformat() }}Z" title="{{ a.when|short_date }}">{{ a.when|ago }}</time>{% if a.by %} · by {{ a.by }}{% endif %}</small>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <p class="acct-empty">Nothing yet. Password, two-step and device changes will show up here.</p>
+                {% endif %}
+            </section>
+
+            {# --- Preferences --------------------------------------------------------------- #}
+            <section class="acct-panel" id="preferences" aria-labelledby="preferences_title">
+                {% call panel_head('sliders-horizontal', 'Preferences', 'preferences_title',
+                    'Saved on this device.') %}{% endcall %}
+                <fieldset class="acct-theme" data-theme-picker>
+                    <legend>Theme</legend>
+                    <label><input type="radio" name="theme_mode" value="light">
+                        <span><i data-lucide="sun" aria-hidden="true"></i> Light</span></label>
+                    <label><input type="radio" name="theme_mode" value="dark">
+                        <span><i data-lucide="moon" aria-hidden="true"></i> Dark</span></label>
+                    <label><input type="radio" name="theme_mode" value="system">
+                        <span><i data-lucide="monitor" aria-hidden="true"></i> Match device</span></label>
+                </fieldset>
+            </section>
+        </div>
     </div>
-</section>
+</div>
 {% endblock %}
 
 {% block page_scripts %}

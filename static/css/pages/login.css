@@ -294,6 +294,14 @@
     color: #1b5e20;
 }
 
+/* Two-step code box: sign-in and account setup */
+.auth-form .auth-code-input {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.3rem;
+    letter-spacing: 0.25em;
+    text-align: center;
+}
+
 /* Dark mode */
 [data-theme="dark"] .auth-card {
     background: #1e1e1e;

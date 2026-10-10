@@ -25,7 +25,7 @@ from pymongo.errors import DuplicateKeyError
 import requests
 
 try:  # package import on Vercel, flat import when run from the api/ directory
-    from api import events, robotevents, site_content, totp
+    from api import devices, events, robotevents, site_content, totp
 except ImportError:  # pragma: no cover
     import events
     import robotevents
@@ -378,6 +378,8 @@ ACTIVITY_TYPES = {
     'two_step_off': ('🛡️', 'Two-step sign-in off', 'people'),
     'two_step_codes': ('🛡️', 'Backup codes renewed', 'people'),
     'two_step_backup_used': ('🛡️', 'Backup code used', 'people'),
+    'profile_update': ('🪪', 'Profile updated', 'people'),
+    'device_sign_out': ('📱', 'Device signed out', 'people'),
     'reset_link_generate': ('🔗', 'Reset link generated', 'people'),
     'user_signup': ('🙋', 'Account requested', 'people'),
     'user_approve': ('✅', 'Account approved', 'people'),
@@ -768,7 +770,21 @@ def _current_db_user():
     # Accounts made before sign-up existed have no status and count as active.
     if user.get('status', 'active') != 'active':
         return None
+    _touch_session(user)
     return user
+
+
+# How often a signed-in device's "last active" time is written back.
+SESSION_SEEN_EVERY = datetime.timedelta(minutes=10)
+
+
+def _touch_session(user):
+    """Note that this device is still in use, at most once per SESSION_SEEN_EVERY."""
+    sid, now = session.get('sid'), _utcnow()
+    if not sid or now.timestamp() - session.get('seen', 0) < SESSION_SEEN_EVERY.total_seconds():
+        return
+    session['seen'] = now.timestamp()
+    db['users'].update_one({'_id': user['_id'], 'sessions.sid': sid}, {'$set': {'sessions.$.seen': now}})
 
 def login_required(f):
     @wraps(f)
@@ -1708,6 +1724,8 @@ def login():
 # Signed-out session ids kept per user. Sessions last at most 30 days, so this
 # only needs to outlive the sign-outs one person makes in that time.
 SIGNED_OUT_KEPT = 100
+# Signed-in devices listed on the account page; the oldest drop off first.
+SESSIONS_KEPT = 20
 
 
 def _start_session(user, remember):
@@ -1719,6 +1737,14 @@ def _start_session(user, remember):
     # nothing to a copy. This id lets sign-out revoke the session server-side.
     session['sid'] = secrets.token_urlsafe(16)
     session.permanent = bool(remember)
+    now = _utcnow()
+    session['seen'] = now.timestamp()
+    # The device list shows a separate random key, so the page never prints a session id.
+    entry = {'sid': session['sid'], 'key': secrets.token_hex(8), 'agent': request.user_agent.string[:300],
+             'ip': _client_ip(), 'started': now, 'seen': now, 'version': user.get('session_version', 0),
+             'remember': bool(remember)}
+    db['users'].update_one({'_id': user['_id']},
+                           {'$push': {'sessions': {'$each': [entry], '$slice': -SESSIONS_KEPT}}})
 
 
 # --- Two-step sign-in ----------------------------------------------------------
@@ -1796,7 +1822,8 @@ def login_two_step():
 def logout():
     if session.get('user') and session.get('sid'):
         db['users'].update_one({'username': session['user']},
-                               {'$push': {'signed_out': {'$each': [session['sid']], '$slice': -SIGNED_OUT_KEPT}}})
+                               {'$push': {'signed_out': {'$each': [session['sid']], '$slice': -SIGNED_OUT_KEPT}},
+                                '$pull': {'sessions': {'sid': session['sid']}}})
     session.clear()
     return redirect(url_for('index'))
 
@@ -1829,7 +1856,8 @@ def reset_password(token):
 
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         db['users'].update_one({'_id': user['_id']},
-                               {'$set': {'password': hashed}, '$inc': {'session_version': 1}})
+                               {'$set': {'password': hashed, 'password_changed': _utcnow()},
+                                '$inc': {'session_version': 1}})
         db['password_resets'].delete_many({'user_id': user['_id']})
         _clear_attempts(user['username'].lower())
         if user.get('email'):
@@ -2398,7 +2426,7 @@ def admin_update_user(id):
     error = ('Pick a valid role.' if role not in USER_ROLES else
              f'Names must be {FULL_NAME_MAX} characters or fewer.' if len(full_name) > FULL_NAME_MAX else
              _validate_account(username, email, password, form.get('confirm_password') if password else None,
-                               existing=user, require_email=False, require_password=False))
+                               existing=user, require_password=False))
     if not error and user.get('role') == 'admin' and role != 'admin' and not _other_admin_exists(user['_id']):
         error = 'Cannot remove the last admin.'
     if error:
@@ -3919,13 +3947,90 @@ def _account_user():
     return db['users'].find_one({'username': session['user']})
 
 
+# Account events shown on the account page's activity list.
+ACCOUNT_ACTIVITY_TYPES = ('password_change', 'password_reset', 'reset_link_generate', 'sign_out_everywhere',
+                          'two_step_on', 'two_step_off', 'two_step_codes', 'two_step_backup_used',
+                          'profile_update', 'device_sign_out', 'user_signup', 'user_approve')
+ACCOUNT_ACTIVITY_SHOWN = 12
+
+
+def _live_sessions(user):
+    """The account's signed-in devices that can still get in, newest first.
+
+    Entries outlive their sessions when a password change or role change bumps
+    the version, a device signs out, or a cookie simply expires; all of those
+    are dropped here rather than at each place that ends a session.
+    """
+    version, dead = user.get('session_version', 0), set(user.get('signed_out') or [])
+    oldest = _utcnow() - app.permanent_session_lifetime
+    stored = user.get('sessions') or []
+    live = [s for s in stored
+            if s.get('version', 0) == version and s.get('sid') not in dead and s.get('seen') and s['seen'] > oldest]
+    if len(live) != len(stored):
+        db['users'].update_one({'_id': user['_id']}, {'$set': {'sessions': live}})
+    return sorted(live, key=lambda s: s['seen'], reverse=True)
+
+
+def _device_rows(user):
+    current = session.get('sid')
+    rows = []
+    for s in _live_sessions(user):
+        label, kind = devices.describe(s.get('agent'))
+        rows.append({'key': s.get('key'), 'label': label, 'kind': kind, 'ip': s.get('ip') or '',
+                     'started': s.get('started'), 'seen': s['seen'], 'remember': s.get('remember'),
+                     'current': s.get('sid') == current})
+    rows.sort(key=lambda r: not r['current'])
+    return rows
+
+
+def _account_activity(user):
+    found = db['activities'].find({'details.username': user['username'],
+                                   'type': {'$in': list(ACCOUNT_ACTIVITY_TYPES)}}
+                                  ).sort('timestamp', -1).limit(ACCOUNT_ACTIVITY_SHOWN)
+    rows = []
+    for a in found:
+        _, title, _ = ACTIVITY_TYPES.get(a['type'], ('', a['type'], 'people'))
+        actor = a.get('user')
+        rows.append({'type': a['type'], 'title': title, 'when': a['timestamp'],
+                     'by': actor if actor and actor not in (user['username'], 'System') else None})
+    return rows
+
+
+def _security_checks(user, two_step, backup_left):
+    """(done, label, hint, anchor) for each thing that keeps the account safe."""
+    changed = user.get('password_changed') or user.get('created_at')
+    fresh = bool(changed) and _utcnow() - changed < datetime.timedelta(days=365)
+    return [
+        (two_step, 'Two-step sign-in', 'On' if two_step else 'Adds a phone code to every sign-in', 'two-step'),
+        (two_step and backup_left >= 3, 'Backup codes',
+         f'{backup_left} left' if two_step else 'Come with two-step sign-in', 'two-step'),
+        (bool(user.get('email')), 'Email on file', user.get('email') or 'So an admin can reach you', 'profile'),
+        (fresh, 'Fresh password', 'Changed in the last year' if fresh else 'Not changed in over a year',
+         'password'),
+    ]
+
+
+app.add_template_filter(get_time_ago, 'ago')
+
+
+@app.template_filter('short_date')
+def short_date(value):
+    """Oct 8, 2026; blank for a missing date."""
+    return f'{value:%b} {value.day}, {value.year}' if value else ''
+
+
 def _render_account(user, status=200, **extra):
     pending = user.get('totp_pending')
+    two_step, backup_left = bool(user.get('totp_secret')), len(user.get('totp_backup') or [])
+    checks = _security_checks(user, two_step, backup_left)
     return render_template(
         'account.html', active_page='account', account=user,
-        two_step=bool(user.get('totp_secret')), backup_left=len(user.get('totp_backup') or []),
+        two_step=two_step, backup_left=backup_left,
         setup_secret=pending,
         setup_uri=totp.provisioning_uri(pending, user['username'], TOTP_ISSUER) if pending else None,
+        checks=checks, checks_done=sum(1 for c in checks if c[0]),
+        devices=_device_rows(user), activity=_account_activity(user), rosters=_own_rosters(),
+        full_name_max=FULL_NAME_MAX, password_min=PASSWORD_MIN_LENGTH,
         **extra), status
 
 
@@ -3948,6 +4053,9 @@ def _bump_session_version(user):
     updated = db['users'].find_one_and_update({'_id': user['_id']}, {'$inc': {'session_version': 1}},
                                               projection={'session_version': 1}, return_document=True)
     session['session_version'] = updated['session_version']
+    # Carry this device's entry in the device list over to the new version.
+    db['users'].update_one({'_id': user['_id'], 'sessions.sid': session.get('sid')},
+                           {'$set': {'sessions.$.version': updated['session_version']}})
 
 
 @app.route('/account')
@@ -3969,7 +4077,8 @@ def account_password():
     if error:
         return _render_account(user, 400, password_error=error)
     db['users'].update_one({'_id': user['_id']},
-                           {'$set': {'password': bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())}})
+                           {'$set': {'password': bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()),
+                                     'password_changed': _utcnow()}})
     _bump_session_version(user)
     db['password_resets'].delete_many({'user_id': user['_id']})
     log_activity('password_change', f"{user['username']} changed their password",
@@ -3978,11 +4087,70 @@ def account_password():
     return redirect(url_for('account'))
 
 
+@app.route('/account/profile', methods=['POST'])
+@login_required
+def account_profile():
+    user = _account_user()
+    full_name = collapse_whitespace(request.form.get('full_name', ''))
+    email = request.form.get('email', '').strip().lower()
+    old_email = (user.get('email') or '').lower()
+    error = None
+    if len(full_name) > FULL_NAME_MAX:
+        error = f'Your name must be {FULL_NAME_MAX} characters or fewer.'
+    elif email != old_email:
+        # The email is where an admin reaches you, so changing it takes the password.
+        error = (_validate_account(user['username'], email, '', existing=user,
+                                   require_password=False)
+                 or _password_attempt_ok(user, request.form.get('current_password', '')))
+    if error:
+        return _render_account(user, 400, profile_error=error, profile_form=request.form)
+    changes = {}
+    if full_name != (user.get('full_name') or ''):
+        changes['full_name'] = full_name
+    if email != old_email:
+        changes['email'] = email
+    if not changes:
+        flash('Nothing changed.', 'info')
+        return redirect(url_for('account', _anchor='profile'))
+    update = {}
+    if any(changes.values()):
+        update['$set'] = {k: v for k, v in changes.items() if v}
+    if not all(changes.values()):
+        update['$unset'] = {k: '' for k, v in changes.items() if not v}
+    db['users'].update_one({'_id': user['_id']}, update)
+    log_activity('profile_update', f"{user['username']} updated their profile", user=user['username'],
+                 details={'username': user['username'], 'fields': sorted(changes)})
+    flash('Profile saved.', 'success')
+    return redirect(url_for('account', _anchor='profile'))
+
+
+@app.route('/account/devices/<key>/sign-out', methods=['POST'])
+@login_required
+def account_device_sign_out(key):
+    user = _account_user()
+    entry = next((s for s in user.get('sessions') or [] if s.get('key') == key), None)
+    if not entry:
+        flash('That device is already signed out.', 'info')
+        return redirect(url_for('account', _anchor='devices'))
+    db['users'].update_one({'_id': user['_id']},
+                           {'$push': {'signed_out': {'$each': [entry['sid']], '$slice': -SIGNED_OUT_KEPT}},
+                            '$pull': {'sessions': {'key': key}}})
+    label, _ = devices.describe(entry.get('agent'))
+    log_activity('device_sign_out', f"{user['username']} signed out {label}", user=user['username'],
+                 details={'username': user['username'], 'device': label})
+    if entry['sid'] == session.get('sid'):
+        session.clear()
+        flash('Signed out on this device.', 'success')
+        return redirect(url_for('login'))
+    flash(f'Signed out {label}.', 'success')
+    return redirect(url_for('account', _anchor='devices'))
+
+
 @app.route('/account/sign-out-everywhere', methods=['POST'])
 @login_required
 def account_sign_out_everywhere():
     user = _account_user()
-    db['users'].update_one({'_id': user['_id']}, {'$inc': {'session_version': 1}})
+    db['users'].update_one({'_id': user['_id']}, {'$inc': {'session_version': 1}, '$set': {'sessions': []}})
     log_activity('sign_out_everywhere', f"{user['username']} signed out everywhere",
                  user=user['username'], details={'username': user['username']})
     session.clear()
