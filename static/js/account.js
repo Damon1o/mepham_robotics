@@ -148,6 +148,49 @@ window.addEventListener('afterprint', () => document.body.classList.remove('is-p
     sync();
 })();
 
+// --- Profile photo: picking or dropping a file uploads it straight away ----------------
+
+(function photoPicker() {
+    const form = document.querySelector('[data-photo-form]');
+    if (!form) return;
+    const input = form.querySelector('[data-photo-input]');
+    input.addEventListener('change', () => {
+        if (!input.files.length) return;
+        form.classList.add('is-uploading');
+        form.submit();
+    });
+})();
+
+// --- Avatar colour: the swatches and the preview avatars change together ------------
+
+(function tonePicker() {
+    const inputs = document.querySelectorAll('[data-tone-input]');
+    // Only this page's previews: the side menu changes once the profile is saved.
+    const avatars = document.querySelectorAll('.acct-avatar, .acct-photo-preview, .acct-tone-now');
+    inputs.forEach(input => input.addEventListener('change', () => {
+        avatars.forEach(el => {
+            [...el.classList].filter(c => c.startsWith('avatar-tone--')).forEach(c => el.classList.remove(c));
+            if (input.value !== 'gold') el.classList.add(`avatar-tone--${input.value}`);
+        });
+    }));
+})();
+
+// --- Start page: saves as soon as it is picked -----------------------------------------
+
+document.querySelectorAll('[data-autosave]').forEach(form => {
+    form.addEventListener('change', () => form.submit());
+});
+
+// --- Motion ------------------------------------------------------------------------
+
+(function motionPicker() {
+    const picker = document.querySelector('[data-motion-picker]');
+    if (!picker || !window.MephamMotion) return;
+    const current = picker.querySelector(`input[value="${window.MephamMotion.get()}"]`);
+    if (current) current.checked = true;
+    picker.addEventListener('change', e => window.MephamMotion.set(e.target.value));
+})();
+
 // --- Theme picker ---------------------------------------------------------------
 
 (function themePicker() {

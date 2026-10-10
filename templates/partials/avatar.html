@@ -1,0 +1,15 @@
+{#- A person's avatar: their profile photo, or their initials on the colour they picked.
+
+    avatar(person, cls)  person is an account (full_name/username, photo, avatar_tone);
+                         cls is the caller's own avatar class, which sets size and shape.
+                         The tone class only supplies --avatar-bg / --avatar-ink, so each
+                         caller's stylesheet decides how much of it to use.
+-#}
+{% macro avatar(person, cls) -%}
+{%- set photo = (person.photo or '')|real_photo -%}
+{%- set tone = person.avatar_tone if person.avatar_tone and person.avatar_tone != 'gold' else '' -%}
+<span class="{{ cls }}{% if tone %} avatar-tone--{{ tone }}{% endif %}{% if photo %} has-photo{% endif %}" aria-hidden="true">
+    {%- if photo %}<img src="{{ get_image_url(photo) }}" alt="" loading="lazy" decoding="async">
+    {%- else %}{{ (person.full_name or person.username)|initials }}{% endif -%}
+</span>
+{%- endmacro %}

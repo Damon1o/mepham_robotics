@@ -75,4 +75,40 @@
             query.addListener(onChange);
         }
     }
+
+    // Motion: 'reduce' (picked on My Account) turns off the site's animations on this
+    // device, on top of whatever the OS asks for. Set here so nothing animates first.
+    var MOTION_KEY = 'mepham-motion';
+
+    function storedMotion() {
+        try {
+            return localStorage.getItem(MOTION_KEY) === 'reduce' ? 'reduce' : 'full';
+        } catch (err) {
+            return 'full';
+        }
+    }
+
+    function applyMotion(mode) {
+        if (mode === 'reduce') {
+            document.documentElement.setAttribute('data-motion', 'reduce');
+        } else {
+            document.documentElement.removeAttribute('data-motion');
+        }
+    }
+
+    window.MephamMotion = {
+        get: storedMotion,
+        set: function (mode) {
+            mode = mode === 'reduce' ? 'reduce' : 'full';
+            try {
+                localStorage.setItem(MOTION_KEY, mode);
+            } catch (err) {
+                /* storage unavailable — the choice just won't persist */
+            }
+            applyMotion(mode);
+            return mode;
+        }
+    };
+
+    applyMotion(storedMotion());
 })();

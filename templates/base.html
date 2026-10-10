@@ -125,10 +125,12 @@
 
         <div class="nav-footer">
             {% if 'user' in session %}
+            {% from "partials/avatar.html" import avatar with context %}
+            {% set me = current_account() or {'username': session['user']} %}
             <div class="nav-user">
-                <span class="nav-avatar" aria-hidden="true">{{ session['user'][:1]|upper }}</span>
+                {{ avatar(me, 'nav-avatar') }}
                 <span class="nav-user-text">
-                    <strong>{{ session['user'] }}</strong>
+                    <strong>{{ me.full_name or me.username }}</strong>
                     <small>{{ (session.get('role') or 'member')|capitalize }}</small>
                 </span>
             </div>

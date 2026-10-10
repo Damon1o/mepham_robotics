@@ -491,11 +491,41 @@ a.nav-link.active:focus-visible {
     font-family: var(--font-display);
     font-size: 1.15rem;
     font-weight: 700;
-    color: var(--nav-ink);
-    background: var(--nav-gold);
+    color: var(--avatar-ink, var(--nav-ink));
+    background: var(--avatar-bg, var(--nav-gold));
     border: 2px solid var(--nav-ink);
     border-radius: 12px;
     box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+}
+
+/* Avatars (partials/avatar.html): the colour a member picked on My Account, and their photo.
+   Each avatar class reads --avatar-bg / --avatar-ink with its own colours as the fallback. */
+.avatar-tone--maroon { --avatar-bg: #800000; --avatar-ink: #ffffff; }
+.avatar-tone--rose { --avatar-bg: #e25c7a; --avatar-ink: #ffffff; }
+.avatar-tone--teal { --avatar-bg: #138a8a; --avatar-ink: #ffffff; }
+.avatar-tone--navy { --avatar-bg: #23396b; --avatar-ink: #ffffff; }
+.avatar-tone--plum { --avatar-bg: #6b2f73; --avatar-ink: #ffffff; }
+.avatar-tone--forest { --avatar-bg: #2f6b3a; --avatar-ink: #ffffff; }
+.avatar-tone--slate { --avatar-bg: #4a5260; --avatar-ink: #ffffff; }
+.avatar-tone--gold { --avatar-bg: #ffd700; --avatar-ink: #1a1a1a; }
+
+.has-photo > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+}
+
+/* "Reduce motion" on My Account: the site's own switch, on top of the device setting. */
+[data-motion="reduce"] *,
+[data-motion="reduce"] *::before,
+[data-motion="reduce"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
 }
 
 .nav-user-text {

@@ -56,6 +56,7 @@ def db(monkeypatch):
     monkeypatch.setattr(app_module, '_contact_indexes_ready', False, raising=False)
     monkeypatch.setattr(app_module, '_rate_limit_index_ready', False, raising=False)
     monkeypatch.setattr(app_module, '_newsletter_index_ready', False, raising=False)
+    monkeypatch.setattr(app_module, '_profiles_reconciled', False, raising=False)
     return mock_db
 
 

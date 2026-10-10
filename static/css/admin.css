@@ -1489,10 +1489,11 @@ body:has(.admin-container) #custom-chatbot-container {
     width: 2.2rem;
     height: 2.2rem;
     border-radius: 50%;
-    background: var(--maroon-dark);
-    color: #ffffff;
+    background: var(--avatar-bg, var(--maroon-dark));
+    color: var(--avatar-ink, #ffffff);
     font-size: 0.8rem;
     font-weight: 700;
+    overflow: hidden;
 }
 
 /* 9. Overview tab =========================================================== */
@@ -1939,7 +1940,7 @@ body:has(.admin-container) #custom-chatbot-container {
 }
 
 .roster-col--unassigned .roster-avatar {
-    background: #5c5451;
+    background: var(--avatar-bg, #5c5451);
 }
 
 .roster-text {
@@ -3262,5 +3263,5 @@ html.ctl-dragging .admin-editor .setting-row[data-drop] {
 }
 
 [data-theme="dark"] .roster-col--unassigned .roster-avatar {
-    background: #6e6461;
+    background: var(--avatar-bg, #6e6461);
 }

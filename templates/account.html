@@ -25,14 +25,16 @@
     class="visually-hidden" tabindex="-1" aria-hidden="true" readonly>
 {%- endmacro %}
 
+{% from "partials/avatar.html" import avatar with context %}
 {% set name = account.full_name or account.username %}
+{% set tone = account.avatar_tone or avatar_tones[0] %}
 {% set score = (checks_done * 100 / (checks|length))|round|int %}
 
 {% block content %}
 <div class="acct">
     <section class="acct-hero" aria-labelledby="acct_name">
         <div class="acct-hero-id">
-            <div class="acct-avatar" aria-hidden="true">{{ name|initials }}</div>
+            {{ avatar(account, 'acct-avatar') }}
             <div class="acct-hero-text">
                 <p class="acct-kicker">My account</p>
                 <h1 class="acct-name" id="acct_name">{{ name }}</h1>
@@ -121,10 +123,48 @@
             {% set pf = profile_form or {} %}
             <section class="acct-panel" id="profile" aria-labelledby="profile_title">
                 {% call panel_head('id-card', 'Profile', 'profile_title',
-                    'How you show up to admins and coaches.') %}{% endcall %}
+                    'Your name and photo stay in step everywhere: team pages, rosters, the menu and the admin panel.') %}{% endcall %}
                 {% if profile_error %}<p class="auth-error" role="alert">{{ profile_error }}</p>{% endif %}
+
+                <div class="acct-photo">
+                    <form class="acct-photo-drop" method="POST" action="{{ url_for('account_photo') }}"
+                        enctype="multipart/form-data" data-native-submit data-photo-form data-drop
+                        data-drop-label="Drop to use as your photo">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        {{ avatar(account, 'acct-photo-preview') }}
+                        <label class="acct-photo-pick">
+                            <input type="file" name="photo" class="visually-hidden" data-photo-input
+                                accept="{% for t in photo_types %}.{{ t }}{{ ',' if not loop.last }}{% endfor %}">
+                            <span class="account-btn account-btn--small"><i data-lucide="image-up" aria-hidden="true"></i>
+                                {{ 'Change photo' if account.photo else 'Upload photo' }}</span>
+                        </label>
+                    </form>
+                    <div class="acct-photo-text">
+                        <b>Profile photo</b>
+                        <small>Shows on every team page and roster you're on, the side menu, and the admin
+                            panel. Square photos look best; drag one onto the circle.</small>
+                        {% if account.photo %}
+                        <form method="POST" action="{{ url_for('account_photo_remove') }}">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="acct-link-btn">Remove photo</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <form class="auth-form acct-form" method="POST" action="{{ url_for('account_profile') }}"
                     data-native-submit data-profile-form>
+                    <fieldset class="acct-tones">
+                        <legend>Avatar colour <small>{{ '(behind your initials when there is no photo)' if not account.photo else '(used if you remove your photo)' }}</small></legend>
+                        {% for t in avatar_tones %}
+                        <label class="acct-tone avatar-tone--{{ t }}" title="{{ t|capitalize }}">
+                            <input type="radio" name="avatar_tone" value="{{ t }}" {{ 'checked' if t == ((profile_form or {}).avatar_tone or tone) }}
+                                data-tone-input>
+                            <span aria-hidden="true">{{ name|initials }}</span>
+                            <span class="visually-hidden">{{ t|capitalize }}</span>
+                        </label>
+                        {% endfor %}
+                    </fieldset>
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     {{ username_field() }}
                     <div class="acct-fields">
@@ -380,9 +420,29 @@
             {# --- Preferences --------------------------------------------------------------- #}
             <section class="acct-panel" id="preferences" aria-labelledby="preferences_title">
                 {% call panel_head('sliders-horizontal', 'Preferences', 'preferences_title',
-                    'Saved on this device.') %}{% endcall %}
+                    'Make the site work the way you like.') %}{% endcall %}
+                <form method="POST" action="{{ url_for('account_preferences') }}" class="acct-pref" data-autosave>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <fieldset class="acct-theme">
+                        <legend>After signing in, take me to <small>Saved to your account</small></legend>
+                        {% set icons = {'index': 'house', 'resources': 'book-open', 'my_team': 'users', 'events_page': 'calendar'} %}
+                        {% for key, label in start_pages.items() %}
+                        <label><input type="radio" name="start_page" value="{{ key }}"
+                                {{ 'checked' if key == (account.start_page or 'index') }}>
+                            <span><i data-lucide="{{ icons[key] }}" aria-hidden="true"></i> {{ label }}</span></label>
+                        {% endfor %}
+                    </fieldset>
+                    <noscript><button type="submit" class="account-btn account-btn--small">Save</button></noscript>
+                </form>
+                <fieldset class="acct-theme" data-motion-picker>
+                    <legend>Motion <small>Saved on this device</small></legend>
+                    <label><input type="radio" name="motion_mode" value="full">
+                        <span><i data-lucide="sparkles" aria-hidden="true"></i> Full</span></label>
+                    <label><input type="radio" name="motion_mode" value="reduce">
+                        <span><i data-lucide="pause" aria-hidden="true"></i> Reduced</span></label>
+                </fieldset>
                 <fieldset class="acct-theme" data-theme-picker>
-                    <legend>Theme</legend>
+                    <legend>Theme <small>Saved on this device</small></legend>
                     <label><input type="radio" name="theme_mode" value="light">
                         <span><i data-lucide="sun" aria-hidden="true"></i> Light</span></label>
                     <label><input type="radio" name="theme_mode" value="dark">
