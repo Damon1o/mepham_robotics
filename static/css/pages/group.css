@@ -1,0 +1,346 @@
+/* Page styles: group pages. Loaded after team.css, before the group layout's own
+   stylesheet in group-layouts/. Holds what every group layout shares: the header,
+   section headings, faces, goal rings, owner rows and goal tags. */
+
+/* --- HEADER --- */
+
+.g-head {
+    background: linear-gradient(120deg, rgba(90, 0, 0, 0.94) 0%, rgba(128, 0, 0, 0.82) 60%, rgba(148, 69, 71, 0.7) 100%),
+        var(--team-hero-image) center/cover;
+    color: #fff;
+    padding: 7rem var(--spacing-md) var(--spacing-lg);
+    border-bottom: 4px solid var(--accent-gold);
+}
+
+.g-head-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+}
+
+.g-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+}
+
+.g-head h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 7vw, 4.6rem);
+    line-height: 1;
+    letter-spacing: -1px;
+    margin: 0.35rem 0 0;
+    color: #fff;
+}
+
+.g-mission {
+    max-width: 38ch;
+    margin: 0.75rem 0 0;
+    font-size: clamp(1.1rem, 2.2vw, 1.4rem);
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.g-head-stats {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    margin: var(--spacing-md) 0 0;
+    padding: 0;
+}
+
+.g-head-stats li {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.4rem 0.95rem;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.g-head-stats strong {
+    color: var(--accent-gold);
+    font-size: 0.95rem;
+}
+
+/* --- SECTION HEADINGS --- */
+
+.g-section-head {
+    max-width: 1120px;
+    margin: 0 auto var(--spacing-lg);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-xs) var(--spacing-md);
+    border-bottom: 3px solid var(--text-dark);
+    padding-bottom: var(--spacing-xs);
+}
+
+.g-section-head h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+    color: var(--maroon-dark);
+    line-height: 1.15;
+    text-align: left;
+    width: auto;
+    margin: 0;
+}
+
+/* The section rule replaces the site's centred gold underline. */
+.g-section-head h2::after {
+    content: none;
+}
+
+.g-section-note {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin: 0;
+}
+
+.g-empty {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: var(--spacing-md);
+    border: 3px dashed var(--maroon-light);
+    border-radius: 16px;
+    text-align: center;
+    color: var(--text-light);
+}
+
+/* --- FACES --- */
+
+.g-face {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 3px solid var(--maroon-dark);
+    object-fit: cover;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--maroon-dark);
+}
+
+.g-face--initials {
+    color: var(--accent-gold);
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.g-face--sm {
+    width: 30px;
+    height: 30px;
+    border-width: 2px;
+    font-size: 0.6rem;
+    letter-spacing: -0.04em;
+}
+
+.g-face--lg {
+    width: 112px;
+    height: 112px;
+    border-width: 4px;
+    font-size: 1.9rem;
+}
+
+/* --- GOAL RING --- */
+
+.g-ring {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    flex: 0 0 auto;
+    display: inline-grid;
+    place-items: center;
+}
+
+.g-ring-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.g-ring circle {
+    fill: none;
+    stroke-width: 5;
+}
+
+.g-ring-track {
+    stroke: rgba(128, 0, 0, 0.12);
+}
+
+.g-ring-fill {
+    stroke: var(--maroon-dark);
+    stroke-linecap: round;
+}
+
+/* A goal at 0% would still draw a round-capped dot; hide it. */
+.g-ring--todo .g-ring-fill {
+    display: none;
+}
+
+.g-ring--done {
+    background: var(--maroon-dark);
+    border-radius: 50%;
+}
+
+.g-ring--done .g-ring-fill {
+    stroke: var(--accent-gold);
+}
+
+.g-ring-label {
+    position: relative;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--maroon-dark);
+}
+
+.g-ring-label small {
+    font-size: 0.65em;
+}
+
+.g-ring--done .g-ring-label {
+    width: 28px;
+    height: 28px;
+    color: var(--accent-gold);
+}
+
+.g-ring--sm {
+    width: 48px;
+    height: 48px;
+}
+
+.g-ring--sm .g-ring-label {
+    font-size: 0.72rem;
+}
+
+.g-ring--sm.g-ring--done .g-ring-label {
+    width: 20px;
+    height: 20px;
+}
+
+/* --- OWNERS AND GOAL TAGS --- */
+
+.g-owners {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0;
+}
+
+.g-owner-faces {
+    display: inline-flex;
+}
+
+.g-owner-faces .g-face {
+    border-color: #fff;
+}
+
+.g-owner-faces .g-face + .g-face {
+    margin-left: -9px;
+}
+
+.g-owner-names {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.g-goal-tags {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+}
+
+.g-goal-tag {
+    font-size: 0.78rem;
+    line-height: 1.2;
+    padding: 0.25rem 0.6rem;
+    border: 2px solid var(--maroon-dark);
+    border-radius: 999px;
+    color: var(--maroon-dark);
+    background: #fff;
+}
+
+.g-goal-tag--done {
+    background: var(--accent-gold);
+    border-color: var(--text-dark);
+    color: var(--ink-on-gold);
+}
+
+.g-goal-tag--done::before {
+    content: '\2713\00a0';
+}
+
+/* --- DARK THEME --- */
+
+[data-theme="dark"] .g-section-head {
+    border-bottom-color: #555;
+}
+
+[data-theme="dark"] .g-section-head h2,
+[data-theme="dark"] .g-ring-label,
+[data-theme="dark"] .g-goal-tag {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .g-section-note,
+[data-theme="dark"] .g-owner-names,
+[data-theme="dark"] .g-empty {
+    color: #b8b8b8;
+}
+
+[data-theme="dark"] .g-ring-track {
+    stroke: rgba(212, 160, 161, 0.18);
+}
+
+[data-theme="dark"] .g-ring-fill {
+    stroke: #d4a0a1;
+}
+
+[data-theme="dark"] .g-ring--done .g-ring-fill {
+    stroke: var(--accent-gold);
+}
+
+[data-theme="dark"] .g-ring--done .g-ring-label {
+    color: var(--accent-gold);
+}
+
+[data-theme="dark"] .g-face {
+    border-color: #d4a0a1;
+}
+
+[data-theme="dark"] .g-owner-faces .g-face {
+    border-color: #1e1e1e;
+}
+
+[data-theme="dark"] .g-goal-tag {
+    background: #2a2a2a;
+    border-color: #d4a0a1;
+}
+
+[data-theme="dark"] .g-goal-tag--done {
+    background: var(--accent-gold);
+    border-color: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+@media (max-width: 600px) {
+    .g-head {
+        padding-top: 6rem;
+    }
+}

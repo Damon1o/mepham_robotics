@@ -10,7 +10,10 @@ members, competition results, and season goals.{% endif %}{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team.css') }}">
-{% if layout != 'classic' %}
+{% if is_group %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/group.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/group-layouts/' ~ layout ~ '.css') }}">
+{% elif layout != 'classic' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team-layouts/' ~ layout ~ '.css') }}">
 {% endif %}
 {% if award_style != 'classic' %}
@@ -48,6 +51,6 @@ members, competition results, and season goals.{% endif %}{% endblock %}
 
 {% block content %}
 <div class="team-layout team-layout--{{ layout }}" data-layout="{{ layout }}">
-{% include "team_layouts/" ~ layout ~ ".html" %}
+{% include ("group_layouts/" if is_group else "team_layouts/") ~ layout ~ ".html" %}
 </div>
 {% endblock %}

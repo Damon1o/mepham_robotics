@@ -154,7 +154,8 @@ STYLE_ALLOWED = {
     'hero.html': ['--team-hero-image'],  # partials/team/hero.html
     'title_bar.html': ['--team-hero-image'],  # partials/team/title_bar.html
     'crew_header.html': ['--team-hero-image'],  # partials/team/crew_header.html
-    'dossier_head.html': ['--team-hero-image'],  # partials/team/dossier_head.html
+    'dossier_head.html': ['--team-hero-image'],
+    'head.html': ['--team-hero-image'],  # partials/group/head.html  # partials/team/dossier_head.html
     'site_macros.html': ['--hero-image'],
     'shelf.html': ['--trophy-cols'],  # partials/awards/shelf.html
     'banners.html': ['--banner-cols'],  # partials/awards/banners.html

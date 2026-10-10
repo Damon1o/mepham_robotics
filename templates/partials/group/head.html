@@ -1,0 +1,17 @@
+{#- Group header: the name and mission over the banner photo, with the three numbers
+    a group is about: its people, its goals, and how many are done. -#}
+<header class="g-head" style="--team-hero-image: url('{{ get_image_url(team.hero_image) }}')">
+    <div class="g-head-inner">
+        <span class="g-eyebrow">Group{% if active_season %} · {{ active_season }}{% endif %}</span>
+        <h1>{{ team_name }}</h1>
+        <p class="g-mission">{{ team.tagline or site.teams.default_tagline }}</p>
+        {% if board.people or board.goals %}
+        <ul class="g-head-stats">
+            {% if board.people %}<li><strong>{{ board.people|length }}</strong> {{ 'person' if board.people|length == 1 else 'people' }}</li>{% endif %}
+            {% if board.goals %}<li><strong>{{ board.goals|length }}</strong> {{ 'goal' if board.goals|length == 1 else 'goals' }}</li>
+            <li><strong>{{ board.done }}</strong> done</li>{% endif %}
+        </ul>
+        {% endif %}
+    </div>
+</header>
+{% include "partials/team/breadcrumb.html" %}

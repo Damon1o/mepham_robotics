@@ -1,0 +1,58 @@
+{#- G1 Mission Board: the default group page. The mission up top, then every goal as
+    a tile with its progress ring and the people who own it, then the people, each
+    with the goals they are on. Recruiting band and journey close the page. -#}
+{% from "partials/group/macros.html" import face, ring, owners, status_label %}
+{% include "partials/group/head.html" %}
+{% include "partials/team/season_switcher.html" %}
+
+<section class="gm-goals fade-in-section" aria-labelledby="gm-goals-h">
+    <div class="g-section-head">
+        <h2 id="gm-goals-h">What we're working toward</h2>
+        {% if board.goals %}<p class="g-section-note">{{ board.done }} of {{ board.goals|length }} done · {{ board.overall }}% overall</p>{% endif %}
+    </div>
+    {% if board.goals %}
+    <ol class="gm-goal-grid">
+        {% for goal in board.goals %}
+        <li class="gm-goal gm-goal--{{ goal.status }}">
+            {{ ring(goal) }}
+            <div class="gm-goal-body">
+                <span class="gm-goal-num">{{ '%02d'|format(loop.index) }} · {{ status_label(goal.status) }}</span>
+                <h3>{{ goal.name }}</h3>
+                {% if goal.note %}<p class="gm-goal-note">{{ goal.note }}</p>{% endif %}
+                {{ owners(goal) }}
+            </div>
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="g-empty">This season's goals are on the way.</p>
+    {% endif %}
+</section>
+
+<section id="team" class="gm-people fade-in-section" aria-labelledby="gm-people-h">
+    <div class="g-section-head">
+        <h2 id="gm-people-h">The people behind it</h2>
+    </div>
+    {% if board.people %}
+    <ul class="gm-people-grid">
+        {% for person in board.people %}
+        <li class="gm-person{{ ' gm-person--lead' if person.lead }}">
+            {{ face(person, 'lg') }}
+            <h3>{{ person.name }}</h3>
+            {% set roles = person|member_roles %}
+            {% if roles %}<p class="gm-person-roles">{{ roles|join(' · ') }}</p>{% endif %}
+            {% if person.goals %}
+            <ul class="g-goal-tags" aria-label="Goals {{ person.name }} is on">
+                {% for goal in person.goals %}<li class="g-goal-tag g-goal-tag--{{ goal.status }}">{{ goal.name }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="g-empty">Roster coming soon for this group.</p>
+    {% endif %}
+</section>
+
+{% include "partials/team/join_cta.html" %}
+{% include "partials/team/journey.html" %}

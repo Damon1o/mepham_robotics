@@ -42,6 +42,34 @@
 </select>
 {% endmacro %}
 
+{#- One goal row. Groups also get a note and the roster members who own the goal,
+    picked with toggle chips (team-editor.js collects the pressed ones). -#}
+{% macro goal_row(goal) %}
+{% set progress = goal.progress|default(0) %}
+<li class="row-item goal-row{{ ' goal-row--group' if is_group }}">
+    <input type="text" data-key="name" value="{{ goal.name or '' }}" aria-label="Goal" maxlength="120"
+        placeholder="Pick or type a goal" list="dl-goals">
+    <input type="range" data-key="progress" min="0" max="100" step="5" value="{{ progress }}"
+        aria-label="Progress{{ ' for ' ~ goal.name if goal.name }}">
+    <output class="range-value">{{ progress }}%</output>
+    <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove goal">
+        <i data-lucide="x" aria-hidden="true"></i></button>
+    {% if is_group %}
+    <input type="text" class="goal-note" data-key="note" value="{{ goal.note or '' }}" maxlength="200"
+        aria-label="What this goal means" placeholder="What does done look like? (optional)">
+    {% if team.members %}
+    <div class="goal-owners" data-key="owners" role="group" aria-label="Who is on this goal">
+        <span class="goal-owners-label">On it</span>
+        {% for m in team.members if m.member_id %}
+        <button type="button" class="owner-chip" data-owner="{{ m.member_id }}"
+            aria-pressed="{{ 'true' if m.member_id in (goal.owners or []) else 'false' }}">{{ m.name }}</button>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endif %}
+</li>
+{% endmacro %}
+
 {% block content %}
 {% set api = '/api/team/' ~ team._id %}
 <div class="admin-container admin-editor team-editor" id="teamEditor" data-api="{{ api }}"
@@ -109,8 +137,9 @@
                 <input id="f-tagline" type="text" maxlength="200" value="{{ team.tagline or '' }}"
                     data-autosave="tagline" placeholder="{{ 'Telling the club’s story.' if is_group else 'Precision. Power. Performance.' }}">
                 {% endcall %}
-                {% if not is_group %}
-                {% set default_layout = site.teams.layout if site.teams.layout in team_layouts else 'classic' %}
+                {% if team_layouts|length > 1 %}
+                {% set site_layout = site.teams.group_layout if is_group else site.teams.layout %}
+                {% set default_layout = site_layout if site_layout in team_layouts else team_layouts|first %}
                 {% set own_layout = team.layout if team.layout in team_layouts else '' %}
                 {% call row('Page layout', hint='Saved for the ' ~ (team.season ~ ' season' if team.season else 'this season') ~ ' only') %}
                 <div class="layout-picker" role="radiogroup" aria-labelledby="lbl-page-layout" data-carousel>
@@ -129,6 +158,8 @@
                     {% endfor %}
                 </div>
                 {% endcall %}
+                {% endif %}
+                {% if not is_group %}
                 {% call row('Notebook link', 'f-notebook', 'Google Drive or Docs share link') %}
                 <input id="f-notebook" type="url" maxlength="500"
                     value="{{ team.notebook_link if team.notebook_link and team.notebook_link != '#' else '' }}"
@@ -170,16 +201,10 @@
             <!-- GOALS -->
             <section class="settings-section" id="s-goals" aria-labelledby="h-goals">
                 <h2 id="h-goals">Season goals</h2>
+                {% if is_group %}<p class="form-hint">Say what each goal means and who is on it: the group page shows people next to their goals.</p>{% endif %}
                 <ul class="row-list" data-list="goals">
                     {% for goal in team.goals or [] %}
-                    <li class="row-item goal-row">
-                        <input type="text" data-key="name" value="{{ goal.name }}" aria-label="Goal" maxlength="120" list="dl-goals">
-                        <input type="range" data-key="progress" min="0" max="100" step="5" value="{{ goal.progress|default(0) }}"
-                            aria-label="Progress for {{ goal.name }}">
-                        <output class="range-value">{{ goal.progress|default(0) }}%</output>
-                        <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove goal">
-                            <i data-lucide="x" aria-hidden="true"></i></button>
-                    </li>
+                    {{ goal_row(goal) }}
                     {% endfor %}
                 </ul>
                 <button type="button" class="add-more-btn" data-action="add-row" data-list-target="goals">+ Add goal</button>
@@ -187,13 +212,7 @@
                     {% for g in goal_suggestions %}<option value="{{ g }}"></option>{% endfor %}
                 </datalist>
                 <template id="tpl-goals">
-                    <li class="row-item goal-row">
-                        <input type="text" data-key="name" aria-label="Goal" maxlength="120" placeholder="Pick or type a goal" list="dl-goals">
-                        <input type="range" data-key="progress" min="0" max="100" step="5" value="0" aria-label="Progress">
-                        <output class="range-value">0%</output>
-                        <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove goal">
-                            <i data-lucide="x" aria-hidden="true"></i></button>
-                    </li>
+                    {{ goal_row({}) }}
                 </template>
             </section>
 

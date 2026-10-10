@@ -1505,15 +1505,43 @@ def team_mosaic(team):
 def team_layout(team):
     """The layout this team season renders with: its own pick, else the site default.
 
-    Groups always use Classic until they get layouts of their own. A stored key that
-    is no longer offered falls back too, so removing a layout never breaks a page.
+    Groups pick from their own set of layouts. A stored key that is no longer
+    offered falls back too, so removing a layout never breaks a page.
     """
     if is_group(team):
-        return site_content.DEFAULT_TEAM_LAYOUT
-    for key in (team.get('layout'), site().teams.layout):
-        if key in site_content.TEAM_LAYOUTS:
+        offered, default, fallback = site_content.GROUP_LAYOUTS, site().teams.group_layout,             site_content.DEFAULT_GROUP_LAYOUT
+    else:
+        offered, default, fallback = site_content.TEAM_LAYOUTS, site().teams.layout, site_content.DEFAULT_TEAM_LAYOUT
+    for key in (team.get('layout'), default):
+        if key in offered:
             return key
-    return site_content.DEFAULT_TEAM_LAYOUT
+    return fallback
+
+
+def goal_status(progress):
+    return 'done' if progress >= 100 else 'active' if progress > 0 else 'todo'
+
+
+def goal_board(team):
+    """A group's goals and people, each pointing at the other, for the group layouts.
+
+    Goals get their owners as member dicts; people get the goals they own, leads
+    first. An owner id that is no longer on the roster is skipped, so removing a
+    member never breaks a goal. `overall` is the mean progress, rounded.
+    """
+    members = {m.get('member_id'): m for m in team.get('members') or [] if m.get('member_id')}
+    goals = []
+    for goal in team.get('goals') or []:
+        progress = _clamp_percent(goal.get('progress'))
+        owners = [members[i] for i in dict.fromkeys(goal.get('owners') or []) if i in members]
+        goals.append({'name': goal.get('name') or '', 'note': goal.get('note') or '', 'progress': progress,
+                      'status': goal_status(progress), 'owners': owners})
+    people = [dict(m, goals=[g for g in goals if any(o is m for o in g['owners'])], lead=_is_leadership(m))
+              for m in team.get('members') or []]
+    people.sort(key=lambda p: not p['lead'])
+    counts = {s: sum(g['status'] == s for g in goals) for s in ('done', 'active', 'todo')}
+    return {'goals': goals, 'people': people, 'open': [g for g in goals if not g['owners']],
+            'overall': round(sum(g['progress'] for g in goals) / len(goals)) if goals else 0, **counts}
 
 
 @app.route('/team/<team_number>')
@@ -1565,7 +1593,8 @@ def team_page(team_number):
     mosaic, mosaic_more = team_mosaic(team) if layout == 'magazine' else ([], 0)
     return render_template('team.html', team=team, team_awards=team_awards,
                            event_photos=event_photos, robot_photos=robot_photos,
-                           layout=layout, award_style=site_content.LAYOUT_AWARD_STYLES.get(layout, 'classic'),
+                           layout=layout, board=goal_board(team) if is_group(team) else None,
+                           award_style=site_content.LAYOUT_AWARD_STYLES.get(layout, 'classic'),
                            timeline=team_timeline(team) if layout == 'timeline' else [],
                            mosaic=mosaic, mosaic_more=mosaic_more,
                            robotevents_url=None if is_group(team) else robotevents.team_url(team_number),
@@ -2700,6 +2729,8 @@ def month_suggestions():
 # Anyone can reach these, so no SVG (it can carry script).
 MEMBER_UPLOAD_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 LIST_MAX_ITEMS = 30
+GOAL_NOTE_MAX = 200
+GOAL_OWNERS_MAX = 8
 
 
 def _json_body():
@@ -3948,7 +3979,7 @@ ADMIN_TEAM_FIELDS = {
     'title': ('Group name', GROUP_TITLE_MAX),
 }
 # Fields that only mean something for one kind of team.
-ROBOT_ONLY_FIELDS = {'nickname', 'notebook_link', 'hide_cad', 'division', 'robotevents_number', 'worlds_appearances', 'layout',
+ROBOT_ONLY_FIELDS = {'nickname', 'notebook_link', 'hide_cad', 'division', 'robotevents_number', 'worlds_appearances',
                      'specs.drive_train', 'specs.lift_system', 'specs.intake', 'specs.auton_consistency'}
 GROUP_ONLY_FIELDS = {'title'}
 MEMBER_CARD_FIELDS = {'name': ('Name', 100), 'role': ('Role', 100), 'roles': ('Roles', 200),
@@ -4486,14 +4517,14 @@ def manage_team(team_id):
                            cards=[_card(m) | {'roles': ', '.join(m.get('roles') or []),
                                               'since': m.get('since') or ''}
                                   for m in team.get('members', [])],
-                           subteams=SUBTEAMS, divisions=DIVISIONS, team_layouts=site_content.TEAM_LAYOUTS,
+                           subteams=SUBTEAMS, divisions=DIVISIONS, team_layouts=site_content.GROUP_LAYOUTS if is_group(team) else site_content.TEAM_LAYOUTS,
                            seasons=season_options(d.get('season') for d in db['teams'].find({}, {'season': 1})),
                            years=year_options(), months=month_suggestions(),
                            role_suggestions=ROLE_SUGGESTIONS, goal_suggestions=GOAL_SUGGESTIONS,
                            spec_suggestions=SPEC_SUGGESTIONS)
 
 
-def _clean_team_field(field, value, label, limit):
+def _clean_team_field(field, value, label, limit, group=False):
     if field == 'notebook_link':
         return _clean_url(value, label)
     if field in ('since', 'worlds_appearances'):
@@ -4504,7 +4535,7 @@ def _clean_team_field(field, value, label, limit):
         # Blank means "use the site default", so it is removed rather than stored.
         if not value:
             return None
-        if value not in site_content.TEAM_LAYOUTS:
+        if value not in (site_content.GROUP_LAYOUTS if group else site_content.TEAM_LAYOUTS):
             raise UserFacingError('Pick one of the listed layouts.')
         return value
     text = _clean_text(value, limit, label, required=(field == 'team_number'))
@@ -4578,7 +4609,7 @@ def api_team_field(team_id):
             value = (_clean_group_field(field, body.get('value'), 'Page address', GROUP_SLUG_MAX)
                      if field == 'team_number' else _clean_group_field(field, body.get('value'), label, limit))
         else:
-            value = _clean_team_field(field, body.get('value'), label, limit)
+            value = _clean_team_field(field, body.get('value'), label, limit, group=is_group(team))
     except UserFacingError as e:
         return _json_error(str(e))
 
@@ -4611,6 +4642,21 @@ def api_team_field(team_id):
     return jsonify({'ok': True, 'value': value})
 
 
+def _clean_goal(item, roster):
+    """One goal row: name and progress, plus an optional note and the roster members
+    who own it. Owners not on this roster are dropped; empty extras are not stored."""
+    goal = {'name': _clean_text(item.get('name'), 120, 'Goal name'),
+            'progress': _clamp_percent(item.get('progress'))}
+    note = _clean_text(item.get('note'), GOAL_NOTE_MAX, 'Goal note')
+    owners = item.get('owners') if isinstance(item.get('owners'), list) else []
+    owners = [o for o in dict.fromkeys(str(o) for o in owners) if o in roster][:GOAL_OWNERS_MAX]
+    if note:
+        goal['note'] = note
+    if owners:
+        goal['owners'] = owners
+    return goal
+
+
 @app.route('/api/team/<team_id>/list/<kind>', methods=['POST'])
 @login_required
 def api_team_list(team_id, kind):
@@ -4627,9 +4673,8 @@ def api_team_list(team_id, kind):
         return _json_error(f'Send up to {LIST_MAX_ITEMS} rows.')
     try:
         if kind == 'goals':
-            cleaned = [{'name': _clean_text(i.get('name'), 120, 'Goal name'),
-                        'progress': _clamp_percent(i.get('progress'))}
-                       for i in items if isinstance(i, dict)]
+            roster = {m.get('member_id') for m in team.get('members') or []} - {None, ''}
+            cleaned = [_clean_goal(i, roster) for i in items if isinstance(i, dict)]
             cleaned = [g for g in cleaned if g['name']]
         else:
             cleaned = [{'date': _clean_text(i.get('date'), 40, 'Date'),

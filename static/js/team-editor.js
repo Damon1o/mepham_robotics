@@ -162,7 +162,11 @@
         return Array.from(list.querySelectorAll('.row-item')).map(row => {
             const item = {};
             row.querySelectorAll('[data-key]').forEach(input => {
-                item[input.dataset.key] = input.type === 'range' ? Number(input.value) : input.value;
+                if (input.dataset.key === 'owners') {
+                    item.owners = Array.from(input.querySelectorAll('[aria-pressed="true"]'), b => b.dataset.owner);
+                } else {
+                    item[input.dataset.key] = input.type === 'range' ? Number(input.value) : input.value;
+                }
             });
             return item;
         });
@@ -197,6 +201,12 @@
             list.append(row);
             refreshLucideIcons();
             row.querySelector('input[type="text"]').focus();
+            return;
+        }
+        const owner = e.target.closest('[data-owner]');
+        if (owner) {
+            owner.setAttribute('aria-pressed', String(owner.getAttribute('aria-pressed') !== 'true'));
+            saveList(owner.closest('[data-list]'));
             return;
         }
         const remove = e.target.closest('[data-action="remove-row"]');

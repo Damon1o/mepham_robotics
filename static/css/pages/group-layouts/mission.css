@@ -1,0 +1,156 @@
+/* Group page layout G1: Mission Board. Loaded after group.css. */
+
+.gm-goals,
+.gm-people {
+    padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.gm-goals {
+    background: var(--bg-light);
+}
+
+/* --- GOALS --- */
+
+.gm-goal-grid {
+    list-style: none;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    gap: var(--spacing-md);
+}
+
+.gm-goal {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: flex-start;
+    background: #fff;
+    border: 3px solid var(--text-dark);
+    border-radius: 16px;
+    box-shadow: 6px 6px 0 rgba(148, 69, 71, 0.25);
+    padding: var(--spacing-md);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.gm-goal:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 9px 9px 0 rgba(148, 69, 71, 0.3);
+}
+
+/* A finished goal reads at a glance: the tile itself turns gold. */
+.gm-goal--done {
+    background: #fff8d6;
+    box-shadow: 6px 6px 0 var(--accent-gold);
+}
+
+.gm-goal-body {
+    min-width: 0;
+    display: grid;
+    gap: 0.45rem;
+}
+
+.gm-goal-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.gm-goal h3 {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    line-height: 1.2;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.gm-goal-note {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: #444;
+}
+
+/* --- PEOPLE --- */
+
+.gm-people-grid {
+    list-style: none;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+    gap: var(--spacing-lg) var(--spacing-md);
+}
+
+.gm-person {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.45rem;
+}
+
+.gm-person .g-face--lg {
+    margin-bottom: 0.3rem;
+    box-shadow: 5px 5px 0 rgba(148, 69, 71, 0.25);
+}
+
+/* Leads get a gold rim. */
+.gm-person--lead .g-face--lg {
+    border-color: var(--accent-gold);
+    box-shadow: 5px 5px 0 var(--maroon-dark);
+}
+
+.gm-person h3 {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--maroon-dark);
+    margin: 0;
+}
+
+.gm-person-roles {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.gm-person .g-goal-tags {
+    justify-content: center;
+    margin-top: 0.25rem;
+}
+
+/* --- DARK THEME --- */
+
+[data-theme="dark"] .gm-goals {
+    background: #151515;
+}
+
+[data-theme="dark"] .gm-goal {
+    background: #1e1e1e;
+    border-color: #444;
+}
+
+[data-theme="dark"] .gm-goal--done {
+    background: #2a2510;
+}
+
+[data-theme="dark"] .gm-goal h3 {
+    color: #f1f1f1;
+}
+
+[data-theme="dark"] .gm-goal-note,
+[data-theme="dark"] .gm-person-roles {
+    color: #c4c4c4;
+}
+
+[data-theme="dark"] .gm-goal-num,
+[data-theme="dark"] .gm-person h3 {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .gm-person--lead .g-face--lg {
+    border-color: var(--accent-gold);
+}
