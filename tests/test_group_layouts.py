@@ -8,6 +8,7 @@ import api.index as app_module
 from api import site_content
 
 TWO = {'mission': 'Mission Board', 'other': 'Other'}
+PHOTO = 'https://example.public.blob.vercel-storage.com/grace.jpg'
 
 
 @pytest.fixture
@@ -16,7 +17,7 @@ def media(db, make_user):
     doc = {'kind': 'group', 'team_number': 'media', 'title': 'Media', 'season': '2026-27',
            'tagline': 'We tell the club story.',
            'members': [{'member_id': 'm1', 'name': 'Ada Byron', 'role': 'Builder', 'user_id': str(ada['_id'])},
-                       {'member_id': 'm2', 'name': 'Grace Hopper', 'role': 'Media Captain'}],
+                       {'member_id': 'm2', 'name': 'Grace Hopper', 'role': 'Media Captain', 'photo': PHOTO}],
            'goals': [{'name': 'Weekly reels', 'progress': 40, 'note': 'One short video a week.',
                       'owners': ['m1', 'gone']},
                      {'name': 'Photo every event', 'progress': 100, 'owners': ['m2', 'm1']},
@@ -141,6 +142,12 @@ def test_group_layout_site_default_and_fallback(db, media, monkeypatch):
 def render_as(client, db, team, layout):
     db['teams'].update_one({'_id': team['_id']}, {'$set': {'layout': layout}})
     return client.get(f"/team/{team['team_number']}").data.decode()
+
+
+@pytest.mark.parametrize('layout', list(site_content.GROUP_LAYOUTS))
+def test_every_layout_shows_member_photos(client, db, media, layout):
+    # The face macro is imported without context; a member with a photo used to 500 every group page.
+    assert f'src="{PHOTO}"' in render_as(client, db, media, layout)
 
 
 def test_yearbook_puts_leads_first_then_the_wall(client, db, media):

@@ -514,6 +514,11 @@ def get_image_url(image_path, external=False):
         clean_path = DEFAULT_IMAGE
     return url_for('static', filename=clean_path, _external=external)
 
+
+# A global, not a context processor value, so imported macros (which get no
+# template context) can use it too.
+app.jinja_env.globals['get_image_url'] = get_image_url
+
 class LazyList:
     """A list that runs its loader on first use and never raises.
 
@@ -588,7 +593,6 @@ def inject_global_data():
         site=site(),
         get_activity_icon=get_activity_icon,
         get_activity_title=get_activity_title,
-        get_image_url=get_image_url,
     )
 
 

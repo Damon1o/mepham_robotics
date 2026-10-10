@@ -22,7 +22,7 @@
             {{ face(person, 'lg') }}
             <strong>{{ person.name }}</strong>
             {% set roles = person|member_roles %}
-            {% if roles %}<span>{{ roles|first }}</span>{% endif %}
+            {% if roles %}<span class="gc-member-role">{{ roles|first }}</span>{% endif %}
         </li>
         {% endfor %}
     </ul>
