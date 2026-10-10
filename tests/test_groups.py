@@ -78,7 +78,7 @@ def test_nav_lists_groups_after_teams(client, db, club):
 def test_group_page_has_no_robot_sections(client, db, club):
     page = client.get('/team/media').get_data(as_text=True)
     assert '<h1>Media</h1>' in page
-    assert 'Meet the Group' in page
+    assert 'The people behind it' in page
     assert 'robot-showcase' not in page and 'Engineering Notebook' not in page
     assert 'Team media' not in page
 

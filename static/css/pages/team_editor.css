@@ -9,6 +9,60 @@
     grid-template-columns: minmax(0, 1fr) 10rem 3rem auto;
 }
 
+/* Group goals carry a note and the people on them, each on a full-width line. */
+.goal-row--group {
+    padding-bottom: 0.9rem;
+    margin-bottom: 0.4rem;
+    border-bottom: 1px solid var(--admin-line);
+}
+
+.goal-row--group .goal-note,
+.goal-owners {
+    grid-column: 1 / -1;
+}
+
+.goal-owners {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.goal-owners-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--admin-muted, #666);
+    margin-right: 0.25rem;
+}
+
+.owner-chip {
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    border: 1.5px solid var(--admin-line-strong);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.owner-chip:hover {
+    border-color: var(--admin-accent);
+}
+
+.owner-chip[aria-pressed="true"] {
+    background: var(--admin-accent);
+    border-color: var(--admin-accent);
+    color: #fff;
+}
+
+.owner-chip[aria-pressed="true"]::before {
+    content: '\2713\00a0';
+}
+
 .journey-row {
     grid-template-columns: 8rem minmax(0, 1fr) minmax(0, 1.4fr) auto;
     align-items: start;
@@ -684,6 +738,22 @@ select[data-member-field] {
 
 .layout-thumb .lt-hero--short {
     flex-grow: 1.4;
+}
+
+/* --- Group layouts --- */
+
+/* Goal tiles two to a row, each with a gold ring on its left. */
+.layout-thumb .lt-goals {
+    flex-grow: 2.4;
+    background:
+        radial-gradient(circle at 18% 50%, var(--admin-gold) 0 3.5px, transparent 4px) 0 0 / 50% 33.3%,
+        repeating-linear-gradient(90deg, var(--admin-line-strong) 0 47%, transparent 47% 53%) 0 0 / 100% 33.3%;
+}
+
+/* A row of round faces. */
+.layout-thumb .lt-faces {
+    flex-grow: 1.1;
+    background: radial-gradient(circle, var(--maroon-light, #944547) 0 5px, transparent 5.5px) center / 25% 100% repeat-x;
 }
 
 /* A row of pill tabs, the first one lit. */

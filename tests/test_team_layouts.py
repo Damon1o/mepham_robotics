@@ -65,10 +65,10 @@ def test_removed_layout_falls_back(db, monkeypatch):
     assert resolve({'team_number': '1A', 'layout': 'gone'}) == 'classic'
 
 
-def test_groups_always_use_classic(db, monkeypatch):
+def test_groups_never_use_team_layouts(db, monkeypatch):
     monkeypatch.setattr(site_content, 'TEAM_LAYOUTS', EXTRA)
     set_default(db, 'spotlight')
-    assert resolve({'kind': 'group', 'team_number': 'media', 'layout': 'spotlight'}) == 'classic'
+    assert resolve({'kind': 'group', 'team_number': 'media', 'layout': 'spotlight'}) == site_content.DEFAULT_GROUP_LAYOUT
 
 
 # --- rendering --------------------------------------------------------------
@@ -80,9 +80,9 @@ def test_page_renders_inside_layout_wrapper(client, setup):
     assert 'team-layouts/' not in body  # classic needs no extra stylesheet
 
 
-def test_group_page_renders_classic(client, setup):
+def test_group_page_renders_a_group_layout(client, setup):
     body = client.get('/team/media').data.decode()
-    assert 'data-layout="classic"' in body
+    assert f'data-layout="{site_content.DEFAULT_GROUP_LAYOUT}"' in body
 
 
 def test_classic_keeps_skills_out_of_the_hero(client, setup, monkeypatch):
@@ -514,7 +514,7 @@ def test_unknown_layout_is_rejected(client, db, setup):
     assert 'layout' not in db['teams'].find_one({'_id': ObjectId(setup['new'])})
 
 
-def test_groups_cannot_pick_a_layout(client, db, setup):
+def test_groups_cannot_pick_a_team_layout(client, db, setup):
     login(client, 'alice', 'alice-password')
     resp = client.post(f"/api/team/{setup['group']}/field", json={'field': 'layout', 'value': 'classic'})
     assert resp.status_code == 400

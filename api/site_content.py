@@ -56,6 +56,12 @@ TEAM_LAYOUTS = {
     'compact': 'Compact Card',
 }
 DEFAULT_TEAM_LAYOUT = 'classic'
+# Group page layouts work the same way, built around goals and people instead of a
+# robot: templates/group_layouts/<key>.html and static/css/pages/group-layouts/<key>.css.
+GROUP_LAYOUTS = {
+    'mission': 'Mission Board',
+}
+DEFAULT_GROUP_LAYOUT = 'mission'
 # Public pages that can be put under construction: view endpoint -> name in the picker.
 CONSTRUCTION_PAGES = {
     'index': 'Homepage',
@@ -546,6 +552,8 @@ SECTIONS = (
     Section('teams', 'Team pages', 'bot', (
         Field('layout', 'choice', 'Default layout', DEFAULT_TEAM_LAYOUT, choices=TEAM_LAYOUTS, group='Layout',
               hint='Used by every team that has not picked its own layout for the season.'),
+        Field('group_layout', 'choice', 'Default group layout', DEFAULT_GROUP_LAYOUT, choices=GROUP_LAYOUTS,
+              group='Layout', hint='Used by every group that has not picked its own layout for the season.'),
         Field('default_tagline', 'text', 'Shown when a team has no nickname', '{tagline}', max=60, group='Layout',
               hint='{tagline} uses the club tagline from Club details.'),
         Field('show_matches', 'toggle', 'Show match results', True, group='Match results',
