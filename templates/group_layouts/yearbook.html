@@ -1,0 +1,94 @@
+{#- G2 Yearbook: the people first. Leads get a wide card each, everyone else a portrait
+    tile like a yearbook page, then the goals as a short checklist with who is on each.
+    A group with nobody on it yet gets the Mission Board instead. -#}
+{% from "partials/group/macros.html" import face, owners, status_label %}
+{% if board.people %}
+{% include "partials/group/head.html" %}
+{% include "partials/team/season_switcher.html" %}
+
+{% set leads = board.people|selectattr('lead')|list %}
+{% set crew = board.people|rejectattr('lead')|list %}
+<section id="team" class="gy-people fade-in-section" aria-labelledby="gy-people-h">
+    <div class="g-section-head">
+        <h2 id="gy-people-h">Class of {{ active_season or 'this season' }}</h2>
+        <p class="g-section-note">{{ board.people|length }} {{ 'person' if board.people|length == 1 else 'people' }}</p>
+    </div>
+
+    {% macro portrait(person) %}
+    {% set photo = person.photo|real_photo %}
+    <span class="gy-portrait">
+        {% if photo %}<img src="{{ get_image_url(photo) }}" alt="" loading="lazy">
+        {% else %}<span class="gy-portrait-initials" aria-hidden="true">{{ person.name|initials }}</span>{% endif %}
+    </span>
+    {% endmacro %}
+
+    {% if leads %}
+    <ul class="gy-leads">
+        {% for person in leads %}
+        <li class="gy-lead">
+            {{ portrait(person) }}
+            <div class="gy-lead-body">
+                <span class="gy-lead-tag">Leads the group</span>
+                <h3>{{ person.name }}</h3>
+                {% set roles = person|member_roles %}
+                {% if roles %}<p class="gy-roles">{{ roles|join(' · ') }}</p>{% endif %}
+                {% if person.goals %}
+                <ul class="g-goal-tags" aria-label="Goals {{ person.name }} is on">
+                    {% for goal in person.goals %}<li class="g-goal-tag g-goal-tag--{{ goal.status }}">{{ goal.name }}</li>{% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if crew %}
+    <ul class="gy-wall">
+        {% for person in crew %}
+        <li class="gy-tile">
+            {{ portrait(person) }}
+            <h3>{{ person.name }}</h3>
+            {% set roles = person|member_roles %}
+            {% if roles %}<p class="gy-roles">{{ roles|first }}</p>{% endif %}
+            {% if person.goals %}<p class="gy-on">On {{ person.goals|length }} {{ 'goal' if person.goals|length == 1 else 'goals' }}</p>
+            {% elif person.since %}<p class="gy-on">Since {{ person.since }}</p>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</section>
+
+<section class="gy-goals fade-in-section" aria-labelledby="gy-goals-h">
+    <div class="g-section-head">
+        <h2 id="gy-goals-h">This season we're after</h2>
+        {% if board.goals %}<p class="g-section-note">{{ board.done }} of {{ board.goals|length }} done</p>{% endif %}
+    </div>
+    {% if board.goals %}
+    <ol class="gy-checklist">
+        {% for goal in board.goals %}
+        <li class="gy-check gy-check--{{ goal.status }}">
+            <span class="gy-box" aria-hidden="true">{% if goal.status == 'done' %}<i data-lucide="check"></i>{% endif %}</span>
+            <div class="gy-check-body">
+                <h3>{{ goal.name }} <span class="visually-hidden">({{ status_label(goal.status) }})</span></h3>
+                {% if goal.note %}<p class="gy-check-note">{{ goal.note }}</p>{% endif %}
+                <div class="progress-bar" role="progressbar" aria-label="{{ goal.name }}"
+                    aria-valuenow="{{ goal.progress }}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-fill" data-progress="{{ goal.progress }}"></div>
+                </div>
+            </div>
+            <span class="gy-check-pct">{{ goal.progress }}%</span>
+            {{ owners(goal) }}
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="g-empty">This season's goals are on the way.</p>
+    {% endif %}
+</section>
+
+{% include "partials/team/join_cta.html" %}
+{% include "partials/team/journey.html" %}
+{% else %}
+{% include "group_layouts/mission.html" %}
+{% endif %}

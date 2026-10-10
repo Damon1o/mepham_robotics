@@ -750,6 +750,24 @@ select[data-member-field] {
         repeating-linear-gradient(90deg, var(--admin-line-strong) 0 47%, transparent 47% 53%) 0 0 / 100% 33.3%;
 }
 
+/* Yearbook: one wide lead card, a wall of square portraits, a checklist. */
+.layout-thumb .lt-lead {
+    flex-grow: 1;
+    background:
+        linear-gradient(var(--maroon-dark), var(--maroon-dark)) left 3px center / 26% 70% no-repeat,
+        var(--admin-gold);
+}
+
+.layout-thumb .lt-wall {
+    flex-grow: 2.2;
+    background: repeating-linear-gradient(90deg, var(--maroon-light, #944547) 0 21%, transparent 21% 26.3%) 0 0 / 100% 50%;
+}
+
+.layout-thumb .lt-checks {
+    flex-grow: 1.2;
+    background: repeating-linear-gradient(180deg, var(--admin-line-strong) 0 22%, transparent 22% 34%);
+}
+
 /* A row of round faces. */
 .layout-thumb .lt-faces {
     flex-grow: 1.1;

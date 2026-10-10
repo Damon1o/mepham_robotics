@@ -545,10 +545,11 @@ def test_editor_picker_loads_the_carousel(client, setup):
     assert body.index('js/circular-carousel.js') < body.index('js/layout-carousel.js')
 
 
-def test_group_editor_has_no_layout_picker(client, setup):
+def test_group_editor_offers_only_group_layouts(client, setup):
     login(client, 'alice', 'alice-password')
     body = client.get(f"/manage/team/{setup['group']}").data.decode()
-    assert 'data-autosave="layout"' not in body
+    assert 'data-autosave="layout"' in body
+    assert 'value="yearbook"' in body and 'value="spotlight"' not in body
 
 
 def test_site_default_accepts_only_listed_layouts():
