@@ -157,3 +157,22 @@ def test_yearbook_without_people_falls_back_to_mission_board(client, db):
     team['_id'] = db['teams'].insert_one(team).inserted_id
     body = client.get('/team/fund').data.decode()
     assert 'class="gm-goal-grid"' in body and 'gy-wall' not in body
+
+
+def test_tracker_sorts_goals_into_columns(client, db, media):
+    body = render_as(client, db, media, 'tracker')
+    assert 'data-layout="tracker"' in body and 'group-layouts/tracker.css' in body
+    todo = body[body.index('gt-col--todo'):body.index('gt-col--active')]
+    active = body[body.index('gt-col--active'):body.index('gt-col--done')]
+    done = body[body.index('gt-col--done'):body.index('id="team"')]
+    assert 'New logo' in todo and 'Nobody on it yet' in todo
+    assert 'Weekly reels' in active and 'data-progress="40"' in active
+    assert 'Photo every event' in done
+    assert 'data-progress="47"' in body  # the season band
+    assert "Who's on what" in body
+
+
+def test_tracker_without_goals_falls_back_to_mission_board(client, db, media):
+    db['teams'].update_one({'_id': media['_id']}, {'$set': {'goals': []}})
+    body = render_as(client, db, media, 'tracker')
+    assert 'class="gm-people-grid"' in body and 'gt-board' not in body

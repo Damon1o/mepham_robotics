@@ -61,6 +61,7 @@ DEFAULT_TEAM_LAYOUT = 'classic'
 GROUP_LAYOUTS = {
     'mission': 'Mission Board',
     'yearbook': 'Yearbook',
+    'tracker': 'Goal Tracker',
 }
 DEFAULT_GROUP_LAYOUT = 'mission'
 # Public pages that can be put under construction: view endpoint -> name in the picker.
