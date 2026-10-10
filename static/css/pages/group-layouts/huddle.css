@@ -1,0 +1,233 @@
+/* Group page layout G4: Huddle. Loaded after group.css. */
+
+.gh-huddle {
+    padding: var(--spacing-xl) var(--spacing-md);
+}
+
+/* --- PERSON CARDS --- */
+
+/* Cards differ in height (one goal or five), so they flow in columns rather
+   than a grid that would leave gaps under the short ones. */
+.gh-cards {
+    list-style: none;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0;
+    columns: 3 300px;
+    column-gap: var(--spacing-md);
+}
+
+.gh-card {
+    break-inside: avoid;
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: #fff;
+    border: 3px solid var(--text-dark);
+    border-radius: 18px;
+    box-shadow: 6px 6px 0 rgba(148, 69, 71, 0.25);
+}
+
+.gh-card--lead {
+    box-shadow: 6px 6px 0 var(--maroon-dark);
+}
+
+/* A lead's name block sits on a gold strip across the top of the card. */
+.gh-card--lead .gh-who {
+    margin: calc(-1 * var(--spacing-md)) calc(-1 * var(--spacing-md)) 0;
+    padding: var(--spacing-md);
+    background: #fff4c2;
+    border-bottom: 2px solid var(--text-dark);
+    border-radius: 15px 15px 0 0;
+}
+
+.gh-card--lead .gh-goals,
+.gh-card--lead .gh-free {
+    border-top: 0;
+}
+
+.gh-who {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.gh-who .g-face--lg {
+    width: 84px;
+    height: 84px;
+    font-size: 1.5rem;
+}
+
+.gh-lead {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.12rem 0.5rem;
+    margin-bottom: 0.2rem;
+    border-radius: 999px;
+    background: var(--maroon-dark);
+    color: var(--accent-gold);
+}
+
+.gh-card h3 {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    line-height: 1.15;
+    color: var(--maroon-dark);
+    margin: 0;
+}
+
+.gh-roles {
+    margin: 0.15rem 0 0;
+    font-size: 0.86rem;
+    color: var(--text-light);
+}
+
+.gh-goals {
+    list-style: none;
+    margin: var(--spacing-sm) 0 0;
+    padding: var(--spacing-sm) 0 0;
+    border-top: 2px dashed rgba(0, 0, 0, 0.15);
+    display: grid;
+    gap: 0.6rem;
+}
+
+.gh-goal {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.gh-goal-name {
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text-dark);
+}
+
+.gh-free {
+    margin: var(--spacing-sm) 0 0;
+    padding-top: var(--spacing-sm);
+    border-top: 2px dashed rgba(0, 0, 0, 0.15);
+    font-size: 0.9rem;
+    font-style: italic;
+    color: var(--text-light);
+}
+
+/* --- UP FOR GRABS --- */
+
+.gh-grabs {
+    max-width: 1180px;
+    margin: 0 auto var(--spacing-xl);
+    padding: var(--spacing-lg) var(--spacing-md);
+    background: var(--maroon-dark);
+    color: #fff;
+    border: 3px solid var(--text-dark);
+    border-radius: 24px;
+    box-shadow: 8px 8px 0 var(--accent-gold);
+}
+
+.gh-grabs-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: var(--spacing-lg);
+    align-items: start;
+}
+
+.gh-grabs h2 {
+    font-size: clamp(2rem, 4.5vw, 3rem);
+    line-height: 1.1;
+    color: var(--accent-gold);
+    text-align: left;
+    width: auto;
+    margin: 0 0 var(--spacing-sm);
+}
+
+.gh-grabs h2::after {
+    content: none;
+}
+
+.gh-grabs p {
+    margin: 0 0 var(--spacing-md);
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.gh-grab-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.75rem;
+}
+
+/* Dashed outlines: a slot waiting for someone to fill it. */
+.gh-grab-list li {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.9rem 1.1rem;
+    border: 3px dashed rgba(255, 215, 0, 0.7);
+    border-radius: 14px;
+}
+
+.gh-grab-list strong {
+    font-size: 1.1rem;
+}
+
+.gh-grab-list span {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* --- DARK THEME --- */
+
+[data-theme="dark"] .gh-card {
+    background: #1e1e1e;
+    border-color: #444;
+}
+
+[data-theme="dark"] .gh-card--lead {
+    box-shadow: 6px 6px 0 #d4a0a1;
+}
+
+[data-theme="dark"] .gh-card--lead .gh-who {
+    background: #2a2510;
+    border-bottom-color: #444;
+}
+
+[data-theme="dark"] .gh-card h3 {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .gh-goal-name {
+    color: #f1f1f1;
+}
+
+[data-theme="dark"] .gh-roles,
+[data-theme="dark"] .gh-free {
+    color: #c4c4c4;
+}
+
+[data-theme="dark"] .gh-goals,
+[data-theme="dark"] .gh-free {
+    border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .gh-grabs {
+    background: #3a0a0a;
+}
+
+@media (max-width: 760px) {
+    .gh-grabs {
+        margin-left: var(--spacing-sm);
+        margin-right: var(--spacing-sm);
+    }
+
+    .gh-grabs-inner {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

@@ -777,6 +777,21 @@ select[data-member-field] {
         repeating-linear-gradient(180deg, var(--admin-gold) 0 18%, transparent 18% 24%) right / 31% 100% no-repeat;
 }
 
+/* Huddle: person cards with a face on top, then a maroon "up for grabs" band. */
+.layout-thumb .lt-huddle {
+    flex-grow: 3;
+    background:
+        radial-gradient(circle at 50% 22%, var(--maroon-light, #944547) 0 4px, transparent 4.5px) 0 0 / 33.3% 50%,
+        repeating-linear-gradient(90deg, var(--admin-line-strong) 0 30%, transparent 30% 33.3%) 0 0 / 100% 46% repeat-y;
+}
+
+.layout-thumb .lt-grabs {
+    flex-grow: 1.2;
+    background:
+        repeating-linear-gradient(180deg, transparent 0 12%, var(--admin-gold) 12% 22%, transparent 22% 34%) right 4px top / 50% 100% no-repeat,
+        var(--maroon-dark);
+}
+
 /* A row of round faces. */
 .layout-thumb .lt-faces {
     flex-grow: 1.1;
