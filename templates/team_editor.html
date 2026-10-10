@@ -49,7 +49,7 @@
 <li class="row-item goal-row{{ ' goal-row--group' if is_group }}">
     <input type="text" data-key="name" value="{{ goal.name or '' }}" aria-label="Goal" maxlength="120"
         placeholder="Pick or type a goal" list="dl-goals">
-    <input type="range" data-key="progress" min="0" max="100" step="5" value="{{ progress }}"
+    <input type="range" data-key="progress" min="0" max="100" step="1" value="{{ progress }}"
         aria-label="Progress{{ ' for ' ~ goal.name if goal.name }}">
     <output class="range-value">{{ progress }}%</output>
     <button type="button" class="icon-btn" data-action="remove-row" aria-label="Remove goal">

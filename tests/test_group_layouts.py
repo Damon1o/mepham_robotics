@@ -111,6 +111,15 @@ def test_group_editor_offers_owner_chips(client, media):
     assert 'data-key="note"' in body
 
 
+def test_goal_progress_slider_moves_by_one_percent(client, media):
+    login(client, 'ada', 'ada-password')
+    body = client.get(f"/manage/team/{media['_id']}").data.decode()
+    assert 'data-key="progress" min="0" max="100" step="1"' in body
+    resp = client.post(f"/api/team/{media['_id']}/list/goals", json={'items': [{'name': 'Reels', 'progress': 37}]})
+    assert resp.status_code == 200
+    assert client.get('/team/media').data.decode().count('37%') >= 1
+
+
 def test_robot_team_editor_has_no_owner_chips(client, db, media):
     db['teams'].insert_one({'team_number': '77628A', 'members': [
         {'member_id': 'r1', 'name': 'Ada', 'user_id': media['members'][0]['user_id']}]})
