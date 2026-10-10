@@ -141,6 +141,20 @@ def test_meetings_and_fundraisers_can_be_switched_off(admin, db):
     assert 'Every week' not in page and 'data-kind="meeting"' not in page
 
 
+def test_calendar_can_zoom_and_maximize_and_keeps_every_pill(client, db):
+    for n in range(4):
+        db['competitions'].insert_one({'name': f'Busy day {n}', 'date': soon(5, hour=8 + n), 'kind': 'outreach'})
+    page = client.get(f'/events?month={soon(5):%Y-%m}').get_data(as_text=True)
+    cal = page.split('id="calendar"')[1].split('id="ev-dayview"')[0]
+    # Hidden until events.js shows them; the page works without them.
+    assert 'class="ev-cal-tools" role="group" aria-label="Calendar size" hidden' in cal
+    assert 'data-cal-step="-1"' in cal and 'data-cal-step="1"' in cal and 'data-cal-max' in cal
+    # Every pill is rendered; past two they wait for zoom or maximize, with "+2 more" at normal size.
+    assert all(f'>Busy day {n}</span>' in cal for n in range(4))
+    assert cal.count('ev-pill--extra') == 2 and '+2 more' in cal
+    assert 'class="ev-cal-body"' in cal
+
+
 def test_events_page_survives_odd_months(client, db):
     for month in ('2026-02', 'bogus', '1900-01'):
         assert client.get(f'/events?month={month}').status_code == 200

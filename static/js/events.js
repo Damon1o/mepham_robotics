@@ -1,14 +1,16 @@
 // Events page (/events): type filter, flipping months without a reload, the day
-// view under the month grid, the "Next up" countdown, copying the feed link, and
-// closing "Add to calendar" menus.
+// view under the month grid, zooming and maximizing the calendar, the "Next up"
+// countdown, copying the feed link, and closing "Add to calendar" menus.
 //
 // The page is complete without this file: the grid, the list and every link are
-// server-rendered. The chosen filter is remembered in this browser only.
+// server-rendered. The chosen filter and zoom are remembered in this browser only.
 
 (function () {
     'use strict';
 
     const FILTER_KEY = 'events-filter';
+    const ZOOM_KEY = 'events-zoom';
+    const ZOOM_STEPS = 4;  // 100% plus four steps to 200%; see events.css
     const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)');
     const page = document.querySelector('.ev');
     if (!page) return;
@@ -125,6 +127,7 @@
             window.lucide?.createIcons();
             if (!hasChip(currentKind)) currentKind = 'all';
             applyFilter(currentKind);
+            syncCalTools();
             if (push) history.pushState({ evMonth: true }, '', monthUrl(href));
             live.textContent = cal.querySelector('#ev-cal-title')?.textContent.replace(/\s+/g, ' ').trim() || '';
             if (focusLabel) {
@@ -179,6 +182,73 @@
                 panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             }
         });
+    }
+
+    // --- Zoom and maximize -------------------------------------------------------------
+
+    // Both live on the page wrapper, not the calendar, so they survive month changes
+    // (the calendar is replaced). The buttons stay hidden without this script.
+    let zoom = 0;
+    let maxed = false;
+
+    function syncCalTools() {
+        const tools = page.querySelector('.ev-cal-tools');
+        if (!tools) return;
+        tools.hidden = false;
+        tools.querySelector('[data-cal-step="-1"]').disabled = zoom === 0;
+        tools.querySelector('[data-cal-step="1"]').disabled = zoom === ZOOM_STEPS;
+        const max = tools.querySelector('[data-cal-max]');
+        max.setAttribute('aria-pressed', String(maxed));
+        max.setAttribute('aria-label', maxed ? 'Restore calendar size' : 'Maximize calendar');
+    }
+
+    function setZoom(step) {
+        const next = Math.min(ZOOM_STEPS, Math.max(0, step));
+        if (next === zoom) return;
+        // Keep the middle of what's in view in the middle as the month widens.
+        const body = page.querySelector('.ev-cal-body');
+        const centre = body ? (body.scrollLeft + body.clientWidth / 2) / body.scrollWidth : 0;
+        zoom = next;
+        if (zoom) page.dataset.calZoom = String(zoom);
+        else delete page.dataset.calZoom;
+        if (body) body.scrollLeft = centre * body.scrollWidth - body.clientWidth / 2;
+        try { localStorage.setItem(ZOOM_KEY, String(zoom)); } catch (err) { /* storage blocked */ }
+        live.textContent = `Calendar at ${100 + zoom * 25}%`;
+        syncCalTools();
+    }
+
+    function setMax(on) {
+        maxed = on;
+        page.classList.toggle('is-cal-max', on);
+        document.documentElement.classList.toggle('ev-cal-locked', on);
+        syncCalTools();
+        page.querySelector('[data-cal-max]')?.focus({ preventScroll: true });
+        if (!on) page.querySelector('.ev-cal')?.scrollIntoView({ block: 'nearest' });
+    }
+
+    function initCalTools() {
+        try { zoom = Math.min(ZOOM_STEPS, Math.max(0, parseInt(localStorage.getItem(ZOOM_KEY), 10) || 0)); } catch (err) { /* storage blocked */ }
+        if (zoom) page.dataset.calZoom = String(zoom);
+        syncCalTools();
+        // Delegated on the page: the buttons are replaced when the month changes.
+        page.addEventListener('click', e => {
+            const step = e.target.closest('[data-cal-step]');
+            if (step) setZoom(zoom + Number(step.dataset.calStep));
+            else if (e.target.closest('[data-cal-max]')) setMax(!maxed);
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && maxed) setMax(false);
+        });
+        // Pinching a trackpad (and Ctrl + wheel) over the month zooms it, not the page.
+        let pinch = 0;
+        page.addEventListener('wheel', e => {
+            if (!e.ctrlKey || !e.target.closest('.ev-cal-body')) return;
+            e.preventDefault();
+            pinch -= e.deltaY;
+            if (Math.abs(pinch) < 40) return;
+            setZoom(zoom + Math.sign(pinch));
+            pinch = 0;
+        }, { passive: false });
     }
 
     // --- Countdown ----------------------------------------------------------------------
@@ -247,6 +317,7 @@
     initFilters();
     initMonthNav();
     initDayView();
+    initCalTools();
     initCountdown();
     initCopy();
     initMenus();
