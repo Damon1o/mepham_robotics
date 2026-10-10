@@ -176,3 +176,27 @@ def test_tracker_without_goals_falls_back_to_mission_board(client, db, media):
     db['teams'].update_one({'_id': media['_id']}, {'$set': {'goals': []}})
     body = render_as(client, db, media, 'tracker')
     assert 'class="gm-people-grid"' in body and 'gt-board' not in body
+
+
+def test_huddle_pairs_people_with_their_goals(client, db, media):
+    body = render_as(client, db, media, 'huddle')
+    assert 'data-layout="huddle"' in body and 'group-layouts/huddle.css' in body
+    ada = body[body.index('Goals Ada Byron is on'):]
+    ada = ada[:ada.index('</ul>')]
+    assert 'Weekly reels' in ada and 'Photo every event' in ada and 'New logo' not in ada
+    grabs = body[body.index('Up for grabs'):]
+    assert 'New logo' in grabs and 'Weekly reels' not in grabs
+    assert '2 of 3 goals have an owner' in body
+
+
+def test_huddle_shows_join_band_when_every_goal_is_owned(client, db, media):
+    db['teams'].update_one({'_id': media['_id']}, {'$set': {'goals': [{'name': 'X', 'owners': ['m1']}]}})
+    body = render_as(client, db, media, 'huddle')
+    assert 'Up for grabs' not in body and 'teamcta-band' in body
+    assert "Helping wherever it's needed" in body  # Grace owns nothing
+
+
+def test_huddle_without_people_falls_back_to_mission_board(client, db, media):
+    db['teams'].update_one({'_id': media['_id']}, {'$set': {'members': []}})
+    body = render_as(client, db, media, 'huddle')
+    assert 'class="gm-goal-grid"' in body and 'gh-cards' not in body

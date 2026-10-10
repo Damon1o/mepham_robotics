@@ -1,0 +1,68 @@
+{#- G4 Huddle: every person with what they are on. Each card pairs someone with the
+    goals they own, rings and all; goals nobody owns yet close the page as "up for
+    grabs", next to the join button. A group with nobody on it yet gets the Mission
+    Board instead. -#}
+{% from "partials/group/macros.html" import face, ring %}
+{% if board.people %}
+{% include "partials/group/head.html" %}
+{% include "partials/team/season_switcher.html" %}
+
+<section id="team" class="gh-huddle fade-in-section" aria-labelledby="gh-h">
+    <div class="g-section-head">
+        <h2 id="gh-h">Who's doing what</h2>
+        {% if board.goals %}<p class="g-section-note">{{ board.goals|length - board.open|length }} of {{ board.goals|length }} goals have an owner</p>{% endif %}
+    </div>
+    <ul class="gh-cards">
+        {% for person in board.people %}
+        <li class="gh-card{{ ' gh-card--lead' if person.lead }}">
+            <div class="gh-who">
+                {{ face(person, 'lg') }}
+                <div>
+                    {% if person.lead %}<span class="gh-lead">Lead</span>{% endif %}
+                    <h3>{{ person.name }}</h3>
+                    {% set roles = person|member_roles %}
+                    {% if roles %}<p class="gh-roles">{{ roles|join(' · ') }}</p>{% endif %}
+                </div>
+            </div>
+            {% if person.goals %}
+            <ul class="gh-goals" aria-label="Goals {{ person.name }} is on">
+                {% for goal in person.goals %}
+                <li class="gh-goal">
+                    {{ ring(goal, 'sm') }}
+                    <span class="gh-goal-name">{{ goal.name }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="gh-free">Helping wherever it's needed</p>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+
+{% if board.open %}
+<section class="gh-grabs fade-in-section" aria-labelledby="gh-grabs-h">
+    <div class="gh-grabs-inner">
+        <div>
+            <h2 id="gh-grabs-h">Up for grabs</h2>
+            <p>Nobody owns these yet.{% if site.teams.cta_show %} Join the group and one could be yours.{% endif %}</p>
+            {% if site.teams.cta_show %}<a href="{{ url_for('contact') }}" class="cta-button cta-primary">{{ site.teams.cta_button }}</a>{% endif %}
+        </div>
+        <ul class="gh-grab-list">
+            {% for goal in board.open %}
+            <li>
+                <strong>{{ goal.name }}</strong>
+                {% if goal.note %}<span>{{ goal.note }}</span>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+{% else %}
+{% include "partials/team/join_cta.html" %}
+{% endif %}
+{% include "partials/team/journey.html" %}
+{% else %}
+{% include "group_layouts/mission.html" %}
+{% endif %}
