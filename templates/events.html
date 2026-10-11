@@ -165,6 +165,12 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
         <section class="ev-cal" id="calendar" aria-labelledby="ev-cal-title">
             <header class="ev-cal-head">
                 <h2 id="ev-cal-title">{{ month_start.strftime('%B') }} <span>{{ month_start.year }}</span></h2>
+                <div class="ev-cal-tools" role="group" aria-label="Calendar size" hidden>
+                    <button type="button" class="ev-icon-btn" data-cal-step="-1" aria-label="Zoom out"><i data-lucide="zoom-out" aria-hidden="true"></i></button>
+                    <button type="button" class="ev-icon-btn" data-cal-step="1" aria-label="Zoom in"><i data-lucide="zoom-in" aria-hidden="true"></i></button>
+                    <button type="button" class="ev-icon-btn" data-cal-max aria-pressed="false" aria-label="Maximize calendar">
+                        <i data-lucide="maximize-2" class="ev-max-on" aria-hidden="true"></i><i data-lucide="minimize-2" class="ev-max-off" aria-hidden="true"></i></button>
+                </div>
                 <nav class="ev-cal-nav" aria-label="Change month">
                     <a class="ev-icon-btn" href="{{ url_for('events_page', month=prev_month) }}#calendar" rel="nofollow"
                         aria-label="Previous month"><i data-lucide="chevron-left" aria-hidden="true"></i></a>
@@ -174,6 +180,7 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
                 </nav>
             </header>
 
+            <div class="ev-cal-body">
             <div class="ev-weekdays" aria-hidden="true">
                 {% for d in ('Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat') %}<span>{{ d }}</span>{% endfor %}
             </div>
@@ -192,8 +199,9 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
                     {% endif %}
                     {% if main or meets %}
                     <div class="ev-day-items" aria-hidden="true">
-                        {% for item in main[:2] %}
-                        <span class="ev-pill ev-k-{{ item.kind }}" data-kind="{{ item.kind }}">{{ item.name }}</span>
+                        {#- Past two, pills show only when the calendar is zoomed or maximized. -#}
+                        {% for item in main %}
+                        <span class="ev-pill{% if loop.index > 2 %} ev-pill--extra{% endif %} ev-k-{{ item.kind }}" data-kind="{{ item.kind }}">{{ item.name }}</span>
                         {% endfor %}
                         {% if main|length > 2 %}<span class="ev-more" data-kind="{{ main[2:]|map(attribute='kind')|join(' ') }}">+{{ main|length - 2 }} more</span>{% endif %}
                         {% for item in meets %}
@@ -207,6 +215,7 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
                 </li>
                 {% endfor %}{% endfor %}
             </ol>
+            </div>
 
             <div class="ev-dayview" id="ev-dayview" aria-live="polite">
                 {% for week in weeks %}{% for day in week if day['items'] %}

@@ -542,8 +542,25 @@
 }
 
 .ev-cal {
+    --ev-zoom: 1;
     padding: 1.25rem;
     scroll-margin-top: calc(var(--nav-height, 60px) + 1rem);
+}
+
+/* Zoom (events.js): text and day size grow together; past 100% the month gets
+   wider than its card and scrolls sideways inside .ev-cal-body. */
+.ev[data-cal-zoom="1"] .ev-cal { --ev-zoom: 1.25; }
+.ev[data-cal-zoom="2"] .ev-cal { --ev-zoom: 1.5; }
+.ev[data-cal-zoom="3"] .ev-cal { --ev-zoom: 1.75; }
+.ev[data-cal-zoom="4"] .ev-cal { --ev-zoom: 2; }
+
+.ev-cal-body {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+}
+
+.ev-cal-body > * {
+    min-width: calc(100% * var(--ev-zoom));
 }
 
 .ev-cal-head {
@@ -565,10 +582,42 @@
     font-weight: 400;
 }
 
-.ev-cal-nav {
+.ev-cal-nav,
+.ev-cal-tools {
     display: flex;
     align-items: center;
     gap: 0.4rem;
+}
+
+.ev-cal-tools {
+    margin-left: auto;
+}
+
+.ev-icon-btn {
+    padding: 0;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+}
+
+.ev-icon-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
+}
+
+.ev-icon-btn svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.ev-max-off,
+.ev.is-cal-max .ev-max-on {
+    display: none;
+}
+
+.ev.is-cal-max .ev-max-off {
+    display: block;
 }
 
 .ev-icon-btn,
@@ -606,7 +655,7 @@
     padding: 0 0 0.5rem;
     color: var(--ev-muted);
     font-family: 'Space Mono', monospace;
-    font-size: 0.68rem;
+    font-size: calc(0.68rem * var(--ev-zoom));
     letter-spacing: 1.5px;
     text-align: center;
     text-transform: uppercase;
@@ -629,7 +678,7 @@
     flex-direction: column;
     gap: 0.25rem;
     min-width: 0;
-    min-height: 6.4rem;
+    min-height: calc(6.4rem * var(--ev-zoom));
     padding: 0.35rem;
     background: var(--ev-paper);
     transition: opacity var(--transition-fast), background var(--transition-fast);
@@ -656,15 +705,15 @@
 .ev-day-num {
     display: inline-grid;
     place-items: center;
-    width: 1.9rem;
-    height: 1.9rem;
+    width: calc(1.9rem * var(--ev-zoom));
+    height: calc(1.9rem * var(--ev-zoom));
     padding: 0;
     border: 0;
     border-radius: 50%;
     background: none;
     color: var(--ev-ink);
     font: inherit;
-    font-size: 0.85rem;
+    font-size: calc(0.85rem * var(--ev-zoom));
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
@@ -698,7 +747,7 @@ button.ev-day-num:hover {
     border-radius: 5px;
     background: color-mix(in srgb, var(--k) 13%, var(--ev-paper));
     color: var(--ev-ink);
-    font-size: 0.72rem;
+    font-size: calc(0.72rem * var(--ev-zoom));
     line-height: 1.35;
     white-space: nowrap;
     overflow: hidden;
@@ -709,7 +758,7 @@ button.ev-day-num:hover {
     border-left-width: 2px;
     background: none;
     color: var(--ev-muted);
-    font-size: 0.68rem;
+    font-size: calc(0.68rem * var(--ev-zoom));
 }
 
 .ev-more {
@@ -717,6 +766,55 @@ button.ev-day-num:hover {
     color: var(--ev-muted);
     font-size: 0.7rem;
     font-weight: 700;
+}
+
+/* Two pills a day at normal size; zoomed or maximized, every one. */
+.ev-pill--extra {
+    display: none;
+}
+
+.ev[data-cal-zoom] .ev-pill--extra,
+.ev.is-cal-max .ev-pill--extra {
+    display: block;
+}
+
+.ev[data-cal-zoom] .ev-more,
+.ev.is-cal-max .ev-more {
+    display: none;
+}
+
+/* Maximized (events.js): the calendar fills the window above the menu button
+   and chat, and the weeks stretch to fill the height. The day view and key
+   scroll beneath. */
+.ev.is-cal-max .ev-cal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    max-width: none;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    border: 0;
+    border-radius: 0;
+    padding: 1.25rem max(1.25rem, env(safe-area-inset-right)) max(1.25rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    animation: ev-pop 0.2s ease-out;
+}
+
+.ev.is-cal-max .ev-cal-body {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.ev.is-cal-max .ev-days {
+    flex: 1 0 auto;
+    grid-auto-rows: minmax(calc(6.4rem * var(--ev-zoom)), 1fr);
+}
+
+html.ev-cal-locked {
+    overflow: hidden;
 }
 
 /* Flipping months in place (events.js): the new month slides in from its side. */
@@ -1112,18 +1210,24 @@ button.ev-day-num:hover {
         font-size: 1.3rem;
     }
 
-    /* Each day becomes a number with coloured dots; tap it for the day view. */
-    .ev-day {
+    .ev-cal-head {
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
+    /* At normal size each day becomes a number with coloured dots; tap it for
+       the day view. Zoomed, the pills come back and the month scrolls sideways. */
+    .ev:not([data-cal-zoom]) .ev-day {
         align-items: center;
         min-height: 3.6rem;
         padding: 0.3rem 0.1rem;
     }
 
-    .ev-day-items {
+    .ev:not([data-cal-zoom]) .ev-day-items {
         display: none;
     }
 
-    .ev-dots {
+    .ev:not([data-cal-zoom]) .ev-dots {
         display: flex;
         gap: 3px;
     }
@@ -1133,7 +1237,7 @@ button.ev-day-num:hover {
         height: 0.4rem;
     }
 
-    .ev-day-num {
+    .ev:not([data-cal-zoom]) .ev-day-num {
         width: 2.2rem;
         height: 2.2rem;
     }
@@ -1162,7 +1266,8 @@ button.ev-day-num:hover {
     .ev-add-menu,
     .ev-dayview-panel,
     .ev-days.is-entering-next,
-    .ev-days.is-entering-prev {
+    .ev-days.is-entering-prev,
+    .ev.is-cal-max .ev-cal {
         animation: none;
     }
 
