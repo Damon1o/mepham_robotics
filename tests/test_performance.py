@@ -50,7 +50,7 @@ def test_carousel_serves_webp_with_real_widths(client):
             assert re.fullmatch(r'\d+w', width)
 
 
-@pytest.mark.parametrize('path', ['/', '/about', '/login', '/achievements', '/contact', '/donate'])
+@pytest.mark.parametrize('path', ['/', '/about', '/login', '/signup', '/achievements', '/contact', '/donate'])
 def test_every_image_has_intrinsic_size(client, db, path):
     db['awards'].insert_one({'title': 'Design Award', 'icon': 'design_award.png', 'count': 1})
     page = client.get(path).get_data(as_text=True)
