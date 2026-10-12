@@ -35,7 +35,7 @@ document.querySelectorAll('[data-copy-codes]').forEach(button => {
 document.querySelectorAll('[data-download-codes]').forEach(button => {
     button.addEventListener('click', () => {
         const text = [
-            `Mepham Robotics backup codes for @${button.dataset.account}`,
+            `${button.dataset.club} backup codes for @${button.dataset.account}`,
             'Each code signs you in once when you cannot use your authenticator app.',
             '',
             button.dataset.downloadCodes,

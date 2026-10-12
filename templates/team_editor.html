@@ -2,7 +2,7 @@
 
 {% set is_group = team is group %}
 {% from "partials/team/layout_thumb.html" import layout_thumb %}
-{% block title %}Edit {{ team.title or team.team_number if is_group else team.team_number }} | Mepham Robotics{% endblock %}
+{% block title %}Edit {{ team.title or team.team_number if is_group else team.team_number }} | {{ site.general.short_name }}{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">

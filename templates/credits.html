@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Site Credits | Mepham Robotics{% endblock %}
-{% block meta_description %}Credits and acknowledgments for the Mepham Robotics website.{% endblock %}
+{% block title %}Site Credits | {{ site.general.short_name }}{% endblock %}
+{% block meta_description %}Credits and acknowledgments for the {{ site.general.short_name }} website.{% endblock %}
 
 {% block content %}
 <nav class="breadcrumb">
@@ -38,7 +38,7 @@
 
     <h2><i data-lucide="camera"></i> Media</h2>
     <p>
-        All team photos and robot images are property of the Wellington C. Mepham High School Robotics Club unless
+        All team photos and robot images are property of the {{ site.meeting.school }} Robotics Club unless
         otherwise noted. If you are featured in a photo and would like it removed, please contact us.
     </p>
     <p>
@@ -47,7 +47,7 @@
 
     <h2><i data-lucide="heart-handshake"></i> Special Thanks</h2>
     <ul>
-        <li>Wellington C. Mepham High School administration and faculty advisors</li>
+        <li>{{ site.meeting.school }} administration and faculty advisors</li>
         <li>Our sponsors and community partners</li>
         <li>The VEX Robotics community</li>
         <li>Every team member who contributed to building, competing, and documenting</li>

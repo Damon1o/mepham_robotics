@@ -175,7 +175,7 @@
 
         <div class="find-us-map">
             {# The original embed pins the school exactly; a changed search uses Google's search embed. #}
-            <div class="contact-map-facade"
+            <div class="contact-map-facade" data-map-title="{{ meeting.school }} location map"
                 data-map-src="{% if site.is_custom('meeting.map_query') %}https://www.google.com/maps?q={{ meeting.map_query|urlencode }}&amp;output=embed{% else %}https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3025.932292543359!2d-73.54547492397614!3d40.67546077139915!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c27e9652ff1c0d%3A0xf758cff5fe1b37ac!2sWellington%20C.%20Mepham%20High%20School!5e0!3m2!1sen!2sus!4v1769884579961!5m2!1sen!2sus{% endif %}">
                 <p class="contact-map-caption">
                     <i data-lucide="map-pin"></i> {{ meeting.school }}

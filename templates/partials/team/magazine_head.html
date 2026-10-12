@@ -10,7 +10,7 @@
         {% endif %}
     </figure>
     <div class="mag-masthead">
-        <p class="mag-kicker">Mepham Robotics{% if active_season %} · {{ active_season }} Season{% endif %}</p>
+        <p class="mag-kicker">{{ site.general.short_name }}{% if active_season %} · {{ active_season }} Season{% endif %}</p>
         <h1>{{ team_name }}</h1>
         <p class="mag-dek">{{ team.nickname or site.teams.default_tagline }}</p>
         {% include "partials/team/identity_bar.html" %}

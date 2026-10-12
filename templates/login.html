@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Member Login | Mepham Robotics{% endblock %}
-{% block meta_description %}Sign in to the Mepham Robotics member area.{% endblock %}
+{% block title %}Member Login | {{ site.general.short_name }}{% endblock %}
+{% block meta_description %}Sign in to the {{ site.general.short_name }} member area.{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/login.css') }}">
@@ -12,9 +12,9 @@
 <section class="auth-section">
     <div class="auth-card auth-card--split">
         <div class="auth-visual">
-            {{ picture('photos/carousel6', 'Mepham Robotics team members with their robot', '(max-width: 768px) 100vw, 50vw', class_='auth-visual-img', priority=True) }}
+            {{ picture('photos/carousel6', site.general.short_name ~ ' team members with their robot', '(max-width: 768px) 100vw, 50vw', class_='auth-visual-img', priority=True) }}
             <div class="auth-visual-copy">
-                <h1>Welcome back, Team 77628</h1>
+                <h1>Welcome back, Team {{ site.general.team_number }}</h1>
                 <p>Sign in to reach the Member Hub and the admin dashboard.</p>
             </div>
         </div>

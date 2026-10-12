@@ -116,7 +116,7 @@
             {% if givebutter_campaign_id %}<span class="dn-embed-via">via Givebutter</span>{% endif %}
         </div>
         {% if givebutter_campaign_id %}
-        <iframe src="https://givebutter.com/embed/c/{{ givebutter_campaign_id }}" title="Donate to Mepham Robotics"
+        <iframe src="https://givebutter.com/embed/c/{{ givebutter_campaign_id }}" title="Donate to {{ site.general.short_name }}"
             loading="lazy" frameborder="0" scrolling="yes" width="100%" height="640" seamless
             allowpaymentrequest></iframe>
         {% else %}

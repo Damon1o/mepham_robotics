@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Create Account | Mepham Robotics{% endblock %}
-{% block meta_description %}Request a Mepham Robotics member account.{% endblock %}
+{% block title %}Create Account | {{ site.general.short_name }}{% endblock %}
+{% block meta_description %}Request a {{ site.general.short_name }} member account.{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/login.css') }}">
@@ -13,9 +13,9 @@
 <section class="auth-section">
     <div class="auth-card auth-card--split">
         <div class="auth-visual">
-            {{ picture('photos/carousel6', 'Mepham Robotics team members with their robot', '(max-width: 768px) 100vw, 50vw', class_='auth-visual-img', priority=True) }}
+            {{ picture('photos/carousel6', site.general.short_name ~ ' team members with their robot', '(max-width: 768px) 100vw, 50vw', class_='auth-visual-img', priority=True) }}
             <div class="auth-visual-copy">
-                <h1>Join Team 77628</h1>
+                <h1>Join Team {{ site.general.team_number }}</h1>
                 <p>Make an account, and an admin will add you to your team's roster.</p>
             </div>
         </div>

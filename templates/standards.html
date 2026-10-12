@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Design Standards | Mepham Robotics{% endblock %}
-{% block meta_description %}Build standards, coding style, and naming conventions for Mepham Robotics.{% endblock %}
+{% block title %}Design Standards | {{ site.general.short_name }}{% endblock %}
+{% block meta_description %}Build standards, coding style, and naming conventions for {{ site.general.short_name }}.{% endblock %}
 
 
 {% block content %}
@@ -40,8 +40,8 @@
 
     <h2><i data-lucide="folder"></i> File & Naming Conventions</h2>
     <ul>
-        <li><strong>CAD Files:</strong> <code>77628[D/P]_[mechanism]_v[version].step</code> — e.g.,
-            <code>77628D_intake_v3.step</code></li>
+        <li><strong>CAD Files:</strong> <code>{{ site.general.team_number }}[D/P]_[mechanism]_v[version].step</code> — e.g.,
+            <code>{{ site.general.team_number }}D_intake_v3.step</code></li>
         <li><strong>Code Files:</strong> <code>src/[subsystem].cpp</code> — e.g., <code>src/drivetrain.cpp</code>,
             <code>src/auton.cpp</code></li>
         <li><strong>Notebook Entries:</strong> <code>YYYY-MM-DD_[topic].pdf</code> — e.g.,

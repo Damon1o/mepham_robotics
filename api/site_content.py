@@ -290,7 +290,7 @@ SECTIONS = (
               'innovative robots.', max=300, group='Sections'),
         Field('donate_button', 'text', 'Donation button', 'Donate Now', max=24, group='Sections'),
         Field('meta_description', 'textarea', 'Search description',
-              'Mepham Robotics Club (VEX Team 77628): student robotics in Bellmore, Long Island, NY. We build, code '
+              '{club_name} (VEX Team {team_number}): student robotics in {town}, Long Island, NY. We build, code '
               'and compete in VEX V5 Robotics. Join the legacy.', max=200, group='Search & sharing'),
     ), page='index', blurb='Hero, countdown, sections'),
 
@@ -387,7 +387,7 @@ SECTIONS = (
                    'everyone on it.'),
         Field('culture_heading', 'text', 'Heading', 'Culture & Safety', max=60, group='Culture'),
         Field('culture', 'list', 'Culture cards', [
-            _card('globe', 'Diversity & Inclusion', 'Mepham Robotics is committed to fostering an inclusive '
+            _card('globe', 'Diversity & Inclusion', '{short_name} is committed to fostering an inclusive '
                   'environment where students of all backgrounds can thrive in STEM. We believe that diverse '
                   'perspectives lead to better engineering solutions and a stronger community.'),
             _card('hard-hat', 'Team Safety Captain', 'Our dedicated Safety Captain ensures all team members adhere '
@@ -396,7 +396,7 @@ SECTIONS = (
         ], items=CARD_WITH_LINK_ITEMS, max_items=4, group='Culture'),
         Field('gallery_heading', 'text', 'Gallery heading', 'Team Moments', max=60, group='Culture'),
         Field('meta_description', 'textarea', 'Search description',
-              'Learn about the Mepham Robotics Club mission, our sub-teams, and our history of excellence in VEX '
+              'Learn about the {club_name} mission, our sub-teams, and our history of excellence in VEX '
               'Robotics.', max=200, group='Search & sharing'),
     ), page='about', blurb='Story, values, sub-teams'),
 
@@ -415,7 +415,7 @@ SECTIONS = (
               'travel to competitions, and continue building innovative robots that push the boundaries of '
               'what\'s possible.', max=600, group='Online donations'),
         Field('note', 'textarea', 'Small print',
-              'Mepham Robotics Club is a registered student organization. All donations go directly to '
+              '{club_name} is a registered student organization. All donations go directly to '
               'supporting our teams.', max=300, group='Online donations'),
         Field('tiers_heading', 'text', 'Heading', 'Sponsorship Levels', max=60, group='Sponsorship levels'),
         Field('tiers', 'list', 'Levels', [
@@ -457,7 +457,7 @@ SECTIONS = (
         Field('sponsors_empty', 'text', 'When there are no sponsors', 'Support our team and see your logo here!',
               max=120, group='Sponsors'),
         Field('meta_description', 'textarea', 'Search description',
-              'Support Mepham Robotics (Team 77628) through donations or corporate sponsorship. Help us build the '
+              'Support {short_name} (Team {team_number}) through donations or corporate sponsorship. Help us build the '
               'future.', max=200, group='Search & sharing'),
     ), page='donate', blurb='Givebutter, levels, impact'),
 
@@ -500,10 +500,10 @@ SECTIONS = (
              'a': 'No experience required. We teach everything from basic mechanics to advanced programming. '
                   'Everyone starts somewhere.'},
             {'q': 'What is the time commitment?',
-             'a': 'We meet twice a week during the school year. Before competitions, there may be additional '
+             'a': 'We meet every {days} during the school year. Before competitions, there may be additional '
                   'practice sessions on weekends.'},
             {'q': 'Is there a membership fee?',
-             'a': 'No, there is no membership fee to join the Mepham Robotics Club. All students are welcome to '
+             'a': 'No, there is no membership fee to join the {club_name}. All students are welcome to '
                   'join for free.'},
             {'q': 'How can my company sponsor the team?',
              'a': "We'd love to hear from you. See the [support page](/donate) for sponsorship levels, or send us a "
@@ -521,7 +521,7 @@ SECTIONS = (
               max_items=20, group='Questions'),
         Field('closing_text', 'text', 'Closing line', 'Not ready to write yet?', max=60, group='Questions'),
         Field('meta_description', 'textarea', 'Search description',
-              'Contact the Mepham Robotics Club (Team 77628) for inquiries, sponsorship, or membership information.',
+              'Contact the {club_name} (Team {team_number}) for inquiries, sponsorship, or membership information.',
               max=200, group='Search & sharing'),
     ), page='contact', blurb='Form, find us, FAQ'),
 
@@ -580,8 +580,8 @@ SECTIONS = (
         Field('invite_button', 'text', 'Button', 'Invite us', max=24, group='Invite us'),
         Field('invite_url', 'link', 'Button link', '/contact', max=300, group='Invite us'),
         Field('meta_description', 'textarea', 'Search description',
-              'Upcoming VEX Robotics competitions, outreach events and weekly meetings for Mepham Robotics '
-              '(Team 77628). Add them to your calendar.', max=200, group='Search & sharing'),
+              'Upcoming VEX Robotics competitions, outreach events and weekly meetings for {short_name} '
+              '(Team {team_number}). Add them to your calendar.', max=200, group='Search & sharing'),
     ), page='events_page', blurb='Calendar, coming up, invite band'),
 
     Section('teams', 'Team pages', 'bot', (
@@ -698,7 +698,7 @@ SECTIONS = (
         Field('give_button', 'text', 'Button', 'Donate', max=24, group='Join and give'),
         Field('give_url', 'link', 'Button link', '/donate', max=300, group='Join and give'),
         Field('meta_description', 'textarea', 'Search description',
-              'Where Mepham Robotics alumni went next: the colleges, majors and careers of former VEX Robotics '
+              'Where {short_name} alumni went next: the colleges, majors and careers of former VEX Robotics '
               'team members.', max=200, group='Search & sharing'),
     ), page='alumni', blurb='Alumni wall, numbers, join and give'),
 
@@ -712,7 +712,7 @@ SECTIONS = (
         Field('enabled', 'toggle', 'Show the chat bubble', True,
               hint='Also hidden automatically when the assistant has no API key.'),
         Field('greeting', 'textarea', 'Greeting',
-              "Hi there! I'm Steven. I can provide you with information on the Mepham Robotics Club, which focuses "
+              "Hi there! I'm Steven. I can provide you with information on the {club_name}, which focuses "
               'on building, coding, and competing in robotics. How can I assist you today?', max=300),
         Field('knowledge', 'textarea', 'Extra facts for the assistant', '', max=2000,
               hint='Plain sentences the assistant should know, like tryout dates. Never shown on the page.'),
@@ -920,6 +920,8 @@ TOKENS = {
     'tagline': 'club tagline',
     'club_name': 'club name',
     'short_name': 'short name',
+    'team_number': 'VEX team number',
+    'town': 'town',
     'room': 'meeting room',
     'school': 'school',
     'school_short': 'school (short)',
@@ -940,6 +942,7 @@ def token_values(values):
         start = start[:-3]
     return {
         'tagline': general['tagline'], 'club_name': general['club_name'], 'short_name': general['short_name'],
+        'team_number': general['team_number'], 'town': general['town'],
         'room': meeting['room'], 'school': meeting['school'], 'school_short': meeting['school_short'],
         'days': fmt_days(meeting['days']),
         'days_or': ' or '.join(days) if len(days) <= 2 else ', '.join(days[:-1]) + ' or ' + days[-1],

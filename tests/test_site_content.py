@@ -166,6 +166,26 @@ def test_club_email_reaches_both_pages_once_set(admin):
     assert 'club@example.com' in admin.get('/donate').get_data(as_text=True)
 
 
+def test_donate_and_contact_share_the_default_email(client):
+    for path in ('/contact', '/donate'):
+        assert 'damlin@bmchsd.com' in client.get(path).get_data(as_text=True)
+
+
+def test_club_details_reach_every_page(admin):
+    save(admin, 'general.club_name', 'Testbots Club')
+    save(admin, 'general.short_name', 'Testbots')
+    save(admin, 'general.team_number', '12345')
+    privacy = admin.get('/privacy').get_data(as_text=True)
+    assert 'Privacy Policy | Testbots' in privacy and 'Mepham' not in privacy.split('</title>')[0]
+    contact = admin.get('/contact').get_data(as_text=True)
+    assert 'Contact the Testbots Club (Team 12345)' in contact
+    assert 'We meet every Tuesday &amp; Friday during the school year' in contact
+    assert 'Team 12345' in admin.get('/branding').get_data(as_text=True)
+    with app_module.app.test_request_context():
+        prompt = app_module.chat_system_prompt()
+    assert 'Testbots Club (VEX V5 Team 12345)' in prompt and '77628' not in prompt
+
+
 def test_hero_photo_override_uses_a_custom_property(admin, db):
     uploaded(db, 'https://blob.example/site/hero.webp')
     save(admin, 'about.hero_image', {'src': 'https://blob.example/site/hero.webp', 'width': 1600, 'height': 900})

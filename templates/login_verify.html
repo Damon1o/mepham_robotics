@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Two-Step Sign-In | Mepham Robotics{% endblock %}
+{% block title %}Two-Step Sign-In | {{ site.general.short_name }}{% endblock %}
 {% block meta_description %}Enter the code from your authenticator app to finish signing in.{% endblock %}
 
 {% block page_styles %}
@@ -12,7 +12,7 @@
     <div class="auth-card">
         <div class="auth-panel">
             <h1 class="auth-title">One more step</h1>
-            <p class="auth-intro">Open your authenticator app and type the 6-digit code for Mepham Robotics.</p>
+            <p class="auth-intro">Open your authenticator app and type the 6-digit code for {{ site.general.short_name }}.</p>
             {% if error %}
             <p class="auth-error" role="alert">{{ error }}</p>
             {% endif %}

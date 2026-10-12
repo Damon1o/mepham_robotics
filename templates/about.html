@@ -37,7 +37,7 @@
             {{ about.who_body|rich }}
         </div>
         <figure class="about-photo">
-            {{ picture('photos/carousel1', 'Mepham Robotics members working on a robot', '(max-width: 900px) 100vw, 600px') }}
+            {{ picture('photos/carousel1', site.general.short_name ~ ' members working on a robot', '(max-width: 900px) 100vw, 600px') }}
         </figure>
     </div>
 </section>
@@ -63,7 +63,7 @@
     <h2 class="ripple">{{ about.subteams_heading }}</h2>
     <div class="about-subteams-layout">
         <figure class="about-photo">
-            {{ picture('photos/carousel7', 'Mepham Robotics sub-teams at work', '(max-width: 900px) 100vw, 600px') }}
+            {{ picture('photos/carousel7', site.general.short_name ~ ' sub-teams at work', '(max-width: 900px) 100vw, 600px') }}
         </figure>
         <div class="about-subteam-grid">
             {% for card in about.subteams %}
