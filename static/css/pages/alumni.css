@@ -308,6 +308,105 @@
     outline: none;
 }
 
+/* Class and school menus (styled by controls.js) and the "Open to questions" chip. */
+.al-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.al-filter {
+    display: grid;
+    gap: 0.3rem;
+    min-width: 12rem;
+    color: var(--al-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Menus look like the search pill; the arrow and the menu come from controls.css/js. */
+.al-filter select,
+.al-form select {
+    width: 100%;
+    min-height: 2.6rem;
+    padding: 0.5rem 2.6rem 0.5rem 1rem;
+    border: 1.5px solid var(--al-rule);
+    border-radius: 999px;
+    background-color: var(--al-paper);
+    color: var(--al-ink);
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    --cs-pad: 2.6rem;
+    --cs-chevron-x: 1rem;
+}
+
+.al-form select {
+    min-height: 2.75rem;
+    border-radius: 12px;
+    background-color: var(--al-soft);
+}
+
+.al-filter select:focus,
+.al-form select:focus {
+    border-color: var(--maroon-dark);
+    outline: none;
+}
+
+.al-chip--mentor svg {
+    width: 1rem;
+    height: 1rem;
+    color: var(--maroon-dark);
+}
+
+/* A mentor's card: what to ask them about, and the button that picks them in the form. */
+.al-card-ask {
+    display: grid;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--al-rule);
+}
+
+.al-ask-label {
+    margin: 0;
+    color: var(--al-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.al-topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.al-topics li {
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--al-rule);
+    border-radius: 999px;
+    background: var(--al-soft);
+    font-size: 0.8rem;
+}
+
+.al-btn--small {
+    justify-self: start;
+    min-height: 2.25rem;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+}
+
+.al-btn--small:hover {
+    background: var(--maroon-dark);
+    color: #fff;
+}
+
 .al-count {
     min-height: 1.2em;
     margin: 0.5rem 0 1rem;
@@ -645,6 +744,11 @@
     grid-column: 1 / -1;
 }
 
+/* Ask an alum: two fields a row (who, then name and email). */
+.al-ask .al-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .al-form input,
 .al-form textarea {
     width: 100%;
@@ -736,8 +840,19 @@
     background: #a32a2c;
 }
 
-[data-theme="dark"] .al-card-link:hover {
+[data-theme="dark"] .al-card-link:hover,
+[data-theme="dark"] .al-chip--mentor svg {
     color: #e07a7c;
+}
+
+[data-theme="dark"] .al-btn--small {
+    border-color: #e07a7c;
+    background: transparent;
+    color: #f1e9e9;
+}
+
+[data-theme="dark"] .al-btn--small:hover {
+    background: #a32a2c;
 }
 
 [data-theme="dark"] .al-form-status.is-ok {
@@ -785,9 +900,14 @@
         padding: 1.5rem;
     }
 
-    .al-form {
+    .al-form,
+    .al-ask .al-form {
         grid-template-columns: minmax(0, 1fr);
         padding: 1.25rem;
+    }
+
+    .al-filter {
+        flex: 1 1 100%;
     }
 }
 
