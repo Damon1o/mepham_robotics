@@ -25,9 +25,10 @@ from pymongo.errors import DuplicateKeyError
 import requests
 
 try:  # package import on Vercel, flat import when run from the api/ directory
-    from api import devices, events, robotevents, site_content, totp
+    from api import devices, events, people, robotevents, site_content, totp
 except ImportError:  # pragma: no cover
     import events
+    import people
     import robotevents
     import site_content
     import totp
@@ -2601,7 +2602,8 @@ def _blob_still_used(url):
     """True when a team document (another season, say) or an account still shows this file."""
     return bool(db['teams'].find_one({'$or': [{'hero_image': url}, {'stl_path': url}, {'members.photo': url}]},
                                      {'_id': 1})
-                or db['users'].find_one({'$or': [{'photo': url}, {'roster_card.photo': url}]}, {'_id': 1}))
+                or db['users'].find_one({'$or': [{'photo': url}, {'roster_card.photo': url},
+                                                 {'profile.photos.path': url}]}, {'_id': 1}))
 
 
 def _delete_blobs(urls, why):
@@ -4746,6 +4748,213 @@ def admin_two_step_off(id):
     flash(f"Two-step sign-in is off for {user['username']}. They can set it up again from their account.",
           'success')
     return _admin_redirect('users')
+
+
+# --- Member pages ----------------------------------------------------------------
+# /people/<user id>: a page each member writes for themselves (api/people.py), with
+# their seasons, teams and awards from the club's records. Opened from a name on any
+# team or group page and from the account chip in the side menu. Pages are for
+# signed-in members unless the member makes theirs public. Keyed by the account id,
+# never the username, so a link never gives away what someone signs in with.
+
+VERIFIED_SEASONS_MAX = 8
+
+
+def _person(user_id):
+    """The active account behind a member page, or None."""
+    if not ObjectId.is_valid(user_id):
+        return None
+    person = db['users'].find_one({'_id': ObjectId(user_id)})
+    if not person or person.get('status', 'active') != 'active':
+        return None
+    return person
+
+
+def _can_view_person(person, viewer):
+    return viewer is not None or people.profile_view(person.get('profile'))['visibility'] == 'public'
+
+
+def _can_edit_person(person, viewer):
+    return viewer is not None and (viewer['_id'] == person['_id'] or role_at_least(viewer.get('role'), 'admin'))
+
+
+def _linkable_people():
+    """Account ids whose page this viewer can open, looked up once per request."""
+    if 'linkable_people' not in g:
+        query = {'status': {'$nin': ['pending', 'rejected']}}
+        if _session_user() is None:
+            query['profile.visibility'] = 'public'
+        g.linkable_people = {str(u['_id']) for u in db['users'].find(query, {'_id': 1})}
+    return g.linkable_people
+
+
+@app.template_global()
+def person_href(member):
+    """The member page for a roster card, or '' when it has no account or is hidden from this viewer."""
+    uid = str((member or {}).get('user_id') or '')
+    if not uid or uid not in _linkable_people():
+        return ''
+    return url_for('person_page', user_id=uid)
+
+
+def _team_award_cases(history):
+    """[(team number, [award rows with a count])] for the robot teams in a member's history."""
+    numbers = list(dict.fromkeys(t['number'] for s in history['seasons'] for t in s['teams'] if not t['group']))
+    cases = {n: [] for n in numbers}
+    for row in db['awards'].find({'team_number': {'$in': numbers}}).sort(AWARD_ORDER):
+        count = int(row.get('count') or 0)
+        if count > 0:
+            cases[row['team_number']].append({'title': row.get('title') or 'Award', 'count': count,
+                                              'icon': row.get('icon') or AWARD_ICONS[0]})
+    return [(n, rows) for n, rows in cases.items() if rows]
+
+
+def _has_verifiable_seasons(person):
+    return bool(robotevents.get_token()) and db['teams'].find_one(
+        {'members.user_id': str(person['_id']), 'season': {'$nin': [None, '']}, **ROBOT_TEAMS}, {'_id': 1}) is not None
+
+
+@app.route('/people/me')
+@login_required
+def my_person_page():
+    return redirect(url_for('person_page', user_id=str(_session_user()['_id'])))
+
+
+@app.route('/people/<user_id>')
+def person_page(user_id):
+    person = _person(user_id)
+    if person is None:
+        abort(404)
+    viewer = _session_user()
+    if not _can_view_person(person, viewer):
+        return render_template('person.html', locked=True, active_page='people'), 403
+    profile = people.profile_view(person.get('profile'))
+    history = account_history(person)
+    people.team_moves(history['seasons'])
+    signed_in = viewer is not None
+    first_year, _ = people.tenure(history['seasons'])
+    honors = profile['honors']
+    can_edit = _can_edit_person(person, viewer)
+    # What the page's editors start from (people.js builds their rows from it).
+    editor = {'profile': dict(profile, photos=[dict(p, src=get_image_url(p['path'])) for p in profile['photos']]),
+              'teams': list(dict.fromkeys(t['label'] for s in history['seasons'] for t in s['teams']))
+              } if can_edit else None
+    return render_template(
+        'person.html', active_page='people', person=person, profile=profile, history=history,
+        name=_display_name(person), is_owner=signed_in and viewer['_id'] == person['_id'],
+        can_edit=can_edit, editor=editor, signed_in=signed_in,
+        stats=people.stats(history, profile, show_events=signed_in),
+        since=first_year, years_in=people.years_in(first_year, club_now().date()),
+        current=history['seasons'][0]['teams'] if history['seasons'] else [],
+        pinned=[h for h in honors if h['pinned']], honor_groups=people.honor_groups(honors),
+        team_awards=_team_award_cases(history), verified=_has_verifiable_seasons(person),
+        draft=people.activity_draft(site().general.club_name, history, profile),
+        page_url=_public_url('person_page', user_id=str(person['_id'])),
+        honor_kinds=people.HONOR_KINDS, skill_suggestions=people.SKILL_SUGGESTIONS,
+        limits={k: getattr(people, k) for k in dir(people) if k.endswith('_MAX')},
+        link_label=people.link_label, photo_types=sorted(MEMBER_UPLOAD_EXTENSIONS))
+
+
+def _editable_person(user_id):
+    """(person, None) when this viewer may change the page, else (None, JSON error response)."""
+    person = _person(user_id)
+    if person is None:
+        return None, (jsonify({'error': 'Not found.'}), 404)
+    if not _can_edit_person(person, _session_user()):
+        return None, (jsonify({'error': 'Only the member can change their page.'}), 403)
+    return person, None
+
+
+def _log_person_edit(person, fields):
+    viewer = _session_user()
+    log_activity('profile_update', f"{viewer['username']} updated {person['username']}'s member page",
+                 user=viewer['username'], details={'username': person['username'], 'fields': fields})
+
+
+@app.route('/api/people/<user_id>/profile', methods=['POST'])
+@login_required
+def person_profile_save(user_id):
+    person, error = _editable_person(user_id)
+    if error:
+        return error
+    body = request.get_json(silent=True) or {}
+    section = str(body.get('section') or '')
+    try:
+        fields = people.clean_section(section, body.get('data'), person.get('profile'))
+    except people.ProfileError as e:
+        return jsonify({'error': str(e)}), 400
+    db['users'].update_one({'_id': person['_id']}, {'$set': {f'profile.{k}': v for k, v in fields.items()}})
+    _log_person_edit(person, [f'page:{section}'])
+    return jsonify({'ok': True, 'saved': fields})
+
+
+@app.route('/api/people/<user_id>/photos', methods=['POST', 'DELETE'])
+@login_required
+def person_photos(user_id):
+    person, error = _editable_person(user_id)
+    if error:
+        return error
+    photos = people.profile_view(person.get('profile'))['photos']
+    if request.method == 'DELETE':
+        path = str((request.get_json(silent=True) or {}).get('path') or '')
+        if path not in {p['path'] for p in photos}:
+            return jsonify({'error': 'That photo is not on this page.'}), 404
+        db['users'].update_one({'_id': person['_id']}, {'$pull': {'profile.photos': {'path': path}}})
+        if path.startswith('http'):
+            _delete_blobs([path], 'member page photo')
+        _log_person_edit(person, ['page:photos'])
+        return jsonify({'ok': True})
+
+    if len(photos) >= people.PHOTOS_MAX:
+        return jsonify({'error': f'A page holds {people.PHOTOS_MAX} photos. Remove one first.'}), 400
+    file = request.files.get('photo')
+    if not file or not file.filename:
+        return jsonify({'error': 'Choose a photo to upload.'}), 400
+    caption = ' '.join(request.form.get('caption', '').split())[:people.CAPTION_MAX]
+    try:
+        url = checked_upload(file, 'users', person['username'], allowed=MEMBER_UPLOAD_EXTENSIONS, stem='gallery')
+    except UserFacingError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception:
+        logger.exception('Member page photo upload failed')
+        return jsonify({'error': 'Upload failed. Try again in a moment.'}), 502
+    db['users'].update_one({'_id': person['_id']}, {'$push': {'profile.photos': {'path': url, 'caption': caption}}})
+    _log_person_edit(person, ['page:photos'])
+    return jsonify({'ok': True, 'photo': {'path': url, 'caption': caption, 'src': get_image_url(url)}})
+
+
+@app.route('/api/people/<user_id>/verified')
+def person_verified(user_id):
+    """Awards RobotEvents lists for each robot team-season this member was on.
+
+    The page's "Verified" panel loads this after render, so a slow or missing
+    RobotEvents never holds the page up. 204 when there is no token or nothing to show.
+    """
+    person = _person(user_id)
+    if person is None or not _can_view_person(person, _session_user()):
+        return jsonify({'error': 'Not found.'}), 404
+    if not robotevents.get_token():
+        return Response(status=204)
+    docs = list(db['teams'].find({'members.user_id': str(person['_id']), 'season': {'$nin': [None, '']},
+                                  **ROBOT_TEAMS}, {'team_number': 1, 'season': 1, 'robotevents_number': 1}))
+    docs.sort(key=lambda t: t['season'], reverse=True)
+    seasons = []
+    for team in docs[:VERIFIED_SEASONS_MAX]:
+        number = team.get('robotevents_number') or team['team_number']
+        try:
+            season = robotevents.season_id(db, team['season'])
+            summary = robotevents.team_summary(db, number, season_id=season) if season else None
+        except Exception:
+            app.logger.exception('Verified awards failed for %s %s', number, team['season'])
+            continue
+        awards = [{'title': a.get('title') or '', 'event': a.get('event') or ''}
+                  for a in (summary or {}).get('awards') or [] if a.get('title')]
+        if awards:
+            seasons.append({'season': team['season'], 'team': team['team_number'],
+                            'url': robotevents.team_url(number), 'awards': awards})
+    if not seasons:
+        return Response(status=204)
+    return jsonify({'seasons': seasons})
 
 
 @app.route('/my-team')

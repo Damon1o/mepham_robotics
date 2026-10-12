@@ -1,5 +1,6 @@
 {#- Small pieces every group layout shares: a member's face, a goal's progress ring,
     and the faces of the people who own a goal. Styled in group.css. -#}
+{% from "partials/person_link.html" import person_name %}
 
 {% macro face(member, size='') -%}
 {% set photo = member.photo|real_photo %}
@@ -28,7 +29,7 @@
 {% if goal.owners %}
 <p class="g-owners">
     <span class="g-owner-faces">{% for m in goal.owners[:4] %}{{ face(m, 'sm') }}{% endfor %}</span>
-    <span class="g-owner-names">{{ goal.owners|map(attribute='name')|join(', ') }}</span>
+    <span class="g-owner-names">{% for m in goal.owners %}{{ person_name(m) }}{{ ', ' if not loop.last }}{% endfor %}</span>
 </p>
 {% endif %}
 {%- endmacro %}

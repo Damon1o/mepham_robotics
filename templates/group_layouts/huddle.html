@@ -2,6 +2,7 @@
     goals they own, rings and all; goals nobody owns yet close the page as "up for
     grabs", next to the join button. A group with nobody on it yet gets the Mission
     Board instead. -#}
+{% from "partials/person_link.html" import person_name %}
 {% from "partials/group/macros.html" import face, ring %}
 {% if board.people %}
 {% include "partials/group/head.html" %}
@@ -14,12 +15,12 @@
     </div>
     <ul class="gh-cards">
         {% for person in board.people %}
-        <li class="gh-card{{ ' gh-card--lead' if person.lead }}">
+        <li class="gh-card{{ ' gh-card--lead' if person.lead }}{{ ' is-person' if person_href(person) }}">
             <div class="gh-who">
                 {{ face(person, 'lg') }}
                 <div>
                     {% if person.lead %}<span class="gh-lead">Lead</span>{% endif %}
-                    <h3>{{ person.name }}</h3>
+                    <h3>{{ person_name(person) }}</h3>
                     {% set roles = person|member_roles %}
                     {% if roles %}<p class="gh-roles">{{ roles|join(' · ') }}</p>{% endif %}
                 </div>

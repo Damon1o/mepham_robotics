@@ -83,6 +83,8 @@ def urls(db):
         'team_id': [str(t['_id']) for t in teams],
         'event_id': [str(event['_id'])],
         'token': ['tok123', 'not-a-real-token'],
+        # Every account (pending one included) plus one that does not exist.
+        'user_id': [str(u['_id']) for u in db['users'].find()] + ['0123456789abcdef01234567', 'nope'],
     }
     for rule in get_routes():
         if not rule.arguments:
@@ -95,7 +97,7 @@ def urls(db):
 
 def test_every_route_with_arguments_is_seeded():
     """A new route with an unknown URL argument needs a value in urls() above."""
-    known = {'team_number', 'team_id', 'event_id', 'token'}
+    known = {'team_number', 'team_id', 'event_id', 'token', 'user_id'}
     for rule in get_routes():
         assert set(rule.arguments) <= known, rule.rule
 

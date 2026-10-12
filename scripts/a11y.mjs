@@ -9,7 +9,8 @@ import AxeBuilder from '@axe-core/playwright';
 
 const BASE = process.argv[2] || 'http://127.0.0.1:5099';
 const PAGES = ['/', '/about', '/achievements', '/events', '/alumni', '/contact', '/donate',
-    '/events/0000000000000000000a11e0', '/safety-quiz', '/privacy', '/credits', '/login', '/signup', '/team/77628A', '/team/media'];
+    '/events/0000000000000000000a11e0', '/safety-quiz', '/privacy', '/credits', '/login', '/signup', '/team/77628A', '/team/media',
+    '/people/0000000000000000000a11e1'];
 const BLOCKING = new Set(['serious', 'critical']);
 
 const browser = await chromium.launch();

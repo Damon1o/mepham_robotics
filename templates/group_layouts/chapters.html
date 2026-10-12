@@ -1,6 +1,7 @@
 {#- G5 Chapters: the season told like a story. The mission as a pull quote, the cast
     in one strip of faces, then each goal as a numbered chapter starring the people
     who own it. A group with no goals yet gets the Mission Board instead. -#}
+{% from "partials/person_link.html" import person_name %}
 {% from "partials/group/macros.html" import face, status_label %}
 {% if board.goals %}
 <header class="gc-head">
@@ -18,9 +19,9 @@
     <h2 id="gc-cast-h" class="gc-label">The cast · {{ board.people|length }}</h2>
     <ul class="gc-cast-strip">
         {% for person in board.people %}
-        <li class="gc-member{{ ' gc-member--lead' if person.lead }}">
+        <li class="gc-member{{ ' gc-member--lead' if person.lead }}{{ ' is-person' if person_href(person) }}">
             {{ face(person, 'lg') }}
-            <strong>{{ person.name }}</strong>
+            <strong>{{ person_name(person) }}</strong>
             {% set roles = person|member_roles %}
             {% if roles %}<span class="gc-member-role">{{ roles|first }}</span>{% endif %}
         </li>
@@ -46,7 +47,7 @@
                 <p class="gc-starring">
                     {% if goal.owners %}
                     <span class="gc-starring-label">Starring</span>
-                    {% for m in goal.owners %}<span class="gc-star">{{ face(m, 'sm') }} {{ m.name }}</span>{% endfor %}
+                    {% for m in goal.owners %}<span class="gc-star">{{ face(m, 'sm') }} {{ person_name(m) }}</span>{% endfor %}
                     {% else %}
                     <span class="gc-starring-label">Role open</span> <span class="gc-open">this chapter needs a lead</span>
                     {% endif %}

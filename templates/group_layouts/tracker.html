@@ -2,6 +2,7 @@
     then a column each for not started, in progress and done, every card naming who
     is on it. The people close the page as a who's-on-what list. A group with no
     goals yet gets the Mission Board instead. -#}
+{% from "partials/person_link.html" import person_name %}
 {% from "partials/group/macros.html" import face, owners %}
 {% if board.goals %}
 {% include "partials/group/head.html" %}
@@ -55,10 +56,10 @@
     </div>
     <ul class="gt-roster">
         {% for person in board.people %}
-        <li class="gt-person">
+        <li class="gt-person{{ ' is-person' if person_href(person) }}">
             {{ face(person) }}
             <div class="gt-person-body">
-                <h3>{{ person.name }}{% if person.lead %} <span class="gt-lead">Lead</span>{% endif %}</h3>
+                <h3>{{ person_name(person) }}{% if person.lead %} <span class="gt-lead">Lead</span>{% endif %}</h3>
                 {% set roles = person|member_roles %}
                 {% if roles %}<p class="gt-roles">{{ roles|join(' · ') }}</p>{% endif %}
             </div>
