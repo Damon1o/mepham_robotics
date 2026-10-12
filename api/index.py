@@ -4356,6 +4356,47 @@ def short_date(value):
     return f'{value:%b} {value.day}, {value.year}' if value else ''
 
 
+HISTORY_EVENTS_SHOWN = 12
+
+
+def account_history(user):
+    """This member's time in the club: rosters by season, and events they said they were going to.
+
+    seasons: [{season, teams: [{label, number, group, roles, subteam, awards, url}]}], newest first;
+    rosters saved before seasons existed come last under ''. awards is the team's award total
+    (robot teams only; awards are counted per team, not per season). went / going are past
+    and upcoming events answered Going on their RSVP, newest and soonest first.
+    """
+    uid = str(user['_id'])
+    by_season = {}
+    for team in db['teams'].find({'members.user_id': uid}):
+        card = next((m for m in team.get('members') or [] if str(m.get('user_id') or '') == uid), {})
+        by_season.setdefault(team.get('season') or '', []).append({
+            'label': (team.get('title') or team['team_number']) if is_group(team) else team['team_number'],
+            'number': team['team_number'], 'group': is_group(team), 'nickname': team.get('nickname') or '',
+            'roles': member_roles(card), 'subteam': (card.get('subteam') or '').strip(), 'awards': 0,
+            'url': url_for('team_page', team_number=team['team_number'], season=team.get('season') or None)})
+    numbers = {t['number'] for teams in by_season.values() for t in teams if not t['group']}
+    totals = {}
+    for row in db['awards'].find({'team_number': {'$in': list(numbers)}}, {'team_number': 1, 'count': 1}):
+        totals[row['team_number']] = totals.get(row['team_number'], 0) + int(row.get('count') or 0)
+    for teams in by_season.values():
+        for t in teams:
+            t['awards'] = 0 if t['group'] else totals.get(t['number'], 0)
+        teams.sort(key=lambda t: (t['group'], t['label'].lower()))
+    seasons = [{'season': s, 'teams': by_season[s]}
+               for s in sorted(by_season, key=lambda s: (s != '', s), reverse=True)]
+
+    now = club_now()
+    went, going = [], []
+    for row in db['competitions'].find({f'rsvps.{uid}.status': 'going'}).sort('date', -1):
+        item = events.event_item(row)
+        if item:
+            (going if item['end'] >= now else went).append(item)
+    return {'seasons': seasons, 'went': went[:HISTORY_EVENTS_SHOWN], 'went_total': len(went),
+            'going': list(reversed(going)), 'team_count': len({t['number'] for s in seasons for t in s['teams']})}
+
+
 def _render_account(user, status=200, **extra):
     if not _profiles_reconciled:
         _reconcile_profiles()
@@ -4370,6 +4411,7 @@ def _render_account(user, status=200, **extra):
         setup_uri=totp.provisioning_uri(pending, user['username'], TOTP_ISSUER) if pending else None,
         checks=checks, checks_done=sum(1 for c in checks if c[0]),
         devices=_device_rows(user), activity=_account_activity(user), rosters=_own_rosters(),
+        history=account_history(user),
         full_name_max=FULL_NAME_MAX, password_min=PASSWORD_MIN_LENGTH,
         avatar_tones=AVATAR_TONES, start_pages=START_PAGES, photo_types=sorted(MEMBER_UPLOAD_EXTENSIONS),
         **extra), status
