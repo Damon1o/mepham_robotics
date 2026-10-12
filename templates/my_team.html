@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-{% if team_choices is defined %}
+{% if team_seasons is defined %}
 <section class="team-picker">
     <h1>Team pages</h1>
     {% if editor %}
@@ -15,9 +15,13 @@
     {% else %}
     <p>You're on more than one roster. Pick a page to edit.</p>
     {% endif %}
-    {% if team_choices %}
+    {% for s in team_seasons %}
+    <section class="team-picker-season" aria-labelledby="season-{{ loop.index }}">
+    <h2 id="season-{{ loop.index }}" class="team-picker-season-title">
+        {{ s.season ~ ' season' if s.season else 'No season set' }}
+        {%- if s.current %} <span class="team-picker-current">Current</span>{% endif %}</h2>
     <ul class="team-picker-list">
-        {% for t in team_choices %}
+        {% for t in s.choices %}
         <li><a class="team-picker-card{% if t.own %} is-own{% endif %}" href="{{ t.url }}">
             {% if t.group %}
             <span class="team-picker-number team-picker-number--group"><i data-lucide="users" aria-hidden="true"></i></span>
@@ -26,15 +30,16 @@
             {% endif %}
             <span class="team-picker-text">
                 <strong class="team-picker-name">{{ t.number if t.group else t.nickname or 'No nickname yet' }}</strong>
-                <small>{% if t.group %}Group · {% endif %}{% if t.season %}{{ t.season }} · {% endif %}{{ t.members }} member{{ 's' if t.members != 1 }}</small>
+                <small>{% if t.group %}Group · {% endif %}{{ t.members }} member{{ 's' if t.members != 1 }}</small>
             </span>
             {%- if t.own %}<span class="team-picker-own">{{ 'Your group' if t.group else 'Your team' }}</span>{% endif %}
         </a></li>
         {% endfor %}
     </ul>
+    </section>
     {% else %}
     <p>No teams have been created yet.</p>
-    {% endif %}
+    {% endfor %}
     {% if can_manage_fundraisers() %}
     <p class="team-picker-extra"><a class="cta-button cta-secondary" href="{{ url_for('manage_fundraisers') }}">
         <i data-lucide="piggy-bank" aria-hidden="true"></i> Edit the homepage fundraisers</a></p>

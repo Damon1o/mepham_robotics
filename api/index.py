@@ -5062,19 +5062,28 @@ def person_verified(user_id):
 def my_team():
     user = _session_user()
     own = _own_rosters()
-    own_ids = {t['_id'] for t in own}
     editor = bool(user) and role_at_least(user.get('role', 'member'), 'editor')
     if editor or len(own) > 1:
         # Editors can open any team, and someone on a team and in a group has two pages,
-        # so give them a list instead of guessing one.
-        teams = sorted(_newest_season_docs().values(), key=team_sort_key) if editor else own
-        choices = [{'url': url_for('manage_team', team_id=str(t['_id'])), 'group': is_group(t),
-                    'number': (t.get('title') if is_group(t) else t.get('team_number')) or 'Team',
-                    'season': t.get('season') or '', 'nickname': t.get('nickname') or '',
-                    'members': len(t.get('members') or []), 'own': t['_id'] in own_ids}
-                   for t in teams]
-        choices.sort(key=lambda c: not c['own'])
-        return render_template('my_team.html', active_page='my_team', team_choices=choices, editor=editor)
+        # so give them a list instead of guessing one: every season's rosters, by season.
+        uid = str(user['_id'])
+        teams = db['teams'].find({} if editor else {'members.user_id': {'$in': [uid, user['_id']]}},
+                                 {'team_number': 1, 'title': 1, 'kind': 1, 'season': 1, 'nickname': 1,
+                                  'members.user_id': 1})
+        by_season = {}
+        for t in teams:
+            by_season.setdefault(t.get('season') or '', []).append({
+                'url': url_for('manage_team', team_id=str(t['_id'])), 'group': is_group(t),
+                'number': (t.get('title') if is_group(t) else t.get('team_number')) or 'Team',
+                'nickname': t.get('nickname') or '', 'members': len(t.get('members') or []),
+                'own': any(str(m.get('user_id') or '') == uid for m in t.get('members') or []),
+                'sort': team_sort_key(t)})
+        # Newest season first; teams with no season set go last.
+        order = sorted((s for s in by_season if s), reverse=True) + ([''] if '' in by_season else [])
+        this_season = current_season(club_now())
+        seasons = [{'season': s, 'current': s == this_season,
+                    'choices': sorted(by_season[s], key=lambda c: (not c['own'], c['sort']))} for s in order]
+        return render_template('my_team.html', active_page='my_team', team_seasons=seasons, editor=editor)
     if own:
         return redirect(url_for('manage_team', team_id=str(own[0]['_id'])))
     return render_template('my_team.html', active_page='my_team')

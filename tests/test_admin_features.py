@@ -381,6 +381,18 @@ def test_editors_get_a_team_list(client, db, make_user):
     assert 'Team pages' in page and '/manage/team/' in page and page.count('team-picker-number') == 2
 
 
+def test_team_list_is_split_by_season_newest_first(client, db, make_user):
+    db['teams'].insert_many([{'team_number': '1A', 'season': '2024-25', 'nickname': 'Old Bot', 'members': []},
+                             {'team_number': '1A', 'season': '2025-26', 'nickname': 'New Bot', 'members': []},
+                             {'team_number': '1B', 'season': '2025-26', 'members': []}])
+    make_user(username='ed', password='editor-password', email='ed@example.com', role='editor')
+    client.post('/login', data={'username': 'ed', 'password': 'editor-password'})
+    page = client.get('/my-team').get_data(as_text=True)
+    new, old = page.split('2025-26 season')[1].split('2024-25 season')
+    assert 'New Bot' in new and 'Old Bot' not in new and new.count('team-picker-number') == 2
+    assert 'Old Bot' in old and old.count('team-picker-number') == 1
+
+
 def test_quick_team_starts_in_the_current_season(admin, db):
     admin.post('/admin/quick-team', data={'team_number': '1z'})
     assert db['teams'].find_one({'team_number': '1Z'})['season'] == app_module.current_season()
