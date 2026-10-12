@@ -21,8 +21,10 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
 {#- One alum: photo or initials, where they went, what they said. -#}
 {% macro card(p) -%}
 {%- set path = paths.get(p.path) or paths['other'] -%}
-<li class="al-card al-p-{{ p.path if p.path in paths else 'other' }}" data-alum data-path="{{ p.path if p.path in paths else 'other' }}"
-    data-search="{{ [p.name, p.school, p.study, p.now, p.team, p.class_year|string]|join(' ')|lower }}">
+<li class="al-card al-p-{{ p.path if p.path in paths else 'other' }}{% if p.mentor %} is-mentor{% endif %}" data-alum
+    data-path="{{ p.path if p.path in paths else 'other' }}" data-class-year="{{ p.class_year }}"
+    data-school="{{ (p.school or '')|trim|lower }}"{% if p.mentor %} data-mentor{% endif %}
+    data-search="{{ [p.name, p.school, p.study, p.now, p.team, p.class_year|string, p.topics]|join(' ')|lower }}">
     <div class="al-card-head">
         <div class="al-avatar" aria-hidden="true">
             {%- if p.photo %}{{ site_photo({'image': p.photo}, '64px', decorative=True) }}{% else %}{{ p.initials }}{% endif -%}
@@ -42,6 +44,17 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
         {% if p.now %}<li><i data-lucide="briefcase" aria-hidden="true"></i><span>{{ p.now }}</span></li>{% endif %}
     </ul>
     {% if p.quote %}<blockquote class="al-card-quote">{{ p.quote }}</blockquote>{% endif %}
+    {% if p.mentor %}
+    <div class="al-card-ask">
+        {% if p.topic_list %}
+        <p class="al-ask-label">Ask me about</p>
+        <ul class="al-topics">{% for t in p.topic_list %}<li>{{ t }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if al.ask_show %}
+        <a class="al-btn al-btn--small" href="#ask" data-ask="{{ p.name }}"><i data-lucide="message-circle-question" aria-hidden="true"></i> Ask {{ p.name.split()[0] }}</a>
+        {% endif %}
+    </div>
+    {% endif %}
     <span class="al-badge"><i data-lucide="{{ path[1] }}" aria-hidden="true"></i>{{ path[0] }}</span>
 </li>
 {%- endmacro %}
@@ -107,6 +120,28 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
                 <input type="search" placeholder="Name, school, major…" data-alumni-search autocomplete="off">
             </label>
         </div>
+        <div class="al-filters" role="group" aria-label="Narrow the wall">
+            {% if view.classes|length > 1 %}
+            <label class="al-filter"><span>Class</span>
+                <select data-alumni-class>
+                    <option value="">Every class</option>
+                    {% for year, people in view.classes %}<option value="{{ year }}" data-tag="{{ people|length }}">Class of {{ year }}</option>{% endfor %}
+                </select>
+            </label>
+            {% endif %}
+            {% if view.schools|length > 1 %}
+            <label class="al-filter"><span>School</span>
+                <select data-alumni-school>
+                    <option value="">Every school</option>
+                    {% for name, count in view.schools|sort(attribute='0') %}<option value="{{ name|trim|lower }}" data-tag="{{ count }}">{{ name }}</option>{% endfor %}
+                </select>
+            </label>
+            {% endif %}
+            {% if view.mentors %}
+            <button type="button" class="al-chip al-chip--mentor" data-alumni-mentors aria-pressed="false">
+                <i data-lucide="message-circle-question" aria-hidden="true"></i> Open to questions <span>{{ view.mentors|length }}</span></button>
+            {% endif %}
+        </div>
         <p class="al-count" role="status" aria-live="polite" data-alumni-count></p>
         {% for year, people in view.classes %}
         <div class="al-class" data-class>
@@ -153,6 +188,32 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
             <a class="al-btn al-btn--primary" {{ link_attrs(al.give_url) }}>{{ al.give_button }} <i data-lucide="arrow-right" aria-hidden="true"></i></a>
         </div>
     </section>
+
+    {% if al.ask_show and view.mentors %}
+    <!-- ASK AN ALUM: goes to the Messages inbox, tagged alumni, for the club to pass on -->
+    <section id="ask" class="al-update al-ask fade-in-section" aria-labelledby="al-ask-heading">
+        <div>
+            <p class="al-kicker"><i data-lucide="message-circle-question" aria-hidden="true"></i> Mentors</p>
+            <h2 id="al-ask-heading">{{ al.ask_heading }}</h2>
+            {% if al.ask_body %}<p class="al-lede">{{ al.ask_body }}</p>{% endif %}
+        </div>
+        <form class="al-form" data-alumni-ask novalidate>
+            <label class="al-form-wide">Who would you like to ask?
+                <select name="alum" required>
+                    {% for p in view.mentors %}<option value="{{ p.name }}" data-tag="Class of {{ p.class_year }}">{{ p.name }}</option>{% endfor %}
+                </select></label>
+            <label>Your name<input type="text" name="name" maxlength="100" autocomplete="name" required></label>
+            <label>Email<input type="email" name="email" maxlength="200" autocomplete="email" required></label>
+            <label class="al-form-wide">Your question
+                <textarea name="message" rows="4" maxlength="1500" required></textarea></label>
+            <input type="text" name="website" class="visually-hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <div class="al-form-foot">
+                <button type="submit" class="al-btn al-btn--primary">Send question <i data-lucide="send" aria-hidden="true"></i></button>
+                <p class="al-form-status" role="status" aria-live="polite" data-alumni-status></p>
+            </div>
+        </form>
+    </section>
+    {% endif %}
 
     {% if al.update_show %}
     <!-- ALUMNI UPDATE: goes to the Messages inbox, tagged alumni -->

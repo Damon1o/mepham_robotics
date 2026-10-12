@@ -123,6 +123,7 @@ ALUMNI_PATHS = {
 }
 STEM_PATHS = ('engineering', 'computing', 'science')
 ALUMNI_MAX = 300
+ALUMNI_TOPICS_SHOWN = 6
 FUNDRAISERS_MAX = 20
 HISTORY_MAX = 60
 MONEY_MAX = 1_000_000
@@ -658,10 +659,19 @@ SECTIONS = (
             Field('quote', 'textarea', 'Looking back', '', max=280),
             Field('photo', 'image', 'Photo', None),
             Field('link', 'url', 'LinkedIn or portfolio', '', max=300),
+            Field('mentor', 'toggle', 'Happy to answer questions', False,
+                  hint='Shows an Ask button on their card. Questions arrive in Messages; nobody sees their email.'),
+            Field('topics', 'text', 'Ask me about', '', max=120, hint='Comma-separated, like CAD, picking a college'),
             Field('hidden', 'toggle', 'Draft (hidden)', False),
         ), max_items=ALUMNI_MAX, group='Alumni',
             hint='Only list people who said yes. Updates sent from the page arrive in Messages, tagged alumni.',
             hint_link=('Messages', 'messages')),
+        Field('ask_show', 'toggle', 'Show "Ask an alum"', True, group='Ask an alum',
+              hint='Only appears once someone on the list is happy to answer questions.'),
+        Field('ask_heading', 'text', 'Heading', 'Ask an alum', max=60, group='Ask an alum'),
+        Field('ask_body', 'textarea', 'Text',
+              'Wondering about a major, a college or a first internship? Ask someone who did it. We pass your '
+              'question on and they reply to you.', max=300, group='Ask an alum'),
         Field('update_show', 'toggle', 'Show the update form', True, group='Send an update'),
         Field('update_heading', 'text', 'Heading', 'Are you an alum?', max=60, group='Send an update'),
         Field('update_body', 'textarea', 'Text',
@@ -1228,11 +1238,14 @@ def alumni_view(people):
     """The alumni wall: who is listed, grouped by class, and the numbers above it.
 
     Drafts and rows without a name or class are left out. Returns people (newest
-    class first, then by name; each gains `initials`), classes as [(year, rows)],
+    class first, then by name; each gains `initials` and `topic_list`, the "Ask me
+    about" topics split on commas), mentors (those happy to answer questions),
+    classes as [(year, rows)],
     paths as [(key, name, icon, count, percent)], schools as [(name, count)] most
     common first, and count, school_count, class_count and stem_percent.
     """
-    rows = [dict(p, initials=''.join(w[0] for w in p['name'].split()[:2]).upper())
+    rows = [dict(p, initials=''.join(w[0] for w in p['name'].split()[:2]).upper(),
+                 topic_list=[t.strip() for t in (p.get('topics') or '').split(',') if t.strip()][:ALUMNI_TOPICS_SHOWN])
             for p in people or [] if not p.get('hidden') and (p.get('name') or '').strip() and p.get('class_year')]
     rows.sort(key=lambda p: (-p['class_year'], p['name'].lower()))
     classes, counts, schools = {}, {}, {}
@@ -1254,4 +1267,5 @@ def alumni_view(people):
         'school_count': len(schools),
         'class_count': len(classes),
         'stem_percent': round(100 * sum(counts.get(k, 0) for k in STEM_PATHS) / total) if total else 0,
+        'mentors': [r for r in rows if r.get('mentor')],
     }
