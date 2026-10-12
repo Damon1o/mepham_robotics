@@ -4512,7 +4512,7 @@ def manage_team(team_id):
         flash('You can only edit your own team.', 'error')
         return render_template('my_team.html', active_page='my_team', forbidden=True), 403
     team['_id'] = str(team['_id'])
-    team.setdefault('specs', {})
+    team['specs'] = team.get('specs') or {}  # null in some older documents
     other_seasons = [{'label': d.get('season') or 'No season', 'url': url_for('manage_team', team_id=str(d['_id']))}
                      for d in db['teams'].find({'team_number': team.get('team_number'),
                                                 '_id': {'$ne': ObjectId(team['_id'])}}, {'season': 1})]
