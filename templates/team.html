@@ -6,7 +6,10 @@
 {% block meta_description %}{% if is_group %}Meet the {{ team_name }} group of the Mepham Robotics Club: its members,
 goals, and journey.{% else %}Meet Team {{ team.team_number }} of the Mepham Robotics Club. View our robot specs, team
 members, competition results, and season goals.{% endif %}{% endblock %}
-{% block og_image %}{{ get_image_url(team.hero_image, external=True) }}{% endblock %}
+{#- Link previews use the team's own photo when it has one (size unknown, so no
+    dimensions); otherwise the club photo, never the placeholder avatar. -#}
+{% block og_image %}{% if team.hero_image|real_photo %}{{ get_image_url(team.hero_image, external=True) }}{% else %}{{ super() }}{% endif %}{% endblock %}
+{% block og_image_size %}{% if not team.hero_image|real_photo %}{{ super() }}{% endif %}{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team.css') }}">
