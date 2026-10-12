@@ -49,7 +49,7 @@ members, competition results, and season goals.{% endif %}{% endblock %}
 ('Auton Consistency', team.specs.get('auton_consistency'))
 ]|selectattr('1')|list %}
 {% set award_total = team_awards|sum(attribute='count') %}
-{% set groups = team.members|roster_groups %}
+{% set roster = team.members|roster_order %}
 {% set has_notebook = team.notebook_link and team.notebook_link != '#' %}
 
 {% block content %}

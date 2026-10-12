@@ -195,11 +195,11 @@ def test_main_role_leads_the_chips_in_gold(client, team_factory):
     assert '>driver<' not in body
 
 
-def test_roster_grouped_by_subteam(client, team_factory):
+def test_roster_shows_subteam_on_each_card(client, team_factory):
     team_factory()
     body = html(client)[1]
-    assert 'Mechanical' in body
-    assert 'Programming' in body
+    assert '<p class="roster-subteam">Mechanical</p>' in body
+    assert '<p class="roster-subteam">Programming</p>' in body
 
 
 def test_leadership_sorted_first(client, team_factory):

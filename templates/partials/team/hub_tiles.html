@@ -2,7 +2,7 @@
     its tab. Expects `hub_tabs` from team_layouts/tabs.html. -#}
 {% set hub_keys = hub_tabs|map(attribute='0')|list %}
 {% set members = team.members|length %}
-{% set subteams = groups|selectattr('0')|list|length %}
+{% set subteams = roster|map(attribute='subteam', default='')|select|map('trim')|select|unique|list|length %}
 <nav class="hub-tiles" aria-label="Explore this team">
     {% if 'team' in hub_keys %}
     <a class="hub-tile" href="#team" data-hub-open="team">
