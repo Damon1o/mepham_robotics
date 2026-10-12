@@ -278,6 +278,36 @@ def test_public_pages_are_linked_for_everyone(client, db, ada):
     assert f'href="{page(ada)}"' in client.get('/team/77628A').get_data(as_text=True)
 
 
+def allow_public_pages(db, allowed):
+    db['site_metadata'].update_one({'_id': app_module.SITE_CONTENT_ID},
+                                   {'$set': {'values.people.allow_public': allowed}}, upsert=True)
+
+
+def test_admins_can_turn_public_pages_off_and_back_on(client, db, ada):
+    db['users'].update_one({'_id': ada['_id']}, {'$set': {'profile': {'visibility': 'public'}}})
+    db['teams'].insert_one({'team_number': '77628A', 'members': [card(ada)]})
+    href = f'href="{page(ada)}"'
+
+    allow_public_pages(db, False)
+    assert client.get(page(ada)).status_code == 403
+    assert client.get(f"/api/people/{ada['_id']}/verified").status_code == 404
+    assert href not in client.get('/team/77628A').get_data(as_text=True)
+
+    allow_public_pages(db, True)
+    assert client.get(page(ada)).status_code == 200
+    assert href in client.get('/team/77628A').get_data(as_text=True)
+
+
+def test_with_public_pages_off_the_owner_sees_members_only_and_a_locked_choice(client, db, ada):
+    db['users'].update_one({'_id': ada['_id']}, {'$set': {'profile': {'visibility': 'public'}}})
+    allow_public_pages(db, False)
+    sign_in(client, 'ada')
+    html = client.get(page(ada)).get_data(as_text=True)
+    assert 'pf-visibility--members' in html and 'Turned off by the club' in html
+    assert 'value="public" disabled' in html and 'Shareable by link' not in html
+    assert db['users'].find_one({'_id': ada['_id']})['profile']['visibility'] == 'public'
+
+
 @pytest.mark.parametrize('layout', ['mission', 'yearbook', 'tracker', 'huddle', 'chapters'])
 def test_every_group_layout_links_its_people(client, db, ada, bo, layout):
     db['teams'].insert_one({'kind': 'group', 'team_number': 'media', 'title': 'Media', 'layout': layout,

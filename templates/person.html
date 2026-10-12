@@ -100,10 +100,10 @@
         {% if can_edit %}
         <button type="button" class="pf-btn pf-btn--primary" data-edit-toggle aria-pressed="false">
             <i data-lucide="pencil" aria-hidden="true"></i> <span data-edit-label>Edit page</span></button>
-        <span class="pf-visibility pf-visibility--{{ profile.visibility }}"
-            title="Change this under About me">
-            <i data-lucide="{{ 'globe' if profile.visibility == 'public' else 'lock' }}" aria-hidden="true"></i>
-            {{ 'Public: anyone with the link' if profile.visibility == 'public' else 'Members only' }}</span>
+        <span class="pf-visibility pf-visibility--{{ 'public' if is_public else 'members' }}"
+            title="{{ 'Change this under About me' if public_allowed else 'The club has turned off public member pages' }}">
+            <i data-lucide="{{ 'globe' if is_public else 'lock' }}" aria-hidden="true"></i>
+            {{ 'Public: anyone with the link' if is_public else 'Members only' }}</span>
         {% endif %}
         <span class="pf-toolbar-gap"></span>
         <button type="button" class="pf-btn" data-copy-link="{{ page_url }}">
@@ -183,9 +183,13 @@
                                     <small>Signed-in club members. Your name on team pages links here for them.</small></span>
                             </label>
                             <label class="pf-choice-card">
-                                <input type="radio" name="visibility" value="public">
+                                <input type="radio" name="visibility" value="public"{{ ' disabled' if not public_allowed }}>
                                 <span><i data-lucide="globe" aria-hidden="true"></i> <b>Anyone with the link</b>
-                                    <small>For college applications and résumés. Never listed in search engines.</small></span>
+                                    {% if public_allowed %}
+                                    <small>For college applications and résumés. Never listed in search engines.</small>
+                                    {% else %}
+                                    <small>Turned off by the club's admins for now.</small>
+                                    {% endif %}</span>
                             </label>
                         </fieldset>
                     </div>
@@ -400,8 +404,7 @@
                 (profile.honors|selectattr('link')|list|length > 0, 'A proof link on an entry', 'honors'),
                 (pinned|length > 0, 'Highlights pinned', 'honors'),
                 (profile.photos|length > 0, 'Photos added', 'photos'),
-                (profile.visibility == 'public', 'Shareable by link', 'about'),
-            ] %}
+            ] + ([(is_public, 'Shareable by link', 'about')] if public_allowed else []) %}
             <section class="pf-card pf-kit" id="kit" aria-labelledby="kit_title">
                 {{ card_head('graduation-cap', 'College-app kit', 'kit_title',
                     blurb='Only you and the club\'s admins see this.') }}

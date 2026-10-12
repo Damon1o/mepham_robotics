@@ -4854,7 +4854,7 @@ def admin_two_step_off(id):
 # /people/<user id>: a page each member writes for themselves (api/people.py), with
 # their seasons, teams and awards from the club's records. Opened from a name on any
 # team or group page and from the account chip in the side menu. Pages are for
-# signed-in members unless the member makes theirs public. Keyed by the account id,
+# signed-in members unless the member makes theirs public and Site settings allow it. Keyed by the account id,
 # never the username, so a link never gives away what someone signs in with.
 
 VERIFIED_SEASONS_MAX = 8
@@ -4870,8 +4870,17 @@ def _person(user_id):
     return person
 
 
+def _public_pages_allowed():
+    """Club admins can turn public member pages off; each member's own choice is kept for when they turn it back on."""
+    return bool(site().people.allow_public)
+
+
+def _is_public(profile):
+    return _public_pages_allowed() and profile['visibility'] == 'public'
+
+
 def _can_view_person(person, viewer):
-    return viewer is not None or people.profile_view(person.get('profile'))['visibility'] == 'public'
+    return viewer is not None or _is_public(people.profile_view(person.get('profile')))
 
 
 def _can_edit_person(person, viewer):
@@ -4883,6 +4892,9 @@ def _linkable_people():
     if 'linkable_people' not in g:
         query = {'status': {'$nin': ['pending', 'rejected']}}
         if _session_user() is None:
+            if not _public_pages_allowed():
+                g.linkable_people = set()
+                return g.linkable_people
             query['profile.visibility'] = 'public'
         g.linkable_people = {str(u['_id']) for u in db['users'].find(query, {'_id': 1})}
     return g.linkable_people
@@ -4943,6 +4955,7 @@ def person_page(user_id):
         'person.html', active_page='people', person=person, profile=profile, history=history,
         name=_display_name(person), is_owner=signed_in and viewer['_id'] == person['_id'],
         can_edit=can_edit, editor=editor, signed_in=signed_in,
+        public_allowed=_public_pages_allowed(), is_public=_is_public(profile),
         stats=people.stats(history, profile, show_events=signed_in),
         since=first_year, years_in=people.years_in(first_year, club_now().date()),
         current=history['seasons'][0]['teams'] if history['seasons'] else [],
