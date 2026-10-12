@@ -378,6 +378,23 @@ a.nav-link.active:focus-visible {
     outline-color: #fff7e6;
 }
 
+/* Member guide link (new member guide): chapters done so far */
+.nav-count {
+    flex: none;
+    padding: 2px 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--nav-ink);
+    background: var(--nav-gold);
+    border-radius: 999px;
+}
+
+a.nav-link.active .nav-count {
+    color: var(--nav-gold);
+    background: var(--nav-ink);
+}
+
 /* Team menu */
 .dropdown-chevron {
     flex: none;

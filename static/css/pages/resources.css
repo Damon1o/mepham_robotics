@@ -528,6 +528,62 @@
     background: rgba(255, 255, 255, 0.12);
 }
 
+/* New member guide banner: shown until every chapter is done. */
+.hub-guide {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.4rem;
+    border-radius: 20px;
+    background: linear-gradient(150deg, var(--maroon-dark), #4d0000);
+    color: #fff;
+    text-decoration: none;
+    box-shadow: 0 12px 26px rgba(80, 0, 0, 0.18);
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.hub-guide:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 36px rgba(80, 0, 0, 0.26);
+}
+
+.hub-guide-icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 14px;
+    background: var(--accent-gold);
+    color: #1a1414;
+}
+
+.hub-guide-text {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.hub-guide-text strong {
+    font-size: 1.15rem;
+}
+
+.hub-guide-text span {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.hub-guide-go {
+    flex: none;
+    margin-left: auto;
+    color: var(--accent-gold);
+    transition: transform var(--transition-fast);
+}
+
+.hub-guide:hover .hub-guide-go {
+    transform: translateX(4px);
+}
+
 /* ================================================================
    6. SHELVES
    ================================================================ */
@@ -1055,6 +1111,15 @@
         display: none;
     }
 
+    .hub-guide {
+        padding: 1rem;
+    }
+
+    .hub-guide-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+
     .hub-calc-inputs {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 0.75rem;
@@ -1085,11 +1150,15 @@
 
     .hub-balance-dot,
     .hub-step > a,
+    .hub-guide,
+    .hub-guide-go,
     .hub-rosters a {
         transition: none;
     }
 
     .hub-step > a:hover,
+    .hub-guide:hover,
+    .hub-guide:hover .hub-guide-go,
     .hub-rosters a:hover {
         transform: none;
     }

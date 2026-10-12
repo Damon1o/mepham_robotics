@@ -925,6 +925,10 @@ function showToast(message, type = 'info') {
         if (e.target.closest('.search-close')) {
             closeSearch();
         }
+        // Any button can open search, like the new member guide's "Open search".
+        if (e.target.closest('[data-search-open]')) {
+            openSearch();
+        }
     });
 
     document.addEventListener('keydown', function (e) {
