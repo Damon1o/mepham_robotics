@@ -1064,7 +1064,7 @@ function showToast(message, type = 'info') {
         const cq = questions[current];
         const progress = ((current) / questions.length) * 100;
         container.innerHTML = `
-            <div class="quiz-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress)}"><div class="quiz-progress-fill"></div></div>
+            <div class="quiz-progress" role="progressbar" aria-label="Quiz progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress)}"><div class="quiz-progress-fill"></div></div>
             <div class="quiz-question-card">
                 <div class="quiz-question-num">Question ${current + 1} of ${questions.length}</div>
                 <div class="quiz-question-text">${cq.q}</div>
