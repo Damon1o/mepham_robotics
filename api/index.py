@@ -1277,6 +1277,8 @@ def achievements_view():
         'featured': [a for a in earned if a['featured']],
         'total': total, 'team_cards': team_cards, 'past_events': log, 'more_events': more_events,
         'top_count': max((a['count'] for a in earned), default=0),
+        'top_team_total': max((c['total'] for c in team_cards), default=0),
+        'seasons': list(dict.fromkeys(e['season'] for e in log)),
     }
 
 

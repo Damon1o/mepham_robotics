@@ -83,10 +83,16 @@
     {% if earned %}
     <ol class="ach-roll">
         {% for award in earned %}
-        <li class="ach-roll-row{{ ' accent-' + award.border if award.border }}">
+        <li class="ach-roll-row{{ ' accent-' + award.border if award.border }}" id="award-{{ award._id }}">
             <div class="ach-roll-icon">{{ award_icon(award, 56) }}</div>
             <div class="ach-roll-body">
-                <h3>{{ award.title }}</h3>
+                <div class="ach-roll-title">
+                    <h3>{{ award.title }}</h3>
+                    {#- Shown by achievements.js when the browser can share or copy. -#}
+                    <button type="button" class="ach-share" data-share="award-{{ award._id }}"
+                        data-share-text="{{ site.general.short_name }} has won the {{ award.title }} {{ award.count }} time{{ 's' if award.count != 1 }}."
+                        aria-label="Share {{ award.title }}" hidden><i data-lucide="share-2" aria-hidden="true"></i><span>Share</span></button>
+                </div>
                 <progress class="ach-roll-bar" value="{{ award.count }}" max="{{ top_count }}" aria-hidden="true"></progress>
                 {% if award.teams %}
                 <div class="ach-team-chips">{% for w in award.teams %}{{ team_chip(w.team_number, w.count) }}{% endfor %}</div>
@@ -127,7 +133,10 @@
                 <span class="ach-team-number">{{ card.number }}</span>
                 {% if card.nickname %}<span class="ach-team-nick">{{ card.nickname }}</span>{% endif %}
             </div>
-            <p class="ach-team-total"><b>{{ card.total }}</b> award{{ 's' if card.total != 1 }}</p>
+            <div class="ach-team-total">
+                <p><b>{{ card.total }}</b> award{{ 's' if card.total != 1 }}</p>
+                <progress class="ach-roll-bar ach-team-bar" value="{{ card.total }}" max="{{ top_team_total }}" aria-hidden="true"></progress>
+            </div>
             {% if card.awards %}
             <ul class="ach-team-icons">
                 {% for award in card.awards %}
@@ -154,8 +163,17 @@
         <p class="ach-eyebrow">Where we've competed</p>
         <h2 id="history-heading">{{ page.history_heading }}</h2>
     </header>
+    {% if seasons|length > 1 %}
+    {#- Shown by achievements.js; without it every season is listed. -#}
+    <div class="ach-season-filter" role="group" aria-label="Show season" hidden>
+        <button type="button" class="ach-season-chip is-on" data-season="all" aria-pressed="true">All seasons</button>
+        {% for season in seasons %}
+        <button type="button" class="ach-season-chip" data-season="{{ season }}" aria-pressed="false">{{ season }}</button>
+        {% endfor %}
+    </div>
+    {% endif %}
     {% for season in past_events|groupby('season')|reverse %}
-    <div class="ach-season">
+    <div class="ach-season" data-season="{{ season.grouper }}">
         <h3 class="ach-season-label">{{ season.grouper }} season</h3>
         <ol class="ach-timeline">
             {% for event in season.list %}
@@ -193,6 +211,7 @@
 {% endblock %}
 
 {% block page_scripts %}
+<script src="{{ url_for('static', filename='js/achievements.js') }}" defer></script>
 {% if live_results %}
 <script src="{{ url_for('static', filename='js/match-feed.js') }}" defer></script>
 {% endif %}

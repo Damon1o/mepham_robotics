@@ -324,6 +324,58 @@
     color: var(--ach-ink);
 }
 
+.ach-roll-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+/* A shared link lands on its award with room under the fixed nav. */
+.ach-roll-row {
+    scroll-margin-top: calc(var(--nav-height, 60px) + 1.5rem);
+}
+
+.ach-roll-row:target {
+    outline: 4px solid var(--accent-gold);
+    outline-offset: 4px;
+}
+
+.ach-share {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.7rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ach-ink);
+    background: var(--ach-surface);
+    border: 2px solid var(--ach-line);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.ach-share svg {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+.ach-share:hover,
+.ach-share:focus-visible {
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    transform: translateY(-2px);
+}
+
+.ach-share[hidden] {
+    display: none;
+}
+
 /* Bar length = count against the most-won award. Revealed left to right on scroll-in. */
 .ach-roll-bar {
     -webkit-appearance: none;
@@ -436,7 +488,7 @@
 
 .ach-team-card {
     display: grid;
-    grid-template-columns: minmax(180px, 1.2fr) 7rem 2fr auto;
+    grid-template-columns: minmax(180px, 1.2fr) 10rem 2fr auto;
     align-items: center;
     gap: var(--spacing-md);
     padding: var(--spacing-sm) var(--spacing-md);
@@ -485,6 +537,15 @@
 .ach-team-total b {
     font-size: 1.1rem;
     color: var(--ach-ink);
+}
+
+.ach-team-total p {
+    margin: 0 0 0.4rem;
+}
+
+/* Length = this team's total against the club's top team; the sorted rows read as a bar chart. */
+.ach-team-bar {
+    height: 8px;
 }
 
 .ach-team-icons {
@@ -570,6 +631,49 @@
 
 .ach-season + .ach-season {
     margin-top: var(--spacing-lg);
+}
+
+.ach-season[hidden],
+.ach-season-filter[hidden] {
+    display: none;
+}
+
+.ach-season-filter {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0 auto var(--spacing-lg);
+}
+
+.ach-season-chip {
+    padding: 0.35rem 0.95rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--ach-ink);
+    background: var(--ach-surface);
+    border: 2px solid var(--ach-line);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.ach-season-chip:hover,
+.ach-season-chip:focus-visible {
+    transform: translateY(-2px);
+}
+
+.ach-season-chip.is-on {
+    color: #fff;
+    background: var(--maroon-dark);
+    border-color: var(--maroon-dark);
+}
+
+[data-theme="dark"] .ach-season-chip.is-on {
+    background: #a33a3c;
+    border-color: #a33a3c;
 }
 
 .ach-season-label {
