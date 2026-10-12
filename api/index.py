@@ -25,9 +25,10 @@ from pymongo.errors import DuplicateKeyError
 import requests
 
 try:  # package import on Vercel, flat import when run from the api/ directory
-    from api import devices, events, people, robotevents, site_content, totp
+    from api import devices, events, guide, people, robotevents, site_content, totp
 except ImportError:  # pragma: no cover
     import events
+    import guide
     import people
     import robotevents
     import site_content
@@ -681,6 +682,8 @@ SEARCH_PAGES = [
      'standards design build code style naming conventions', True),
     ('Member Hub', 'resources', 'Team links, this week at a glance, and the drivetrain calculator',
      'resources hub guides links tools members downloads calculator gear ratio drivetrain speed', True),
+    ('New Member Guide', 'guide_page', 'A step-by-step tour of every part of the site',
+     'guide tutorial help start here new member how to tour onboarding walkthrough', True),
     ('Safety Quiz', 'safety_quiz', 'Interactive safety quiz — test your workshop knowledge',
      'safety quiz test workshop lab rules ppe', False),
     ('Engineering Notebook', 'notebook', 'Public engineering notebook — design process and logs',
@@ -1911,6 +1914,62 @@ def standards():
 @role_required('member')
 def notebook():
     return render_template('notebook.html', active_page='notebook')
+
+# --- New member guide (api/guide.py) ----------------------------------------------------------
+
+def _guide_chapters(user):
+    """The chapters this member sees: ones above their role left out, and steps about
+    switched-off features (the assistant, public member pages) dropped."""
+    role = user.get('role', 'member')
+    on = {'assistant': bool(site().assistant.enabled), 'public_pages': _public_pages_allowed()}
+    chapters = []
+    for chapter in guide.CHAPTERS:
+        if chapter.get('role') and not role_at_least(role, chapter['role']):
+            continue
+        steps = [s if isinstance(s, str) else s[0] for s in chapter['steps'] if isinstance(s, str) or on[s[1]]]
+        label, endpoint, anchor = chapter['try']
+        href = url_for(endpoint) + (f'#{anchor}' if anchor else '')
+        chapters.append(chapter | {'steps': steps, 'try': {'label': label, 'href': href}})
+    return chapters
+
+
+def guide_progress():
+    """(chapters done, chapters shown) for the signed-in member, or None when signed out."""
+    if 'guide_progress' not in g:
+        user = _session_user()
+        if not user:
+            return None
+        keys = {c['key'] for c in _guide_chapters(user)}
+        g.guide_progress = (len(keys & set(user.get('guide_done') or [])), len(keys))
+    return g.guide_progress
+
+
+app.jinja_env.globals['guide_progress'] = guide_progress
+
+
+@app.route('/guide')
+@role_required('member')
+def guide_page():
+    user = _session_user()
+    chapters = _guide_chapters(user)
+    done = {c['key'] for c in chapters} & set(user.get('guide_done') or [])
+    return render_template('guide.html', active_page='guide', chapters=chapters, done=done)
+
+
+@app.route('/api/guide/step', methods=['POST'])
+@role_required('member')
+def api_guide_step():
+    """Tick a guide chapter off for the signed-in member, or untick it."""
+    body = _json_body()
+    key = str(body.get('key') or '')
+    if key not in guide.KEYS:
+        return _json_error('That chapter is not in the guide.', 404)
+    user = _session_user()
+    op = '$addToSet' if body.get('done') else '$pull'
+    db['users'].update_one({'_id': user['_id']}, {op: {'guide_done': key}})
+    saved = db['users'].find_one({'_id': user['_id']}, {'guide_done': 1}) or {}
+    return jsonify({'done': saved.get('guide_done') or []})
+
 
 def _find_login_user(identifier):
     """The account for a typed username or email, matched the way sign-up checks for clashes:

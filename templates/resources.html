@@ -50,6 +50,18 @@ href="{{ row.url }}"{% if row.url.startswith('http') %} target="_blank" rel="noo
 </nav>
 
 <div class="hub">
+    {% set guide_steps = guide_progress() %}
+    {% if guide_steps and guide_steps[0] < guide_steps[1] %}
+    <a class="hub-guide" href="{{ url_for('guide_page') }}">
+        <span class="hub-guide-icon"><i data-lucide="milestone" aria-hidden="true"></i></span>
+        <span class="hub-guide-text">
+            <strong>{{ 'New here? Take the member guide' if not guide_steps[0] else 'Finish the member guide' }}</strong>
+            <span>A step-by-step tour of every part of the site · {{ guide_steps[0] }} of {{ guide_steps[1] }} chapters done</span>
+        </span>
+        <i data-lucide="arrow-right" class="hub-guide-go" aria-hidden="true"></i>
+    </a>
+    {% endif %}
+
     {% if week %}
     <div class="hub-week" aria-labelledby="hub-week-title">
         <p class="hub-kicker" id="hub-week-title">This week · {{ now.strftime('%A, %B') }} {{ now.day }}</p>

@@ -1,0 +1,872 @@
+/* Page styles: New Member Guide (/guide)
+   ------------------------------------------------------------------
+   Hero, then .guide: a sticky progress rail beside the chapters.
+
+     1. Shared
+     2. Hero
+     3. Progress rail and chapter list
+     4. How it works
+     5. Chapters
+     6. Finish card
+     7. Dark mode
+     8. Responsive
+     9. Reduced motion
+   ------------------------------------------------------------------ */
+
+/* ================================================================
+   1. SHARED
+   ================================================================ */
+
+.guide {
+    --guide-ink: #1a1414;
+    --guide-muted: #6b5f5f;
+    --guide-paper: #ffffff;
+    --guide-rule: rgba(128, 0, 0, 0.12);
+    --guide-soft: #fbf6f6;
+    --guide-done: #1f7a4d;
+    --guide-done-soft: rgba(31, 122, 77, 0.1);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 5rem;
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    align-items: start;
+    gap: 2.5rem;
+    color: var(--guide-ink);
+}
+
+.guide [hidden] {
+    display: none !important;
+}
+
+.guide-kicker {
+    margin: 0 0 0.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.guide kbd {
+    display: inline-block;
+    min-width: 1.6em;
+    padding: 0.05em 0.45em;
+    border: 1px solid var(--guide-rule);
+    border-bottom-width: 3px;
+    border-radius: 6px;
+    background: var(--guide-soft);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8em;
+    text-align: center;
+    color: var(--guide-ink);
+}
+
+/* The global h2 underline belongs to centered page headings. */
+.guide h2::after,
+.guide h3::after {
+    display: none;
+}
+
+.guide h2,
+.guide h3 {
+    width: auto;
+    text-align: left;
+}
+
+/* ================================================================
+   2. HERO
+   ================================================================ */
+
+.hero-image {
+    /* Fallback for browsers without image-set(type()); the rule below wins elsewhere. */
+    background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%), url('../../assets/photos/carousel3.jpg') center/cover;
+    background: linear-gradient(135deg, rgba(148, 69, 71, 0.85) 0%, rgba(128, 0, 0, 0.9) 100%),
+    image-set(url('../../assets/photos/carousel3-1200.webp') type('image/webp'), url('../../assets/photos/carousel3.jpg') type('image/jpeg')) center/cover;
+    min-height: 48vh;
+}
+
+/* ================================================================
+   3. PROGRESS RAIL AND CHAPTER LIST
+   ================================================================ */
+
+.guide-rail {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    position: sticky;
+    top: calc(var(--nav-height, 60px) + 1.5rem);
+    display: grid;
+    gap: 1.25rem;
+    max-height: calc(100vh - var(--nav-height, 60px) - 3rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.guide-progress {
+    padding: 1.25rem;
+    border-radius: 20px;
+    background: linear-gradient(150deg, var(--maroon-dark), #4d0000);
+    color: #fff;
+    box-shadow: 0 12px 26px rgba(80, 0, 0, 0.18);
+}
+
+.guide-progress .guide-kicker {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.guide-count {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin: 0 0 0.75rem;
+}
+
+.guide-count b {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.4rem;
+    line-height: 1;
+    color: var(--accent-gold);
+}
+
+.guide-count span {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.guide-bar {
+    display: block;
+    width: 100%;
+    height: 10px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.15);
+    overflow: hidden;
+    appearance: none;
+}
+
+.guide-bar::-webkit-progress-bar {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+}
+
+.guide-bar::-webkit-progress-value {
+    background: var(--accent-gold);
+    border-radius: 999px;
+    transition: width var(--transition-base);
+}
+
+.guide-bar::-moz-progress-bar {
+    background: var(--accent-gold);
+    border-radius: 999px;
+}
+
+.guide-resume {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 1rem;
+    padding: 0.55rem 1rem;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: #1a1414;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: transform var(--transition-fast);
+}
+
+.guide-resume:hover {
+    transform: translateX(3px);
+}
+
+.guide-resume svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.guide-status:empty {
+    display: none;
+}
+
+.guide-status {
+    margin: 0.75rem 0 0;
+    font-size: 0.85rem;
+    color: #ffd7d7;
+}
+
+.guide-toc ol {
+    display: grid;
+    gap: 0.15rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.guide-toc a {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 12px;
+    color: var(--guide-ink);
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: background var(--transition-fast);
+}
+
+.guide-toc a:hover,
+.guide-toc a:focus-visible {
+    background: var(--guide-soft);
+}
+
+.guide-toc a.is-current {
+    background: var(--guide-soft);
+    font-weight: 700;
+    box-shadow: inset 3px 0 0 var(--maroon-dark);
+}
+
+.guide-toc-mark {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border: 1.5px solid var(--guide-rule);
+    border-radius: 50%;
+    background: var(--guide-paper);
+}
+
+.guide-toc-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--guide-muted);
+}
+
+.guide-toc-check {
+    display: none;
+    width: 1rem;
+    height: 1rem;
+}
+
+.guide-toc a.is-done .guide-toc-mark {
+    border-color: var(--guide-done);
+    background: var(--guide-done);
+    color: #fff;
+}
+
+.guide-toc a.is-done .guide-toc-num {
+    display: none;
+}
+
+.guide-toc a.is-done .guide-toc-check {
+    display: block;
+}
+
+/* ================================================================
+   4. HOW IT WORKS
+   ================================================================ */
+
+.guide-main {
+    display: grid;
+    gap: 1.5rem;
+    min-width: 0;
+}
+
+.guide-intro {
+    padding: 1.5rem;
+    border: 1px dashed var(--guide-rule);
+    border-radius: 20px;
+}
+
+.guide-intro-title {
+    margin: 0 0 1rem;
+    font-size: 1.25rem;
+    color: var(--guide-ink);
+}
+
+.guide-how {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.guide-how li {
+    display: grid;
+    gap: 0.5rem;
+    font-size: 0.92rem;
+    color: var(--guide-muted);
+}
+
+.guide-how strong {
+    display: block;
+    color: var(--guide-ink);
+}
+
+.guide-how svg {
+    width: 1.6rem;
+    height: 1.6rem;
+    color: var(--maroon-dark);
+}
+
+/* ================================================================
+   5. CHAPTERS
+   ================================================================ */
+
+.guide-ch {
+    position: relative;
+    padding: 1.75rem;
+    border: 1px solid var(--guide-rule);
+    border-radius: 24px;
+    background: var(--guide-paper);
+    scroll-margin-top: calc(var(--nav-height, 60px) + 1.5rem);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.guide-ch.is-done {
+    border-color: rgba(31, 122, 77, 0.35);
+    box-shadow: inset 4px 0 0 var(--guide-done);
+}
+
+.guide-ch-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.guide-ch-icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 16px;
+    background: linear-gradient(150deg, var(--maroon-dark), #4d0000);
+    color: var(--accent-gold);
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.12);
+}
+
+.guide-ch-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.guide-ch-titles {
+    flex: 1;
+    min-width: 0;
+}
+
+.guide-ch-num {
+    margin: 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.guide-role {
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: #1a1414;
+    letter-spacing: 1px;
+}
+
+.guide-ch h2 {
+    margin: 0.2rem 0 0.25rem;
+    font-size: clamp(1.35rem, 2.6vw, 1.7rem);
+    letter-spacing: -0.3px;
+    color: var(--guide-ink);
+}
+
+.guide-ch-blurb {
+    margin: 0;
+    color: var(--guide-muted);
+}
+
+.guide-ch-badge {
+    flex: none;
+    display: none;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: var(--guide-done-soft);
+    color: var(--guide-done);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.guide-ch-badge svg {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+.guide-ch.is-done .guide-ch-badge {
+    display: inline-flex;
+}
+
+/* Find it: Menu › Account */
+.guide-where {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin: 1.25rem 0 0;
+    padding: 0.7rem 0.9rem;
+    border-radius: 14px;
+    background: var(--guide-soft);
+}
+
+.guide-where-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.guide-where-label svg {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+.guide-path {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.guide-path li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.guide-path li + li::before {
+    content: '›';
+    color: var(--guide-muted);
+}
+
+.guide-path span {
+    padding: 0.15rem 0.6rem;
+    border: 1.5px solid var(--guide-rule);
+    border-radius: 8px;
+    background: var(--guide-paper);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+/* Numbered steps */
+.guide-steps {
+    display: grid;
+    gap: 0.85rem;
+    margin: 1.4rem 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: guide-step;
+}
+
+.guide-steps li {
+    position: relative;
+    padding-left: 2.6rem;
+    line-height: 1.6;
+    counter-increment: guide-step;
+}
+
+.guide-steps li::before {
+    content: counter(guide-step);
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    place-items: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 50%;
+    background: var(--guide-soft);
+    border: 1.5px solid var(--guide-rule);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--maroon-dark);
+}
+
+.guide-steps a {
+    color: var(--maroon-dark);
+}
+
+/* Try it, Mark as done, Next */
+.guide-ch-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--guide-rule);
+}
+
+.guide-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.65rem 1.15rem;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.guide-btn svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.guide-btn--try {
+    background: var(--maroon-dark);
+    color: #fff;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.18);
+}
+
+.guide-btn--try:hover {
+    transform: translateY(-2px);
+    background: #5c0000;
+}
+
+.guide-btn--done {
+    border-color: var(--guide-rule);
+    background: var(--guide-paper);
+    color: var(--guide-ink);
+}
+
+.guide-btn--done:hover {
+    border-color: var(--guide-done);
+    color: var(--guide-done);
+}
+
+.guide-btn--done[aria-pressed="true"] {
+    border-color: var(--guide-done);
+    background: var(--guide-done);
+    color: #fff;
+}
+
+.guide-btn--done [data-label-on],
+.guide-btn--done[aria-pressed="true"] [data-label-off] {
+    display: none;
+}
+
+.guide-btn--done[aria-pressed="true"] [data-label-on] {
+    display: inline;
+}
+
+.guide-next {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: auto;
+    color: var(--guide-muted);
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.guide-next:hover {
+    color: var(--maroon-dark);
+}
+
+.guide-next svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* ================================================================
+   6. FINISH CARD
+   ================================================================ */
+
+.guide-finish {
+    padding: 2rem 1.75rem;
+    border-radius: 24px;
+    background: var(--guide-soft);
+    border: 1px solid var(--guide-rule);
+    text-align: center;
+}
+
+.guide-finish-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background: var(--guide-paper);
+    color: var(--guide-muted);
+    border: 1.5px dashed var(--guide-rule);
+}
+
+.guide-finish-icon svg {
+    width: 1.8rem;
+    height: 1.8rem;
+}
+
+.guide-finish h2 {
+    margin: 0.75rem 0 0.5rem;
+    font-size: 1.6rem;
+    text-align: center;
+}
+
+.guide-finish > p {
+    max-width: 38rem;
+    margin: 0 auto;
+    color: var(--guide-muted);
+}
+
+.guide-finish [data-finish-done],
+.guide-finish.is-complete [data-finish-todo] {
+    display: none;
+}
+
+.guide-finish.is-complete [data-finish-done] {
+    display: revert;
+}
+
+.guide-finish.is-complete {
+    background: linear-gradient(150deg, var(--maroon-dark), #4d0000);
+    border-color: transparent;
+    color: #fff;
+}
+
+.guide-finish.is-complete h2 {
+    color: #fff;
+}
+
+.guide-finish.is-complete > p {
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.guide-finish.is-complete .guide-finish-icon {
+    border: 0;
+    background: var(--accent-gold);
+    color: #1a1414;
+}
+
+.guide-finish.is-complete kbd {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.guide-help {
+    max-width: 34rem;
+    margin: 1.5rem auto 0;
+    padding: 1.1rem 1.25rem;
+    border-radius: 16px;
+    background: var(--guide-paper);
+    color: var(--guide-ink);
+    text-align: left;
+}
+
+.guide-help h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
+    font-size: 1.05rem;
+    color: var(--guide-ink);
+}
+
+.guide-help h3 svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    color: var(--maroon-dark);
+}
+
+.guide-help ul {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.93rem;
+}
+
+.guide-help a {
+    color: var(--maroon-dark);
+}
+
+/* ================================================================
+   7. DARK MODE
+   ================================================================ */
+
+[data-theme="dark"] .guide {
+    --guide-ink: #f1e9e9;
+    --guide-muted: #b3a5a5;
+    --guide-paper: #1e1a1a;
+    --guide-rule: rgba(255, 255, 255, 0.1);
+    --guide-soft: rgba(255, 255, 255, 0.05);
+    --guide-done: #4cc38a;
+    --guide-done-soft: rgba(76, 195, 138, 0.14);
+}
+
+[data-theme="dark"] .guide-kicker,
+[data-theme="dark"] .guide-ch-num,
+[data-theme="dark"] .guide-where-label {
+    color: #d79a9c;
+}
+
+[data-theme="dark"] .guide-how svg,
+[data-theme="dark"] .guide-steps li::before,
+[data-theme="dark"] .guide-steps a,
+[data-theme="dark"] .guide-help h3 svg,
+[data-theme="dark"] .guide-help a {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .guide-toc a.is-current {
+    box-shadow: inset 3px 0 0 #e6b8b9;
+}
+
+[data-theme="dark"] .guide-toc a.is-done .guide-toc-mark,
+[data-theme="dark"] .guide-btn--done[aria-pressed="true"] {
+    color: #0f1f17;
+}
+
+[data-theme="dark"] .guide-btn--try {
+    background: #a33a3c;
+}
+
+[data-theme="dark"] .guide-btn--try:hover {
+    background: #b84a4c;
+}
+
+[data-theme="dark"] .guide-next:hover {
+    color: #e6b8b9;
+}
+
+/* ================================================================
+   8. RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 960px) {
+    .guide {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.5rem;
+    }
+
+    /* The rail becomes a progress card with the chapter list in a scrolling row. */
+    .guide-rail {
+        position: static;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .guide-toc ol {
+        display: flex;
+        gap: 0.4rem;
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+        scrollbar-width: thin;
+    }
+
+    .guide-toc a {
+        flex: none;
+        padding: 0.4rem 0.75rem 0.4rem 0.4rem;
+        border: 1px solid var(--guide-rule);
+        border-radius: 999px;
+        white-space: nowrap;
+        font-size: 0.88rem;
+    }
+
+    .guide-toc a.is-current {
+        box-shadow: none;
+        border-color: var(--maroon-dark);
+    }
+
+    .guide-toc-mark {
+        width: 1.6rem;
+        height: 1.6rem;
+    }
+}
+
+@media (max-width: 700px) {
+    .guide-how {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .guide-how li {
+        grid-template-columns: auto 1fr;
+        align-items: start;
+        gap: 0.75rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .guide {
+        padding: 2rem 1rem 4rem;
+    }
+
+    .guide-ch {
+        padding: 1.25rem;
+        border-radius: 20px;
+    }
+
+    .guide-ch-icon {
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 14px;
+    }
+
+    .guide-ch-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+
+    .guide-steps li {
+        padding-left: 2.3rem;
+    }
+
+    .guide-ch-actions .guide-btn {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .guide-next {
+        margin-left: 0;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .guide-finish {
+        padding: 1.5rem 1rem;
+    }
+}
+
+/* ================================================================
+   9. REDUCED MOTION
+   ================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .guide-ch,
+    .guide-btn,
+    .guide-resume,
+    .guide-bar::-webkit-progress-value {
+        transition: none;
+    }
+
+    .guide-btn--try:hover,
+    .guide-resume:hover {
+        transform: none;
+    }
+}

@@ -113,6 +113,15 @@
 
             {% if 'user' in session %}
             <p class="nav-section">Members</p>
+            {#- The new member guide stays here until every chapter is ticked off. -#}
+            {% set guide_steps = guide_progress() %}
+            {% if guide_steps and (guide_steps[0] < guide_steps[1] or active_page == 'guide') %}
+            <a href="{{ url_for('guide_page') }}" class="nav-link nav-link--guide{% if active_page == 'guide' %} active{% endif %}" {% if active_page == 'guide' %}aria-current="page"{% endif %}>
+                <span class="nav-icon"><i data-lucide="milestone" aria-hidden="true"></i></span>
+                <span class="nav-label">Member guide</span>
+                <span class="nav-count" data-guide-nav-count title="Guide chapters done">{{ guide_steps[0] }}/{{ guide_steps[1] }}</span>
+            </a>
+            {% endif %}
             {% if session.get('role') in ('editor', 'admin') %}
             {{ nav_link(url_for('my_team'), 'pencil-ruler', 'Team Pages', active_page == 'my_team') }}
             {% else %}
