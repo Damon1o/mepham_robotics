@@ -201,6 +201,137 @@
     color: #bbb;
 }
 
+/* Who is on the sub-team: a row of faces that opens into the list. */
+.about-subteam-people {
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 2px dashed rgba(26, 26, 26, 0.18);
+}
+
+.about-subteam-people summary {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    list-style: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--maroon-dark);
+}
+
+.about-subteam-people summary::-webkit-details-marker {
+    display: none;
+}
+
+.about-subteam-people summary::after {
+    content: '+';
+    margin-left: auto;
+    font-size: 1.1rem;
+}
+
+.about-subteam-people[open] summary::after {
+    content: '−';
+}
+
+.about-faces {
+    display: flex;
+}
+
+.about-faces .about-face + .about-face {
+    margin-left: -0.55rem;
+}
+
+.about-face {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    overflow: hidden;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: var(--avatar-bg, var(--accent-gold));
+    color: var(--avatar-ink, var(--ink-on-gold));
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.about-face img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.about-subteam-people ul {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.about-subteam-people a {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 0.6rem;
+    align-items: center;
+    padding: 0.3rem 0.4rem;
+    border-radius: 10px;
+    color: var(--text-dark);
+    text-decoration: none;
+}
+
+.about-subteam-people a:hover,
+.about-subteam-people a:focus-visible {
+    background: rgba(128, 0, 0, 0.06);
+}
+
+.about-subteam-people a .about-face {
+    grid-row: span 2;
+}
+
+.about-person-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.about-person-meta {
+    color: var(--text-light);
+    font-size: 0.8rem;
+    line-height: 1.35;
+}
+
+.about-subteam-people summary > span:last-of-type {
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .about-subteam-people {
+    border-top-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .about-subteam-people summary {
+    color: #d4a0a1;
+}
+
+[data-theme="dark"] .about-face {
+    border-color: #1e1e1e;
+}
+
+[data-theme="dark"] .about-subteam-people a {
+    color: #f1f1f1;
+}
+
+[data-theme="dark"] .about-subteam-people a:hover,
+[data-theme="dark"] .about-subteam-people a:focus-visible {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .about-person-meta {
+    color: #bbb;
+}
+
 @media (max-width: 768px) {
     .about-subteams-layout {
         grid-template-columns: 1fr;

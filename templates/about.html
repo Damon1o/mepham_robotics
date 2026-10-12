@@ -9,6 +9,7 @@
 
 {% from "partials/picture.html" import picture %}
 {% from "partials/site_macros.html" import hero_attrs %}
+{% from "partials/avatar.html" import avatar %}
 {% set about = site.about %}
 {% block content %}
 <div {{ hero_attrs(about.hero_image) }}>
@@ -66,10 +67,33 @@
         </figure>
         <div class="about-subteam-grid">
             {% for card in about.subteams %}
+            {% set people = subteam_people.get(card.title|trim|lower, []) %}
             <div class="about-subteam-card">
                 <i data-lucide="{{ card.icon }}" class="about-subteam-icon"></i>
                 <h3>{{ card.title }}</h3>
                 <p>{{ card.text }}</p>
+                {% if people %}
+                {#- Members whose roster card names this sub-team (matched by name). -#}
+                <details class="about-subteam-people">
+                    <summary>
+                        <span class="about-faces" aria-hidden="true">
+                            {%- for person in people[:5] %}{{ avatar(person, 'about-face') }}{% endfor -%}
+                        </span>
+                        <span>{{ people|length }} member{{ 's' if people|length != 1 }}</span>
+                    </summary>
+                    <ul>
+                        {% for person in people %}
+                        <li>
+                            <a href="{{ url_for('team_page', team_number=person.team_number) }}">
+                                {{ avatar(person, 'about-face') }}
+                                <span class="about-person-name">{{ person.full_name }}</span>
+                                <span class="about-person-meta">{{ person.team_label }}{% if person.roles %} · {{ person.roles|join(', ') }}{% endif %}</span>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </details>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
