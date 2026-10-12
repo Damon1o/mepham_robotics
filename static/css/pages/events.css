@@ -690,7 +690,13 @@
 
 .ev-day.is-out > *,
 .ev-day.is-past:not(.is-today) > * {
-    opacity: 0.55;
+    opacity: 0.65;
+}
+
+/* Faded days already read as muted; muted ink on top of the fade fell to 2.3:1. */
+.ev-day.is-out .ev-pill--soft,
+.ev-day.is-past:not(.is-today) .ev-pill--soft {
+    color: var(--ev-ink);
 }
 
 .ev-day.is-muted {
