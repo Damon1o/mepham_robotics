@@ -160,6 +160,7 @@ STYLE_ALLOWED = {
     'shelf.html': ['--trophy-cols'],  # partials/awards/shelf.html
     'banners.html': ['--banner-cols'],  # partials/awards/banners.html
     'alumni.html': ['--share'],  # each pathway's width in the share bar
+    'donate.html': ['--share'],  # each category's width in a season's spending bar
 }
 
 

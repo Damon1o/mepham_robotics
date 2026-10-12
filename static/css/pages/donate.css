@@ -262,6 +262,255 @@ svg.dn-embed-fallback-icon {
 
 /* --- SPONSORSHIP LEVELS --- */
 
+/* --- FUNDRAISERS RUNNING NOW OR COMING UP --- */
+
+.dn-now-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-md);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dn-now-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 1.25rem 1.35rem 1.4rem;
+    background: var(--dn-surface);
+    border: 3px solid var(--dn-line);
+    border-top: 10px solid var(--accent-gold);
+    border-radius: 20px;
+    box-shadow: var(--dn-shadow);
+}
+
+.dn-now-card.is-live {
+    border-top-color: #1f7a45;
+}
+
+.dn-now-when {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
+    color: var(--dn-heading);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.dn-now-card.is-live .dn-now-when {
+    color: #1f7a45;
+}
+
+.dn-now-pulse {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: currentColor;
+    animation: dn-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dn-pulse {
+    50% { opacity: 0.35; }
+}
+
+.dn-now-card h3 {
+    margin: 0;
+    color: var(--dn-ink);
+    font-size: 1.3rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.dn-now-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    color: var(--dn-muted);
+    font-size: 0.92rem;
+}
+
+.dn-now-meta svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.dn-now-text {
+    margin: 0;
+    color: var(--dn-muted);
+    line-height: 1.5;
+}
+
+.dn-now-goal {
+    margin-top: 0.35rem;
+}
+
+.dn-now-goal p {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    margin: 0.4rem 0 0;
+    color: var(--dn-muted);
+}
+
+.dn-now-goal strong {
+    color: var(--dn-heading);
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+}
+
+.dn-now-goal span {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: var(--dn-ink);
+}
+
+.dn-now-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: fit-content;
+    margin-top: auto;
+    padding-top: 0.5rem;
+    color: var(--dn-heading);
+    font-weight: 700;
+}
+
+.dn-now-link svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+[data-theme="dark"] .dn-now-card.is-live {
+    border-top-color: #5fd38d;
+}
+
+[data-theme="dark"] .dn-now-card.is-live .dn-now-when {
+    color: #5fd38d;
+}
+
+/* --- WHERE THE MONEY GOES --- */
+
+/* One colour per category, by its fixed slot (SPENDING_CATEGORIES order), so a
+   category keeps its colour in every season. Validated categorical steps. */
+.dn-slot-1 { --slot: #2a78d6; }
+.dn-slot-2 { --slot: #eb6834; }
+.dn-slot-3 { --slot: #1baf7a; }
+.dn-slot-4 { --slot: #eda100; }
+.dn-slot-5 { --slot: #e87ba4; }
+.dn-slot-6 { --slot: #008300; }
+
+[data-theme="dark"] .dn-slot-1 { --slot: #3987e5; }
+[data-theme="dark"] .dn-slot-2 { --slot: #d95926; }
+[data-theme="dark"] .dn-slot-3 { --slot: #199e70; }
+[data-theme="dark"] .dn-slot-4 { --slot: #c98500; }
+[data-theme="dark"] .dn-slot-5 { --slot: #d55181; }
+[data-theme="dark"] .dn-slot-6 { --slot: #008300; }
+
+.dn-spend-note {
+    max-width: 60ch;
+    margin: 0.6rem auto 0;
+    color: var(--dn-muted);
+}
+
+.dn-spend-list {
+    display: grid;
+    gap: var(--spacing-md);
+    max-width: 820px;
+    margin: 0 auto;
+}
+
+.dn-spend-season {
+    margin: 0;
+    padding: 1.2rem 1.4rem 1.3rem;
+    background: var(--dn-surface);
+    border: 3px solid var(--dn-line);
+    border-radius: 20px;
+    box-shadow: var(--dn-shadow);
+}
+
+.dn-spend-season figcaption {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    color: var(--dn-heading);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.dn-spend-season figcaption strong {
+    color: var(--dn-ink);
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    letter-spacing: 0;
+}
+
+/* Segments share the width by amount; the 2px surface gap keeps neighbours apart. */
+.dn-spend-bar {
+    display: flex;
+    gap: 2px;
+    height: 1.1rem;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--dn-surface);
+}
+
+.dn-spend-seg {
+    flex: var(--share) 1 0;
+    min-width: 4px;
+    background: var(--slot);
+}
+
+.dn-spend-key {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 0.4rem 1.25rem;
+    margin: 0.9rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dn-spend-key li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    font-size: 0.95rem;
+    color: var(--dn-ink);
+}
+
+.dn-spend-swatch {
+    flex: none;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 3px;
+    background: var(--slot);
+}
+
+.dn-spend-name {
+    min-width: 0;
+}
+
+.dn-spend-amount {
+    margin-left: auto;
+    color: var(--dn-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
 /* --- PAST FUNDRAISERS --- */
 
 .dn-past-total {
@@ -351,7 +600,8 @@ svg.dn-embed-fallback-icon {
     font-size: 1.15rem;
 }
 
-.dn-past-card progress {
+.dn-past-card progress,
+.dn-now-goal progress {
     display: block;
     width: 100%;
     height: 0.85rem;
@@ -362,15 +612,18 @@ svg.dn-embed-fallback-icon {
     appearance: none;
 }
 
-.dn-past-card progress::-webkit-progress-bar {
+.dn-past-card progress::-webkit-progress-bar,
+.dn-now-goal progress::-webkit-progress-bar {
     background: var(--dn-soft);
 }
 
-.dn-past-card progress::-webkit-progress-value {
+.dn-past-card progress::-webkit-progress-value,
+.dn-now-goal progress::-webkit-progress-value {
     background: linear-gradient(90deg, var(--maroon-dark), var(--maroon-accent));
 }
 
-.dn-past-card progress::-moz-progress-bar {
+.dn-past-card progress::-moz-progress-bar,
+.dn-now-goal progress::-moz-progress-bar {
     background: linear-gradient(90deg, var(--maroon-dark), var(--maroon-accent));
 }
 
@@ -775,6 +1028,10 @@ a.dn-sponsor-link:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .dn-now-pulse {
+        animation: none;
+    }
+
     .dn-tier,
     .dn-impact-list li,
     .dn-sponsor-link,

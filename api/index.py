@@ -1497,12 +1497,16 @@ def donate():
     # used CONTACT_EMAIL. Once an admin sets the club email, both use it.
     email = content.general.contact_email if content.is_custom('general.contact_email') else CONTACT_EMAIL
     fundraisers = content.fundraisers
-    past, raised = (site_content.past_fundraisers(fundraisers.entries, fundraisers.history, club_now())
+    now = club_now()
+    past, raised = (site_content.past_fundraisers(fundraisers.entries, fundraisers.history, now)
                     if fundraisers.show_history else ([], 0))
     return render_template('donate.html', active_page='donate',
                            givebutter_campaign_id=content.donate.givebutter_id,
                            contact_email=email, sponsors=load_sponsors(),
-                           past_fundraisers=past, past_raised=raised)
+                           running=site_content.fundraiser_cards(fundraisers.entries, now, site_content.FUNDRAISERS_MAX),
+                           past_fundraisers=past, past_raised=raised,
+                           spending=site_content.spending_seasons(content.donate.spending)
+                           if content.donate.show_spending else [])
 
 # Journey dates are free text; these are the shapes people type into that box.
 LOOSE_DATE_FORMATS = ('%Y-%m-%d', '%m/%d/%Y', '%b %d, %Y', '%B %d, %Y', '%b %d %Y', '%B %d %Y',

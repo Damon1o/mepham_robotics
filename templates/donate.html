@@ -28,6 +28,30 @@
     </div>
 </li>
 {%- endmacro %}
+{#- A fundraiser running now or coming up, with its progress toward the goal. -#}
+{% macro now_card(f) -%}
+<li class="dn-now-card{% if f.live %} is-live{% endif %}">
+    <p class="dn-now-when">
+        {%- if f.live %}<span class="dn-now-pulse" aria-hidden="true"></span> Happening now
+        {%- elif f.days_away == 0 %}Today
+        {%- elif f.days_away == 1 %}Tomorrow
+        {%- else %}{{ f.start.strftime('%a, %b ') ~ f.start.day }}{% endif -%}
+    </p>
+    <h3>{{ f.name }}</h3>
+    {% if f.location %}<p class="dn-now-meta"><i data-lucide="map-pin" aria-hidden="true"></i>{{ f.location }}</p>{% endif %}
+    {% if f.description %}<p class="dn-now-text">{{ f.description }}</p>{% endif %}
+    {% if f.percent is not none %}
+    <div class="dn-now-goal">
+        <progress max="100" value="{{ f.percent }}" aria-label="{{ f.name }}: {{ f.percent }}% of the goal"></progress>
+        <p><strong>${{ '{:,}'.format(f.raised or 0) }}</strong> of ${{ '{:,}'.format(f.goal) }} <span>{{ f.percent }}%</span></p>
+    </div>
+    {% endif %}
+    {% if f.link_url %}
+    <a class="dn-now-link" href="{{ f.link_url }}"{% if f.link_url.startswith('http') %} target="_blank" rel="noopener"{% endif %}>
+        {{- f.link_label or 'Learn more' }} <i data-lucide="arrow-right" aria-hidden="true"></i></a>
+    {% endif %}
+</li>
+{%- endmacro %}
 {% set donate = site.donate %}
 {% set show_impact = donate.show_impact and donate.impact %}
 
@@ -109,6 +133,19 @@
     </div>
 </section>
 
+<!-- FUNDRAISERS RUNNING NOW OR COMING UP -->
+{% if running %}
+<section id="fundraisers" class="dn-section dn-now fade-in-section" aria-labelledby="now-heading">
+    <header class="dn-head">
+        <p class="dn-eyebrow">Fundraisers</p>
+        <h2 id="now-heading">Help Us Hit Our Goals</h2>
+    </header>
+    <ul class="dn-now-grid">
+        {% for f in running %}{{ now_card(f) }}{% endfor %}
+    </ul>
+</section>
+{% endif %}
+
 <!-- PAST FUNDRAISERS -->
 {% if past_fundraisers %}
 {% set shown = 6 %}
@@ -132,6 +169,38 @@
         </ul>
     </details>
     {% endif %}
+</section>
+{% endif %}
+
+<!-- WHERE THE MONEY GOES: one bar per season, split by category -->
+{% if spending %}
+<section id="spending" class="dn-section dn-spend fade-in-section" aria-labelledby="spend-heading">
+    <header class="dn-head">
+        <p class="dn-eyebrow">Your money at work</p>
+        <h2 id="spend-heading">{{ donate.spending_heading }}</h2>
+        {% if donate.spending_note %}<p class="dn-spend-note">{{ donate.spending_note }}</p>{% endif %}
+    </header>
+    <div class="dn-spend-list">
+        {% for year in spending %}
+        <figure class="dn-spend-season">
+            <figcaption><span>{{ year.season }} season</span> <strong>${{ '{:,}'.format(year.total) }}</strong></figcaption>
+            {#- The bar is a picture of the list under it, which carries every number. -#}
+            <div class="dn-spend-bar" aria-hidden="true">
+                {% for part in year.parts %}
+                <span class="dn-spend-seg dn-slot-{{ part.slot }}" style="--share: {{ part.amount }}"
+                    title="{{ part.name }}: ${{ '{:,}'.format(part.amount) }} ({{ part.percent }}%)"></span>
+                {% endfor %}
+            </div>
+            <ul class="dn-spend-key">
+                {% for part in year.parts %}
+                <li><span class="dn-spend-swatch dn-slot-{{ part.slot }}" aria-hidden="true"></span>
+                    <span class="dn-spend-name">{{ part.name }}</span>
+                    <span class="dn-spend-amount">${{ '{:,}'.format(part.amount) }} · {{ part.percent }}%</span></li>
+                {% endfor %}
+            </ul>
+        </figure>
+        {% endfor %}
+    </div>
 </section>
 {% endif %}
 

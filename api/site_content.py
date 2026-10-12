@@ -126,6 +126,17 @@ ALUMNI_MAX = 300
 FUNDRAISERS_MAX = 20
 HISTORY_MAX = 60
 MONEY_MAX = 1_000_000
+# Donate page spending breakdown: key -> name, in the fixed order the bars stack them.
+# The order is also each category's colour slot (donate.css), so a colour never moves.
+SPENDING_CATEGORIES = {
+    'parts': 'Robot parts',
+    'fees': 'Competition fees',
+    'travel': 'Travel',
+    'tools': 'Tools & field',
+    'outreach': 'Outreach & events',
+    'other': 'Other',
+}
+SPENDING_MAX = 60
 
 
 class Field:
@@ -420,6 +431,17 @@ SECTIONS = (
         ], items=(Field('amount', 'text', 'Amount', '', max=12, required=True),
                   Field('text', 'text', 'What it pays for', '', max=80, required=True)),
               max_items=6, group='Your impact'),
+        Field('show_spending', 'toggle', 'Show where the money goes', True, group='Where the money goes',
+              hint='A bar for each season, split by what the money paid for. Hidden until a row is added.'),
+        Field('spending_heading', 'text', 'Heading', 'Where the Money Goes', max=60, group='Where the money goes'),
+        Field('spending_note', 'textarea', 'Note under the heading', '', max=300, group='Where the money goes'),
+        Field('spending', 'list', 'Spending', [], items=(
+            Field('season', 'text', 'Season', '', max=7, required=True, pattern=r'\d{4}-\d{2}',
+                  hint='Like 2025-26'),
+            Field('category', 'choice', 'Spent on', 'parts', choices=SPENDING_CATEGORIES),
+            Field('amount', 'number', 'Amount ($)', None, required=True, min_value=0, max_value=MONEY_MAX),
+        ), max_items=SPENDING_MAX, group='Where the money goes',
+            hint='One row per season and category. Two rows for the same season and category are added up.'),
         Field('show_inquiry', 'toggle', 'Show the sponsor inquiry form', True, group='Sponsors'),
         Field('inquiry_heading', 'text', 'Inquiry heading', 'Become a Corporate Sponsor', max=60, group='Sponsors'),
         Field('sponsors_heading', 'text', 'Sponsor list heading', 'Our Sponsors', max=60, group='Sponsors'),
@@ -1171,6 +1193,35 @@ def past_fundraisers(entries, history, now):
                         else None))
     out.sort(key=lambda r: r['day'], reverse=True)
     return out, sum(r.get('raised') or 0 for r in out)
+
+
+def spending_seasons(rows):
+    """The spending list as seasons, newest first: [{season, total, parts}].
+
+    parts are [{key, name, slot, amount, percent}] in SPENDING_CATEGORIES order, empty ones
+    left out; slot is the category's colour (1-6). Rows for the same season and category
+    add up. Seasons that add up to nothing are dropped.
+    """
+    sums = {}
+    for row in rows or []:
+        season, key = str(row.get('season') or '').strip(), row.get('category')
+        try:
+            amount = max(0, int(row.get('amount') or 0))
+        except (TypeError, ValueError):
+            continue
+        if season and key in SPENDING_CATEGORIES:
+            by_key = sums.setdefault(season, {})
+            by_key[key] = by_key.get(key, 0) + amount
+    out = []
+    for season in sorted(sums, reverse=True):
+        total = sum(sums[season].values())
+        if not total:
+            continue
+        parts = [{'key': key, 'name': name, 'slot': slot, 'amount': sums[season][key],
+                  'percent': round(100 * sums[season][key] / total)}
+                 for slot, (key, name) in enumerate(SPENDING_CATEGORIES.items(), 1) if sums[season].get(key)]
+        out.append({'season': season, 'total': total, 'parts': parts})
+    return out
 
 
 def alumni_view(people):
