@@ -4,7 +4,7 @@
 <header class="mag-head">
     <figure class="mag-cover{{ '' if cover else ' mag-cover--plain' }}">
         {% if cover %}
-        <img src="{{ get_image_url(cover) }}" alt="{{ team_name }}" class="mag-cover-img">
+        <img src="{{ get_image_url(cover) }}" alt="{{ team_name }}" class="mag-cover-img" fetchpriority="high" decoding="async">
         {% else %}
         <span class="mag-cover-mark" aria-hidden="true">{{ team.team_number }}</span>
         {% endif %}
