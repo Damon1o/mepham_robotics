@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from api import site_content
@@ -393,3 +395,20 @@ def test_hidden_cad_puts_specs_back_in_their_section(client, team_factory):
 def test_missing_team_redirects(client):
     resp = client.get('/team/nope')
     assert resp.status_code == 302
+
+
+# --- link previews ------------------------------------------------------------
+
+def test_link_preview_uses_team_photo_without_default_size(client, team_factory):
+    team_factory(hero_image='https://example.public.blob.vercel-storage.com/team.jpg')
+    _, body = html(client)
+    assert '<meta property="og:image" content="https://example.public.blob.vercel-storage.com/team.jpg">' in body
+    assert 'og:image:width' not in body
+
+
+def test_link_preview_without_team_photo_uses_club_photo(client, team_factory):
+    team_factory(hero_image='')
+    _, body = html(client)
+    preview = re.search(r'<meta property="og:image" content="([^"]+)">', body).group(1)
+    assert 'photos/hero.jpg' in preview and 'base.png' not in preview
+    assert '<meta property="og:image:width" content="1276">' in body
