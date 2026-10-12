@@ -382,7 +382,9 @@ SECTIONS = (
             _card('code', 'Programming', 'C++ and Python, autonomous routines, odometry.'),
             _card('notebook-pen', 'Notebook & Outreach', 'Engineering notebook, judging interviews, community '
                   'events.'),
-        ], items=CARD_ITEMS, max_items=8, group='Sub-teams'),
+        ], items=CARD_ITEMS, max_items=8, group='Sub-teams',
+              hint='Members pick their sub-team from these cards in the team editor. Renaming a card moves '
+                   'everyone on it.'),
         Field('culture_heading', 'text', 'Heading', 'Culture & Safety', max=60, group='Culture'),
         Field('culture', 'list', 'Culture cards', [
             _card('globe', 'Diversity & Inclusion', 'Mepham Robotics is committed to fostering an inclusive '

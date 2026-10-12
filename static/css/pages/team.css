@@ -155,20 +155,8 @@
 
 /* --- ROSTER --- */
 
-.roster-group {
+.roster-section > .roster-grid {
     margin-top: var(--spacing-lg);
-}
-
-.roster-group-title {
-    font-family: 'Space Mono', monospace;
-    font-size: 1rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--maroon-dark);
-    border-bottom: 3px solid var(--maroon-dark);
-    display: inline-block;
-    padding-bottom: 0.3rem;
-    margin-bottom: var(--spacing-md);
 }
 
 .roster-grid {
@@ -280,6 +268,15 @@
     }
 }
 
+.roster-subteam {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--maroon-dark);
+    margin: 0 0 var(--spacing-xs);
+}
+
 .roster-since {
     font-family: 'Space Mono', monospace;
     font-size: 0.75rem;
@@ -303,9 +300,8 @@
     color: #d4a0a1;
 }
 
-[data-theme="dark"] .roster-group-title {
+[data-theme="dark"] .roster-subteam {
     color: #d4a0a1;
-    border-bottom-color: #d4a0a1;
 }
 
 [data-theme="dark"] .roster-role-chip {

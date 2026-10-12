@@ -33,6 +33,9 @@
     {% for s in subteams %}
     <option value="{{ s }}" {% if m.subteam == s %}selected{% endif %}>{{ s }}</option>
     {% endfor %}
+    {% if m.subteam and m.subteam not in subteams %}
+    <option value="{{ m.subteam }}" selected>{{ m.subteam }} (no longer listed)</option>
+    {% endif %}
 </select>
 <select data-member-field="since" aria-label="Joined">
     <option value="">Joined?</option>

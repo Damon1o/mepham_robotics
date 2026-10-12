@@ -311,8 +311,7 @@
     }
 }
 
-.dossier-main .scoreboard-inner,
-.dossier-main .roster-group-title {
+.dossier-main .scoreboard-inner {
     max-width: none;
 }
 
@@ -342,7 +341,7 @@
 
 .dossier-main .roster-photo,
 .dossier-main .roster-initials {
-    grid-row: 1 / span 3;
+    grid-row: 1 / span 4;
     width: 64px;
     height: 64px;
     margin: 0;
@@ -352,6 +351,10 @@
 .dossier-main .roster-name {
     margin: 0;
     font-size: 1rem;
+}
+
+.dossier-main .roster-subteam {
+    margin: 0.15rem 0 0;
 }
 
 .dossier-main .roster-roles {

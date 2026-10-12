@@ -173,24 +173,14 @@ def _is_leadership(member):
     return any(word in text for word in LEADERSHIP_KEYWORDS)
 
 
-@app.template_filter('roster_groups')
-def roster_groups(members):
-    """Members grouped by sub-team, leadership first inside each group.
+@app.template_filter('roster_order')
+def roster_order(members):
+    """Everyone on one roster, leadership first, otherwise in the order they were added.
 
-    Groups keep the order the sub-teams first appear in, and members with no
-    sub-team fall into a single trailing group with an empty name, so a team
-    that never filled the field still renders as one plain grid.
+    Sub-teams no longer split the roster into sections; each card carries its
+    sub-team as a chip instead.
     """
-    order, grouped = [], {}
-    for member in members or []:
-        key = (member.get('subteam') or '').strip()
-        if key not in grouped:
-            grouped[key] = []
-            order.append(key)
-        grouped[key].append(member)
-
-    order.sort(key=lambda k: (k == '', k))
-    return [(key, sorted(grouped[key], key=lambda m: not _is_leadership(m))) for key in order]
+    return sorted(members or [], key=lambda m: not _is_leadership(m))
 
 
 # Members saved before this revamp carry a default photo path that was never a real
@@ -2919,7 +2909,48 @@ def admin_api_sponsor_logo(id):
 # The CSRF hook covers these routes like any other POST; the browser sends the
 # token in the X-CSRF-Token header.
 
-SUBTEAMS = ('Mechanical', 'Electrical', 'Programming', 'Notebook & Outreach')
+def subteam_names():
+    """The sub-teams a member can be on: the sub-team cards on the About page.
+
+    One list for the whole site, so adding, renaming or removing a card in Site
+    settings changes the team editor, the rosters and the About page together.
+    """
+    return [title for title in ((card.get('title') or '').strip() for card in site().about.subteams) if title]
+
+
+def _listed_subteam(value):
+    """`value` spelled as its About card spells it, or None when no card has that name."""
+    return next((name for name in subteam_names() if name.lower() == value.lower()), None)
+
+
+def _rename_subteams(old_cards, new_cards):
+    """Carry a renamed sub-team card over to everyone on it.
+
+    A card counts as renamed when the list keeps its length and the title in that
+    spot is new while the old title is gone, so reordering cards changes nobody.
+    """
+    def titles(cards):
+        return [(c.get('title') or '').strip() for c in cards or [] if isinstance(c, dict)]
+
+    old, new = titles(old_cards), titles(new_cards)
+    if len(old) != len(new):
+        return
+    old_set, new_set = {t.lower() for t in old}, {t.lower() for t in new}
+    renames = {a.lower(): b for a, b in zip(old, new)
+               if a and b and a.lower() not in new_set and b.lower() not in old_set}
+    if not renames:
+        return
+    for team in db['teams'].find({'members.subteam': {'$exists': True}}, {'members': 1}):
+        members = team.get('members') or []
+        changed = False
+        for m in members:
+            target = renames.get((m.get('subteam') or '').strip().lower())
+            if target:
+                m['subteam'], changed = target, True
+        if changed:
+            db['teams'].update_one({'_id': team['_id']}, {'$set': {'members': members}})
+
+
 DIVISIONS = ('High School', 'Middle School')
 # Offered as <datalist> suggestions; people can still type anything.
 ROLE_SUGGESTIONS = ('Captain', 'Co-Captain', 'Driver', 'Builder', 'Programmer', 'Designer (CAD)',
@@ -3947,6 +3978,8 @@ SITE_HISTORY_ORDER = [('at', -1), ('_id', -1)]
 def _record_site_change(section, field, old, value, verb='Changed'):
     """Log a published change and remember the value it replaced."""
     key = f'{section.key}.{field.key}'
+    if key == 'about.subteams':
+        _rename_subteams(old, value)
     if value == field.default and verb == 'Changed':
         verb = 'Reset'
     label = f'{verb} "{field.label}" on {section.title}' + (' to the original' if verb == 'Reset' else '')
@@ -5003,7 +5036,7 @@ def manage_team(team_id):
                            cards=[_card(m) | {'roles': ', '.join(m.get('roles') or []),
                                               'since': m.get('since') or ''}
                                   for m in team.get('members', [])],
-                           subteams=SUBTEAMS, divisions=DIVISIONS, team_layouts=site_content.GROUP_LAYOUTS if is_group(team) else site_content.TEAM_LAYOUTS,
+                           subteams=subteam_names(), divisions=DIVISIONS, team_layouts=site_content.GROUP_LAYOUTS if is_group(team) else site_content.TEAM_LAYOUTS,
                            seasons=season_options(d.get('season') for d in db['teams'].find({}, {'season': 1})),
                            years=year_options(), months=month_suggestions(),
                            role_suggestions=ROLE_SUGGESTIONS, goal_suggestions=GOAL_SUGGESTIONS,
@@ -5213,8 +5246,11 @@ def api_team_member(team_id, member_id):
             value = [r.strip() for r in text.split(',') if r.strip()]
         else:
             value = _clean_text(body.get('value'), limit, label, required=(field == 'name'))
-            if field == 'subteam' and value and value not in SUBTEAMS:
-                raise UserFacingError('Pick a listed sub-team.')
+            # A card left on a sub-team that was since removed can keep it, but can't move to one.
+            if field == 'subteam' and value and value != (member.get('subteam') or '').strip():
+                value = _listed_subteam(value)
+                if not value:
+                    raise UserFacingError('Pick a sub-team from the About page list.')
     except UserFacingError as e:
         return _json_error(str(e))
     account = _linked_account(member) if field == 'name' else None

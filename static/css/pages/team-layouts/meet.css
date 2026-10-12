@@ -127,13 +127,6 @@
     padding-top: var(--spacing-xl);
 }
 
-.team-layout--meet .roster-group-title {
-    font-family: var(--font-display);
-    font-size: clamp(1.3rem, 2.6vw, 1.7rem);
-    letter-spacing: 0.04em;
-    padding-bottom: 0.4rem;
-}
-
 .team-layout--meet .roster-grid {
     /* auto-fit counts columns by the track's max, so the cap goes on the grid:
        four 260px cards on desktop, three on a tablet. */
