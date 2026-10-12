@@ -1,6 +1,7 @@
 // Events page (/events): type filter, flipping months without a reload, the day
 // view under the month grid, zooming and maximizing the calendar, the "Next up"
-// countdown, copying the feed link, and closing "Add to calendar" menus.
+// countdown, copying the feed link, and closing "Add to calendar" menus. On one
+// event's page (/events/<id>) it also runs the countdown and members' RSVPs.
 //
 // The page is complete without this file: the grid, the list and every link are
 // server-rendered. The chosen filter and zoom are remembered in this browser only.
@@ -314,6 +315,81 @@
         });
     }
 
+    // --- RSVP (one event's page) ------------------------------------------------------
+
+    // Pressing your current answer again takes it back. The counts and the list of
+    // who's coming are redrawn from the server's reply, so they stay in step.
+    function personItem(p) {
+        const li = document.createElement('li');
+        li.className = 'ev-person';
+        const face = document.createElement('span');
+        face.className = 'ev-person-avatar' + (p.tone && p.tone !== 'gold' ? ` avatar-tone--${p.tone}` : '');
+        face.setAttribute('aria-hidden', 'true');
+        if (p.photo) {
+            face.classList.add('has-photo');
+            const img = document.createElement('img');
+            img.src = p.photo;
+            img.alt = '';
+            face.append(img);
+        } else {
+            face.textContent = p.initials;
+        }
+        const name = document.createElement('span');
+        name.className = 'ev-person-name';
+        name.textContent = p.name;
+        li.append(face, name);
+        if (p.status === 'maybe') {
+            const tag = document.createElement('span');
+            tag.className = 'ev-person-tag';
+            tag.textContent = 'maybe';
+            li.append(tag);
+        }
+        return li;
+    }
+
+    function showRsvp(box, data) {
+        Object.entries(data.counts).forEach(([key, n]) => {
+            const el = box.querySelector(`[data-rsvp-count="${key}"]`);
+            if (el) el.textContent = n;
+        });
+        box.querySelectorAll('[data-rsvp]').forEach(b => {
+            const on = b.dataset.rsvp === data.mine;
+            b.classList.toggle('is-on', on);
+            b.setAttribute('aria-pressed', String(on));
+        });
+        const list = box.querySelector('[data-rsvp-people]');
+        if (list) list.replaceChildren(...data.people.map(personItem));
+        const empty = box.querySelector('[data-rsvp-empty]');
+        if (empty) empty.hidden = data.people.length > 0;
+    }
+
+    function initRsvp() {
+        const box = page.querySelector('.ev-rsvp');
+        if (!box) return;
+        const status = box.querySelector('.ev-rsvp-status');
+        let busy = false;
+        box.addEventListener('click', e => {
+            const button = e.target.closest('[data-rsvp]');
+            if (!button || busy) return;
+            const answer = button.getAttribute('aria-pressed') === 'true' ? '' : button.dataset.rsvp;
+            busy = true;
+            box.setAttribute('aria-busy', 'true');
+            fetch(box.dataset.rsvpUrl, {
+                method: 'POST', credentials: 'same-origin', headers: jsonHeaders(),
+                body: JSON.stringify({ status: answer }),
+            }).then(r => r.json().then(data => {
+                if (!r.ok) throw new Error(data.error || 'Could not save that.');
+                showRsvp(box, data);
+                status.textContent = answer ? `Saved: ${button.textContent.trim()}.` : 'Answer removed.';
+            })).catch(err => {
+                status.textContent = err.message || 'Could not save that. Try again.';
+            }).finally(() => {
+                busy = false;
+                box.removeAttribute('aria-busy');
+            });
+        });
+    }
+
     initFilters();
     initMonthNav();
     initDayView();
@@ -321,4 +397,5 @@
     initCountdown();
     initCopy();
     initMenus();
+    initRsvp();
 })();
