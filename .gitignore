@@ -21,6 +21,3 @@ Thumbs.db
 # Browser automation artifacts
 .playwright-mcp/
 .claude/worktrees/
-
-# Accessibility check (scripts/a11y.mjs) installs these without a package.json
-node_modules/
