@@ -664,3 +664,318 @@
     background: #2a2a2a;
     border-color: #555;
 }
+
+/* The event's own site (RobotEvents), beside its title. */
+.timeline-ext {
+    display: inline-grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    vertical-align: middle;
+    border-radius: 6px;
+    color: var(--maroon-light);
+}
+
+.timeline-ext:hover,
+.timeline-ext:focus-visible {
+    background: var(--accent-light);
+}
+
+.timeline-ext svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+[data-theme="dark"] .timeline-ext {
+    color: #e8b4b5;
+}
+
+/* --- LATEST FROM THE CLUB ------------------------------------------------- */
+.latest-section {
+    padding: 4rem 2rem;
+}
+
+.latest-section h2 {
+    margin-bottom: var(--spacing-lg);
+    text-align: center;
+    color: var(--maroon-dark);
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 2.5rem);
+}
+
+.latest-grid {
+    display: grid;
+    /* Four cards fit one row on a laptop; phones get one column. */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr));
+    gap: var(--spacing-md);
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+}
+
+.latest-card a {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    height: 100%;
+    padding: 1.4rem 1.4rem 1.2rem;
+    border: 3px solid var(--text-dark);
+    border-radius: 14px;
+    background: #fff;
+    color: var(--text-dark);
+    text-decoration: none;
+    box-shadow: var(--shadow-brutal);
+    transition: var(--transition-base);
+}
+
+.latest-card a:hover,
+.latest-card a:focus-visible {
+    transform: translate(-3px, -3px);
+    box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.3);
+    border-color: var(--maroon-dark);
+}
+
+.latest-icon {
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    margin-bottom: 0.35rem;
+    border: 2px solid var(--text-dark);
+    border-radius: 10px;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+.latest-icon svg {
+    width: 1.3rem;
+    height: 1.3rem;
+}
+
+.latest-kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.latest-title {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    line-height: 1.25;
+    color: var(--maroon-dark);
+}
+
+.latest-text {
+    color: var(--text-light);
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.latest-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: auto;
+    padding-top: 0.6rem;
+    font-weight: 700;
+    color: var(--maroon-dark);
+}
+
+.latest-link svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+[data-theme="dark"] .latest-card a {
+    background: #1e1e1e;
+    border-color: #444;
+    color: #f1f1f1;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .latest-kicker {
+    color: #d79a9c;
+}
+
+[data-theme="dark"] .latest-section h2,
+[data-theme="dark"] .latest-title,
+[data-theme="dark"] .latest-link {
+    color: #e8b4b5;
+}
+
+[data-theme="dark"] .latest-text {
+    color: #bbb;
+}
+
+/* --- LIVE MATCHES (during a competition) ----------------------------------- */
+.live-ticker {
+    max-width: 1100px;
+    margin: 3rem auto 0;
+    padding: 1.5rem 1.75rem;
+    border: 3px solid var(--text-dark);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--shadow-brutal);
+}
+
+.live-ticker[hidden] {
+    display: none;
+}
+
+.live-ticker-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.live-ticker-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #b42318;
+}
+
+.live-dot {
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 50%;
+    background: currentColor;
+    animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+    50% { opacity: 0.3; }
+}
+
+.live-ticker h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    text-align: left;
+}
+
+.live-ticker h2::after {
+    display: none;
+}
+
+.live-ticker h2 a {
+    color: var(--maroon-dark);
+    text-decoration: none;
+}
+
+.live-ticker-next {
+    flex-basis: 100%;
+    margin: 0;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.live-ticker-list {
+    display: grid;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.live-match {
+    display: grid;
+    grid-template-columns: 5rem minmax(0, 1fr) auto 4rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-left: 5px solid #999;
+    border-radius: 8px;
+    background: var(--accent-light);
+    font-variant-numeric: tabular-nums;
+}
+
+.live-match.is-win { border-left-color: #1f7a45; }
+.live-match.is-loss { border-left-color: #b42318; }
+.live-match.is-tie { border-left-color: #a15c07; }
+
+.live-match-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.live-match-teams a {
+    color: var(--maroon-dark);
+    font-weight: 700;
+}
+
+.live-match-score {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.live-match-result {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: right;
+}
+
+.is-win .live-match-result { color: #1f7a45; }
+.is-loss .live-match-result { color: #b42318; }
+.is-tie .live-match-result { color: #a15c07; }
+
+.live-ticker-credit {
+    margin: 0.9rem 0 0;
+    color: var(--text-light);
+    font-size: 0.8rem;
+}
+
+[data-theme="dark"] .live-ticker {
+    background: #1e1e1e;
+    border-color: #444;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .live-ticker-next {
+    color: #f1f1f1;
+}
+
+[data-theme="dark"] .live-ticker h2 a,
+[data-theme="dark"] .live-match-teams a {
+    color: #e8b4b5;
+}
+
+[data-theme="dark"] .live-match {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .live-ticker-kicker,
+[data-theme="dark"] .is-loss .live-match-result { color: #f0a08f; }
+[data-theme="dark"] .is-win .live-match-result { color: #6fcf97; }
+[data-theme="dark"] .is-tie .live-match-result { color: #e8bd45; }
+
+@media (max-width: 600px) {
+    .live-ticker {
+        margin: 2rem 1rem 0;
+        padding: 1.2rem;
+    }
+
+    .live-match {
+        grid-template-columns: 3.5rem minmax(0, 1fr) auto auto;
+        gap: 0.5rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .live-dot {
+        animation: none;
+    }
+}

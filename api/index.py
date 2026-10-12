@@ -1222,8 +1222,66 @@ def index():
     settings = site().fundraisers
     fundraisers = (site_content.fundraiser_cards(settings.entries, club_now(), settings.max_shown)
                    if settings.mode != 'never' else [])
+    home = site().home
     return render_template('index.html', active_page='index', stats=stats,
-                           competition=competition, upcoming_events=upcoming_events, fundraisers=fundraisers)
+                           competition=competition, upcoming_events=upcoming_events, fundraisers=fundraisers,
+                           latest=home_latest() if home.show_latest else [],
+                           live_event=live_competition() if home.show_live and robotevents.get_token() else None)
+
+
+def live_competition():
+    """The competition or scrimmage on the calendar that is happening right now, as an event item."""
+    now = club_now()
+    earliest = now - datetime.timedelta(hours=max(events.DURATION_HOURS.values()))
+    for row in db['competitions'].find({'date': {'$gte': earliest, '$lte': now}, **events.competitive_query()}):
+        item = events.event_item(row)
+        if item and item['start'] <= now <= item['end']:
+            return item
+    return None
+
+
+def home_latest():
+    """Cards for "Latest from the club", each built from another part of the site.
+
+    The last competition, awards won, the newest alumni class and the last
+    fundraiser, as [{icon, kicker, title, text, url, link}] in that order,
+    skipping any with nothing to show. Fewer than two cards: an empty list,
+    so a new site does not show one lonely card.
+    """
+    cards = []
+    now = club_now()
+    # The last one that is over: one still going on is in the live ticker instead.
+    item = next((i for i in map(events.event_item, db['competitions'].find(
+        {'date': {'$lt': now}, **events.competitive_query()}).sort('date', -1).limit(5)) if i and i['end'] < now), None)
+    if item:
+        cards.append({'icon': 'flag', 'kicker': 'Last competition', 'title': item['name'],
+                      'text': f"{item['start']:%B} {item['start'].day}, {item['start'].year}"
+                              + (f" · {item['location']}" if item['location'] else ''),
+                      'url': url_for('event_page', event_id=item['id']), 'link': 'Event page'})
+    # Club-wide award rows only (team rows repeat them), in one small query.
+    won = [a for a in db['awards'].find({'team_number': {'$exists': False}}, {'title': 1, 'count': 1})
+           if int(a.get('count') or 0) > 0]
+    if won:
+        total = sum(int(a['count']) for a in won)
+        best = max(won, key=lambda a: int(a['count']))
+        cards.append({'icon': 'trophy', 'kicker': 'Awards won', 'title': f"{total} award{'s' if total != 1 else ''}",
+                      'text': f"Most won: {best.get('title') or 'Award'} ×{int(best['count'])}",
+                      'url': url_for('achievements'), 'link': 'Achievements'})
+    alumni = site_content.alumni_view(site().alumni.people)
+    if alumni['classes']:
+        year, people = alumni['classes'][0]
+        schools = sorted({p['school'] for p in people if p.get('school')})
+        cards.append({'icon': 'graduation-cap', 'kicker': 'Newest alumni', 'title': f'Class of {year}',
+                      'text': f"{len(people)} graduate{'s' if len(people) != 1 else ''}"
+                              + (f" · {', '.join(schools[:2])}{' and more' if len(schools) > 2 else ''}" if schools else ''),
+                      'url': url_for('alumni'), 'link': 'Alumni'})
+    fundraisers = site().fundraisers
+    past, _ = site_content.past_fundraisers(fundraisers.entries, fundraisers.history, now)
+    done = next((f for f in past if f.get('raised')), None)
+    if done:
+        cards.append({'icon': 'piggy-bank', 'kicker': 'Last fundraiser', 'title': f"${done['raised']:,} raised",
+                      'text': f"{done['name']} · {done['day']:%B %Y}", 'url': url_for('donate'), 'link': 'Donate'})
+    return cards if len(cards) > 1 else []
 
 def subteam_people():
     """Current members by sub-team, keyed by the sub-team's name in lower case, leads first.
