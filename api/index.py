@@ -1326,7 +1326,7 @@ def events_jsonld(items):
         'location': {'@type': 'Place', 'name': item['location'], 'address': item['location']},
         'description': item['details'] or f"{item['label']} with {general.club_name}.",
         'organizer': organizer,
-        'url': item['link'] if item['link'].startswith('http') else _public_url('events_page'),
+        'url': item['link'] if item['link'].startswith('http') else _public_url('event_page', event_id=item['id']),
     } for item in items if item['source'] == 'event' and item['location']]
 
 
@@ -1392,6 +1392,84 @@ def event_ics(event_id):
         abort(404)
     return _ics_response(events.ics_calendar(item['name'], [item], request.host, CLUB_TIMEZONE,
                                              datetime.datetime.now(datetime.timezone.utc)), 'event.ics')
+
+
+# --- One event's page and member RSVPs -------------------------------------------------
+# Answers live on the event row as rsvps.<user id> = {status, at}, so deleting an
+# event takes its answers with it. Counts are public; who answered is members only.
+RSVP_CHOICES = {'going': 'Going', 'maybe': 'Maybe', 'no': "Can't go"}
+OTHER_EVENTS_SHOWN = 3
+
+
+def _event_row_and_item(event_id):
+    row = _find_by_id('competitions', event_id)
+    return row, events.event_item(row or {})
+
+
+def rsvp_summary(row, viewer_id=None, with_people=False):
+    """{counts, mine, people} for an event row. People (going first, then maybe) only when asked."""
+    answers = {uid: a for uid, a in (row.get('rsvps') or {}).items()
+               if isinstance(a, dict) and a.get('status') in RSVP_CHOICES}
+    counts = {key: sum(a['status'] == key for a in answers.values()) for key in RSVP_CHOICES}
+    summary = {'counts': counts, 'mine': (answers.get(viewer_id) or {}).get('status', '') if viewer_id else '',
+               'people': []}
+    if with_people:
+        coming = {uid: a for uid, a in answers.items() if a['status'] != 'no' and ObjectId.is_valid(uid)}
+        accounts = db['users'].find({'_id': {'$in': [ObjectId(uid) for uid in coming]}, 'status': {'$ne': 'pending'}},
+                                    {'username': 1, 'full_name': 1, 'photo': 1, 'avatar_tone': 1})
+        people = [dict(u, status=coming[str(u['_id'])]['status'], at=coming[str(u['_id'])].get('at'))
+                  for u in accounts]
+        people.sort(key=lambda p: (p['status'] != 'going', p.get('at') or datetime.datetime.min))
+        summary['people'] = people
+    return summary
+
+
+def _rsvp_json(summary):
+    def person(p):
+        photo = real_photo(p.get('photo') or '')
+        return {'name': _display_name(p), 'initials': initials(_display_name(p)), 'status': p['status'],
+                'photo': get_image_url(photo) if photo else '', 'tone': p.get('avatar_tone') or ''}
+    return {'counts': summary['counts'], 'mine': summary['mine'], 'people': [person(p) for p in summary['people']]}
+
+
+@app.route('/events/<event_id>')
+def event_page(event_id):
+    row, item = _event_row_and_item(event_id)
+    if not item:
+        abort(404)
+    now = club_now()
+    user = _session_user()
+    others = [i for i in _calendar_sources(now) if i['source'] == 'event' and i['id'] != item['id']]
+    return render_template(
+        'event.html', active_page='events', item=item, now=now, today=now.date(),
+        rsvp=rsvp_summary(row, str(user['_id']) if user else None, with_people=bool(user)),
+        rsvp_open=item['end'] >= now, rsvp_choices=RSVP_CHOICES, signed_in=bool(user),
+        others=others[:OTHER_EVENTS_SHOWN],
+        google_url=lambda i: events.google_url(i, CLUB_TIMEZONE), maps_url=events.maps_url,
+        jsonld=events_jsonld([item]))
+
+
+@app.route('/api/events/<event_id>/rsvp', methods=['POST'])
+@login_required
+def api_event_rsvp(event_id):
+    """Set (or with an empty status, clear) the signed-in member's answer for an event."""
+    user = _session_user()
+    row, item = _event_row_and_item(event_id)
+    if not item:
+        return _json_error('That event is no longer on the calendar.', 404)
+    if item['end'] < club_now():
+        return _json_error('That event is over.', 400)
+    status = str(_json_body().get('status') or '')
+    if status and status not in RSVP_CHOICES:
+        return _json_error("Pick going, maybe or can't go.")
+    uid = str(user['_id'])
+    if status:
+        update = {'$set': {f'rsvps.{uid}': {'status': status, 'at': _utcnow()}}}
+    else:
+        update = {'$unset': {f'rsvps.{uid}': ''}}
+    db['competitions'].update_one({'_id': row['_id']}, update)
+    row = db['competitions'].find_one({'_id': row['_id']}) or row
+    return jsonify(_rsvp_json(rsvp_summary(row, uid, with_people=True)))
 
 
 @app.route('/alumni')
@@ -5271,6 +5349,10 @@ def sitemap_xml():
             'priority': 0.6,
             'changefreq': 'weekly',
         })
+    for item in _calendar_sources(club_now()):
+        if item['source'] == 'event':
+            urls.append({'loc': url_for('event_page', event_id=item['id'], _external=True),
+                         'priority': 0.5, 'changefreq': 'weekly'})
 
     xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>',
                  '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']

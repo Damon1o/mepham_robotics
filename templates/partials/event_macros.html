@@ -1,0 +1,58 @@
+{#- Calendar item pieces shared by the events page and one event's page.
+    Import with context: they call google_url and maps_url from the view. -#}
+
+{#- 3:00 PM -#}
+{% macro clock(moment) -%}{{ fmt_time(moment.strftime('%H:%M')) }}{%- endmacro %}
+
+{#- "Sat, Oct 12 · 9:00 AM", "3:00–5:00 PM" for a meeting, "Oct 12 – Oct 14" across days. -#}
+{% macro when(item, with_day=True) -%}
+{%- if item.all_day -%}
+{% if with_day %}{{ item.start.strftime('%a, %b ') ~ item.start.day }}{% else %}All day{% endif %}
+{%- elif item.end.date() != item.start.date() -%}
+{{ item.start.strftime('%a, %b ') ~ item.start.day }} – {{ item.end.strftime('%a, %b ') ~ item.end.day }}
+{%- elif item.source == 'meeting' -%}
+{{ clock(item.start) }}–{{ clock(item.end) }}
+{%- else -%}
+{% if with_day %}{{ item.start.strftime('%a, %b ') ~ item.start.day }} · {% endif %}{{ clock(item.start) }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro badge(item) -%}
+<span class="ev-badge ev-k-{{ item.kind }}"><i data-lucide="{{ item.icon }}" aria-hidden="true"></i>{{ item.label }}</span>
+{%- endmacro %}
+
+{% macro link_attrs(url) -%}
+href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{% endif %}
+{%- endmacro %}
+
+{#- The event's own page on this site; only events from the calendar have one. -#}
+{% macro page_url(item) -%}{{ url_for('event_page', event_id=item.id) }}{%- endmacro %}
+
+{% macro add_menu(item) -%}
+<details class="ev-add">
+    <summary class="ev-btn ev-btn--ghost"><i data-lucide="calendar-plus" aria-hidden="true"></i> Add to calendar</summary>
+    <div class="ev-add-menu">
+        <a href="{{ google_url(item) }}" target="_blank" rel="noopener"><i data-lucide="external-link" aria-hidden="true"></i> Google Calendar</a>
+        {% if item.source == 'event' %}
+        <a href="{{ url_for('event_ics', event_id=item.id) }}" download><i data-lucide="download" aria-hidden="true"></i> Apple, Outlook &amp; others</a>
+        {% endif %}
+    </div>
+</details>
+{%- endmacro %}
+
+{#- details: link to the event's own page (the list and spotlight; not the page itself). -#}
+{% macro actions(item, big=False, details=True) -%}
+<div class="ev-actions">
+    {% if details and item.source == 'event' %}
+    <a class="ev-btn{{ ' ev-btn--primary' if big and not item.link }}" href="{{ page_url(item) }}">Details <i data-lucide="arrow-right" aria-hidden="true"></i></a>
+    {% endif %}
+    {% if item.link %}
+    <a class="ev-btn{{ ' ev-btn--primary' if big }}" {{ link_attrs(item.link) }}>
+        {{- item.link_label or ('Event page' if item.source == 'event' else 'Learn more') }} <i data-lucide="arrow-up-right" aria-hidden="true"></i></a>
+    {% endif %}
+    {{ add_menu(item) }}
+    {% if item.location and item.source != 'meeting' %}
+    <a class="ev-btn ev-btn--ghost" href="{{ maps_url(item.location) }}" target="_blank" rel="noopener"><i data-lucide="navigation" aria-hidden="true"></i> Directions</a>
+    {% endif %}
+</div>
+{%- endmacro %}

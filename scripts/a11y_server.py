@@ -11,6 +11,7 @@ import pathlib
 import sys
 
 import mongomock
+from bson import ObjectId
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 os.environ.setdefault('SECRET_KEY', 'a11y-check-only')
@@ -39,7 +40,8 @@ db['teams'].insert_many([
 db['awards'].insert_one({'team_number': '77628A', 'title': 'Excellence Award', 'count': 2, 'icon': 'design_award.png'})
 soon = (index.club_now() + dt.timedelta(days=10)).replace(hour=9, minute=0, second=0, microsecond=0)
 db['competitions'].insert_many([
-    {'name': 'Regional Qualifier', 'date': soon, 'location': 'Mepham Gym', 'kind': 'competition',
+    # Fixed id: scripts/a11y.mjs checks this event's own page.
+    {'_id': ObjectId('0000000000000000000a11e0'), 'name': 'Regional Qualifier', 'date': soon, 'location': 'Mepham Gym', 'kind': 'competition',
      'details': 'Doors at 7.', 'link': 'https://robotevents.com/x'},
     {'name': 'Library Robot Day', 'date': soon - dt.timedelta(days=7), 'location': 'Bellmore Library',
      'kind': 'outreach'},

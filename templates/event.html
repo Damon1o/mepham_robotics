@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.name }} | {{ site.events.hero_title }} | {{ site.general.short_name }}{% endblock %}
+{% block meta_description %}{{ item.details or (item.label ~ ' on ' ~ item.start.strftime('%A, %B ') ~ item.start.day ~ ', ' ~ item.start.year ~ ((' at ' ~ item.location) if item.location else '') ~ '.') }}{% endblock %}
+
+{% block page_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/events.css') }}">
+{% endblock %}
+
+{% from "partials/event_macros.html" import when, badge, page_url, actions with context %}
+{% from "partials/avatar.html" import avatar %}
+
+{% block content %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('index') }}">Home</a>
+    <span class="separator">›</span>
+    <a href="{{ url_for('events_page') }}">{{ site.events.hero_title }}</a>
+    <span class="separator">›</span>
+    <span class="current">{{ item.name }}</span>
+</nav>
+
+<div class="ev ev-page">
+    <div class="ev-page-grid">
+        <article class="ev-spot ev-detail ev-k-{{ item.kind }}" aria-labelledby="ev-detail-name">
+            {% set days_away = (item.start.date() - today).days %}
+            <div class="ev-spot-body">
+                <div class="ev-spot-date" aria-hidden="true">
+                    <span>{{ item.start.strftime('%b') }}</span>
+                    <strong>{{ item.start.day }}</strong>
+                    <span>{{ item.start.strftime('%a') }}</span>
+                </div>
+                <div class="ev-spot-text">
+                    {{ badge(item) }}
+                    <h1 id="ev-detail-name">{{ item.name }}</h1>
+                    <p class="ev-meta"><i data-lucide="clock" aria-hidden="true"></i> {{ when(item) }}{% if item.start.year != today.year %}, {{ item.start.year }}{% endif %}</p>
+                    {% if item.location %}<p class="ev-meta"><i data-lucide="map-pin" aria-hidden="true"></i> {{ item.location }}</p>{% endif %}
+                </div>
+            </div>
+            {% if item.details %}<p class="ev-details ev-detail-text">{{ item.details }}</p>{% endif %}
+            {% if item.start > now %}
+            <div class="ev-countdown" data-ev-seconds="{{ (item.start - now).total_seconds()|int }}" role="timer"
+                aria-label="Starts {{ 'today' if days_away == 0 else 'tomorrow' if days_away == 1 else 'in ' ~ days_away ~ ' days' }}">
+                <span><b data-unit="days">{{ (item.start - now).days }}</b> days</span>
+                <span><b data-unit="hours">{{ ((item.start - now).seconds // 3600) }}</b> hrs</span>
+                <span><b data-unit="minutes">{{ ((item.start - now).seconds // 60) % 60 }}</b> min</span>
+                <span><b data-unit="seconds">{{ (item.start - now).seconds % 60 }}</b> sec</span>
+            </div>
+            {% elif rsvp_open %}
+            <p class="ev-live"><span class="ev-pulse" aria-hidden="true"></span> Happening now</p>
+            {% else %}
+            <p class="ev-over"><i data-lucide="history" aria-hidden="true"></i> This event has happened.
+                <a href="{{ url_for('achievements') }}">Results and awards</a></p>
+            {% endif %}
+            {% if rsvp_open %}{{ actions(item, big=True, details=False) }}{% endif %}
+        </article>
+
+        <aside class="ev-card ev-rsvp" aria-labelledby="ev-rsvp-title"
+            data-rsvp-url="{{ url_for('api_event_rsvp', event_id=item.id) }}">
+            <p class="ev-kicker"><i data-lucide="users" aria-hidden="true"></i> Members</p>
+            <h2 id="ev-rsvp-title" class="ev-card-big">{{ 'Are you coming?' if rsvp_open else 'Who came' }}</h2>
+            <p class="ev-rsvp-counts">
+                <span><b data-rsvp-count="going">{{ rsvp.counts.going }}</b> going</span>
+                <span><b data-rsvp-count="maybe">{{ rsvp.counts.maybe }}</b> maybe</span>
+            </p>
+
+            {% if signed_in and rsvp_open %}
+            <div class="ev-rsvp-choices" role="group" aria-label="Your answer">
+                {% for key, label in rsvp_choices.items() %}
+                <button type="button" class="ev-chip ev-rsvp-choice{% if rsvp.mine == key %} is-on{% endif %}" data-rsvp="{{ key }}"
+                    aria-pressed="{{ 'true' if rsvp.mine == key else 'false' }}">{{ label }}</button>
+                {% endfor %}
+            </div>
+            <p class="ev-rsvp-status" role="status" aria-live="polite"></p>
+            {% elif rsvp_open %}
+            <p class="ev-card-text">Members: <a href="{{ url_for('login', next=request.path) }}">sign in</a> to say you're coming.</p>
+            {% endif %}
+
+            {% if signed_in %}
+            <ul class="ev-people" data-rsvp-people>
+                {% for person in rsvp.people %}
+                <li class="ev-person">
+                    {{ avatar(person, 'ev-person-avatar') }}
+                    <span class="ev-person-name">{{ person.full_name or person.username }}</span>
+                    {% if person.status == 'maybe' %}<span class="ev-person-tag">maybe</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            <p class="ev-people-empty" data-rsvp-empty{% if rsvp.people %} hidden{% endif %}>{{ 'No one yet. Be the first.' if rsvp_open else 'No one said they were coming.' }}</p>
+            {% endif %}
+        </aside>
+    </div>
+
+    {% if others %}
+    <section class="ev-list ev-others" aria-labelledby="ev-others-title">
+        <h2 id="ev-others-title" class="ev-heading">More coming up</h2>
+        <ol class="ev-items">
+            {% for other in others %}
+            <li class="ev-item ev-k-{{ other.kind }}">
+                <div class="ev-item-date" aria-hidden="true">
+                    <span>{{ other.start.strftime('%a') }}</span>
+                    <strong>{{ other.start.day }}</strong>
+                </div>
+                <div class="ev-item-body">
+                    {{ badge(other) }}
+                    <h3><a href="{{ page_url(other) }}">{{ other.name }}</a></h3>
+                    <p class="ev-meta"><i data-lucide="clock" aria-hidden="true"></i> {{ when(other) }}</p>
+                </div>
+            </li>
+            {% endfor %}
+        </ol>
+    </section>
+    {% endif %}
+
+    <div class="page-back-cta">
+        <a href="{{ url_for('events_page') }}" class="cta-button cta-primary"><i data-lucide="arrow-left" aria-hidden="true"></i> All events</a>
+    </div>
+</div>
+
+{% for event in jsonld %}
+<script type="application/ld+json">{{ event|tojson }}</script>
+{% endfor %}
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/events.js') }}" defer></script>
+{% endblock %}

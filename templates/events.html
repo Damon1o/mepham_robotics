@@ -11,54 +11,7 @@
 
 {% from "partials/site_macros.html" import hero_attrs %}
 
-{#- 3:00 PM -#}
-{% macro clock(moment) -%}{{ fmt_time(moment.strftime('%H:%M')) }}{%- endmacro %}
-
-{#- "Sat, Oct 12 · 9:00 AM", "3:00–5:00 PM" for a meeting, "Oct 12 – Oct 14" across days. -#}
-{% macro when(item, with_day=True) -%}
-{%- if item.all_day -%}
-{% if with_day %}{{ item.start.strftime('%a, %b ') ~ item.start.day }}{% else %}All day{% endif %}
-{%- elif item.end.date() != item.start.date() -%}
-{{ item.start.strftime('%a, %b ') ~ item.start.day }} – {{ item.end.strftime('%a, %b ') ~ item.end.day }}
-{%- elif item.source == 'meeting' -%}
-{{ clock(item.start) }}–{{ clock(item.end) }}
-{%- else -%}
-{% if with_day %}{{ item.start.strftime('%a, %b ') ~ item.start.day }} · {% endif %}{{ clock(item.start) }}
-{%- endif -%}
-{%- endmacro %}
-
-{% macro badge(item) -%}
-<span class="ev-badge ev-k-{{ item.kind }}"><i data-lucide="{{ item.icon }}" aria-hidden="true"></i>{{ item.label }}</span>
-{%- endmacro %}
-
-{% macro link_attrs(url) -%}
-href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{% endif %}
-{%- endmacro %}
-
-{% macro add_menu(item) -%}
-<details class="ev-add">
-    <summary class="ev-btn ev-btn--ghost"><i data-lucide="calendar-plus" aria-hidden="true"></i> Add to calendar</summary>
-    <div class="ev-add-menu">
-        <a href="{{ google_url(item) }}" target="_blank" rel="noopener"><i data-lucide="external-link" aria-hidden="true"></i> Google Calendar</a>
-        {% if item.source == 'event' %}
-        <a href="{{ url_for('event_ics', event_id=item.id) }}" download><i data-lucide="download" aria-hidden="true"></i> Apple, Outlook &amp; others</a>
-        {% endif %}
-    </div>
-</details>
-{%- endmacro %}
-
-{% macro actions(item, big=False) -%}
-<div class="ev-actions">
-    {% if item.link %}
-    <a class="ev-btn{{ ' ev-btn--primary' if big }}" {{ link_attrs(item.link) }}>
-        {{- item.link_label or ('Event page' if item.source == 'event' else 'Learn more') }} <i data-lucide="arrow-up-right" aria-hidden="true"></i></a>
-    {% endif %}
-    {{ add_menu(item) }}
-    {% if item.location and item.source != 'meeting' %}
-    <a class="ev-btn ev-btn--ghost" href="{{ maps_url(item.location) }}" target="_blank" rel="noopener"><i data-lucide="navigation" aria-hidden="true"></i> Directions</a>
-    {% endif %}
-</div>
-{%- endmacro %}
+{% from "partials/event_macros.html" import clock, when, badge, link_attrs, page_url, actions with context %}
 
 {% block content %}
 <div {{ hero_attrs(ev.hero_image) }}>
@@ -91,7 +44,7 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
                 </div>
                 <div class="ev-spot-text">
                     {{ badge(s) }}
-                    <h2 id="ev-spot-name">{{ s.name }}</h2>
+                    <h2 id="ev-spot-name">{% if s.source == 'event' %}<a href="{{ page_url(s) }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %}</h2>
                     <p class="ev-meta"><i data-lucide="clock" aria-hidden="true"></i> {{ when(s) }}</p>
                     {% if s.location %}<p class="ev-meta"><i data-lucide="map-pin" aria-hidden="true"></i> {{ s.location }}</p>{% endif %}
                     {% if s.details %}<p class="ev-details">{{ s.details }}</p>{% endif %}
@@ -226,7 +179,7 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
                         <li class="ev-dayview-item" data-kind="{{ item.kind }}">
                             <span class="ev-dot ev-k-{{ item.kind }}" aria-hidden="true"></span>
                             <div>
-                                <strong>{% if item.link %}<a {{ link_attrs(item.link) }}>{{ item.name }}</a>{% else %}{{ item.name }}{% endif %}</strong>
+                                <strong>{% if item.source == 'event' %}<a href="{{ page_url(item) }}">{{ item.name }}</a>{% elif item.link %}<a {{ link_attrs(item.link) }}>{{ item.name }}</a>{% else %}{{ item.name }}{% endif %}</strong>
                                 <span>{{ item.label }} · {{ when(item, with_day=False) }}{% if item.location %} · {{ item.location }}{% endif %}</span>
                             </div>
                         </li>
@@ -257,7 +210,7 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
                         </div>
                         <div class="ev-item-body">
                             {{ badge(item) }}
-                            <h4>{{ item.name }}</h4>
+                            <h4>{% if item.source == 'event' %}<a href="{{ page_url(item) }}">{{ item.name }}</a>{% else %}{{ item.name }}{% endif %}</h4>
                             <p class="ev-meta"><i data-lucide="clock" aria-hidden="true"></i> {{ when(item) }}
                                 {%- if item.start <= now %} <span class="ev-now">Now</span>{% endif %}</p>
                             {% if item.location %}<p class="ev-meta"><i data-lucide="map-pin" aria-hidden="true"></i> {{ item.location }}</p>{% endif %}
@@ -279,7 +232,7 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
                 <h3 class="ev-month-name">Recently</h3>
                 <ul>
                     {% for item in recent %}
-                    <li><span>{{ item.start.strftime('%b ') ~ item.start.day }}</span> {{ item.name }}</li>
+                    <li><span>{{ item.start.strftime('%b ') ~ item.start.day }}</span> <a href="{{ page_url(item) }}">{{ item.name }}</a></li>
                     {% endfor %}
                 </ul>
                 <a class="ev-more-link" href="{{ url_for('achievements') }}">Results and awards <i data-lucide="arrow-right" aria-hidden="true"></i></a>
