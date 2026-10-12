@@ -85,15 +85,20 @@
             </button>
             <div id="teamDropdown" class="dropdown-container{% if on_team_page %} active{% endif %}">
                 <div class="dropdown-inner">
-                    {% for n_team in nav_teams %}
-                    {% if loop.first and n_team is not group %}
-                    <span class="dropdown-label" role="presentation">Competing Teams</span>
-                    {% endif %}
-                    {% if n_team is group and loop.previtem is not group %}
-                    <span class="dropdown-label" role="presentation">Groups</span>
-                    {% endif %}
+                    {#- Robot teams under their newest season, newest season first; groups last. -#}
+                    {% set nav_sections = [] %}
+                    {% for season, season_teams in nav_teams|reject('group')|groupby('season', default='')|reverse %}
+                    {% set _ = nav_sections.append(('Competing Teams' ~ (' · ' ~ season if season else '') if loop.first
+                        else (season ~ ' season' if season else 'Earlier teams'), season_teams)) %}
+                    {% endfor %}
+                    {% set nav_groups = nav_teams|select('group')|list %}
+                    {% if nav_groups %}{% set _ = nav_sections.append(('Groups', nav_groups)) %}{% endif %}
+                    {% for nav_label, nav_section in nav_sections %}
+                    <span class="dropdown-label" role="presentation">{{ nav_label }}</span>
+                    {% for n_team in nav_section %}
                     <a href="{{ url_for('team_page', team_number=n_team.team_number) }}" class="team-chip{% if n_team is group %} team-chip-group{% endif %}{% if active_page == n_team.team_number %} active{% endif %}" {% if active_page == n_team.team_number %}aria-current="page"{% endif %}>{{ n_team.title or
                         n_team.team_number if n_team is group else n_team.team_number }}</a>
+                    {% endfor %}
                     {% endfor %}
                 </div>
             </div>

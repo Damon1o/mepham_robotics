@@ -2426,7 +2426,7 @@ def admin_dashboard():
 
     # Roster board: one column per team's current season, then every active account not on a roster.
     usernames = {u['_id']: u['username'] for u in users}
-    rostered = {str(m.get('user_id')) for t in teams for m in t['members'] if m.get('user_id')}
+    rostered = {str(m.get('user_id')) for t in teams if t['is_current'] for m in t['members'] if m.get('user_id')}
     board, claimable = [], []
     for t in current_teams:
         cards = []
@@ -3070,15 +3070,26 @@ def _clean_url(value, field_label):
     return text
 
 
-def _rosters_to_leave(user_id, team):
-    """Rosters an account must leave to join `team`: every robot team, or just that group.
+def _same_season(team):
+    """Query for team documents in the same season as `team` (a missing season matches missing)."""
+    return {'season': team.get('season') or {'$in': [None, '']}}
 
-    A person is on at most one robot team but can sit in any number of groups
-    (Media, Fundraising, ...), with or without a robot team.
+
+def _rosters_to_leave(user_id, team):
+    """Rosters an account must leave to join `team`: every robot team that season, or just that group.
+
+    A person is on at most one robot team per season but can sit in any number of
+    groups (Media, Fundraising, ...), with or without a robot team. Earlier seasons
+    keep their login, so a move from one team to another reads as a transfer.
     """
     if is_group(team):
         return {'_id': team['_id'], 'members.user_id': user_id}
-    return {'members.user_id': user_id, **ROBOT_TEAMS}
+    return {'members.user_id': user_id, **ROBOT_TEAMS, **_same_season(team)}
+
+
+def _current_team_ids():
+    """_ids of each team's newest season: the rosters the board, nav and editors work with."""
+    return [t['_id'] for t in _newest_season_docs().values()]
 
 
 def _pull_user_from_rosters(user_id, team):
@@ -3086,7 +3097,8 @@ def _pull_user_from_rosters(user_id, team):
 
 
 def _on_any_roster(user_id):
-    return db['teams'].find_one({'members.user_id': user_id}, {'_id': 1}) is not None
+    return db['teams'].find_one({'members.user_id': user_id, '_id': {'$in': _current_team_ids()}},
+                                {'_id': 1}) is not None
 
 
 # --- Profile sync ---
@@ -3170,11 +3182,61 @@ def _reconcile_profiles():
         return
     _profiles_reconciled = True
     try:
+        if not db['site_metadata'].find_one({'_id': SEASON_LOGINS_MARK}, {'_id': 1}):
+            _relink_past_seasons()
         if not db['site_metadata'].find_one({'_id': PROFILE_SYNC_MARK}, {'_id': 1}):
             _catch_up_profiles()
     except Exception:
         # A catch-up must never take a page down; it runs again after the next restart.
         logger.exception('Profile catch-up failed')
+
+
+SEASON_LOGINS_MARK = 'season_logins_v1'
+
+
+def _relink_past_seasons():
+    """Give earlier seasons' cards back the logins "New season" used to strip from them.
+
+    A card is linked only when its name matches exactly one account (by the account's
+    name or a card it is linked to), and never onto a second robot team that season.
+    """
+    _ensure_member_ids()
+    names = {}
+
+    def add(name, uid):
+        key = collapse_whitespace(name or '').lower()
+        if key and uid:
+            names.setdefault(key, set()).add(uid)
+
+    for user in db['users'].find({'status': {'$ne': 'pending'}}, {'full_name': 1}):
+        add(user.get('full_name'), str(user['_id']))
+    teams = list(db['teams'].find({}, {'members': 1, 'season': 1, 'kind': 1, 'team_number': 1}))
+    for team in teams:
+        for m in team.get('members') or []:
+            add(m.get('name'), str(m.get('user_id') or ''))
+    taken = {}  # season -> logins already on a robot team that season
+    for team in teams:
+        if not is_group(team):
+            taken.setdefault(team.get('season') or '', set()).update(
+                str(m['user_id']) for m in team.get('members') or [] if m.get('user_id'))
+    current = set(_current_team_ids())
+    for team in teams:
+        if team['_id'] in current:
+            continue
+        on_card = {str(m.get('user_id')) for m in team.get('members') or [] if m.get('user_id')}
+        season_taken = set() if is_group(team) else taken.setdefault(team.get('season') or '', set())
+        for m in team.get('members') or []:
+            match = names.get(collapse_whitespace(m.get('name') or '').lower(), set())
+            if m.get('user_id') or not m.get('member_id') or len(match) != 1:
+                continue
+            uid = next(iter(match))
+            if uid in on_card or uid in season_taken:
+                continue
+            db['teams'].update_one({'_id': team['_id'], 'members.member_id': m['member_id']},
+                                   {'$set': {'members.$.user_id': uid}})
+            on_card.add(uid)
+            season_taken.add(uid)
+    db['site_metadata'].update_one({'_id': SEASON_LOGINS_MARK}, {'$set': {'at': _utcnow()}}, upsert=True)
 
 
 def _catch_up_profiles():
@@ -3360,7 +3422,8 @@ def admin_api_roster_move():
             return _json_error('User not found.', 404)
         if not _is_active(user):
             return _json_error('Approve this account before putting it on a team.', 409)
-        source = db['teams'].find_one({'members.user_id': str(user['_id']), **ROBOT_TEAMS})
+        source = db['teams'].find_one({'members.user_id': str(user['_id']), **ROBOT_TEAMS,
+                                       '_id': {'$in': _current_team_ids()}})
         member = (next(m for m in source['members'] if m.get('user_id') == str(user['_id'])) if source
                   else _card_for_user(user))
     else:
@@ -3379,7 +3442,8 @@ def admin_api_roster_move():
     # has a team card, that card moves; otherwise they get a new one.
     added = bool(target) and (is_group(target) or (source is not None and is_group(source)))
     if target and not is_group(target) and source and is_group(source):
-        robot = db['teams'].find_one({'members.user_id': linked, **ROBOT_TEAMS}) if linked else None
+        robot = (db['teams'].find_one({'members.user_id': linked, **ROBOT_TEAMS, **_same_season(target)})
+                 if linked else None)
         if robot and robot['_id'] == target['_id']:
             return _json_error(f'{name} is already on {_team_label(target)}.', 409)
         if robot:
@@ -3392,6 +3456,10 @@ def admin_api_roster_move():
         if linked and db['teams'].find_one({'_id': target['_id'], 'members.user_id': linked}, {'_id': 1}):
             return _json_error(f'{name} is already in {_team_label(target)}.', 409)
         member = _copied_card(member)
+    elif target and source and (source.get('season') or '') != (target.get('season') or ''):
+        # An earlier season's roster is history: moving on to another season's team
+        # leaves that card in place, so the person's career shows both teams.
+        added, member = True, _copied_card(member)
 
     from_id = str(source['_id']) if source else None
     if source and not added:
@@ -3784,8 +3852,9 @@ CARRIED_TEAM_FIELDS = ('kind', 'title', 'team_number', 'nickname', 'tagline', 'd
 def admin_api_new_season(id):
     """Start a team's next season: same identity and roster, fresh specs, goals and journey.
 
-    Logins move to the new season's cards; last season keeps its roster as
-    names only, so each account still sits on exactly one card.
+    Last season keeps its roster with logins, so each person's career shows every
+    season. Someone already on another robot team for the new season has
+    transferred, so they are left off the new roster.
     """
     team = _find_team(id)
     if not team:
@@ -3797,6 +3866,10 @@ def admin_api_new_season(id):
     if db['teams'].find_one({'team_number': number, 'season': season}, {'_id': 1}):
         return _json_error(f'{number} already has a {season} profile.', 409)
     members = team.get('members') or []
+    if not is_group(team):
+        moved = {str(m.get('user_id')) for t in db['teams'].find({'season': season, **ROBOT_TEAMS}, {'members': 1})
+                 for m in t.get('members') or [] if m.get('user_id')}
+        members = [m for m in members if str(m.get('user_id') or '') not in moved]
     doc = {k: team[k] for k in CARRIED_TEAM_FIELDS if team.get(k) not in (None, '')}
     doc.update(season=season, specs={}, goals=[], journey=[],
                members=[dict(m, member_id=_new_member_id()) for m in members])
@@ -3804,9 +3877,6 @@ def admin_api_new_season(id):
         new_id = db['teams'].insert_one(doc).inserted_id
     except DuplicateKeyError:
         return _json_error(f'{number} already has a {season} profile.', 409)
-    if any(m.get('user_id') for m in members):
-        db['teams'].update_one({'_id': team['_id']},
-                               {'$set': {'members': [dict(m, user_id='') for m in members]}})
     if not is_group(team):
         seed_team_awards(number)
     refresh_auto_stats()
@@ -4299,7 +4369,9 @@ def _own_rosters():
     """Current-season teams and groups the signed-in user is on: their team first, then groups."""
     if 'own_rosters' not in g:
         user = _current_db_user()
-        g.own_rosters = sorted(_newest_season_docs({'members.user_id': str(user['_id'])}).values(),
+        uid = str(user['_id']) if user else ''
+        g.own_rosters = sorted((t for t in _newest_season_docs().values()
+                                if any(str(m.get('user_id') or '') == uid for m in t.get('members') or [])),
                                key=team_sort_key) if user else []
     return g.own_rosters
 
@@ -4456,7 +4528,8 @@ def account_history(user):
     """This member's time in the club: rosters by season, and events they said they were going to.
 
     seasons: [{season, teams: [{label, number, group, roles, subteam, awards, url}]}], newest first;
-    rosters saved before seasons existed come last under ''. awards is the team's award total
+    rosters saved before seasons existed come last under ''. A season where the robot
+    team changed also carries moved_from / moved_to (people.team_moves). awards is the team's award total
     (robot teams only; awards are counted per team, not per season). went / going are past
     and upcoming events answered Going on their RSVP, newest and soonest first.
     """
@@ -4477,8 +4550,8 @@ def account_history(user):
         for t in teams:
             t['awards'] = 0 if t['group'] else totals.get(t['number'], 0)
         teams.sort(key=lambda t: (t['group'], t['label'].lower()))
-    seasons = [{'season': s, 'teams': by_season[s]}
-               for s in sorted(by_season, key=lambda s: (s != '', s), reverse=True)]
+    seasons = people.team_moves([{'season': s, 'teams': by_season[s]}
+                                 for s in sorted(by_season, key=lambda s: (s != '', s), reverse=True)])
 
     now = club_now()
     went, going = [], []
@@ -4861,9 +4934,9 @@ def person_page(user_id):
     viewer = _session_user()
     if not _can_view_person(person, viewer):
         return render_template('person.html', locked=True, active_page='people'), 403
+    _reconcile_profiles()
     profile = people.profile_view(person.get('profile'))
     history = account_history(person)
-    people.team_moves(history['seasons'])
     signed_in = viewer is not None
     first_year, _ = people.tenure(history['seasons'])
     honors = profile['honors']

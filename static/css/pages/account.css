@@ -105,6 +105,28 @@
     text-transform: uppercase;
 }
 
+.acct-hist-move {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0 0 0.5rem;
+    padding: 0.15rem 0.6rem;
+    border: 2px dashed var(--maroon-dark);
+    border-radius: 999px;
+    color: var(--maroon-dark);
+    font-size: 0.8rem;
+}
+
+.acct-hist-move svg {
+    width: 0.9rem;
+    height: 0.9rem;
+}
+
+[data-theme="dark"] .acct-hist-move {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+}
+
 .acct-hist-teams,
 .acct-hist-events ul {
     display: grid;

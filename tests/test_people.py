@@ -205,7 +205,7 @@ def test_career_timeline_shows_a_team_switch_and_trophy_cases(client, db, ada):
                               {'team_number': '77628A', 'title': 'Think Award', 'count': 0}])
     sign_in(client, 'ada')
     html = client.get(page(ada)).get_data(as_text=True)
-    assert 'Moved over from 77628A' in html
+    assert 'Transferred <b>77628A</b>' in html and '<b>77628B</b></p>' in html
     assert 'Captain / Driver' in html and 'Since 2024' in html
     assert 'Team trophy cases' in html and '×2' in html and 'Think Award' not in html
 

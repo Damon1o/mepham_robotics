@@ -205,7 +205,7 @@
                         <span class="pf-season-dot" aria-hidden="true"></span>
                         <p class="pf-season-label">{{ s.season ~ ' season' if s.season else 'Earlier' }}{% if loop.first and s.season %} <span class="pf-season-now">Now</span>{% endif %}</p>
                         {% if s.moved_from %}
-                        <p class="pf-move"><i data-lucide="arrow-right" aria-hidden="true"></i> Moved over from {{ s.moved_from }}</p>
+                        <p class="pf-move">Transferred <b>{{ s.moved_from }}</b> <i data-lucide="arrow-right" aria-hidden="true"></i><span class="visually-hidden">to</span> <b>{{ s.moved_to }}</b></p>
                         {% endif %}
                         <ul class="pf-season-teams">
                             {% for t in s.teams %}
