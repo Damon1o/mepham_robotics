@@ -15,10 +15,19 @@
 {%- endmacro %}
 
 {% macro star(row) -%}
-<button type="button" class="hub-star" data-star="{{ row.url }}" aria-pressed="false"
+<button type="button" class="hub-star" data-star="{{ row.url }}" aria-pressed="{{ 'true' if row.url in hub_stars else 'false' }}"
     aria-label="Star {{ row.title }}" title="Star it to find it fast">
     <i data-lucide="star" aria-hidden="true"></i>
 </button>
+{%- endmacro %}
+
+{#- Added to the library since this member last opened the hub. -#}
+{% macro new_badge(row) -%}
+{%- if row.url in hub_new %} <span class="hub-new">New</span>{% endif -%}
+{%- endmacro %}
+
+{% macro row_attrs(row) -%}
+{{ ' is-starred' if row.url in hub_stars }}" data-row{% if row.url in hub_new %} data-new{% endif %}
 {%- endmacro %}
 
 {% macro link_attrs(row) -%}
@@ -113,26 +122,40 @@ href="{{ row.url }}"{% if row.url.startswith('http') %} target="_blank" rel="noo
         <div class="hub-chips" role="group" aria-label="Show">
             <button type="button" class="hub-chip is-on" data-shelf="" aria-pressed="true">All</button>
             <button type="button" class="hub-chip" data-shelf="starred" aria-pressed="false">
-                <i data-lucide="star" aria-hidden="true"></i> Starred <span class="hub-chip-count" data-star-count>0</span>
+                <i data-lucide="star" aria-hidden="true"></i> Starred <span class="hub-chip-count" data-star-count>{{ hub_stars|length }}</span>
             </button>
+            {% if hub_new %}
+            <button type="button" class="hub-chip hub-chip--new" data-shelf="new" aria-pressed="false">
+                <i data-lucide="sparkles" aria-hidden="true"></i> New <span class="hub-chip-count">{{ hub_new|length }}</span>
+            </button>
+            {% endif %}
             {% for key, name, icon, rows in shelves %}
             <button type="button" class="hub-chip" data-shelf="{{ key }}" aria-pressed="false">{{ name }}</button>
             {% endfor %}
         </div>
     </div>
 
-    <div class="hub-library" id="hub-library">
+    {% if hub_recent %}
+    <nav class="hub-recent" aria-label="Recently opened">
+        <p class="hub-kicker"><i data-lucide="history" aria-hidden="true"></i> Recently opened</p>
+        <ul>
+            {% for row in hub_recent %}<li><a {{ link_attrs(row) }} data-opened="{{ row.url }}">{{ row.title }}</a></li>{% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    <div class="hub-library" id="hub-library" data-stars-imported="{{ 'true' if hub_stars_imported else 'false' }}">
         {% for key, name, icon, rows in shelves %}
         {% if key == 'start' %}
         <div class="hub-start" data-shelf-box="start">
             <h2 class="hub-heading"><i data-lucide="{{ icon }}" aria-hidden="true"></i> {{ name }}</h2>
             <ol class="hub-steps">
                 {% for row in rows %}
-                <li class="hub-step" data-row data-shelf="start" data-url="{{ row.url }}"
+                <li class="hub-step{{ row_attrs(row) }} data-shelf="start" data-url="{{ row.url }}"
                     data-text="{{ (row.title ~ ' ' ~ row.note ~ ' ' ~ name)|lower }}">
                     <a {{ link_attrs(row) }}>
                         <span class="hub-step-num" aria-hidden="true">{{ '%02d' % loop.index }}</span>
-                        <strong>{{ row.title }}</strong>
+                        <strong>{{ row.title }}{{ new_badge(row) }}</strong>
                         {% if row.note %}<span>{{ row.note }}</span>{% endif %}
                     </a>
                     {{ star(row) }}
@@ -150,11 +173,12 @@ href="{{ row.url }}"{% if row.url.startswith('http') %} target="_blank" rel="noo
                     <span class="hub-shelf-count">{{ rows|length }}</span></h2>
                 <ul class="hub-links">
                     {% for row in rows %}
-                    <li class="hub-link" data-row data-shelf="{{ key }}" data-url="{{ row.url }}"
+                    <li class="hub-link{{ row_attrs(row) }} data-shelf="{{ key }}" data-url="{{ row.url }}"
                         data-text="{{ (row.title ~ ' ' ~ row.note ~ ' ' ~ name ~ ' ' ~ host(row.url))|lower }}">
                         <a {{ link_attrs(row) }}>
                             <strong>{{ row.title }}
                                 {%- if row.url.startswith('http') %} <i data-lucide="arrow-up-right" class="hub-ext" aria-label="opens in a new tab"></i>{% endif -%}
+                                {{ new_badge(row) }}
                             </strong>
                             {% if row.note %}<span class="hub-note">{{ row.note }}</span>{% endif %}
                             <span class="hub-host">{{ host(row.url) }}</span>
