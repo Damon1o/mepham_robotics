@@ -2,7 +2,7 @@
 
 {% set hub = site.resources %}
 {% block title %}{{ hub.hero_title }} | {{ site.general.short_name }}{% endblock %}
-{% block meta_description %}Team links, this week at a glance, and build tools for Mepham Robotics members.{% endblock %}
+{% block meta_description %}Team links, this week at a glance, and build tools for {{ site.general.short_name }} members.{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/resources.css') }}">

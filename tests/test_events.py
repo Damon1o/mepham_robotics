@@ -253,6 +253,14 @@ def test_countdown_and_hub_count_competitions_only(client, db, make_user):
     assert 'Bellmore Qualifier' in tile and 'Library Robot Day' not in tile
 
 
+def test_countdown_finds_a_competition_past_a_busy_outreach_calendar(client, db):
+    db['competitions'].insert_many([{'name': f'Library Day {n}', 'date': soon(n + 1), 'kind': 'outreach'}
+                                    for n in range(app_module.UPCOMING_EVENTS_LIMIT)])
+    db['competitions'].insert_one({'name': 'Far Qualifier', 'date': soon(40)})
+    home = client.get('/').get_data(as_text=True)
+    assert '<p class="countdown-event">Far Qualifier</p>' in home
+
+
 def test_competition_log_leaves_out_outreach(client, db):
     db['competitions'].insert_one({'name': 'Last Spring Open', 'date': soon(-20)})
     db['competitions'].insert_one({'name': 'Old Library Day', 'date': soon(-10), 'kind': 'outreach'})

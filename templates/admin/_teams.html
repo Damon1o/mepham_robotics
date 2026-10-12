@@ -90,7 +90,7 @@
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <label class="visually-hidden" for="f-team_number">Team number</label>
             <input id="f-team_number" type="text" name="team_number"
-                placeholder="Team number, e.g. {{ team_number_suggestions[0] if team_number_suggestions else '77628X' }}"
+                placeholder="Team number, e.g. {{ team_number_suggestions[0] if team_number_suggestions else site.general.team_number ~ 'X' }}"
                 maxlength="20" required list="dl-team-numbers" autocomplete="off" autocapitalize="characters"
                 pattern="[A-Za-z0-9\-]{1,20}">
             <datalist id="dl-team-numbers">

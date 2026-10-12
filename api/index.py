@@ -1208,8 +1208,7 @@ def index():
         event['month'] = event['date'].strftime('%b').upper()
         event['day'] = event['date'].strftime('%d')
         event['time'] = event['date'].strftime('%I:%M %p')
-    # The countdown is for the next competition, not the next library visit.
-    competition = next((e for e in upcoming_events if events.kind_of(e) in events.COMPETITIVE_KINDS), None)
+    competition = next_competition(club_now())
     settings = site().fundraisers
     fundraisers = (site_content.fundraiser_cards(settings.entries, club_now(), settings.max_shown)
                    if settings.mode != 'never' else [])
@@ -1218,6 +1217,12 @@ def index():
                            competition=competition, upcoming_events=upcoming_events, fundraisers=fundraisers,
                            latest=home_latest() if home.show_latest else [],
                            live_event=live_competition() if home.show_live and robotevents.get_token() else None)
+
+
+def next_competition(now):
+    """The next competition or scrimmage, not the next library visit: the homepage countdown and
+    the Member Hub both count down to it."""
+    return db['competitions'].find_one({'date': {'$gte': now}, **events.competitive_query()}, sort=[('date', 1)])
 
 
 def live_competition():
@@ -1344,9 +1349,7 @@ def achievements_view():
     more_events = len(log) > limit
     log = log[:limit]
     for event in log:
-        # VEX seasons start in late spring: an April event belongs to the season that began last year.
-        start = event['date'].year - (event['date'].month < 5)
-        event['season'] = f'{start}–{str(start + 1)[-2:]}'
+        event['season'] = current_season(event['date']).replace('-', '–')
     return {
         'earned': earned, 'unearned': unearned, 'has_awards': bool(categories),
         'featured': [a for a in earned if a['featured']],
@@ -1560,24 +1563,18 @@ def alumni():
 def contact():
     return render_template('contact.html', active_page='contact')
 
-CONTACT_EMAIL = os.getenv('CONTACT_EMAIL', 'mephamrobotics@gmail.com')
-
-
 @app.route('/donate')
 def donate():
     # The embed only renders once a campaign id is configured; until then the
     # template shows an email fallback instead of a broken Givebutter frame.
     content = site()
-    # The contact page has always shown its own address; the donation fallback
-    # used CONTACT_EMAIL. Once an admin sets the club email, both use it.
-    email = content.general.contact_email if content.is_custom('general.contact_email') else CONTACT_EMAIL
     fundraisers = content.fundraisers
     now = club_now()
     past, raised = (site_content.past_fundraisers(fundraisers.entries, fundraisers.history, now)
                     if fundraisers.show_history else ([], 0))
     return render_template('donate.html', active_page='donate',
                            givebutter_campaign_id=content.donate.givebutter_id,
-                           contact_email=email, sponsors=load_sponsors(),
+                           contact_email=content.general.contact_email, sponsors=load_sponsors(),
                            running=site_content.fundraiser_cards(fundraisers.entries, now, site_content.FUNDRAISERS_MAX),
                            past_fundraisers=past, past_raised=raised,
                            spending=site_content.spending_seasons(content.donate.spending)
@@ -1615,8 +1612,7 @@ def team_timeline(team):
         when = comp.get('date')
         if not comp.get('name') or not isinstance(when, datetime.datetime):
             continue
-        # VEX seasons start in late spring, as on the achievements page.
-        if start_year is not None and when.year - (when.month < 5) != start_year:
+        if start_year is not None and int(current_season(when)[:4]) != start_year:
             continue
         competitions.setdefault(comp['name'].strip().lower(), comp)
 
@@ -1824,8 +1820,7 @@ def resources():
     week = None
     if hub.show_week:
         meeting = site_content.next_meeting(site().meeting, now)
-        competition = db['competitions'].find_one({'date': {'$gte': now}, **events.competitive_query()},
-                                                  sort=[('date', 1)])
+        competition = next_competition(now)
         week = {'meeting': meeting, 'competition': competition,
                 'meeting_today': bool(meeting) and meeting[0].date() == now.date(),
                 'meeting_live': bool(meeting) and meeting[0] <= now,
@@ -2010,7 +2005,6 @@ def _start_session(user, remember):
 # code (or a one-time backup code). The half-signed-in state lives in the
 # session for a few minutes and carries no access of its own.
 TWO_STEP_WINDOW = datetime.timedelta(minutes=5)
-TOTP_ISSUER = 'Mepham Robotics'
 
 
 def _begin_two_step(user, remember, next_url):
@@ -4574,7 +4568,7 @@ def _render_account(user, status=200, **extra):
         'account.html', active_page='account', account=user,
         two_step=two_step, backup_left=backup_left,
         setup_secret=pending,
-        setup_uri=totp.provisioning_uri(pending, user['username'], TOTP_ISSUER) if pending else None,
+        setup_uri=totp.provisioning_uri(pending, user['username'], site().general.short_name) if pending else None,
         checks=checks, checks_done=sum(1 for c in checks if c[0]),
         devices=_device_rows(user), activity=_account_activity(user), rosters=_own_rosters(),
         history=account_history(user),
@@ -5566,10 +5560,8 @@ def chat_history(raw):
     while kept and kept[0]['role'] == 'assistant':
         kept.pop(0)
     return kept
-CHAT_SYSTEM_PROMPT = (
-    "You are Steven, the official AI assistant for the Mepham Robotics Club "
-    "(VEX V5 Team 77628). Be helpful, enthusiastic about robotics, and concise."
-)
+CHAT_SYSTEM_PROMPT = ('You are Steven, the official AI assistant for the {club_name} (VEX V5 Team {team_number}). '
+                      'Be helpful, enthusiastic about robotics, and concise.')
 
 
 def chat_system_prompt():
@@ -5595,7 +5587,8 @@ def chat_system_prompt():
             + (f" at {i['location']}" if i['location'] else '') for i in coming) + '.')
     if content.assistant.knowledge:
         facts.append(content.assistant.knowledge)
-    return CHAT_SYSTEM_PROMPT + ' Facts you can rely on: ' + ' '.join(facts)
+    intro = CHAT_SYSTEM_PROMPT.format(club_name=content.general.club_name, team_number=content.general.team_number)
+    return intro + ' Facts you can rely on: ' + ' '.join(facts)
 
 
 NEWSLETTER_RATE_LIMIT = 5

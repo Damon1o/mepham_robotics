@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Branding Guide | Mepham Robotics{% endblock %}
-{% block meta_description %}Official Mepham Robotics branding guide — colors, fonts, and logo usage.{% endblock %}
+{% block title %}Branding Guide | {{ site.general.short_name }}{% endblock %}
+{% block meta_description %}Official {{ site.general.short_name }} branding guide — colors, fonts, and logo usage.{% endblock %}
 
 
 {% block page_styles %}
@@ -20,7 +20,7 @@
 <div class="content-page">
     <h1>Branding Guide</h1>
     <p class="page-subtitle">Official colors, typography, and
-        logo usage for Team 77628.</p>
+        logo usage for Team {{ site.general.team_number }}.</p>
 
     <h2><i data-lucide="palette"></i> Color Palette</h2>
     <p>Our brand is built on a bold maroon and gold foundation. Use these colors consistently across all team
@@ -79,12 +79,12 @@
         <h3>Secondary — Monospace</h3>
         <div class="specimen-text specimen-mono-bold">Space Mono Bold</div>
         <div class="specimen-text specimen-mono-body">
-            BUILD.CODE.COMPETE. → 77628</div>
+            {{ site.general.tagline|upper|replace(' ', '') }} → {{ site.general.team_number }}</div>
         <div class="specimen-meta">Used for: Headings, stats, labels, code references</div>
     </div>
 
     <h2><i data-lucide="tag"></i> Logo Usage</h2>
-    <p>The Mepham Robotics logo should always:</p>
+    <p>The {{ site.general.short_name }} logo should always:</p>
     <ul>
         <li>Appear with sufficient clear space around it</li>
         <li>Not be stretched, skewed, or distorted</li>

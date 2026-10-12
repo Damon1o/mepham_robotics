@@ -63,7 +63,6 @@ Python 3.12 is the target (`.python-version`); Vercel deploys with the Flask fra
 | `CHATBOT_API_KEY` | optional | Enables the on-site assistant; without it the widget reports it is offline |
 | `CHATBOT_API_URL`, `CHATBOT_MODEL` | optional | Override the assistant's upstream and model |
 | `GIVEBUTTER_CAMPAIGN_ID` | optional | Renders the donation embed; without it the page shows an email fallback |
-| `CONTACT_EMAIL` | optional | Address shown in fallbacks |
 | `CLUB_TIMEZONE` | optional | Zone event times are entered in (default `America/New_York`) |
 | `FLASK_DEBUG` | optional | `1` enables the debugger for the local server only |
 

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Your Account | Mepham Robotics{% endblock %}
+{% block title %}Your Account | {{ site.general.short_name }}{% endblock %}
 {% block meta_description %}Edit your profile, change your password, see where you're signed in and set up two-step sign-in.{% endblock %}
 
 {% block page_styles %}
@@ -342,7 +342,7 @@
                         <button type="button" class="account-btn" data-copy-codes="{{ backup_codes|join('\n') }}">
                             <i data-lucide="copy" aria-hidden="true"></i> <span>Copy</span></button>
                         <button type="button" class="account-btn" data-download-codes="{{ backup_codes|join('\n') }}"
-                            data-account="{{ account.username }}">
+                            data-account="{{ account.username }}" data-club="{{ site.general.short_name }}">
                             <i data-lucide="download" aria-hidden="true"></i> <span>Download .txt</span></button>
                         <button type="button" class="account-btn" data-print-codes>
                             <i data-lucide="printer" aria-hidden="true"></i> <span>Print</span></button>
