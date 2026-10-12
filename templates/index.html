@@ -7,6 +7,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/index.css') }}">
 {% endblock %}
 
+{% block page_scripts %}
+{% if live_event %}<script src="{{ url_for('static', filename='js/home-live.js') }}" defer></script>{% endif %}
+{% endblock %}
+
 {% from "partials/picture.html" import picture %}
 {% from "partials/site_macros.html" import hero_attrs, site_photo %}
 {% set home = site.home %}
@@ -101,6 +105,20 @@
 </section>
 {% endif %}
 
+{% if live_event %}
+<!-- LIVE MATCHES: shown by home-live.js once RobotEvents has results for the competition on now -->
+<section class="live-ticker" data-live-ticker data-team-url="{{ url_for('team_page', team_number='TEAM') }}"
+    aria-labelledby="live-ticker-title" hidden>
+    <div class="live-ticker-head">
+        <p class="live-ticker-kicker"><span class="live-dot" aria-hidden="true"></span> Live now</p>
+        <h2 id="live-ticker-title"><a href="{{ url_for('event_page', event_id=live_event.id) }}">{{ live_event.name }}</a></h2>
+        <p class="live-ticker-next" data-live-next hidden></p>
+    </div>
+    <ol class="live-ticker-list" data-live-list aria-live="polite"></ol>
+    <p class="live-ticker-credit">Results from RobotEvents · updates every minute</p>
+</section>
+{% endif %}
+
 <section class="timeline">
     <h2>{{ home.events_heading }}</h2>
     <div class="timeline-wrapper">
@@ -108,7 +126,9 @@
         <div class="timeline-card">
             <div class="date-pill">{{ event.month }} {{ event.day }}</div>
             <div class="timeline-content">
-                <h3>{% if event.link %}<a class="timeline-link" href="{{ event.link }}" target="_blank" rel="noopener">{{ event.name }}</a>{% else %}{{ event.name }}{% endif %}</h3>
+                <h3><a class="timeline-link" href="{{ url_for('event_page', event_id=event._id|string) }}">{{ event.name }}</a>
+                    {%- if event.link %} <a class="timeline-ext" href="{{ event.link }}" target="_blank" rel="noopener"
+                        aria-label="{{ event.name }}: event page (opens in a new tab)"><i data-lucide="arrow-up-right" aria-hidden="true"></i></a>{% endif %}</h3>
                 <div class="info-row">
                     <p class="location">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -138,6 +158,26 @@
     </div>
     <p class="timeline-more"><a href="{{ url_for('events_page') }}">See the full calendar <i data-lucide="arrow-right" aria-hidden="true"></i></a></p>
 </section>
+
+{% if latest %}
+<!-- LATEST FROM THE CLUB: built from the events, achievements, alumni and fundraisers -->
+<section class="latest-section fade-in-section" aria-labelledby="latest-heading">
+    <h2 id="latest-heading" class="ripple">{{ home.latest_heading }}</h2>
+    <ul class="latest-grid">
+        {% for card in latest %}
+        <li class="latest-card">
+            <a href="{{ card.url }}">
+                <span class="latest-icon" aria-hidden="true"><i data-lucide="{{ card.icon }}"></i></span>
+                <span class="latest-kicker">{{ card.kicker }}</span>
+                <strong class="latest-title">{{ card.title }}</strong>
+                {% if card.text %}<span class="latest-text">{{ card.text }}</span>{% endif %}
+                <span class="latest-link">{{ card.link }} <i data-lucide="arrow-right" aria-hidden="true"></i></span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
 
 {% set fr = site.fundraisers %}
 {% if fr.mode == 'always' or (fr.mode == 'scheduled' and fundraisers) %}

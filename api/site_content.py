@@ -273,6 +273,12 @@ SECTIONS = (
         Field('events_heading', 'text', 'Events heading', 'Upcoming Events', max=60, group='Countdown & events'),
         Field('events_empty', 'text', 'When there are no events',
               'No upcoming events scheduled at this time. Check back soon!', max=160, group='Countdown & events'),
+        Field('show_latest', 'toggle', 'Show "Latest from the club"', True, group='Sections',
+              hint='Cards for the last competition, awards, the newest alumni and the last fundraiser, '
+                   'built from the rest of the site. Hidden when fewer than two have anything to show.'),
+        Field('latest_heading', 'text', 'Latest heading', 'Latest from the Club', max=60, group='Sections'),
+        Field('show_live', 'toggle', 'Show live match results during competitions', True, group='Sections',
+              hint='Only while a competition on the calendar is happening, and only with a RobotEvents key.'),
         Field('show_stats', 'toggle', 'Show the club numbers', True, group='Sections',
               hint='The numbers themselves are set on the dashboard.', hint_link=('Overview', 'overview')),
         Field('show_gallery', 'toggle', 'Show the photo gallery', True, group='Sections'),

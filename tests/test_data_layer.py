@@ -50,10 +50,12 @@ def counting(db, monkeypatch):
 
 # --- Query cost -------------------------------------------------------------
 
-def test_homepage_skips_awards_and_sponsors(client, counting):
+def test_homepage_skips_sponsors_and_reads_awards_once(client, counting):
     client.get('/')
-    touched = {name for name, _ in counting.calls}
-    assert touched == {'site_metadata', 'competitions', 'teams'}
+    touched = [name for name, _ in counting.calls]
+    assert set(touched) == {'site_metadata', 'competitions', 'teams', 'awards'}
+    # "Latest from the club" reads the club-wide award rows in one query, not the whole achievements view.
+    assert touched.count('awards') == 1
 
 
 def test_404_page_makes_no_queries(client, counting):
