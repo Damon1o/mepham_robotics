@@ -83,6 +83,13 @@ def test_icon_choice_lists_are_bundled():
     assert names - BUNDLED == set()
 
 
+def test_icons_written_into_templates_are_bundled():
+    """Catches icons that only render with data present (a share button on an award, say)."""
+    for path in (ROOT / 'templates').rglob('*.html'):
+        for name in re.findall(r'data-lucide="([a-z0-9-]+)"', path.read_text(encoding='utf-8')):
+            assert name in BUNDLED, f'{path.name}: {name}'
+
+
 def test_icons_written_into_js_are_bundled():
     for path in (ROOT / 'static' / 'js').glob('*.js'):
         for name in re.findall(r'data-lucide="([a-z0-9-]+)"', path.read_text(encoding='utf-8')):
