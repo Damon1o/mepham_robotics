@@ -533,6 +533,40 @@ select[data-member-field] {
     border-color: var(--accent-gold);
 }
 
+/* One block per season, newest first. */
+.team-picker-season + .team-picker-season {
+    margin-top: 1.75rem;
+}
+
+.team-picker-season-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid #e6e0dc;
+    color: var(--maroon-dark);
+    font-size: 1.1rem;
+}
+
+.team-picker-season-title::after {
+    display: none;
+}
+
+.team-picker-current {
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+[data-theme="dark"] .team-picker-season-title {
+    border-color: #3a3a3a;
+    color: #e6b8b9;
+}
+
 /* Link to /manage/fundraisers under the picker, for the fundraising group and editors. */
 .team-picker-extra {
     margin-top: 1.5rem;
