@@ -1,5 +1,6 @@
-// Alumni (/alumni): pathway chips and search narrow the wall; the update form
-// sends to the contact inbox tagged "alumni".
+// Alumni (/alumni): pathway chips, class and school menus, the "Open to questions"
+// chip and search narrow the wall. The update form and the "Ask an alum" form send
+// to the contact inbox tagged "alumni"; an Ask button on a card picks that person.
 
 (function () {
     'use strict';
@@ -11,6 +12,9 @@
         const search = document.querySelector('[data-alumni-search]');
         const count = document.querySelector('[data-alumni-count]');
         const none = document.querySelector('[data-alumni-none]');
+        const year = document.querySelector('[data-alumni-class]');
+        const school = document.querySelector('[data-alumni-school]');
+        const mentors = document.querySelector('[data-alumni-mentors]');
         let path = '';
 
         function apply() {
@@ -18,6 +22,9 @@
             let shown = 0;
             cards.forEach(card => {
                 const match = (!path || card.dataset.path === path)
+                    && (!year?.value || card.dataset.classYear === year.value)
+                    && (!school?.value || card.dataset.school === school.value)
+                    && (mentors?.getAttribute('aria-pressed') !== 'true' || 'mentor' in card.dataset)
                     && words.every(w => card.dataset.search.includes(w));
                 card.hidden = !match;
                 if (match) shown++;
@@ -38,10 +45,29 @@
             apply();
         }));
         search?.addEventListener('input', apply);
+        year?.addEventListener('change', apply);
+        school?.addEventListener('change', apply);
+        mentors?.addEventListener('click', () => {
+            mentors.setAttribute('aria-pressed', String(mentors.getAttribute('aria-pressed') !== 'true'));
+            apply();
+        });
     }
 
-    function initForm() {
-        const form = document.querySelector('[data-alumni-form]');
+    // An Ask button on a card picks that person in the form; its link then scrolls there.
+    function initAskButtons() {
+        const pick = document.querySelector('[data-alumni-ask] select[name="alum"]');
+        if (!pick) return;
+        document.addEventListener('click', e => {
+            const button = e.target.closest('[data-ask]');
+            if (!button) return;
+            pick.value = button.dataset.ask;
+            pick.dispatchEvent(new Event('change', { bubbles: true }));
+            setTimeout(() => pick.form.querySelector('[name="name"]').focus({ preventScroll: true }), 0);
+        });
+    }
+
+    // Both forms post to /api/contact tagged "alumni"; `compose` builds the message.
+    function initForm(form, compose, sent) {
         if (!form) return;
         const status = form.querySelector('[data-alumni-status]');
         const field = name => form.querySelector(`[name="${name}"]`);
@@ -56,15 +82,16 @@
             e.preventDefault();
             const name = field('name').value.trim();
             const email = field('email').value.trim();
-            const year = field('class_year').value.trim();
+            const year = field('class_year')?.value.trim() || '';
             const note = field('message').value.trim();
             const missing = [[field('name'), !name], [field('email'), !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)],
-                [field('class_year'), year && !/^\d{4}$/.test(year)], [field('message'), !note]];
+                [field('class_year'), year && !/^\d{4}$/.test(year)], [field('message'), !note]]
+                .filter(([input]) => input);
             missing.forEach(([input, bad]) => input.classList.toggle('has-error', Boolean(bad)));
             const first = missing.find(([, bad]) => bad);
             if (first) {
                 say(first[0] === field('class_year') ? 'Class year should look like 2024.'
-                    : 'Fill in your name, a valid email and where you are now.', false);
+                    : `Fill in your name, a valid email and ${field('class_year') ? 'where you are now' : 'your question'}.`, false);
                 first[0].focus();
                 return;
             }
@@ -78,14 +105,14 @@
                     headers: jsonHeaders(),
                     body: JSON.stringify({
                         name, email, topic: 'alumni',
-                        message: (year ? `Class of ${year}\n\n` : '') + note,
+                        message: compose(field, year, note),
                         website: field('website').value
                     })
                 });
                 const data = await response.json().catch(() => ({}));
                 if (response.ok) {
                     form.reset();
-                    say('Thanks! We got your update and will be in touch.', true);
+                    say(sent, true);
                 } else {
                     say(data.error || 'That did not send. Try again in a moment.', false);
                 }
@@ -99,6 +126,12 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         initWall();
-        initForm();
+        initAskButtons();
+        initForm(document.querySelector('[data-alumni-form]'),
+            (field, year, note) => (year ? `Class of ${year}\n\n` : '') + note,
+            'Thanks! We got your update and will be in touch.');
+        initForm(document.querySelector('[data-alumni-ask]'),
+            (field, year, note) => `Question for ${field('alum').value}:\n\n${note}`,
+            'Thanks! We will pass your question on.');
     });
 })();
