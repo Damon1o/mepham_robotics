@@ -267,9 +267,7 @@
     {% endif %}
 
     <script type="application/json" id="search-pages">{{ search_index(nav_teams)|tojson }}</script>
-    <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"
-        integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
-        crossorigin="anonymous" defer></script>
+    <script src="{{ url_for('static', filename='js/icons.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/controls.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/fuse.js') }}" defer></script>
