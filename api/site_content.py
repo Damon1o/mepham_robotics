@@ -605,6 +605,12 @@ SECTIONS = (
         Field('cta_button', 'text', 'Band button', 'Join the Club', max=24, group='Interested? band'),
     ), blurb='Shared copy on every team page'),
 
+    Section('people', 'Member pages', 'id-card', (
+        Field('allow_public', 'toggle', 'Members can make their page public', True,
+              hint='Off keeps every member page for signed-in members only, whatever each member picked. '
+                   'Turning it back on restores the pages members had made public.'),
+    ), blurb='Who can see member pages'),
+
     Section('resources', 'Member Hub', 'library', (
         Field('hero_title', 'text', 'Big title', 'Member Hub', max=40, required=True, group='Top of the page'),
         Field('hero_tagline', 'text', 'Tagline', 'Everything you need between the bell and the buzzer', max=80,

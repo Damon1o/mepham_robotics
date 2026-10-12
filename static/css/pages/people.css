@@ -1350,6 +1350,14 @@
     opacity: 0;
 }
 
+.pf-choice-card:has(input:disabled) {
+    cursor: not-allowed;
+}
+
+.pf-choice-card input:disabled + span {
+    border-style: dashed;
+}
+
 .pf-choice-card > span {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
