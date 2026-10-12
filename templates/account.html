@@ -223,6 +223,9 @@
                     {% for s in h.seasons %}
                     <li>
                         <p class="acct-hist-season">{{ s.season ~ ' season' if s.season else 'Earlier' }}</p>
+                        {% if s.moved_from %}
+                        <p class="acct-hist-move">Transferred <b>{{ s.moved_from }}</b> <i data-lucide="arrow-right" aria-hidden="true"></i><span class="visually-hidden">to</span> <b>{{ s.moved_to }}</b></p>
+                        {% endif %}
                         <ul class="acct-hist-teams">
                             {% for t in s.teams %}
                             <li>

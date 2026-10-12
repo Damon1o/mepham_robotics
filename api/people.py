@@ -258,13 +258,15 @@ def team_moves(seasons):
     """Mark each season whose robot team differs from the season before it.
 
     seasons come newest first; a season gets `moved_from` (the earlier team's label)
-    when the person's robot team changed going into it. The career timeline shows
-    that as a "moved from" note, so a switch of teams reads as a story, not a gap.
+    and `moved_to` (the team they joined) when the person's robot team changed going
+    into it. Timelines show that as a transfer, so a switch of teams reads as a story.
     """
     previous = None
     for s in reversed(seasons):
         robots = [t['label'] for t in s['teams'] if not t['group']]
-        s['moved_from'] = previous if robots and previous and previous not in robots else None
+        moved = bool(robots and previous and previous not in robots)
+        s['moved_from'] = previous if moved else None
+        s['moved_to'] = robots[0] if moved else None
         if robots:
             previous = robots[0]
     return seasons

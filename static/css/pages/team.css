@@ -98,7 +98,8 @@
 .season-switcher {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 var(--spacing-md) var(--spacing-sm);
+    /* Top room so the pills never sit on the breadcrumb card above them. */
+    padding: var(--spacing-sm) var(--spacing-md);
     display: flex;
     flex-wrap: wrap;
     align-items: center;

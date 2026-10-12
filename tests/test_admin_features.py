@@ -143,7 +143,7 @@ def test_event_links_are_saved_and_shown(admin, db):
 
 # --- Seasons -----------------------------------------------------------------------------
 
-def test_new_season_copies_the_team_and_moves_logins(admin, db, make_user):
+def test_new_season_copies_the_team_and_keeps_last_seasons_logins(admin, db, make_user):
     kid = make_user(username='kid', password='kid-password', email='kid@example.com')
     old = db['teams'].insert_one({'team_number': '1A', 'season': '2025-26', 'nickname': 'Hydra',
                                   'goals': [{'name': 'Win', 'progress': 50}],
@@ -153,8 +153,69 @@ def test_new_season_copies_the_team_and_moves_logins(admin, db, make_user):
     new = db['teams'].find_one({'season': '2026-27'})
     assert new['nickname'] == 'Hydra' and new['goals'] == []
     assert new['members'][0]['user_id'] == str(kid['_id']) and new['members'][0]['member_id'] != 'm1'
-    assert db['teams'].find_one({'_id': old})['members'][0]['user_id'] == ''
+    # Last season keeps its login, so the career timeline still lists it.
+    assert db['teams'].find_one({'_id': old})['members'][0]['user_id'] == str(kid['_id'])
     assert admin.post(f'/admin/api/teams/{old}/new-season', json={'season': '2026-27'}).status_code == 409
+
+
+def test_new_season_leaves_off_someone_who_already_transferred(admin, db, make_user):
+    kid = make_user(username='kid', password='kid-password', email='kid@example.com')
+    uid = str(kid['_id'])
+    old = db['teams'].insert_one({'team_number': '77629P', 'season': '2025-26',
+                                  'members': [{'member_id': 'm1', 'name': 'Kid', 'user_id': uid},
+                                              {'member_id': 'm2', 'name': 'Stays'}]}).inserted_id
+    db['teams'].insert_one({'team_number': '77628A', 'season': '2026-27',
+                            'members': [{'member_id': 'm3', 'name': 'Kid', 'user_id': uid}]})
+    assert admin.post(f'/admin/api/teams/{old}/new-season', json={'season': '2026-27'}).status_code == 200
+    new = db['teams'].find_one({'team_number': '77629P', 'season': '2026-27'})
+    assert [m['name'] for m in new['members']] == ['Stays']
+
+
+def test_moving_teams_keeps_last_seasons_card(admin, db, make_user):
+    kid = make_user(username='kid', password='kid-password', email='kid@example.com')
+    uid = str(kid['_id'])
+    db['teams'].insert_one({'team_number': '77629P', 'season': '2025-26',
+                            'members': [{'member_id': 'm1', 'name': 'Kid', 'user_id': uid}]})
+    p = db['teams'].insert_one({'team_number': '77629P', 'season': '2026-27',
+                                'members': [{'member_id': 'm2', 'name': 'Kid', 'user_id': uid}]}).inserted_id
+    a = db['teams'].insert_one({'team_number': '77628A', 'season': '2026-27', 'members': []}).inserted_id
+    resp = admin.post('/admin/api/roster/move', json={'member_id': 'm2', 'to_team_id': str(a)})
+    assert resp.status_code == 200 and resp.get_json()['mode'] == 'move'
+    assert db['teams'].find_one({'_id': p})['members'] == []
+    assert db['teams'].find_one({'_id': a})['members'][0]['user_id'] == uid
+    past = db['teams'].find_one({'team_number': '77629P', 'season': '2025-26'})
+    assert past['members'][0]['user_id'] == uid
+    history = admin.get(f'/people/{uid}').get_data(as_text=True)
+    assert 'Transferred <b>77629P</b>' in history and '<b>77628A</b>' in history
+
+
+def test_moving_from_an_older_seasons_roster_copies_the_card(admin, db, make_user):
+    kid = make_user(username='kid', password='kid-password', email='kid@example.com')
+    uid = str(kid['_id'])
+    p = db['teams'].insert_one({'team_number': '77629P', 'season': '2025-26',
+                                'members': [{'member_id': 'm1', 'name': 'Kid', 'user_id': uid}]}).inserted_id
+    a = db['teams'].insert_one({'team_number': '77628A', 'season': '2026-27', 'members': []}).inserted_id
+    resp = admin.post('/admin/api/roster/move', json={'member_id': 'm1', 'to_team_id': str(a)})
+    assert resp.status_code == 200 and resp.get_json()['mode'] == 'add'
+    assert db['teams'].find_one({'_id': p})['members'][0]['user_id'] == uid
+    assert db['teams'].find_one({'_id': a})['members'][0]['user_id'] == uid
+
+
+def test_past_season_cards_get_their_logins_back(db, make_user):
+    kid = make_user(username='kid', password='kid-password', email='kid@example.com')
+    uid = str(kid['_id'])
+    db['teams'].insert_many([
+        {'team_number': '77629P', 'season': '2025-26', 'members': [{'member_id': 'm1', 'name': 'Kid Name'},
+                                                                    {'member_id': 'm2', 'name': 'Nobody'}]},
+        {'team_number': '77629P', 'season': '2026-27', 'members': []},
+        {'team_number': '77628A', 'season': '2026-27', 'members': [{'member_id': 'm3', 'name': 'kid  name', 'user_id': uid}]},
+    ])
+    app_module._relink_past_seasons()
+    past = db['teams'].find_one({'team_number': '77629P', 'season': '2025-26'})
+    assert [m.get('user_id') for m in past['members']] == [uid, None]
+    seasons = app_module.people.team_moves([{'season': '2026-27', 'teams': [{'label': '77628A', 'group': False}]},
+                                            {'season': '2025-26', 'teams': [{'label': '77629P', 'group': False}]}])
+    assert (seasons[0]['moved_from'], seasons[0]['moved_to']) == ('77629P', '77628A')
 
 
 def test_nav_lists_a_multi_season_team_once(client, db):
@@ -162,6 +223,16 @@ def test_nav_lists_a_multi_season_team_once(client, db):
     page = client.get('/about').get_data(as_text=True)
     nav = page.split('id="teamDropdown"')[1].split('</div>')[0]
     assert nav.count('/team/1A') == 1
+
+
+def test_nav_separates_teams_by_season(client, db):
+    db['teams'].insert_many([{'team_number': '77629P', 'season': '2025-26'},
+                             {'team_number': '77628A', 'season': '2026-27'},
+                             {'team_number': '77628D', 'season': '2026-27'}])
+    page = client.get('/about').get_data(as_text=True)
+    nav = page.split('id="teamDropdown"')[1].split('</div>')[0]
+    assert (nav.index('Competing Teams · 2026-27') < nav.index('/team/77628A') < nav.index('/team/77628D')
+            < nav.index('2025-26 season') < nav.index('/team/77629P'))
 
 
 # --- People: claiming and linking cards, pending accounts -----------------------------------
