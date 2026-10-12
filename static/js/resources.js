@@ -1,8 +1,10 @@
-// Member Hub (/resources): library search and shelf filter, per-viewer stars,
-// and the drivetrain calculator.
+// Member Hub (/resources): library search and shelf filter, stars, "Recently
+// opened", and the drivetrain calculator.
 //
-// Stars and the last calculator setup live in this browser only (localStorage).
-// Everything still works when storage is blocked; nothing is remembered.
+// Stars and recently opened links live on the account, so they follow a member
+// to any device; the page arrives with them drawn. Stars kept in this browser
+// before that are sent up once and then forgotten here. The last calculator
+// setup stays in this browser (localStorage).
 
 (function () {
     'use strict';
@@ -23,6 +25,17 @@
         },
     };
 
+    // keepalive: a link that opens in this tab still gets its "opened" note sent.
+    function post(url, body) {
+        return fetch(url, {
+            method: 'POST', credentials: 'same-origin', keepalive: true,
+            headers: jsonHeaders(), body: JSON.stringify(body),
+        }).then(r => (r.status === 204 ? {} : r.json().then(data => {
+            if (!r.ok) throw new Error(data.error || 'Could not save that.');
+            return data;
+        })));
+    }
+
     // --- Library ----------------------------------------------------------------------
 
     function initLibrary() {
@@ -35,7 +48,7 @@
         const chips = [...document.querySelectorAll('.hub-bar [data-shelf]')];
         const empty = document.getElementById('hub-empty');
         const starCount = document.querySelector('[data-star-count]');
-        let stars = new Set(store.get('hub-stars', []));
+        let stars = new Set([...library.querySelectorAll('[data-star][aria-pressed="true"]')].map(b => b.dataset.star));
         let shelf = '';
 
         function paintStars() {
@@ -54,7 +67,8 @@
             const words = q.split(/\s+/).filter(Boolean);
             let shown = 0;
             rows.forEach(row => {
-                const inShelf = !shelf || (shelf === 'starred' ? stars.has(row.dataset.url) : row.dataset.shelf === shelf);
+                const inShelf = !shelf || (shelf === 'starred' ? stars.has(row.dataset.url)
+                    : shelf === 'new' ? 'new' in row.dataset : row.dataset.shelf === shelf);
                 const match = words.every(w => row.dataset.text.includes(w));
                 row.hidden = !(inShelf && match);
                 if (!row.hidden) shown++;
@@ -82,14 +96,40 @@
             const btn = event.target.closest('[data-star]');
             if (!btn) return;
             const url = btn.dataset.star;
-            if (stars.has(url)) stars.delete(url); else stars.add(url);
-            store.set('hub-stars', [...stars]);
+            const on = !stars.has(url);
+            if (on) stars.add(url); else stars.delete(url);
             btn.classList.remove('is-popping');
             void btn.offsetWidth;
             btn.classList.add('is-popping');
             paintStars();
             if (shelf === 'starred') apply();
+            post('/api/hub/star', { url, on }).catch(() => {
+                // Not saved (signed out, or the link was removed): put it back as it was.
+                if (on) stars.delete(url); else stars.add(url);
+                paintStars();
+                if (shelf === 'starred') apply();
+            });
         });
+
+        // Opening a link (from the library or "Recently opened") moves it to the front of the recent list.
+        document.addEventListener('click', event => {
+            const link = event.target.closest('[data-row] a, a[data-opened]');
+            if (!link) return;
+            const url = link.dataset.opened || link.closest('[data-row]').dataset.url;
+            post('/api/hub/opened', { url }).catch(() => { /* not worth bothering anyone about */ });
+        });
+
+        // Stars this browser kept before they lived on the account: send them up once.
+        if (library.dataset.starsImported === 'false') {
+            const local = store.get('hub-stars', []);
+            if (Array.isArray(local) && local.length) {
+                post('/api/hub/stars/import', { urls: local }).then(data => {
+                    stars = new Set(data.stars);
+                    paintStars();
+                    try { localStorage.removeItem('hub-stars'); } catch (e) { /* storage blocked */ }
+                }).catch(() => { /* try again next visit */ });
+            }
+        }
 
         search.addEventListener('input', apply);
         search.addEventListener('keydown', event => {

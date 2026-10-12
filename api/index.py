@@ -1782,8 +1782,71 @@ def resources():
                 'meeting_live': bool(meeting) and meeting[0] <= now,
                 'days_to_competition': (competition['date'].date() - now.date()).days if competition else None,
                 'rosters': _own_rosters()}
-    return render_template('resources.html', active_page='resources', week=week, now=now,
-                           shelves=site_content.resource_shelves(hub.library))
+    shelves = site_content.resource_shelves(hub.library)
+    rows = {r['url']: r for _, _, _, shelf_rows in shelves for r in shelf_rows}
+    user = _session_user()
+    # "New" means added since this account last opened the hub; a first visit marks nothing.
+    seen = user.get('hub_seen')
+    new = set() if seen is None else set(rows) - set(seen)
+    if seen is None or set(seen) != set(rows):
+        db['users'].update_one({'_id': user['_id']}, {'$set': {'hub_seen': list(rows)}})
+    return render_template('resources.html', active_page='resources', week=week, now=now, shelves=shelves,
+                           hub_new=new, hub_stars={u for u in user.get('hub_stars') or [] if u in rows},
+                           hub_recent=[rows[u] for u in user.get('hub_recent') or [] if u in rows],
+                           hub_stars_imported='hub_stars' in user)
+
+
+# --- Member Hub: stars and recently opened links, kept on the account ----------------------
+HUB_RECENT_KEPT = 6
+
+
+def _hub_library_urls():
+    return {r['url'] for _, _, _, rows in site_content.resource_shelves(site().resources.library) for r in rows}
+
+
+def _hub_stars_reply(user_id):
+    user = db['users'].find_one({'_id': user_id}, {'hub_stars': 1}) or {}
+    live = _hub_library_urls()
+    return jsonify({'stars': [u for u in user.get('hub_stars') or [] if u in live]})
+
+
+@app.route('/api/hub/star', methods=['POST'])
+@role_required('member')
+def api_hub_star():
+    """Star or unstar one library link for the signed-in member."""
+    body = _json_body()
+    url = str(body.get('url') or '')
+    if url not in _hub_library_urls():
+        return _json_error('That link is no longer in the library.', 404)
+    user = _session_user()
+    op = '$addToSet' if body.get('on') else '$pull'
+    db['users'].update_one({'_id': user['_id']}, {op: {'hub_stars': url}})
+    return _hub_stars_reply(user['_id'])
+
+
+@app.route('/api/hub/stars/import', methods=['POST'])
+@role_required('member')
+def api_hub_stars_import():
+    """Add stars this browser kept before stars lived on the account. Links no longer listed are skipped."""
+    urls = _json_body().get('urls')
+    live = _hub_library_urls()
+    keep = [u for u in dict.fromkeys(urls if isinstance(urls, list) else []) if isinstance(u, str) and u in live]
+    user = _session_user()
+    db['users'].update_one({'_id': user['_id']}, {'$addToSet': {'hub_stars': {'$each': keep}}})
+    return _hub_stars_reply(user['_id'])
+
+
+@app.route('/api/hub/opened', methods=['POST'])
+@role_required('member')
+def api_hub_opened():
+    """Remember a library link the member opened, newest first, for "Recently opened"."""
+    url = str(_json_body().get('url') or '')
+    if url not in _hub_library_urls():
+        return Response(status=204)
+    user = _session_user()
+    recent = [url] + [u for u in user.get('hub_recent') or [] if u != url]
+    db['users'].update_one({'_id': user['_id']}, {'$set': {'hub_recent': recent[:HUB_RECENT_KEPT]}})
+    return Response(status=204)
 
 @app.route('/glossary')
 @role_required('member')
