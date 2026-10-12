@@ -54,6 +54,169 @@
     color: var(--accent-gold);
 }
 
+/* --- My history: seasons, teams, events ------------------------------------------- */
+
+.acct-hist-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0 0 1.5rem;
+}
+
+.acct-hist-stats div {
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--acct-rule);
+    border-radius: 12px;
+    background: var(--acct-soft);
+}
+
+.acct-hist-stats dt {
+    color: var(--acct-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.acct-hist-stats dd {
+    margin: 0.2rem 0 0;
+    color: var(--acct-ink);
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.acct-hist-seasons {
+    display: grid;
+    gap: 1.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.acct-hist-season {
+    margin: 0 0 0.5rem;
+    color: var(--acct-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.acct-hist-teams,
+.acct-hist-events ul {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.acct-hist-team {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'icon name awards' 'icon role awards';
+    column-gap: 0.75rem;
+    align-items: center;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--acct-rule);
+    border-radius: 12px;
+    color: var(--acct-ink);
+    text-decoration: none;
+    transition: border-color var(--transition-fast);
+}
+
+.acct-hist-team:hover,
+.acct-hist-team:focus-visible {
+    border-color: var(--acct-edge);
+}
+
+.acct-hist-team > svg {
+    grid-area: icon;
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--acct-muted);
+}
+
+.acct-hist-name {
+    grid-area: name;
+}
+
+.acct-hist-name small,
+.acct-hist-role {
+    color: var(--acct-muted);
+    font-size: 0.85rem;
+}
+
+.acct-hist-role {
+    grid-area: role;
+}
+
+.acct-hist-role:empty {
+    display: none;
+}
+
+.acct-hist-awards {
+    grid-area: awards;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: var(--acct-soft);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.acct-hist-awards svg {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+.acct-hist-events {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: 1.5rem;
+}
+
+.acct-hist-events ul + .acct-hist-season {
+    margin-top: 1rem;
+}
+
+.acct-hist-events a {
+    display: flex;
+    gap: 0.75rem;
+    color: var(--acct-ink);
+    text-decoration: none;
+}
+
+.acct-hist-events a:hover {
+    text-decoration: underline;
+}
+
+.acct-hist-events time {
+    flex: none;
+    min-width: 6.5rem;
+    color: var(--acct-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+
+.acct-hint {
+    margin: 0.5rem 0 0;
+    color: var(--acct-muted);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 480px) {
+    .acct-hist-stats dd {
+        font-size: 1.4rem;
+    }
+}
+
 .acct-empty {
     margin: 0;
     padding: 1.25rem;

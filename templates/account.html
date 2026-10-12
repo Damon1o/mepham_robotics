@@ -85,6 +85,7 @@
             <ul>
                 <li><a href="#checkup" data-acct-link><i data-lucide="gauge" aria-hidden="true"></i> Checkup</a></li>
                 <li><a href="#profile" data-acct-link><i data-lucide="id-card" aria-hidden="true"></i> Profile</a></li>
+                <li><a href="#history" data-acct-link><i data-lucide="trophy" aria-hidden="true"></i> My history</a></li>
                 <li><a href="#password" data-acct-link><i data-lucide="key-round" aria-hidden="true"></i> Password</a></li>
                 <li><a href="#two-step" data-acct-link><i data-lucide="shield-check" aria-hidden="true"></i> Two-step
                     <span class="acct-dot {{ 'is-on' if two_step else 'is-off' }}" aria-label="{{ 'On' if two_step else 'Off' }}"></span></a></li>
@@ -201,6 +202,70 @@
                             <i data-lucide="save" aria-hidden="true"></i> Save profile</button>
                     </div>
                 </form>
+            </section>
+
+            {# --- My history -------------------------------------------------------- #}
+            {% set h = history %}
+            <section class="acct-panel" id="history" aria-labelledby="history_title">
+                {% call panel_head('trophy', 'My history', 'history_title',
+                    'Your seasons, teams and events with the club.') %}{% endcall %}
+                {% if h.seasons or h.went or h.going %}
+                <dl class="acct-hist-stats">
+                    <div><dt>{{ 'Season' if h.seasons|length == 1 else 'Seasons' }}</dt><dd>{{ h.seasons|length }}</dd></div>
+                    <div><dt>{{ 'Team' if h.team_count == 1 else 'Teams & groups' }}</dt><dd>{{ h.team_count }}</dd></div>
+                    <div><dt>Events</dt><dd>{{ h.went_total }}</dd></div>
+                </dl>
+
+                {% if h.seasons %}
+                <ol class="acct-hist-seasons">
+                    {% for s in h.seasons %}
+                    <li>
+                        <p class="acct-hist-season">{{ s.season ~ ' season' if s.season else 'Earlier' }}</p>
+                        <ul class="acct-hist-teams">
+                            {% for t in s.teams %}
+                            <li>
+                                <a href="{{ t.url }}" class="acct-hist-team">
+                                    <i data-lucide="{{ 'users' if t.group else 'bot' }}" aria-hidden="true"></i>
+                                    <span class="acct-hist-name"><b>{{ t.label }}</b>{% if t.nickname %} <small>{{ t.nickname }}</small>{% endif %}</span>
+                                    <span class="acct-hist-role">
+                                        {{- t.roles|join(', ') }}{% if t.roles and t.subteam %} · {% endif %}{{ t.subteam -}}
+                                    </span>
+                                    {% if t.awards %}<span class="acct-hist-awards" title="Awards won by {{ t.number }}, all seasons">
+                                        <i data-lucide="award" aria-hidden="true"></i>{{ t.awards }}</span>{% endif %}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% endif %}
+
+                {% if h.going or h.went %}
+                <div class="acct-hist-events">
+                    {% if h.going %}
+                    <p class="acct-hist-season">Coming up</p>
+                    <ul>
+                        {% for e in h.going %}
+                        <li><a href="{{ url_for('event_page', event_id=e.id) }}"><time datetime="{{ e.start.date().isoformat() }}">{{ e.start.strftime('%b ') ~ e.start.day }}</time> {{ e.name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    {% if h.went %}
+                    <p class="acct-hist-season">Events you went to</p>
+                    <ul>
+                        {% for e in h.went %}
+                        <li><a href="{{ url_for('event_page', event_id=e.id) }}"><time datetime="{{ e.start.date().isoformat() }}">{{ e.start.strftime('%b ') ~ e.start.day ~ ', ' ~ e.start.year }}</time> {{ e.name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                    {% if h.went_total > h.went|length %}<p class="acct-hint">And {{ h.went_total - h.went|length }} more.</p>{% endif %}
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="acct-empty">Nothing yet. Once you're on a team, and say you're going to an
+                    <a href="{{ url_for('events_page') }}">event</a>, it shows up here.</p>
+                {% endif %}
             </section>
 
             {# --- Password ----------------------------------------------------------- #}
