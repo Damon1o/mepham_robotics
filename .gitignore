@@ -21,3 +21,6 @@ Thumbs.db
 # Browser automation artifacts
 .playwright-mcp/
 .claude/worktrees/
+
+# Node (scripts/a11y.mjs installs Playwright and axe without a package.json)
+node_modules/
