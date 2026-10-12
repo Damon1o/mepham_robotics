@@ -1225,9 +1225,35 @@ def index():
     return render_template('index.html', active_page='index', stats=stats,
                            competition=competition, upcoming_events=upcoming_events, fundraisers=fundraisers)
 
+def subteam_people():
+    """Current members by sub-team, keyed by the sub-team's name in lower case, leads first.
+
+    Taken from the newest season of every listed team, so a sub-team card on the
+    About page can show who is on it. People without a sub-team are left out.
+    """
+    people = {}
+    for team in listed_teams():
+        for m in team.get('members') or []:
+            key = (m.get('subteam') or '').strip().lower()
+            if key and (m.get('name') or '').strip():
+                people.setdefault(key, []).append({
+                    'full_name': m['name'].strip(), 'photo': m.get('photo') or '', 'lead': _is_leadership(m),
+                    'roles': member_roles(m), 'team_number': team['team_number'],
+                    'team_label': (team.get('title') or team['team_number']) if is_group(team) else team['team_number']})
+    for members in people.values():
+        members.sort(key=lambda p: (not p['lead'], p['full_name'].lower()))
+    return people
+
+
 @app.route('/about')
 def about():
-    return render_template('about.html', active_page='about')
+    try:
+        people = subteam_people()
+    except Exception:
+        # The About page is mostly copy; without rosters the cards just show no members.
+        logger.exception('Could not load sub-team members for /about')
+        people = {}
+    return render_template('about.html', active_page='about', subteam_people=people)
 
 def achievements_view():
     """Everything the achievements page shows, built from award rows, teams and past events.
