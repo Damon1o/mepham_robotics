@@ -1,4 +1,5 @@
 <!-- ROSTER -->
+{% from "partials/person_link.html" import person_name %}
 <section id="team" class="roster-section fade-in-section">
     <div class="text-center">
         <h2 class="ripple">Meet the {{ 'Group' if is_group else 'Team' }}</h2>
@@ -10,7 +11,7 @@
         {% if subteam %}<h3 class="roster-group-title">{{ subteam }}</h3>{% endif %}
         <div class="roster-grid">
             {% for member in members %}
-            <article class="roster-card">
+            <article class="roster-card{{ ' is-person' if person_href(member) }}">
                 {% set photo = member.photo|real_photo %}
                 {% if photo %}
                 <img src="{{ get_image_url(photo) }}" alt="{{ member.name }}" class="roster-photo"
@@ -18,7 +19,7 @@
                 {% else %}
                 <span class="roster-initials" aria-hidden="true">{{ member.name|initials }}</span>
                 {% endif %}
-                <h4 class="roster-name">{{ member.name }}</h4>
+                <h4 class="roster-name">{{ person_name(member) }}</h4>
                 {% set roles = member|member_roles %}
                 {% if roles %}
                 <ul class="roster-roles">

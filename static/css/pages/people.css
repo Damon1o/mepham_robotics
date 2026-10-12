@@ -1,0 +1,1768 @@
+/* Page styles: member pages (/people/<id>, templates/person.html)
+   ------------------------------------------------------------------
+   Built on the account page's look: a maroon hero with the gold slash,
+   thick-edged paper cards with hard shadows, Space Mono labels.
+
+     1. Shared tokens and buttons
+     2. Hero and toolbar
+     3. Pinned highlights
+     4. Layout and cards
+     5. About me
+     6. Career timeline
+     7. Awards and honors
+     8. Photos
+     9. Side: links, events, college-app kit
+    10. Editors
+    11. Locked page
+    12. Dark mode
+    13. Responsive
+    14. Print and reduced motion
+   ------------------------------------------------------------------ */
+
+/* ================================================================
+   1. SHARED TOKENS AND BUTTONS
+   ================================================================ */
+
+.pf {
+    --pf-ink: #1a1414;
+    --pf-muted: #6b5f5f;
+    --pf-paper: #ffffff;
+    --pf-soft: #fbf6f6;
+    --pf-rule: rgba(128, 0, 0, 0.14);
+    --pf-edge: var(--text-dark);
+    --pf-shadow: rgba(148, 69, 71, 0.22);
+    --pf-accent: var(--maroon-dark);
+    --pf-good: #1f7a3a;
+    --pf-warn: #a15c00;
+    max-width: 1180px;
+    margin: 0 auto;
+    /* Clear the fixed menu button, which sits over the top-left corner. */
+    padding: 6.5rem 1.25rem 5rem;
+    color: var(--pf-ink);
+}
+
+.pf [hidden] {
+    display: none !important;
+}
+
+.pf-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.6rem 1rem;
+    border: 2px solid var(--pf-edge);
+    border-radius: 10px;
+    background: var(--pf-paper);
+    color: var(--pf-ink);
+    font: inherit;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.pf-btn svg {
+    width: 1.05rem;
+    height: 1.05rem;
+}
+
+.pf-btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--pf-edge);
+}
+
+.pf-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--pf-edge);
+}
+
+.pf-btn:disabled {
+    opacity: 0.7;
+    cursor: progress;
+    transform: none;
+    box-shadow: none;
+}
+
+.pf-btn--primary,
+.pf-btn[aria-pressed="true"] {
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    box-shadow: 3px 3px 0 var(--pf-edge);
+}
+
+.pf-btn--small {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.88rem;
+}
+
+.pf-icon-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    padding: 0;
+    border: 2px solid var(--pf-rule);
+    border-radius: 9px;
+    background: var(--pf-paper);
+    color: var(--pf-ink);
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.pf-icon-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.pf-icon-btn:hover,
+.pf-icon-btn:focus-visible {
+    border-color: var(--pf-edge);
+}
+
+.pf-icon-btn--danger:hover {
+    border-color: var(--pf-accent);
+    background: var(--pf-accent);
+    color: #fff;
+}
+
+.pf-icon-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.pf-toolbar-gap {
+    flex: 1;
+}
+
+.pf-empty {
+    margin: 0;
+    padding: 1.1rem;
+    border: 2px dashed var(--pf-rule);
+    border-radius: 12px;
+    color: var(--pf-muted);
+    text-align: center;
+}
+
+.pf-hint {
+    margin: 0 0 1rem;
+    color: var(--pf-muted);
+    font-size: 0.9rem;
+}
+
+/* ================================================================
+   2. HERO AND TOOLBAR
+   ================================================================ */
+
+.pf-hero {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.75rem;
+    padding: 2.25rem 2.5rem;
+    border: 3px solid var(--pf-edge);
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.09) 1px, transparent 0) 0 0 / 18px 18px,
+        linear-gradient(135deg, var(--maroon-light) 0%, var(--maroon-dark) 60%, #4a0000 100%);
+    box-shadow: 8px 8px 0 var(--pf-edge);
+    color: #fff;
+    overflow: hidden;
+}
+
+/* The club's gold slash across the corner. */
+.pf-hero::after {
+    content: '';
+    position: absolute;
+    top: -40px;
+    right: 140px;
+    width: 26px;
+    height: 320px;
+    background: var(--accent-gold);
+    opacity: 0.85;
+    transform: rotate(28deg);
+    pointer-events: none;
+}
+
+.pf-hero-id {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+    min-width: 0;
+}
+
+.pf-avatar {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 132px;
+    height: 132px;
+    border: 4px solid #1a1a1a;
+    border-radius: 28px;
+    background: var(--avatar-bg, var(--accent-gold));
+    color: var(--avatar-ink, var(--ink-on-gold));
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35);
+    font-family: var(--font-display);
+    font-size: 3.2rem;
+    font-weight: 700;
+    overflow: hidden;
+    transform: rotate(-3deg);
+}
+
+.pf-hero-text {
+    min-width: 0;
+}
+
+.pf-kicker {
+    margin: 0 0 0.35rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+}
+
+.pf-name {
+    width: auto;
+    margin: 0;
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: clamp(2.1rem, 4.5vw, 3.2rem);
+    line-height: 1.05;
+    text-align: left;
+    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.pf-name::after {
+    display: none;
+}
+
+.pf-headline {
+    margin: 0.45rem 0 0;
+    color: #fff3dc;
+    font-size: 1.1rem;
+}
+
+.pf-now {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.9rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-now-team {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.8rem 0.35rem 0.55rem;
+    border: 2px solid #1a1a1a;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+    font-size: 0.92rem;
+    text-decoration: none;
+    transition: transform var(--transition-fast);
+}
+
+.pf-now-team:hover,
+.pf-now-team:focus-visible {
+    transform: translate(-1px, -2px);
+}
+
+.pf-now-team svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.pf-now-team span {
+    padding-left: 0.45rem;
+    border-left: 2px solid rgba(0, 0, 0, 0.2);
+}
+
+.pf-tenure {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.1rem;
+    margin: 0.8rem 0 0;
+    color: rgba(255, 243, 220, 0.85);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+}
+
+.pf-tenure span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.pf-tenure svg {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+.pf-stats {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(84px, 1fr));
+    gap: 0.6rem;
+    margin: 0;
+}
+
+.pf-stat {
+    padding: 0.7rem 0.9rem;
+    border: 2px solid #1a1a1a;
+    border-radius: 14px;
+    background: #fff;
+    color: #1a1414;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+.pf-stat:nth-child(odd) {
+    transform: rotate(-1.5deg);
+}
+
+.pf-stat:nth-child(even) {
+    transform: rotate(1.5deg);
+}
+
+.pf-stat dt {
+    color: #6b5f5f;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.pf-stat dd {
+    margin: 0.1rem 0 0;
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.pf-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 1.4rem 0 0;
+}
+
+.pf-visibility {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    border: 2px dashed var(--pf-rule);
+    border-radius: 999px;
+    color: var(--pf-muted);
+    font-size: 0.88rem;
+}
+
+.pf-visibility svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.pf-visibility--public {
+    border-style: solid;
+    border-color: var(--pf-good);
+    color: var(--pf-good);
+}
+
+.pf-status {
+    margin: 0.9rem 0 0;
+    padding: 0.7rem 1rem;
+    border: 2px solid var(--pf-good);
+    border-radius: 12px;
+    background: var(--pf-soft);
+    color: var(--pf-good);
+    font-weight: 700;
+}
+
+.pf-status.is-error {
+    border-color: var(--pf-accent);
+    color: var(--pf-accent);
+}
+
+/* ================================================================
+   3. PINNED HIGHLIGHTS
+   ================================================================ */
+
+.pf-highlights ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1rem;
+    margin: 1.75rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* A brass plaque: gold face, dark rim, the honor's icon set in a medallion. */
+.pf-plaque {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'icon title' 'icon meta';
+    column-gap: 0.9rem;
+    align-items: center;
+    padding: 1rem 1.1rem;
+    border: 3px solid var(--pf-edge);
+    border-radius: 16px;
+    background:
+        linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.55) 50%, transparent 60%) -200% 0 / 250% 100% no-repeat,
+        linear-gradient(160deg, #ffe55c 0%, var(--accent-gold) 55%, #e6b800 100%);
+    color: var(--ink-on-gold);
+    box-shadow: 5px 5px 0 var(--pf-edge);
+    animation: pf-shine 5s ease-in-out 1s infinite;
+}
+
+@keyframes pf-shine {
+    0%, 70% { background-position: -200% 0, 0 0; }
+    100% { background-position: 200% 0, 0 0; }
+}
+
+.pf-plaque-icon {
+    grid-area: icon;
+    display: grid;
+    place-items: center;
+    width: 2.8rem;
+    height: 2.8rem;
+    border: 2px solid #1a1a1a;
+    border-radius: 50%;
+    background: #1a1a1a;
+    color: var(--accent-gold);
+}
+
+.pf-plaque-icon svg {
+    width: 1.35rem;
+    height: 1.35rem;
+}
+
+.pf-plaque-title {
+    grid-area: title;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    line-height: 1.2;
+}
+
+.pf-plaque-meta {
+    grid-area: meta;
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.pf-plaque-meta:empty {
+    display: none;
+}
+
+/* ================================================================
+   4. LAYOUT AND CARDS
+   ================================================================ */
+
+.pf-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+    gap: 1.75rem;
+    margin-top: 1.75rem;
+}
+
+.pf-main,
+.pf-side {
+    display: grid;
+    gap: 1.75rem;
+    min-width: 0;
+}
+
+.pf-card {
+    padding: 1.6rem;
+    border: 3px solid var(--pf-edge);
+    border-radius: 18px;
+    background: var(--pf-paper);
+    box-shadow: 8px 8px 0 var(--pf-shadow);
+    scroll-margin-top: 5rem;
+}
+
+.pf-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+}
+
+.pf-card-titles {
+    flex: 1;
+    min-width: 0;
+}
+
+.pf-card-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 2px solid var(--pf-edge);
+    border-radius: 12px;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    box-shadow: 3px 3px 0 var(--pf-edge);
+}
+
+.pf-card-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.pf-card-title {
+    width: auto;
+    margin: 0;
+    color: var(--pf-accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 1.25rem;
+    text-align: left;
+}
+
+.pf-card-title::after {
+    display: none;
+}
+
+.pf-card-blurb {
+    margin: 0.15rem 0 0;
+    color: var(--pf-muted);
+    font-size: 0.9rem;
+}
+
+/* Edit buttons only show once "Edit page" is on. */
+.pf-edit-btn {
+    display: none;
+}
+
+.pf.is-editing .pf-edit-btn {
+    display: inline-flex;
+}
+
+.pf.is-editing .pf-card:has(.pf-edit-btn) {
+    border-style: dashed;
+}
+
+.pf-sub {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.5rem;
+    margin: 1.5rem 0 0.75rem;
+    color: var(--pf-ink);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.pf-sub:first-child {
+    margin-top: 0;
+}
+
+.pf-sub::after {
+    display: none;
+}
+
+.pf-sub svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    color: var(--pf-accent);
+}
+
+.pf-sub small {
+    flex-basis: 100%;
+    color: var(--pf-muted);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+/* ================================================================
+   5. ABOUT ME
+   ================================================================ */
+
+.pf-bio p {
+    margin: 0 0 0.9rem;
+    font-size: 1.05rem;
+    line-height: 1.65;
+    white-space: pre-line;
+}
+
+.pf-bio p:last-child {
+    margin-bottom: 0;
+}
+
+.pf-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1.1rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-skills li {
+    padding: 0.3rem 0.8rem;
+    border: 2px solid var(--pf-edge);
+    border-radius: 999px;
+    background: var(--pf-soft);
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* ================================================================
+   6. CAREER TIMELINE
+   ================================================================ */
+
+.pf-timeline {
+    position: relative;
+    margin: 0;
+    padding: 0 0 0 1.9rem;
+    list-style: none;
+}
+
+/* The rail the season dots sit on. */
+.pf-timeline::before {
+    content: '';
+    position: absolute;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    left: 0.55rem;
+    width: 4px;
+    border-radius: 2px;
+    background: repeating-linear-gradient(to bottom, var(--pf-rule) 0 10px, transparent 10px 16px);
+}
+
+.pf-season {
+    position: relative;
+    padding-bottom: 1.5rem;
+}
+
+.pf-season:last-child {
+    padding-bottom: 0;
+}
+
+.pf-season-dot {
+    position: absolute;
+    top: 0.25rem;
+    left: -1.9rem;
+    width: 1.35rem;
+    height: 1.35rem;
+    border: 3px solid var(--pf-edge);
+    border-radius: 50%;
+    background: var(--pf-paper);
+}
+
+.pf-season.is-current .pf-season-dot {
+    background: var(--accent-gold);
+    box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.3);
+}
+
+.pf-season-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.6rem;
+    color: var(--pf-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.pf-season-now {
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    background: var(--pf-accent);
+    color: #fff;
+    font-size: 0.68rem;
+}
+
+.pf-move {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0 0 0.6rem;
+    padding: 0.2rem 0.65rem;
+    border: 2px dashed var(--pf-accent);
+    border-radius: 999px;
+    color: var(--pf-accent);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.pf-move svg {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+.pf-season-teams {
+    display: grid;
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-team {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'badge name' 'badge roles';
+    column-gap: 0.8rem;
+    row-gap: 0.3rem;
+    align-items: center;
+    padding: 0.75rem 0.9rem;
+    border: 2px solid var(--pf-rule);
+    border-radius: 14px;
+    color: var(--pf-ink);
+    text-decoration: none;
+    transition: border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.pf-team:hover,
+.pf-team:focus-visible {
+    border-color: var(--pf-edge);
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--pf-edge);
+}
+
+.pf-team-badge {
+    grid-area: badge;
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    border: 2px solid var(--pf-edge);
+    border-radius: 12px;
+    background: var(--pf-accent);
+    color: #fff;
+}
+
+.pf-team--group .pf-team-badge {
+    background: var(--pf-soft);
+    color: var(--pf-accent);
+}
+
+.pf-team-badge svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.pf-team-name {
+    grid-area: name;
+    font-size: 1.05rem;
+}
+
+.pf-team-name small {
+    color: var(--pf-muted);
+    font-size: 0.85rem;
+}
+
+.pf-team-roles {
+    grid-area: roles;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.pf-role {
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    background: var(--pf-soft);
+    border: 1px solid var(--pf-rule);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.pf-role--sub {
+    background: transparent;
+    border-style: dashed;
+    color: var(--pf-muted);
+}
+
+/* ================================================================
+   7. AWARDS AND HONORS
+   ================================================================ */
+
+.pf-verified {
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.1rem;
+    border: 2px solid var(--pf-good);
+    border-radius: 14px;
+    background: var(--pf-soft);
+}
+
+.pf-verified .pf-sub svg {
+    color: var(--pf-good);
+}
+
+.pf-verified-list {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-verified-season {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin: 0 0 0.35rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--pf-muted);
+    text-transform: uppercase;
+}
+
+.pf-verified-season a {
+    color: var(--pf-good);
+}
+
+.pf-verified-awards {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-verified-awards li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.6rem;
+}
+
+.pf-verified-awards b::before {
+    content: '\2713';
+    margin-right: 0.35rem;
+    color: var(--pf-good);
+}
+
+.pf-verified-awards span {
+    color: var(--pf-muted);
+    font-size: 0.9rem;
+}
+
+.pf-honors {
+    display: grid;
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-honor {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    border: 2px solid var(--pf-rule);
+    border-left-width: 6px;
+    border-radius: 12px;
+}
+
+.pf-honor.is-pinned {
+    border-left-color: var(--accent-gold);
+}
+
+.pf-honor-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.pf-honor-main b {
+    display: block;
+    font-size: 1.02rem;
+}
+
+.pf-honor-meta {
+    display: block;
+    color: var(--pf-muted);
+    font-size: 0.88rem;
+}
+
+.pf-honor-note {
+    margin: 0.3rem 0 0;
+    font-size: 0.92rem;
+}
+
+.pf-proof {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.6rem;
+    border: 2px solid var(--pf-edge);
+    border-radius: 8px;
+    color: var(--pf-ink);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.pf-proof:hover,
+.pf-proof:focus-visible {
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+}
+
+.pf-proof svg {
+    width: 0.9rem;
+    height: 0.9rem;
+}
+
+.pf-cases {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.9rem;
+}
+
+/* A little glass-fronted case per team. */
+.pf-case {
+    padding: 0.9rem 1rem;
+    border: 3px solid var(--pf-edge);
+    border-radius: 14px;
+    background: linear-gradient(180deg, var(--pf-soft) 0%, var(--pf-paper) 100%);
+}
+
+.pf-case-team {
+    margin: 0 0 0.6rem;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: var(--pf-accent);
+}
+
+.pf-case ul {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-case li {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.92rem;
+}
+
+.pf-case img {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    object-fit: contain;
+}
+
+.pf-case li span {
+    flex: 1;
+    min-width: 0;
+}
+
+.pf-case li b {
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    font-size: 0.8rem;
+}
+
+/* ================================================================
+   8. PHOTOS
+   ================================================================ */
+
+.pf-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.9rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-gallery figure {
+    margin: 0;
+    padding: 0.5rem 0.5rem 0.6rem;
+    border: 2px solid var(--pf-edge);
+    border-radius: 6px;
+    background: var(--pf-paper);
+    box-shadow: 4px 4px 0 var(--pf-shadow);
+    transition: transform var(--transition-fast);
+}
+
+/* Pinned like snapshots on a board, each a little off square. */
+.pf-gallery li:nth-child(3n + 1) figure { transform: rotate(-1.2deg); }
+.pf-gallery li:nth-child(3n + 2) figure { transform: rotate(0.8deg); }
+.pf-gallery li:nth-child(3n) figure { transform: rotate(-0.4deg); }
+
+.pf-gallery figure:hover {
+    transform: rotate(0) scale(1.03);
+}
+
+.pf-gallery a {
+    display: block;
+}
+
+.pf-gallery img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 3px;
+}
+
+.pf-gallery figcaption {
+    margin-top: 0.45rem;
+    font-size: 0.86rem;
+    text-align: center;
+}
+
+/* ================================================================
+   9. SIDE: LINKS, EVENTS, COLLEGE-APP KIT
+   ================================================================ */
+
+.pf-links,
+.pf-events {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-links a {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.6rem 0.8rem;
+    border: 2px solid var(--pf-rule);
+    border-radius: 12px;
+    color: var(--pf-ink);
+    font-weight: 700;
+    text-decoration: none;
+    transition: border-color var(--transition-fast);
+}
+
+.pf-links a:hover,
+.pf-links a:focus-visible {
+    border-color: var(--pf-edge);
+}
+
+.pf-links svg {
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+}
+
+.pf-links span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pf-link-go {
+    color: var(--pf-muted);
+}
+
+.pf-side-label {
+    margin: 0 0 0.5rem;
+    color: var(--pf-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.pf-events + .pf-side-label {
+    margin-top: 1rem;
+}
+
+.pf-events a {
+    display: flex;
+    gap: 0.6rem;
+    color: var(--pf-ink);
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.pf-events a:hover {
+    text-decoration: underline;
+}
+
+.pf-events time {
+    flex: none;
+    min-width: 5.6rem;
+    color: var(--pf-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.76rem;
+    line-height: 1.7;
+}
+
+.pf-kit {
+    border-color: var(--pf-accent);
+    background:
+        repeating-linear-gradient(-45deg, transparent 0 14px, rgba(128, 0, 0, 0.025) 14px 28px),
+        var(--pf-paper);
+}
+
+.pf-checklist {
+    display: grid;
+    gap: 0.3rem;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-checklist a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--pf-muted);
+    font-size: 0.92rem;
+    text-decoration: none;
+}
+
+.pf-checklist a:hover {
+    text-decoration: underline;
+}
+
+.pf-checklist svg {
+    flex: none;
+    width: 1.05rem;
+    height: 1.05rem;
+    color: var(--pf-warn);
+}
+
+.pf-checklist .is-done a {
+    color: var(--pf-ink);
+}
+
+.pf-checklist .is-done svg {
+    color: var(--pf-good);
+}
+
+.pf-activity {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.pf-kit-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.pf-activity .pf-hint {
+    margin: 0;
+    font-size: 0.82rem;
+}
+
+/* ================================================================
+   10. EDITORS
+   ================================================================ */
+
+.pf-editor {
+    display: grid;
+    gap: 1rem;
+}
+
+.pf-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+.pf-field {
+    display: grid;
+    gap: 0.3rem;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.pf-field--wide {
+    grid-column: span 2;
+}
+
+.pf-field--full {
+    grid-column: 1 / -1;
+}
+
+.pf-field > span,
+.pf-field > legend {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0;
+    color: var(--pf-ink);
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.pf-field > span small,
+.pf-counter {
+    color: var(--pf-muted);
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+.pf-counter {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+.pf-counter.is-near {
+    color: var(--pf-warn);
+}
+
+.pf-counter.is-full {
+    color: var(--pf-accent);
+    font-weight: 700;
+}
+
+.pf-field input,
+.pf-field textarea,
+.pf-chips {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 2px solid var(--pf-edge);
+    border-radius: 10px;
+    background: var(--pf-paper);
+    color: var(--pf-ink);
+    font: inherit;
+    font-size: 0.95rem;
+    box-sizing: border-box;
+}
+
+.pf-field textarea {
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.pf-field input:focus,
+.pf-field textarea:focus,
+.pf-chips:focus-within {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 1px;
+}
+
+.pf-field input.is-invalid {
+    border-color: var(--pf-accent);
+}
+
+.pf-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.pf-chip-list {
+    display: contents;
+    list-style: none;
+}
+
+.pf-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.7rem;
+    border: 2px solid var(--pf-edge);
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.pf-chip button {
+    display: grid;
+    place-items: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.pf-chip button:hover,
+.pf-chip button:focus-visible {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.pf-chip svg {
+    width: 0.85rem;
+    height: 0.85rem;
+}
+
+.pf-field .pf-chips input {
+    flex: 1;
+    min-width: 9rem;
+    padding: 0.2rem;
+    border: 0;
+    outline: none;
+}
+
+.pf-choice {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+}
+
+.pf-choice legend {
+    grid-column: 1 / -1;
+    margin-bottom: 0.3rem;
+}
+
+.pf-choice-card {
+    position: relative;
+    cursor: pointer;
+}
+
+.pf-choice-card input {
+    position: absolute;
+    opacity: 0;
+}
+
+.pf-choice-card > span {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.15rem 0.5rem;
+    height: 100%;
+    padding: 0.75rem 0.85rem;
+    border: 2px solid var(--pf-rule);
+    border-radius: 12px;
+    box-sizing: border-box;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.pf-choice-card svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.15rem;
+}
+
+.pf-choice-card small {
+    grid-column: 2;
+    color: var(--pf-muted);
+    font-size: 0.82rem;
+}
+
+.pf-choice-card input:checked + span {
+    border-color: var(--pf-edge);
+    background: var(--pf-soft);
+    box-shadow: 4px 4px 0 var(--pf-edge);
+}
+
+.pf-choice-card input:focus-visible + span {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 2px;
+}
+
+.pf-editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    padding-top: 0.5rem;
+    border-top: 2px dashed var(--pf-rule);
+}
+
+.pf-editor-error {
+    flex-basis: 100%;
+    margin: 0;
+    color: var(--pf-accent);
+    font-weight: 700;
+}
+
+.pf-rows,
+.pf-photo-rows {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-row {
+    padding: 0.9rem;
+    border: 2px solid var(--pf-rule);
+    border-radius: 14px;
+    background: var(--pf-soft);
+}
+
+.pf-row-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.7rem;
+}
+
+.pf-row-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.7rem;
+}
+
+.pf-row--link {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 0.6rem;
+}
+
+.pf-row--link .pf-field--wide {
+    grid-column: auto;
+}
+
+.pf-row--link .pf-row-tools {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    margin-top: 0;
+}
+
+.pf-side .pf-row--link {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.pf-pin {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pf-pin svg {
+    width: 1rem;
+    height: 1rem;
+    color: var(--pf-warn);
+}
+
+.pf-drop {
+    display: grid;
+    justify-items: center;
+    gap: 0.25rem;
+    padding: 1.4rem;
+    border: 3px dashed var(--pf-rule);
+    border-radius: 16px;
+    color: var(--pf-muted);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.pf-drop:hover,
+.pf-drop:focus-within,
+.pf-drop.is-over {
+    border-color: var(--pf-edge);
+    background: var(--pf-soft);
+}
+
+.pf-drop svg {
+    width: 2rem;
+    height: 2rem;
+    color: var(--pf-accent);
+}
+
+.pf-drop b {
+    color: var(--pf-ink);
+}
+
+.pf-drop.is-busy {
+    cursor: progress;
+    opacity: 0.7;
+}
+
+.pf-photo-row {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem 0.9rem;
+    padding: 0.6rem;
+    border: 2px solid var(--pf-rule);
+    border-radius: 12px;
+    background: var(--pf-soft);
+}
+
+.pf-photo-row img {
+    grid-row: span 2;
+    width: 96px;
+    height: 72px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.pf-photo-row .pf-row-tools {
+    margin-top: 0;
+}
+
+/* ================================================================
+   11. LOCKED PAGE
+   ================================================================ */
+
+.pf--locked {
+    max-width: 560px;
+}
+
+.pf-locked {
+    display: grid;
+    justify-items: center;
+    gap: 0.8rem;
+    text-align: center;
+}
+
+.pf-locked .pf-card-title {
+    text-align: center;
+}
+
+.pf-locked p {
+    margin: 0;
+    color: var(--pf-muted);
+}
+
+/* Shown only on paper (section 14). */
+.pf-print-foot {
+    display: none;
+}
+
+/* ================================================================
+   12. DARK MODE
+   ================================================================ */
+
+[data-theme="dark"] .pf {
+    --pf-ink: #f1e9e9;
+    --pf-muted: #b3a5a5;
+    --pf-paper: #1e1a1a;
+    --pf-soft: rgba(255, 255, 255, 0.05);
+    --pf-rule: rgba(255, 255, 255, 0.14);
+    --pf-edge: #555;
+    --pf-shadow: rgba(0, 0, 0, 0.45);
+    --pf-accent: #d4a0a1;
+    --pf-good: #86d493;
+    --pf-warn: #f0b04a;
+}
+
+[data-theme="dark"] .pf-hero {
+    border-color: #2a0000;
+    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .pf-team-badge {
+    color: #1a1414;
+}
+
+[data-theme="dark"] .pf-season-now,
+[data-theme="dark"] .pf-icon-btn--danger:hover {
+    color: #1a1414;
+}
+
+/* ================================================================
+   13. RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 1024px) {
+    .pf-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .pf-side {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        align-items: start;
+    }
+}
+
+@media (max-width: 760px) {
+    .pf {
+        padding-top: 5.5rem;
+    }
+
+    .pf-hero {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 1.6rem 1.25rem;
+    }
+
+    /* Tucked into the corner so it never runs behind the name or kicker. */
+    .pf-hero::after {
+        top: -30px;
+        right: 18px;
+        height: 150px;
+    }
+
+    .pf-hero-id {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .pf-avatar {
+        width: 104px;
+        height: 104px;
+        font-size: 2.5rem;
+    }
+
+    .pf-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .pf-stat dd {
+        font-size: 1.5rem;
+    }
+
+    .pf-card {
+        padding: 1.2rem;
+    }
+
+    .pf-fields,
+    .pf-row-grid,
+    .pf-choice,
+    .pf-row--link {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .pf-field--wide {
+        grid-column: auto;
+    }
+
+    .pf-toolbar .pf-toolbar-gap {
+        display: none;
+    }
+
+    .pf-honor {
+        flex-wrap: wrap;
+    }
+}
+
+/* ================================================================
+   14. PRINT AND REDUCED MOTION
+   ================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-plaque {
+        animation: none;
+    }
+
+    .pf-gallery figure,
+    .pf-gallery figure:hover,
+    .pf-stat,
+    .pf-avatar {
+        transform: none !important;
+    }
+}
+
+/* A one-page portfolio: no menu, no editors, flat cards, and a code to the live page. */
+@media print {
+    .menu-toggle,
+    .overlay,
+    .sidenav,
+    #mySidenav,
+    body > footer,
+    #custom-chatbot-container,
+    .search-overlay,
+    .pf-toolbar,
+    .pf-status,
+    .pf-edit-btn,
+    .pf-editor,
+    .pf-kit,
+    .pf-gallery,
+    #photos,
+    #events {
+        display: none !important;
+    }
+
+    .pf {
+        max-width: none;
+        padding: 0;
+        color: #000;
+    }
+
+    .pf-hero,
+    .pf-card,
+    .pf-plaque,
+    .pf-stat,
+    .pf-team,
+    .pf-case {
+        box-shadow: none !important;
+        transform: none !important;
+        animation: none !important;
+        break-inside: avoid;
+    }
+
+    .pf-hero {
+        border-width: 2px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .pf-hero::after {
+        display: none;
+    }
+
+    .pf-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+    }
+
+    .pf-main,
+    .pf-side {
+        gap: 1rem;
+    }
+
+    .pf-card {
+        padding: 1rem;
+        border-width: 2px;
+    }
+
+    .pf-proof::after,
+    .pf-links a::after {
+        content: ' ' attr(href);
+        font-weight: 400;
+        font-size: 0.75rem;
+        word-break: break-all;
+    }
+
+    .pf-print-foot {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 1rem;
+        font-size: 0.8rem;
+        break-inside: avoid;
+    }
+
+    .pf-qr {
+        width: 96px;
+        height: 96px;
+    }
+
+    .pf-qr svg {
+        width: 100%;
+        height: 100%;
+    }
+}

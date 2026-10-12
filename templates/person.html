@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+{#- A member's own page (/people/<id>). The member (or an admin) edits it in place:
+    "Edit page" puts an Edit button on each part, which swaps that part for its form.
+    Team history, team awards and events come from the club's records; the rest the
+    member writes. people.js runs the editors, the verified-awards panel, sharing and
+    printing; styles live in css/pages/people.css. -#}
+
+{% block title %}{{ 'Member page' if locked else name }} | {{ site.general.club_name }}{% endblock %}
+{% block meta_description %}{% if locked %}A member page on the {{ site.general.club_name }} site.{% else %}{{ profile.headline or (name ~ ' on ' ~ site.general.club_name) }}{% if current %} · {{ current|map(attribute='label')|join(', ') }}{% endif %}{% endif %}{% endblock %}
+{% block og_image %}{% if not locked and (person.photo|real_photo) %}{{ get_image_url(person.photo, external=True) }}{% else %}{{ super() }}{% endif %}{% endblock %}
+{% block og_image_size %}{% if locked or not (person.photo|real_photo) %}{{ super() }}{% endif %}{% endblock %}
+
+{% block head_scripts %}
+{# Mostly minors: a page can be shared by link, but it never goes into search results. #}
+<meta name="robots" content="noindex">
+{% endblock %}
+
+{% block page_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/people.css') }}">
+{% endblock %}
+
+{% from "partials/avatar.html" import avatar with context %}
+
+{% macro card_head(icon, title, id, section=None, blurb=None) -%}
+<header class="pf-card-head">
+    <span class="pf-card-icon" aria-hidden="true"><i data-lucide="{{ icon }}"></i></span>
+    <div class="pf-card-titles">
+        <h2 class="pf-card-title" id="{{ id }}">{{ title }}</h2>
+        {% if blurb %}<p class="pf-card-blurb">{{ blurb }}</p>{% endif %}
+    </div>
+    {% if section and can_edit %}
+    <button type="button" class="pf-btn pf-btn--small pf-edit-btn" data-edit-section="{{ section }}"
+        aria-controls="edit-{{ section }}" aria-expanded="false">
+        <i data-lucide="pencil" aria-hidden="true"></i> Edit<span class="visually-hidden"> {{ title|lower }}</span></button>
+    {% endif %}
+</header>
+{%- endmacro %}
+
+{% macro editor_actions(label='Save') -%}
+<div class="pf-editor-actions">
+    <button type="submit" class="pf-btn pf-btn--primary"><i data-lucide="save" aria-hidden="true"></i> {{ label }}</button>
+    <button type="button" class="pf-btn" data-edit-cancel>Cancel</button>
+    <p class="pf-editor-error" role="alert" data-editor-error hidden></p>
+</div>
+{%- endmacro %}
+
+{% macro counter(limit) -%}
+<small class="pf-counter" data-counter aria-live="polite"><span data-count>0</span>/{{ limit }}</small>
+{%- endmacro %}
+
+{% block content %}
+{% if locked %}
+<div class="pf pf--locked">
+    <section class="pf-card pf-locked" aria-labelledby="pf_locked_title">
+        <span class="pf-card-icon" aria-hidden="true"><i data-lucide="lock"></i></span>
+        <h1 class="pf-card-title" id="pf_locked_title">This page is for club members</h1>
+        <p>The member keeps it visible to signed-in members of {{ site.general.club_name }} only.</p>
+        <a class="pf-btn pf-btn--primary" href="{{ url_for('login', next=request.path) }}">
+            <i data-lucide="log-in" aria-hidden="true"></i> Sign in to see it</a>
+    </section>
+</div>
+{% else %}
+<div class="pf{{ ' pf--editable' if can_edit }}" data-person-page
+    {% if can_edit %}data-profile-api="{{ url_for('person_profile_save', user_id=person._id|string) }}"
+    data-photos-api="{{ url_for('person_photos', user_id=person._id|string) }}"{% endif %}>
+
+    {# --- Hero ------------------------------------------------------------------ #}
+    <section class="pf-hero" aria-labelledby="pf_name">
+        <div class="pf-hero-id">
+            {{ avatar(person, 'pf-avatar') }}
+            <div class="pf-hero-text">
+                <p class="pf-kicker">{{ site.general.club_name }}{% if profile.grad_year %} · Class of {{ profile.grad_year }}{% endif %}</p>
+                <h1 class="pf-name" id="pf_name">{{ name }}</h1>
+                {% if profile.headline %}<p class="pf-headline">{{ profile.headline }}</p>{% endif %}
+                {% if current %}
+                <ul class="pf-now" aria-label="On now">
+                    {% for t in current %}
+                    <li><a class="pf-now-team" href="{{ t.url }}">
+                        <i data-lucide="{{ 'users' if t.group else 'bot' }}" aria-hidden="true"></i>
+                        <b>{{ t.label }}</b>{% if t.roles %}<span>{{ t.roles|join(' / ') }}</span>{% endif %}</a></li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if since or years_in %}
+                <p class="pf-tenure">
+                    {% if since %}<span><i data-lucide="history" aria-hidden="true"></i> Since {{ since }}</span>{% endif %}
+                    {% if years_in %}<span><i data-lucide="graduation-cap" aria-hidden="true"></i> {{ years_in }} in the club</span>{% endif %}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        <dl class="pf-stats">
+            {% for label, value in stats %}
+            <div class="pf-stat"><dt>{{ label }}</dt><dd>{{ value }}</dd></div>
+            {% endfor %}
+        </dl>
+    </section>
+
+    <div class="pf-toolbar">
+        {% if can_edit %}
+        <button type="button" class="pf-btn pf-btn--primary" data-edit-toggle aria-pressed="false">
+            <i data-lucide="pencil" aria-hidden="true"></i> <span data-edit-label>Edit page</span></button>
+        <span class="pf-visibility pf-visibility--{{ profile.visibility }}"
+            title="Change this under About me">
+            <i data-lucide="{{ 'globe' if profile.visibility == 'public' else 'lock' }}" aria-hidden="true"></i>
+            {{ 'Public: anyone with the link' if profile.visibility == 'public' else 'Members only' }}</span>
+        {% endif %}
+        <span class="pf-toolbar-gap"></span>
+        <button type="button" class="pf-btn" data-copy-link="{{ page_url }}">
+            <i data-lucide="link" aria-hidden="true"></i> <span>Copy link</span></button>
+        <button type="button" class="pf-btn" data-print>
+            <i data-lucide="printer" aria-hidden="true"></i> Print portfolio</button>
+    </div>
+    <p class="pf-status" role="status" data-page-status hidden></p>
+
+    {# --- Pinned highlights ------------------------------------------------------- #}
+    {% if pinned %}
+    <section class="pf-highlights" aria-labelledby="pf_highlights_title">
+        <h2 class="visually-hidden" id="pf_highlights_title">Highlights</h2>
+        <ul>
+            {% for h in pinned %}
+            <li class="pf-plaque pf-plaque--{{ h.kind }}">
+                <span class="pf-plaque-icon" aria-hidden="true"><i data-lucide="{{ honor_kinds[h.kind][1] }}"></i></span>
+                <b class="pf-plaque-title">{{ h.title }}</b>
+                <span class="pf-plaque-meta">{{ [h.event, h.when]|select|join(' · ') }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    <div class="pf-layout">
+        <div class="pf-main">
+            {# --- About me ------------------------------------------------------------ #}
+            {% if profile.bio or profile.skills or can_edit %}
+            <section class="pf-card" id="about" aria-labelledby="about_title">
+                {{ card_head('id-card', 'About me', 'about_title', 'about') }}
+                <div class="pf-view" data-view="about">
+                    {% if profile.bio %}
+                    <div class="pf-bio">{% for para in profile.bio.split('\n\n') %}<p>{{ para }}</p>{% endfor %}</div>
+                    {% elif can_edit %}
+                    <p class="pf-empty">Say who you are: what you build, what you're proud of, what's next.</p>
+                    {% endif %}
+                    {% if profile.skills %}
+                    <ul class="pf-skills" aria-label="Skills">
+                        {% for skill in profile.skills %}<li>{{ skill }}</li>{% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% if can_edit %}
+                <form class="pf-editor" id="edit-about" data-editor="about" hidden novalidate>
+                    <div class="pf-fields">
+                        <label class="pf-field pf-field--wide">
+                            <span>Headline {{ counter(limits.HEADLINE_MAX) }}</span>
+                            <input type="text" name="headline" maxlength="{{ limits.HEADLINE_MAX }}"
+                                placeholder="Lead programmer, aspiring mechanical engineer">
+                        </label>
+                        <label class="pf-field">
+                            <span>Class of</span>
+                            <input type="text" name="grad_year" inputmode="numeric" maxlength="4" placeholder="2028">
+                        </label>
+                        <label class="pf-field pf-field--full">
+                            <span>About me {{ counter(limits.BIO_MAX) }}</span>
+                            <textarea name="bio" rows="6" maxlength="{{ limits.BIO_MAX }}"
+                                placeholder="A blank line starts a new paragraph."></textarea>
+                        </label>
+                        <div class="pf-field pf-field--full">
+                            <span id="skills_label">Skills <small>up to {{ limits.SKILLS_MAX }}; press Enter after each</small></span>
+                            <div class="pf-chips" data-chips data-chips-max="{{ limits.SKILLS_MAX }}">
+                                <ul class="pf-chip-list" data-chip-list aria-labelledby="skills_label"></ul>
+                                <input type="text" list="pf-skill-ideas" maxlength="{{ limits.SKILL_MAX }}"
+                                    aria-labelledby="skills_label" placeholder="CAD, Programming…" data-chip-input>
+                                <datalist id="pf-skill-ideas">
+                                    {% for s in skill_suggestions %}<option value="{{ s }}">{% endfor %}
+                                </datalist>
+                            </div>
+                        </div>
+                        <fieldset class="pf-field pf-field--full pf-choice">
+                            <legend>Who can see this page</legend>
+                            <label class="pf-choice-card">
+                                <input type="radio" name="visibility" value="members">
+                                <span><i data-lucide="lock" aria-hidden="true"></i> <b>Members only</b>
+                                    <small>Signed-in club members. Your name on team pages links here for them.</small></span>
+                            </label>
+                            <label class="pf-choice-card">
+                                <input type="radio" name="visibility" value="public">
+                                <span><i data-lucide="globe" aria-hidden="true"></i> <b>Anyone with the link</b>
+                                    <small>For college applications and résumés. Never listed in search engines.</small></span>
+                            </label>
+                        </fieldset>
+                    </div>
+                    {{ editor_actions() }}
+                </form>
+                {% endif %}
+            </section>
+            {% endif %}
+
+            {# --- Career timeline ------------------------------------------------------ #}
+            <section class="pf-card" id="career" aria-labelledby="career_title">
+                {{ card_head('route', 'Career timeline', 'career_title', blurb='Every season, team and role, from the club\'s rosters.') }}
+                {% if history.seasons %}
+                <ol class="pf-timeline">
+                    {% for s in history.seasons %}
+                    <li class="pf-season{{ ' is-current' if loop.first }}">
+                        <span class="pf-season-dot" aria-hidden="true"></span>
+                        <p class="pf-season-label">{{ s.season ~ ' season' if s.season else 'Earlier' }}{% if loop.first and s.season %} <span class="pf-season-now">Now</span>{% endif %}</p>
+                        {% if s.moved_from %}
+                        <p class="pf-move"><i data-lucide="arrow-right" aria-hidden="true"></i> Moved over from {{ s.moved_from }}</p>
+                        {% endif %}
+                        <ul class="pf-season-teams">
+                            {% for t in s.teams %}
+                            <li>
+                                <a class="pf-team{{ ' pf-team--group' if t.group }}" href="{{ t.url }}">
+                                    <span class="pf-team-badge" aria-hidden="true"><i data-lucide="{{ 'users' if t.group else 'bot' }}"></i></span>
+                                    <span class="pf-team-name"><b>{{ t.label }}</b>{% if t.nickname %} <small>{{ t.nickname }}</small>{% endif %}</span>
+                                    {% if t.roles or t.subteam %}
+                                    <span class="pf-team-roles">
+                                        {% for r in t.roles %}<span class="pf-role">{{ r }}</span>{% endfor %}
+                                        {% if t.subteam %}<span class="pf-role pf-role--sub">{{ t.subteam }}</span>{% endif %}
+                                    </span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <p class="pf-empty">No seasons yet. Once {{ 'you join' if is_owner else name ~ ' joins' }} a team or group, it shows up here.</p>
+                {% endif %}
+            </section>
+
+            {# --- Awards & honors ------------------------------------------------------ #}
+            {% if verified or honor_groups or team_awards or can_edit %}
+            <section class="pf-card" id="honors" aria-labelledby="honors_title">
+                {{ card_head('trophy', 'Awards & honors', 'honors_title', 'honors') }}
+                <div class="pf-view" data-view="honors">
+                    {% if verified %}
+                    <div class="pf-verified" data-verified-url="{{ url_for('person_verified', user_id=person._id|string) }}" hidden>
+                        <h3 class="pf-sub"><i data-lucide="badge-check" aria-hidden="true"></i> Verified on RobotEvents
+                            <small>Awards the official VEX results list for {{ 'your' if is_owner else 'their' }} teams, by season.</small></h3>
+                        <ol class="pf-verified-list" data-verified-list></ol>
+                    </div>
+                    {% endif %}
+
+                    {% for kind, label, icon, rows in honor_groups %}
+                    <h3 class="pf-sub"><i data-lucide="{{ icon }}" aria-hidden="true"></i> {{ label }}</h3>
+                    <ul class="pf-honors">
+                        {% for h in rows %}
+                        <li class="pf-honor{{ ' is-pinned' if h.pinned }}">
+                            <div class="pf-honor-main">
+                                <b>{{ h.title }}</b>
+                                {% set meta = [h.event, h.when, ('Team ' ~ h.team) if h.team else '']|select|list %}
+                                {% if meta or h.hours %}<span class="pf-honor-meta">{{ meta|join(' · ') }}{% if h.hours %}{{ ' · ' if meta }}{{ '%g'|format(h.hours) }} hours{% endif %}</span>{% endif %}
+                                {% if h.note %}<p class="pf-honor-note">{{ h.note }}</p>{% endif %}
+                            </div>
+                            {% if h.link %}<a class="pf-proof" href="{{ h.link }}" target="_blank" rel="noopener nofollow ugc">
+                                <i data-lucide="external-link" aria-hidden="true"></i> Proof<span class="visually-hidden"> for {{ h.title }}</span></a>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endfor %}
+                    {% if not honor_groups and can_edit %}
+                    <p class="pf-empty">Add awards, leadership roles, outreach hours and certifications. Pin up to {{ limits.PINNED_MAX }} to show them at the top.</p>
+                    {% endif %}
+
+                    {% if team_awards %}
+                    <h3 class="pf-sub"><i data-lucide="medal" aria-hidden="true"></i> Team trophy cases
+                        <small>All-time totals for the robot teams {{ 'you have' if is_owner else name ~ ' has' }} been on.</small></h3>
+                    <div class="pf-cases">
+                        {% for number, rows in team_awards %}
+                        <div class="pf-case">
+                            <p class="pf-case-team">{{ number }}</p>
+                            <ul>
+                                {% for a in rows %}
+                                <li><img src="{{ url_for('static', filename='assets/icons/' + a.icon) }}" alt="" loading="lazy">
+                                    <span>{{ a.title }}</span>{% if a.count > 1 %}<b>×{{ a.count }}</b>{% endif %}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if can_edit %}
+                <form class="pf-editor" id="edit-honors" data-editor="honors" hidden novalidate>
+                    <p class="pf-hint">Things {{ 'you' if is_owner else 'they' }} did or earned. A proof link (a RobotEvents
+                        page, a certificate, an article) makes an entry easy to check.</p>
+                    <ol class="pf-rows" data-rows="honors"></ol>
+                    <button type="button" class="pf-btn pf-btn--small" data-row-add="honors">
+                        <i data-lucide="plus" aria-hidden="true"></i> Add an entry</button>
+                    <datalist id="pf-team-list">
+                        {% for t in editor.teams %}<option value="{{ t }}">{% endfor %}
+                    </datalist>
+                    {{ editor_actions() }}
+                </form>
+                {% endif %}
+            </section>
+            {% endif %}
+
+            {# --- Photos -------------------------------------------------------------- #}
+            {% if profile.photos or can_edit %}
+            <section class="pf-card" id="photos" aria-labelledby="photos_title">
+                {{ card_head('images', 'Photos', 'photos_title', 'photos') }}
+                <div class="pf-view" data-view="photos">
+                    {% if profile.photos %}
+                    <ul class="pf-gallery">
+                        {% for p in profile.photos %}
+                        <li>
+                            <figure>
+                                <a href="{{ get_image_url(p.path) }}" target="_blank" rel="noopener">
+                                    <img src="{{ get_image_url(p.path) }}" alt="{{ p.caption or 'Photo of ' ~ name }}" loading="lazy" decoding="async"></a>
+                                {% if p.caption %}<figcaption>{{ p.caption }}</figcaption>{% endif %}
+                            </figure>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="pf-empty">Show the robot you built, the competition floor, the team. Up to {{ limits.PHOTOS_MAX }} photos.</p>
+                    {% endif %}
+                </div>
+                {% if can_edit %}
+                <form class="pf-editor" id="edit-photos" data-editor="photos" hidden novalidate>
+                    <label class="pf-drop" data-drop data-drop-accept="image/*" data-drop-multiple
+                        data-drop-label="Drop to add" data-drop-label-many="Drop to add {n} photos">
+                        <input type="file" class="visually-hidden" multiple data-photo-input
+                            accept="{% for t in photo_types %}.{{ t }}{{ ',' if not loop.last }}{% endfor %}">
+                        <i data-lucide="image-up" aria-hidden="true"></i>
+                        <b>Add photos</b>
+                        <small>Drop them here or pick from your device. {{ photo_types|join(', ')|upper }}.</small>
+                    </label>
+                    <ol class="pf-photo-rows" data-rows="photos"></ol>
+                    {{ editor_actions('Save captions and order') }}
+                </form>
+                {% endif %}
+            </section>
+            {% endif %}
+        </div>
+
+        <aside class="pf-side">
+            {# --- Links ------------------------------------------------------------- #}
+            {% if profile.links or can_edit %}
+            <section class="pf-card" id="links" aria-labelledby="links_title">
+                {{ card_head('link', 'Links', 'links_title', 'links') }}
+                <div class="pf-view" data-view="links">
+                    {% if profile.links %}
+                    <ul class="pf-links">
+                        {% for link in profile.links %}
+                        <li><a href="{{ link.url }}" target="_blank" rel="noopener nofollow ugc">
+                            <i data-lucide="{{ link.icon }}" aria-hidden="true"></i>
+                            <span>{{ link_label(link) }}</span>
+                            <i data-lucide="arrow-up-right" class="pf-link-go" aria-hidden="true"></i></a></li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="pf-empty">A GitHub, a portfolio, a video of the robot.</p>
+                    {% endif %}
+                </div>
+                {% if can_edit %}
+                <form class="pf-editor" id="edit-links" data-editor="links" hidden novalidate>
+                    <ol class="pf-rows" data-rows="links"></ol>
+                    <button type="button" class="pf-btn pf-btn--small" data-row-add="links">
+                        <i data-lucide="plus" aria-hidden="true"></i> Add a link</button>
+                    {{ editor_actions() }}
+                </form>
+                {% endif %}
+            </section>
+            {% endif %}
+
+            {# --- Events (members only: RSVPs are never public) ------------------------ #}
+            {% if signed_in and (history.went or history.going) %}
+            <section class="pf-card" id="events" aria-labelledby="events_title">
+                {{ card_head('calendar-days', 'Events', 'events_title') }}
+                {% if history.going %}
+                <p class="pf-side-label">Going to</p>
+                <ul class="pf-events">
+                    {% for e in history.going[:4] %}
+                    <li><a href="{{ url_for('event_page', event_id=e.id) }}"><time datetime="{{ e.start.date().isoformat() }}">{{ e.start.strftime('%b ') ~ e.start.day }}</time> {{ e.name }}</a></li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if history.went %}
+                <p class="pf-side-label">Went to · {{ history.went_total }}</p>
+                <ul class="pf-events">
+                    {% for e in history.went[:6] %}
+                    <li><a href="{{ url_for('event_page', event_id=e.id) }}"><time datetime="{{ e.start.date().isoformat() }}">{{ e.start.strftime('%b ') ~ e.start.day ~ ', ' ~ e.start.year }}</time> {{ e.name }}</a></li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </section>
+            {% endif %}
+
+            {# --- College-app kit (only the member and admins) ------------------------ #}
+            {% if can_edit %}
+            {% set checks = [
+                (profile.bio != '', 'About me written', 'about'),
+                (honor_groups|length > 0, 'Awards or honors listed', 'honors'),
+                (profile.honors|selectattr('link')|list|length > 0, 'A proof link on an entry', 'honors'),
+                (pinned|length > 0, 'Highlights pinned', 'honors'),
+                (profile.photos|length > 0, 'Photos added', 'photos'),
+                (profile.visibility == 'public', 'Shareable by link', 'about'),
+            ] %}
+            <section class="pf-card pf-kit" id="kit" aria-labelledby="kit_title">
+                {{ card_head('graduation-cap', 'College-app kit', 'kit_title',
+                    blurb='Only you and the club\'s admins see this.') }}
+                <ul class="pf-checklist" aria-label="Portfolio checklist">
+                    {% for done, label, anchor in checks %}
+                    <li class="{{ 'is-done' if done }}"><a href="#{{ anchor }}">
+                        <i data-lucide="{{ 'check' if done else 'circle-alert' }}" aria-hidden="true"></i> {{ label }}
+                        <span class="visually-hidden">{{ '(done)' if done else '(to do)' }}</span></a></li>
+                    {% endfor %}
+                </ul>
+                <form class="pf-activity" data-editor="activity" data-always-open novalidate
+                    data-draft-position="{{ draft.position }}" data-draft-activity="{{ draft.activity }}">
+                    <p class="pf-side-label">Common App activity</p>
+                    <label class="pf-field">
+                        <span>Position / leadership {{ counter(limits.POSITION_MAX) }}</span>
+                        <input type="text" name="position" maxlength="{{ limits.POSITION_MAX }}"
+                            value="{{ profile.position or draft.position }}">
+                    </label>
+                    <label class="pf-field">
+                        <span>Description {{ counter(limits.ACTIVITY_MAX) }}</span>
+                        <textarea name="activity" rows="4" maxlength="{{ limits.ACTIVITY_MAX }}">{{ profile.activity or draft.activity }}</textarea>
+                    </label>
+                    <div class="pf-kit-tools">
+                        <button type="button" class="pf-btn pf-btn--small" data-copy-activity>
+                            <i data-lucide="copy" aria-hidden="true"></i> <span>Copy both</span></button>
+                        <button type="button" class="pf-btn pf-btn--small" data-activity-draft>
+                            <i data-lucide="sparkles" aria-hidden="true"></i> Redraft</button>
+                        <button type="submit" class="pf-btn pf-btn--small pf-btn--primary">
+                            <i data-lucide="save" aria-hidden="true"></i> Save</button>
+                    </div>
+                    <p class="pf-editor-error" role="alert" data-editor-error hidden></p>
+                    <p class="pf-hint">Drafted from your seasons and honors. The limits are the Common App's own.</p>
+                </form>
+            </section>
+            {% endif %}
+        </aside>
+    </div>
+
+    {# Printed portfolios end with a code that opens the live page. #}
+    <div class="pf-print-foot" aria-hidden="true">
+        <span class="pf-qr" data-qr="{{ page_url }}"></span>
+        <span>{{ name }} · {{ site.general.club_name }}<br>{{ page_url }}</span>
+    </div>
+
+    {% if can_edit %}
+    <script type="application/json" data-editor-seed>{{ editor|tojson }}</script>
+
+    <template data-row-template="honors">
+        <li class="pf-row" data-row>
+            <div class="pf-row-grid">
+                <label class="pf-field">
+                    <span>Type</span>
+                    <select name="kind">
+                        {% for key, (label, icon) in honor_kinds.items() %}<option value="{{ key }}" data-icon="{{ icon }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </label>
+                <label class="pf-field pf-field--wide">
+                    <span>Name</span>
+                    <input type="text" name="title" maxlength="{{ limits.HONOR_TITLE_MAX }}" placeholder="Excellence Award">
+                </label>
+                <label class="pf-field">
+                    <span>Event or organisation</span>
+                    <input type="text" name="event" maxlength="{{ limits.HONOR_TEXT_MAX }}" placeholder="Long Island Regional">
+                </label>
+                <label class="pf-field">
+                    <span>When</span>
+                    <input type="text" name="when" maxlength="{{ limits.HONOR_WHEN_MAX }}" placeholder="Mar 2026">
+                </label>
+                <label class="pf-field">
+                    <span>Team</span>
+                    <input type="text" name="team" maxlength="{{ limits.HONOR_TEAM_MAX }}" list="pf-team-list">
+                </label>
+                <label class="pf-field">
+                    <span>Hours</span>
+                    <input type="text" name="hours" inputmode="decimal" maxlength="6" placeholder="For outreach">
+                </label>
+                <label class="pf-field pf-field--wide">
+                    <span>Proof link</span>
+                    <input type="url" name="link" maxlength="{{ limits.URL_MAX }}" placeholder="https://www.robotevents.com/…">
+                </label>
+                <label class="pf-field pf-field--full">
+                    <span>Note</span>
+                    <input type="text" name="note" maxlength="{{ limits.HONOR_NOTE_MAX }}" placeholder="What you did to earn it">
+                </label>
+            </div>
+            <div class="pf-row-tools">
+                <label class="pf-pin"><input type="checkbox" name="pinned"> <i data-lucide="star" aria-hidden="true"></i> Pin to the top</label>
+                <span class="pf-toolbar-gap"></span>
+                <button type="button" class="pf-icon-btn" data-row-move="-1" aria-label="Move up"><i data-lucide="arrow-up" aria-hidden="true"></i></button>
+                <button type="button" class="pf-icon-btn" data-row-move="1" aria-label="Move down"><i data-lucide="arrow-down" aria-hidden="true"></i></button>
+                <button type="button" class="pf-icon-btn pf-icon-btn--danger" data-row-remove aria-label="Remove this entry"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+            </div>
+        </li>
+    </template>
+
+    <template data-row-template="links">
+        <li class="pf-row pf-row--link" data-row>
+            <label class="pf-field">
+                <span>Name</span>
+                <input type="text" name="label" maxlength="{{ limits.LINK_LABEL_MAX }}" placeholder="GitHub">
+            </label>
+            <label class="pf-field pf-field--wide">
+                <span>Address</span>
+                <input type="url" name="url" maxlength="{{ limits.URL_MAX }}" placeholder="https://">
+            </label>
+            <div class="pf-row-tools">
+                <button type="button" class="pf-icon-btn" data-row-move="-1" aria-label="Move up"><i data-lucide="arrow-up" aria-hidden="true"></i></button>
+                <button type="button" class="pf-icon-btn" data-row-move="1" aria-label="Move down"><i data-lucide="arrow-down" aria-hidden="true"></i></button>
+                <button type="button" class="pf-icon-btn pf-icon-btn--danger" data-row-remove aria-label="Remove this link"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+            </div>
+        </li>
+    </template>
+
+    <template data-row-template="photos">
+        <li class="pf-photo-row" data-row>
+            <img alt="" data-photo-thumb>
+            <label class="pf-field">
+                <span>Caption</span>
+                <input type="text" name="caption" maxlength="{{ limits.CAPTION_MAX }}" placeholder="Worlds 2026, our first match">
+            </label>
+            <div class="pf-row-tools">
+                <button type="button" class="pf-icon-btn" data-row-move="-1" aria-label="Move earlier"><i data-lucide="arrow-left" aria-hidden="true"></i></button>
+                <button type="button" class="pf-icon-btn" data-row-move="1" aria-label="Move later"><i data-lucide="arrow-right" aria-hidden="true"></i></button>
+                <button type="button" class="pf-icon-btn pf-icon-btn--danger" data-photo-delete aria-label="Delete this photo"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+            </div>
+        </li>
+    </template>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block page_scripts %}
+{% if not locked %}
+<script src="{{ url_for('static', filename='js/vendor/qrcode.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/people.js') }}" defer></script>
+{% endif %}
+{% endblock %}

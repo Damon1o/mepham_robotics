@@ -344,6 +344,32 @@
     height: 0.95rem;
 }
 
+/* To the member's own page (/people/<id>). */
+.acct-page-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.65rem;
+    border: 2px solid #1a1a1a;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: var(--ink-on-gold);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform var(--transition-fast);
+}
+
+.acct-page-link:hover,
+.acct-page-link:focus-visible {
+    transform: translate(-1px, -2px);
+}
+
+.acct-page-link svg {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
 .acct-rosters {
     display: flex;
     flex-wrap: wrap;

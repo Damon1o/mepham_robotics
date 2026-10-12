@@ -1,6 +1,7 @@
 {#- G2 Yearbook: the people first. Leads get a wide card each, everyone else a portrait
     tile like a yearbook page, then the goals as a short checklist with who is on each.
     A group with nobody on it yet gets the Mission Board instead. -#}
+{% from "partials/person_link.html" import person_name %}
 {% from "partials/group/macros.html" import face, owners, status_label %}
 {% if board.people %}
 {% include "partials/group/head.html" %}
@@ -25,11 +26,11 @@
     {% if leads %}
     <ul class="gy-leads">
         {% for person in leads %}
-        <li class="gy-lead">
+        <li class="gy-lead{{ ' is-person' if person_href(person) }}">
             {{ portrait(person) }}
             <div class="gy-lead-body">
                 <span class="gy-lead-tag">Leads the group</span>
-                <h3>{{ person.name }}</h3>
+                <h3>{{ person_name(person) }}</h3>
                 {% set roles = person|member_roles %}
                 {% if roles %}<p class="gy-roles">{{ roles|join(' · ') }}</p>{% endif %}
                 {% if person.goals %}
@@ -46,9 +47,9 @@
     {% if crew %}
     <ul class="gy-wall">
         {% for person in crew %}
-        <li class="gy-tile">
+        <li class="gy-tile{{ ' is-person' if person_href(person) }}">
             {{ portrait(person) }}
-            <h3>{{ person.name }}</h3>
+            <h3>{{ person_name(person) }}</h3>
             {% set roles = person|member_roles %}
             {% if roles %}<p class="gy-roles">{{ roles|first }}</p>{% endif %}
             {% if person.goals %}<p class="gy-on">On {{ person.goals|length }} {{ 'goal' if person.goals|length == 1 else 'goals' }}</p>

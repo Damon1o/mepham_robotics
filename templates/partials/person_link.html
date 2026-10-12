@@ -1,0 +1,11 @@
+{#- A roster name that opens the member's own page (/people/<id>), when the card is
+    linked to an account whose page this viewer can see; otherwise plain text.
+
+    Cards that hold one add `is-person` when person_href(member) is set: styles.css
+    then stretches the name's link over the whole card, so clicking anywhere on it
+    opens the page, and lifts the card on hover.
+-#}
+{% macro person_name(member) -%}
+{%- set href = person_href(member) -%}
+{%- if href %}<a class="person-link" href="{{ href }}">{{ member.name }}</a>{% else %}{{ member.name }}{% endif -%}
+{%- endmacro %}

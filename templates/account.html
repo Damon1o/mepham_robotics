@@ -43,6 +43,8 @@
                     <span class="acct-role acct-role--{{ account.role or 'member' }}">{{ account.role or 'member' }}</span>
                     {% if account.created_at %}<span class="acct-since">
                         <i data-lucide="calendar" aria-hidden="true"></i> Joined {{ account.created_at.strftime('%B %Y') }}</span>{% endif %}
+                    <a class="acct-page-link" href="{{ url_for('person_page', user_id=account._id|string) }}">
+                        <i data-lucide="id-card" aria-hidden="true"></i> View my page</a>
                 </p>
                 {% if rosters %}
                 <ul class="acct-rosters" aria-label="Your teams">

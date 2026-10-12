@@ -47,5 +47,20 @@ db['competitions'].insert_many([
      'kind': 'outreach'},
 ])
 
+# Fixed id: scripts/a11y.mjs checks this member's page. Public, so it renders signed out,
+# and linked to Ada's roster card so the team page links to it.
+db['users'].insert_one({
+    '_id': ObjectId('0000000000000000000a11e1'), 'username': 'ada', 'password': b'x', 'role': 'member',
+    'full_name': 'Ada Lovelace', 'profile': {
+        'visibility': 'public', 'headline': 'Captain and lead programmer', 'grad_year': 2027,
+        'bio': 'I write our autonomous code.\n\nI also run library demo days.',
+        'skills': ['Programming', 'CAD'], 'links': [{'label': 'GitHub', 'url': 'https://github.com/example'}],
+        'honors': [{'kind': 'award', 'title': 'Excellence Award', 'event': 'Regional', 'when': 'Feb 2026',
+                    'link': 'https://robotevents.com/x', 'pinned': True},
+                   {'kind': 'outreach', 'title': 'Library demos', 'hours': 12}],
+        'photos': [{'path': 'static/assets/photos/hero.jpg', 'caption': 'At the pit'}]}})
+db['teams'].update_one({'team_number': '77628A', 'members.member_id': 'm1'},
+                       {'$set': {'members.$.user_id': '0000000000000000000a11e1'}})
+
 if __name__ == '__main__':
     index.app.run(port=int(sys.argv[1]) if len(sys.argv) > 1 else 5099)
