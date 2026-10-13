@@ -132,6 +132,43 @@ def test_admin_rename_reaches_the_cards(client, db, make_user, alice, rosters):
     assert all(c['name'] == 'Alice Pleasance' for c in _cards(db, rosters))
 
 
+def _admin(make_user):
+    make_user(username='root', password='root-password', email='root@example.com', role='admin')
+    admin = app_module.app.test_client()
+    admin.post('/login', data={'username': 'root', 'password': 'root-password'})
+    return admin
+
+
+def test_admin_dropped_photo_becomes_the_profile_photo(db, make_user, alice, rosters, uploads):
+    _, deleted = uploads
+    db['users'].update_one({'_id': alice['_id']}, {'$set': {'photo': 'https://blob.example/old.png'}})
+    resp = _admin(make_user).post(f"/admin/api/users/{alice['_id']}/photo", data=_png(),
+                                  content_type='multipart/form-data')
+    assert resp.status_code == 200
+    url = db['users'].find_one({'_id': alice['_id']})['photo']
+    assert url.startswith('https://blob.example/users/alice/') and resp.get_json()['url'] == url
+    assert all(c['photo'] == url for c in _cards(db, rosters))
+    assert all(c['photo'] == '' for c in _cards(db, rosters, 'b'))
+    assert deleted == ['https://blob.example/old.png']
+
+
+def test_admin_photo_works_for_an_unassigned_account(db, make_user, alice, uploads):
+    resp = _admin(make_user).post(f"/admin/api/users/{alice['_id']}/photo", data=_png(),
+                                  content_type='multipart/form-data')
+    assert resp.status_code == 200
+    assert db['users'].find_one({'_id': alice['_id']})['photo'].startswith('https://blob.example/users/alice/')
+
+
+def test_admin_photo_rejects_other_file_types_and_members(client, db, make_user, alice, uploads):
+    resp = _admin(make_user).post(f"/admin/api/users/{alice['_id']}/photo",
+                                  data={'photo': (io.BytesIO(b'MZ'), 'evil.exe')}, content_type='multipart/form-data')
+    assert resp.status_code == 400
+    # alice is a member, not an admin.
+    resp = client.post(f"/admin/api/users/{alice['_id']}/photo", data=_png(), content_type='multipart/form-data')
+    assert resp.status_code in (302, 403)
+    assert 'photo' not in db['users'].find_one({'_id': alice['_id']})
+
+
 # --- Edits made from a team page flow back -------------------------------------------------------------
 
 def test_own_card_photo_from_the_team_editor_becomes_the_profile_photo(client, db, alice, rosters, uploads):

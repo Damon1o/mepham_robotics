@@ -3236,7 +3236,8 @@ def _adopt_card(user, card, delete_old=True):
 
 
 # Accounts and cards saved before names and photos were kept in step get one catch-up.
-PROFILE_SYNC_MARK = 'profile_sync_v1'
+# v2 runs it again for cards that still showed an older photo than the account.
+PROFILE_SYNC_MARK = 'profile_sync_v2'
 _profiles_reconciled = False
 
 
@@ -3454,6 +3455,30 @@ def admin_api_user_role(id):
     log_activity('user_update', f"Changed {user['username']} to {role}",
                  details={'username': user['username'], 'role': role, 'changes': ['role']})
     return jsonify({'ok': True, 'self_demoted': session.get('user') == user['username'] and role != 'admin'})
+
+
+@app.route('/admin/api/users/<id>/photo', methods=['POST'])
+@role_required('admin')
+def admin_api_user_photo(id):
+    """A photo dropped on someone's People board card: their profile photo, on their
+    account, member page and every roster card, the same as setting it from /account."""
+    user = _find_by_id('users', id)
+    if not user:
+        return _json_error('That account no longer exists.', 404)
+    file = request.files.get('photo')
+    if not file or not file.filename:
+        return _json_error('Choose a photo to upload.')
+    try:
+        url = checked_upload(file, 'users', user['username'], allowed=MEMBER_UPLOAD_EXTENSIONS, stem='photo')
+    except UserFacingError as e:
+        return _json_error(str(e))
+    except Exception:
+        logger.exception('Admin profile photo upload failed')
+        return _json_error('Upload failed. Try again in a moment.', 502)
+    _sync_profile(user, photo=url)
+    log_activity('user_update', f"Changed the photo for {user['username']}",
+                 details={'username': user['username'], 'changes': ['photo']})
+    return jsonify({'ok': True, 'url': get_image_url(url)})
 
 
 # --- Roster board ---

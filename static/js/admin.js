@@ -901,14 +901,24 @@ const DroppedFiles = (function () {
             .slice(0, 100);
     }
 
-    // A photo dropped on a People board card: that person's photo on that team or group.
+    // A photo dropped on a People board card. Someone with a login gets it as their profile photo,
+    // so every card of theirs changes; a card with no login keeps it on that spot only.
     function memberPhoto(card, file) {
-        const teamId = card.closest('.roster-col')?.dataset.teamId;
-        busy(card, uploadFile(`/api/team/${teamId}/image`, { member_photo: file, member_id: card.dataset.memberId })
-            .then(data => {
-                card.querySelector('.roster-avatar').replaceChildren(el('img', { src: data.url, alt: '' }));
-                Admin.notify(`New photo for ${card.dataset.name}.`, 'success');
-            }));
+        const userId = card.dataset.userId;
+        const upload = userId
+            ? uploadFile(`/admin/api/users/${userId}/photo`, { photo: file })
+            : uploadFile(`/api/team/${card.closest('.roster-col')?.dataset.teamId}/image`,
+                { member_photo: file, member_id: card.dataset.memberId });
+        busy(card, upload.then(data => {
+            const cards = userId ? document.querySelectorAll(`.roster-card[data-user-id="${userId}"]`) : [card];
+            cards.forEach(each => {
+                const avatar = each.querySelector('.roster-avatar');
+                avatar.classList.add('has-photo');
+                avatar.replaceChildren(el('img', { src: data.url, alt: '' }));
+            });
+            Admin.notify(userId ? `New profile photo for ${card.dataset.name}, everywhere they appear.`
+                : `New photo for ${card.dataset.name}.`, 'success');
+        }));
     }
 
     // A logo dropped on the list, not on a sponsor: start a new sponsor with it.
@@ -1040,10 +1050,10 @@ const Roster = (function () {
         });
     }
 
-    // A card on a team or group takes a dropped photo for that spot; an account in Unassigned has
-    // no roster spot to hold one.
+    // Any card with a login takes a dropped photo as that person's profile photo (Unassigned too);
+    // a card with no login takes one for its spot on that team or group.
     function photoDrop(card) {
-        if (card.dataset.memberId && teamOf(card)) {
+        if (card.dataset.userId || (card.dataset.memberId && teamOf(card))) {
             card.dataset.drop = 'event';
             card.dataset.dropAccept = 'image/png,image/jpeg,image/gif,image/webp';
             card.dataset.dropLabel = `Set as ${card.dataset.name}’s photo`;
