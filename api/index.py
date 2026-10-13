@@ -3236,7 +3236,8 @@ def _adopt_card(user, card, delete_old=True):
 
 
 # Accounts and cards saved before names and photos were kept in step get one catch-up.
-PROFILE_SYNC_MARK = 'profile_sync_v1'
+# v2 runs it again for cards that still showed an older photo than the account.
+PROFILE_SYNC_MARK = 'profile_sync_v2'
 _profiles_reconciled = False
 
 
