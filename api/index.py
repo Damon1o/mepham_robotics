@@ -3456,6 +3456,30 @@ def admin_api_user_role(id):
     return jsonify({'ok': True, 'self_demoted': session.get('user') == user['username'] and role != 'admin'})
 
 
+@app.route('/admin/api/users/<id>/photo', methods=['POST'])
+@role_required('admin')
+def admin_api_user_photo(id):
+    """A photo dropped on someone's People board card: their profile photo, on their
+    account, member page and every roster card, the same as setting it from /account."""
+    user = _find_by_id('users', id)
+    if not user:
+        return _json_error('That account no longer exists.', 404)
+    file = request.files.get('photo')
+    if not file or not file.filename:
+        return _json_error('Choose a photo to upload.')
+    try:
+        url = checked_upload(file, 'users', user['username'], allowed=MEMBER_UPLOAD_EXTENSIONS, stem='photo')
+    except UserFacingError as e:
+        return _json_error(str(e))
+    except Exception:
+        logger.exception('Admin profile photo upload failed')
+        return _json_error('Upload failed. Try again in a moment.', 502)
+    _sync_profile(user, photo=url)
+    log_activity('user_update', f"Changed the photo for {user['username']}",
+                 details={'username': user['username'], 'changes': ['photo']})
+    return jsonify({'ok': True, 'url': get_image_url(url)})
+
+
 # --- Roster board ---
 
 @app.route('/admin/api/roster/move', methods=['POST'])
