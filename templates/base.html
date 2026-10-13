@@ -37,6 +37,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/controls.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fuse.css') }}">
+    {% if 'user' in session %}<link rel="stylesheet" href="{{ url_for('static', filename='css/tour.css') }}">{% endif %}
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='assets/icons/favicon-32.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='assets/icons/apple-touch-icon.png') }}">
@@ -113,15 +114,6 @@
 
             {% if 'user' in session %}
             <p class="nav-section">Members</p>
-            {#- The new member guide stays here until every chapter is ticked off. -#}
-            {% set guide_steps = guide_progress() %}
-            {% if guide_steps and (guide_steps[0] < guide_steps[1] or active_page == 'guide') %}
-            <a href="{{ url_for('guide_page') }}" class="nav-link nav-link--guide{% if active_page == 'guide' %} active{% endif %}" {% if active_page == 'guide' %}aria-current="page"{% endif %}>
-                <span class="nav-icon"><i data-lucide="milestone" aria-hidden="true"></i></span>
-                <span class="nav-label">Member guide</span>
-                <span class="nav-count" data-guide-nav-count title="Guide chapters done">{{ guide_steps[0] }}/{{ guide_steps[1] }}</span>
-            </a>
-            {% endif %}
             {% if session.get('role') in ('editor', 'admin') %}
             {{ nav_link(url_for('my_team'), 'pencil-ruler', 'Team Pages', active_page == 'my_team') }}
             {% else %}
@@ -130,7 +122,7 @@
             {{ nav_link(team_link, 'bot', 'My Team', active_page == 'my_team') }}
             {% endif %}
             {% endif %}
-            {{ nav_link(url_for('resources'), 'book-open', site.resources.hero_title, active_page in ('resources', 'glossary', 'standards', 'branding', 'notebook')) }}
+            {{ nav_link(url_for('resources'), 'book-open', site.resources.hero_title, active_page in ('resources', 'guide', 'glossary', 'standards', 'branding', 'notebook')) }}
             {% if session.get('role') == 'admin' %}
             {{ nav_link(url_for('admin_dashboard'), 'shield', 'Admin Panel', active_page == 'admin') }}
             {% endif %}
@@ -289,6 +281,11 @@
     <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/controls.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/fuse.js') }}" defer></script>
+    {% if 'user' in session %}
+    {#- The guided tour (Member Hub › Take the tour) follows a member from page to page. -#}
+    <script src="{{ url_for('static', filename='js/tour.js') }}" defer
+        data-tour-url="{{ url_for('api_guide_tour') }}" data-step-url="{{ url_for('api_guide_step') }}"></script>
+    {% endif %}
     {% block page_scripts %}{% endblock %}
     </body>
 

@@ -1,0 +1,304 @@
+/* Guided tour (static/js/tour.js)
+   ------------------------------------------------------------------
+   A spotlight over the real page and a card that explains it. The
+   spotlight's huge shadow dims everything else; nothing blocks clicks,
+   so members can try what the step shows.
+
+     1. Layer and spotlight
+     2. Card
+     3. Paused pill and toast
+     4. Dark mode
+     5. Phones
+     6. Reduced motion
+   ------------------------------------------------------------------ */
+
+/* ================================================================
+   1. LAYER AND SPOTLIGHT
+   ================================================================ */
+
+.tour {
+    --tour-ink: #1a1414;
+    --tour-muted: #6b5f5f;
+    --tour-paper: #ffffff;
+    --tour-rule: rgba(128, 0, 0, 0.14);
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    pointer-events: none;
+}
+
+.tour[hidden],
+.tour [hidden] {
+    display: none !important;
+}
+
+.tour-shade {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 8, 8, 0.6);
+}
+
+.tour-spot {
+    position: fixed;
+    border-radius: 14px;
+    outline: 3px solid var(--accent-gold, #f2c200);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 200vmax rgba(20, 8, 8, 0.6);
+    transition: left 0.35s ease, top 0.35s ease, width 0.35s ease, height 0.35s ease;
+}
+
+/* ================================================================
+   2. CARD
+   ================================================================ */
+
+.tour-pop {
+    position: fixed;
+    width: min(360px, calc(100vw - 2rem));
+    padding: 1.1rem 1.2rem 1rem;
+    border-radius: 18px;
+    background: var(--tour-paper);
+    color: var(--tour-ink);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35), 5px 5px 0 rgba(0, 0, 0, 0.18);
+    pointer-events: auto;
+    overflow: hidden;
+    transition: left 0.35s ease, top 0.35s ease;
+}
+
+.tour-pop:focus {
+    outline: none;
+}
+
+.tour-pop--center {
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%);
+    width: min(420px, calc(100vw - 2rem));
+}
+
+/* Progress through the whole run, along the card's top edge. */
+.tour-bar {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: var(--tour-rule);
+}
+
+.tour-bar span {
+    display: block;
+    height: 100%;
+    width: calc(var(--tour-done, 0) * 100%);
+    background: linear-gradient(90deg, var(--maroon-dark, #800000), var(--accent-gold, #f2c200));
+    transition: width 0.35s ease;
+}
+
+.tour-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.tour-meta {
+    margin: 0.25rem 0 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--maroon-light, #944547);
+}
+
+.tour-close {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    margin: -0.2rem -0.4rem 0 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--tour-muted);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.tour-close:hover {
+    background: var(--tour-rule);
+    color: var(--tour-ink);
+}
+
+.tour-title {
+    width: auto;
+    margin: 0.35rem 0 0.4rem;
+    font-size: 1.25rem;
+    text-align: left;
+    color: var(--tour-ink);
+}
+
+.tour-title::after {
+    display: none;
+}
+
+.tour-text {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: var(--tour-ink);
+}
+
+.tour-text kbd {
+    display: inline-block;
+    min-width: 1.6em;
+    padding: 0 0.4em;
+    border: 1px solid var(--tour-rule);
+    border-bottom-width: 3px;
+    border-radius: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8em;
+    text-align: center;
+}
+
+.tour-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.tour-count {
+    margin-right: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--tour-muted);
+}
+
+.tour-btn {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--maroon-dark, #800000);
+    border-radius: 999px;
+    background: var(--maroon-dark, #800000);
+    color: #fff;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.tour-btn:hover {
+    background: #5c0000;
+    transform: translateY(-1px);
+}
+
+.tour-btn--ghost {
+    border-color: var(--tour-rule);
+    background: transparent;
+    color: var(--tour-ink);
+}
+
+.tour-btn--ghost:hover {
+    background: var(--tour-rule);
+}
+
+.tour-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+    transform: none;
+}
+
+/* ================================================================
+   3. PAUSED PILL AND TOAST
+   ================================================================ */
+
+.tour-pill,
+.tour-toast {
+    position: fixed;
+    left: 1rem;
+    bottom: 1rem;
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    max-width: calc(100vw - 2rem);
+    padding: 0.6rem 0.7rem 0.6rem 1rem;
+    border-radius: 999px;
+    background: #1a1414;
+    color: #fff;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+.tour-pill .tour-btn {
+    padding: 0.35rem 0.85rem;
+    border-color: var(--accent-gold, #f2c200);
+    background: var(--accent-gold, #f2c200);
+    color: #1a1414;
+}
+
+.tour-pill .tour-btn--ghost {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: transparent;
+    color: #fff;
+}
+
+.tour-toast {
+    padding: 0.7rem 1.1rem;
+    border-radius: 14px;
+    font-size: 0.92rem;
+}
+
+/* ================================================================
+   4. DARK MODE
+   ================================================================ */
+
+[data-theme="dark"] .tour {
+    --tour-ink: #f1e9e9;
+    --tour-muted: #b3a5a5;
+    --tour-paper: #1e1a1a;
+    --tour-rule: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .tour-meta {
+    color: #d79a9c;
+}
+
+[data-theme="dark"] .tour-btn:not(.tour-btn--ghost) {
+    border-color: #a33a3c;
+    background: #a33a3c;
+}
+
+/* ================================================================
+   5. PHONES
+   ================================================================ */
+
+@media (max-width: 600px) {
+    /* The card docks to the bottom so it never covers the spotlight's middle. */
+    .tour-pop:not(.tour-pop--center) {
+        left: 0.75rem !important;
+        right: 0.75rem;
+        top: auto !important;
+        bottom: 0.75rem;
+        width: auto;
+    }
+
+    .tour-pill {
+        right: 1rem;
+        justify-content: space-between;
+    }
+}
+
+/* ================================================================
+   6. REDUCED MOTION
+   ================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .tour-spot,
+    .tour-pop,
+    .tour-bar span,
+    .tour-btn {
+        transition: none;
+    }
+}
+
+[data-motion="reduce"] .tour-spot,
+[data-motion="reduce"] .tour-pop {
+    transition: none;
+}

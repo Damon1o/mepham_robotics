@@ -86,6 +86,34 @@
     min-height: 48vh;
 }
 
+.guide-hero-tour {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    padding: 0.8rem 1.4rem;
+    border: 2px solid #1a1414;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: #1a1414;
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.guide-hero-tour:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35);
+}
+
+.guide-hero-tour svg {
+    width: 1.15rem;
+    height: 1.15rem;
+}
+
 /* ================================================================
    3. PROGRESS RAIL AND CHAPTER LIST
    ================================================================ */
@@ -668,6 +696,15 @@
     color: #fff;
 }
 
+.guide-finish-tour {
+    margin-top: 1.25rem;
+}
+
+.guide-finish.is-complete .guide-finish-tour {
+    background: var(--accent-gold);
+    color: #1a1414;
+}
+
 .guide-help {
     max-width: 34rem;
     margin: 1.5rem auto 0;
@@ -866,6 +903,7 @@
     }
 
     .guide-btn--try:hover,
+    .guide-hero-tour:hover,
     .guide-resume:hover {
         transform: none;
     }

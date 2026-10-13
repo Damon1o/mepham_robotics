@@ -18,6 +18,8 @@
     <div class="hero-content">
         <h1>New Member Guide</h1>
         <p>Everything on the {{ site.general.short_name }} site, one stop at a time.</p>
+        <button type="button" class="guide-hero-tour" data-tour-start>
+            <i data-lucide="sparkles" aria-hidden="true"></i> Take the guided tour</button>
     </div>
     <div class="scroll-indicator"></div>
 </div>
@@ -39,7 +41,7 @@
                 aria-label="Chapters done">{{ done|length }} of {{ total }}</progress>
             <a class="guide-resume" href="#ch-{{ resume.key if resume else chapters[0].key }}" data-guide-resume
                 {%- if not resume %} hidden{% endif %}>
-                <i data-lucide="arrow-right" aria-hidden="true"></i> <span>{{ 'Start the tour' if not done else 'Pick up where you left off' }}</span>
+                <i data-lucide="arrow-right" aria-hidden="true"></i> <span>{{ 'Start reading' if not done else 'Pick up where you left off' }}</span>
             </a>
             <p class="guide-status" role="status" aria-live="polite" data-guide-status></p>
         </div>
@@ -67,7 +69,7 @@
                 <li><i data-lucide="book-open" aria-hidden="true"></i>
                     <span><strong>Read a chapter.</strong> Each one covers one part of the site and where to find it.</span></li>
                 <li><i data-lucide="rocket" aria-hidden="true"></i>
-                    <span><strong>Try it for real.</strong> The button at the bottom opens that page so you can follow along.</span></li>
+                    <span><strong>Let it show you.</strong> <b>Show me</b> walks you through that part on the real page, one highlight at a time.</span></li>
                 <li><i data-lucide="circle-check-big" aria-hidden="true"></i>
                     <span><strong>Mark it done.</strong> Your progress is saved to your account, so you can stop and come back on any device.</span></li>
             </ol>
@@ -100,13 +102,8 @@
             </ol>
 
             <div class="guide-ch-actions">
-                {% if c.search %}
-                <button type="button" class="guide-btn guide-btn--try" data-search-open>
-                    <i data-lucide="search" aria-hidden="true"></i> {{ c.try.label }}</button>
-                {% else %}
-                <a class="guide-btn guide-btn--try" href="{{ c.try.href }}">
-                    {{ c.try.label }} <i data-lucide="arrow-right" aria-hidden="true"></i></a>
-                {% endif %}
+                <button type="button" class="guide-btn guide-btn--try" data-tour-start="{{ c.key }}">
+                    <i data-lucide="sparkles" aria-hidden="true"></i> Show me</button>
                 <button type="button" class="guide-btn guide-btn--done" data-guide-toggle="{{ c.key }}"
                     aria-pressed="{{ 'true' if is_done else 'false' }}">
                     <i data-lucide="circle-check-big" aria-hidden="true"></i>
@@ -125,12 +122,14 @@
             <span class="guide-finish-icon"><i data-lucide="party-popper" aria-hidden="true"></i></span>
             <h2 id="guide-finish-title">
                 <span data-finish-done>You've toured the whole site</span>
-                <span data-finish-todo>Finish the tour</span>
+                <span data-finish-todo>Finish the guide</span>
             </h2>
-            <p data-finish-done>Nice work. You know where everything lives. The guide stays here in the
-                {{ site.resources.hero_title }} and in search (<kbd>Ctrl</kbd> + <kbd>K</kbd>) whenever you need a refresher.</p>
-            <p data-finish-todo>Mark every chapter done and the <b>Member guide</b> link leaves your menu.
-                You can always come back to the guide from the {{ site.resources.hero_title }} or search.</p>
+            <p data-finish-done>Nice work. You know where everything lives. The tour and this guide stay in the
+                {{ site.resources.hero_title }} whenever you need a refresher.</p>
+            <p data-finish-todo>Mark every chapter done, or finish its <b>Show me</b> tour, to complete the guide.
+                The tour and this guide always live in the {{ site.resources.hero_title }}.</p>
+            <button type="button" class="guide-btn guide-btn--try guide-finish-tour" data-tour-start>
+                <i data-lucide="sparkles" aria-hidden="true"></i> Take the whole tour</button>
             <div class="guide-help">
                 <h3><i data-lucide="life-buoy" aria-hidden="true"></i> Still stuck?</h3>
                 <ul>

@@ -1,5 +1,5 @@
 // New member guide (/guide): tick chapters off, keep the progress bar, chapter list,
-// "pick up where you left off" link and the menu's Member guide count in step, and
+// and "pick up where you left off" link in step, and
 // light up the chapter being read in the list.
 //
 // Finished chapters are saved to the account (POST /api/guide/step), so progress
@@ -45,14 +45,10 @@
         resume.hidden = !next;
         if (next) {
             resume.href = `#${next.id}`;
-            resume.querySelector('span').textContent = done.size ? 'Pick up where you left off' : 'Start the tour';
+            resume.querySelector('span').textContent = done.size ? 'Pick up where you left off' : 'Start reading';
         }
 
         guide.querySelector('[data-guide-finish]').classList.toggle('is-complete', done.size === total);
-
-        // The menu's Member guide link: its count (the link itself goes on the next page load once all are done).
-        const navCount = document.querySelector('[data-guide-nav-count]');
-        if (navCount) navCount.textContent = `${done.size}/${total}`;
     }
 
     guide.addEventListener('click', e => {
