@@ -5072,6 +5072,8 @@ def person_profile_save(user_id):
         fields = people.clean_section(section, body.get('data'), person.get('profile'))
     except people.ProfileError as e:
         return jsonify({'error': str(e)}), 400
+    if section == 'visibility' and fields['visibility'] == 'public' and not _public_pages_allowed():
+        return jsonify({'error': "The club's admins have turned off public member pages."}), 400
     db['users'].update_one({'_id': person['_id']}, {'$set': {f'profile.{k}': v for k, v in fields.items()}})
     _log_person_edit(person, [f'page:{section}'])
     return jsonify({'ok': True, 'saved': fields})

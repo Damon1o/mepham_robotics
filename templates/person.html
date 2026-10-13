@@ -100,10 +100,18 @@
         {% if can_edit %}
         <button type="button" class="pf-btn pf-btn--primary" data-edit-toggle aria-pressed="false">
             <i data-lucide="pencil" aria-hidden="true"></i> <span data-edit-label>Edit page</span></button>
-        <span class="pf-visibility pf-visibility--{{ 'public' if is_public else 'members' }}"
-            title="{{ 'Change this under About me' if public_allowed else 'The club has turned off public member pages' }}">
-            <i data-lucide="{{ 'globe' if is_public else 'lock' }}" aria-hidden="true"></i>
-            {{ 'Public: anyone with the link' if is_public else 'Members only' }}</span>
+        {% if public_allowed %}
+        {# Live only while editing: a click flips who can see the page. #}
+        <button type="button" class="pf-visibility pf-visibility--{{ 'public' if is_public else 'members' }}"
+            data-visibility-toggle disabled title="Click Edit page, then click here to change who can see it">
+            <span class="pf-vis-members"><i data-lucide="lock" aria-hidden="true"></i> Members only</span>
+            <span class="pf-vis-public"><i data-lucide="globe" aria-hidden="true"></i> Public: anyone with the link</span>
+            <span class="pf-vis-hint" aria-hidden="true"><i data-lucide="refresh-cw" aria-hidden="true"></i></span>
+        </button>
+        {% else %}
+        <span class="pf-visibility pf-visibility--members" title="The club has turned off public member pages">
+            <i data-lucide="lock" aria-hidden="true"></i> Members only</span>
+        {% endif %}
         {% endif %}
         <span class="pf-toolbar-gap"></span>
         <button type="button" class="pf-btn" data-copy-link="{{ page_url }}">

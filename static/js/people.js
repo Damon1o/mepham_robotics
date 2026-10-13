@@ -167,14 +167,39 @@
     // --- Edit mode and opening a section ------------------------------------------------
 
     const toggle = page.querySelector('[data-edit-toggle]');
+    const visibilityBadge = page.querySelector('[data-visibility-toggle]');
     function setEditing(on) {
         page.classList.toggle('is-editing', on);
+        if (visibilityBadge) {
+            visibilityBadge.disabled = !on;
+            visibilityBadge.title = on ? 'Click to change who can see this page'
+                : 'Click Edit page, then click here to change who can see it';
+        }
         if (!toggle) return;
         toggle.setAttribute('aria-pressed', String(on));
         toggle.querySelector('[data-edit-label]').textContent = on ? 'Done editing' : 'Edit page';
         if (!on) page.querySelectorAll('[data-editor]:not([data-always-open])').forEach(close);
     }
     toggle?.addEventListener('click', () => setEditing(!page.classList.contains('is-editing')));
+
+    // The toolbar badge flips who can see the page, saved on its own so About me is untouched.
+    visibilityBadge?.addEventListener('click', async () => {
+        if (visibilityBadge.getAttribute('aria-busy') === 'true') return;
+        const next = profile.visibility === 'public' ? 'members' : 'public';
+        visibilityBadge.setAttribute('aria-busy', 'true');
+        try {
+            await send('visibility', { visibility: next });
+            profile.visibility = next;
+            visibilityBadge.classList.toggle('pf-visibility--public', next === 'public');
+            visibilityBadge.classList.toggle('pf-visibility--members', next !== 'public');
+            say(next === 'public' ? 'Your page is public: anyone with the link can see it.'
+                : 'Your page is for signed-in members only.');
+        } catch (err) {
+            say(err.message, true);
+        } finally {
+            visibilityBadge.removeAttribute('aria-busy');
+        }
+    });
 
     const fillers = {};
 
