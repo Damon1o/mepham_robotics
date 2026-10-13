@@ -298,6 +298,25 @@ def test_admins_can_turn_public_pages_off_and_back_on(client, db, ada):
     assert href in client.get('/team/77628A').get_data(as_text=True)
 
 
+def test_the_badge_flips_who_can_see_the_page_without_touching_about_me(client, db, ada):
+    sign_in(client, 'ada')
+    assert save(client, ada, 'about', {'headline': 'Builder', 'visibility': 'members'}).status_code == 200
+    assert 'data-visibility-toggle' in client.get(page(ada)).get_data(as_text=True)
+    assert save(client, ada, 'visibility', {'visibility': 'public'}).status_code == 200
+    profile = db['users'].find_one({'_id': ada['_id']})['profile']
+    assert profile['visibility'] == 'public' and profile['headline'] == 'Builder'
+    assert save(client, ada, 'visibility', {'visibility': 'everyone'}).status_code == 400
+
+
+def test_the_badge_cannot_make_a_page_public_while_admins_have_it_off(client, db, ada):
+    allow_public_pages(db, False)
+    sign_in(client, 'ada')
+    assert 'data-visibility-toggle' not in client.get(page(ada)).get_data(as_text=True)
+    resp = save(client, ada, 'visibility', {'visibility': 'public'})
+    assert resp.status_code == 400 and 'turned off' in resp.get_json()['error']
+    assert save(client, ada, 'visibility', {'visibility': 'members'}).status_code == 200
+
+
 def test_with_public_pages_off_the_owner_sees_members_only_and_a_locked_choice(client, db, ada):
     db['users'].update_one({'_id': ada['_id']}, {'$set': {'profile': {'visibility': 'public'}}})
     allow_public_pages(db, False)

@@ -379,6 +379,48 @@
     color: var(--pf-good);
 }
 
+button.pf-visibility {
+    background: none;
+    font: inherit;
+    font-size: 0.88rem;
+}
+
+.pf-visibility > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.pf-visibility--members .pf-vis-public,
+.pf-visibility--public .pf-vis-members,
+.pf-visibility .pf-vis-hint {
+    display: none;
+}
+
+/* While editing, the badge is the switch. */
+.pf.is-editing button.pf-visibility {
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.pf.is-editing button.pf-visibility .pf-vis-hint {
+    display: inline-flex;
+}
+
+.pf.is-editing button.pf-visibility:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 currentColor;
+}
+
+.pf.is-editing button.pf-visibility:focus-visible {
+    outline: 3px solid var(--accent-gold);
+    outline-offset: 2px;
+}
+
+button.pf-visibility[aria-busy="true"] {
+    cursor: progress;
+}
+
 .pf-status {
     margin: 0.9rem 0 0;
     padding: 0.7rem 1rem;

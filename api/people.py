@@ -192,7 +192,16 @@ def clean_photos(data, stored):
     return {'photos': photos}
 
 
-SECTIONS = {'about': clean_about, 'links': clean_links, 'honors': clean_honors, 'activity': clean_activity}
+def clean_visibility(data):
+    """Just who can see the page: the toolbar badge flips it without touching About me."""
+    visibility = data.get('visibility')
+    if visibility not in VISIBILITY:
+        raise ProfileError('Pick who can see your page.')
+    return {'visibility': visibility}
+
+
+SECTIONS = {'about': clean_about, 'links': clean_links, 'honors': clean_honors, 'activity': clean_activity,
+            'visibility': clean_visibility}
 
 
 def clean_section(section, data, stored_profile):
