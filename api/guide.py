@@ -1,15 +1,16 @@
 """New member guide (/guide): a chapter-by-chapter tour of the whole site.
 
-Each chapter says where the feature lives, walks through it in steps, and links to
-the real page to try it. Members tick chapters off; the keys they finish are kept on
-the account (users.guide_done), so the list here is also what the save route accepts.
+Each chapter says where the feature lives and walks through it in steps; its guided
+tour (TOURS, below) shows the same thing on the real pages. Members tick chapters off;
+the keys they finish are kept on the account (users.guide_done), so the list here is
+also what the save route accepts.
 
 Step text is trusted HTML written here (only <b>, <kbd> and <a>), never user input.
 A chapter or step with `when` only shows if that site feature is turned on, and a
 chapter with `role` only shows to members with at least that role.
 """
 
-# key, title, icon, blurb, where (menu path), steps, try link (label, endpoint, anchor), extras
+# key, title, icon, blurb, where (menu path), steps; role for editor/admin chapters
 CHAPTERS = [
     {
         'key': 'signin',
@@ -27,7 +28,6 @@ CHAPTERS = [
             '<b>Sign out everywhere</b> if a phone or laptop goes missing.',
             'The <b>Security checkup</b> at the top of Account shows what is still left to do.',
         ],
-        'try': ('Open security settings', 'account', 'two-step'),
     },
     {
         'key': 'around',
@@ -47,8 +47,6 @@ CHAPTERS = [
             ('Stuck? The chat bubble in the bottom-right corner is <b>Steven</b>, the club assistant. '
              'Ask him about meetings, teams or how to join.', 'assistant'),
         ],
-        'try': ('Open search', 'index', None),
-        'search': True,
     },
     {
         'key': 'account',
@@ -67,7 +65,6 @@ CHAPTERS = [
             '<b>My history</b> shows the teams and seasons you have been part of; <b>Recent activity</b> '
             'lists password, two-step and device changes.',
         ],
-        'try': ('Open Account', 'account', 'profile'),
     },
     {
         'key': 'page',
@@ -86,7 +83,6 @@ CHAPTERS = [
             'The <b>College-app kit</b> (only you and admins see it) has a checklist and a Common App '
             'activity you can <b>Copy</b>. Use <b>Print portfolio</b> for a paper or PDF copy.',
         ],
-        'try': ('Open my page', 'my_person_page', None),
     },
     {
         'key': 'team',
@@ -104,7 +100,6 @@ CHAPTERS = [
             'Ask an admin to add or move teammates.',
             'Past seasons keep their own pages. Switch season at the top of the editor to look back.',
         ],
-        'try': ('Open My Team', 'my_team', None),
     },
     {
         'key': 'hub',
@@ -124,7 +119,6 @@ CHAPTERS = [
             'The Hub also links the <b>Glossary</b>, <b>Design Standards</b>, <b>Branding Guide</b> and '
             '<b>Engineering Notebook</b>.',
         ],
-        'try': ('Open the Hub', 'resources', None),
     },
     {
         'key': 'events',
@@ -139,7 +133,6 @@ CHAPTERS = [
             'Hit <b>Subscribe</b> (or <b>Google</b>) once and every new event lands in your own calendar.',
             'The Home page counts down to the next competition and shows <b>live match results</b> on the day.',
         ],
-        'try': ('Open Events', 'events_page', None),
     },
     {
         'key': 'club',
@@ -156,7 +149,6 @@ CHAPTERS = [
             '<b>Donate</b>: fundraisers, what the money is spent on, and sponsorship tiers.',
             '<b>Contact</b>: the message form, where we meet, and answers to common questions.',
         ],
-        'try': ('Open About', 'about', None),
     },
     {
         'key': 'safety',
@@ -169,7 +161,6 @@ CHAPTERS = [
             'Read the <b>Build Standards</b> and <b>Pre-Match Checklist</b> in Design Standards.',
             'Not sure how to use a tool? Ask a captain or mentor first. Every time.',
         ],
-        'try': ('Take the quiz', 'safety_quiz', None),
     },
     {
         'key': 'editors',
@@ -187,7 +178,6 @@ CHAPTERS = [
             '<b>Hide this team</b> from the menu and search.',
             'Ask an admin to start a <b>new season</b> for a team; the old season stays as history.',
         ],
-        'try': ('Open Team Pages', 'my_team', None),
     },
     {
         'key': 'admins',
@@ -206,8 +196,159 @@ CHAPTERS = [
             'from history.',
             'Deleting something shows an <b>Undo</b> button for a few seconds instead of asking first.',
         ],
-        'try': ('Open Admin Panel', 'admin_dashboard', None),
     },
 ]
 
 KEYS = {c['key'] for c in CHAPTERS}
+
+
+# --- Guided tour ------------------------------------------------------------------------
+# The same chapters shown on the real pages, one spotlighted element per step.
+#   page      endpoint the step lives on (the tour goes there first)
+#   match     regex for the path when the endpoint redirects (/people/me → /people/<id>)
+#   target    CSS selector to spotlight; None shows the step in the middle of the screen
+#   optional  skip the step when the element isn't there (a free agent has no team editor)
+#   nav       'open' to show the step with the side menu open
+#   when      only when that site feature is on (as for chapter steps)
+
+def _step(page, target, title, text, **opts):
+    return {'page': page, 'target': target, 'title': title, 'text': text, **opts}
+
+
+PEOPLE = r'^/people/[^/]+$'
+TEAM = r'^/(my-team|manage/team/[^/]+)$'
+
+TOURS = {
+    'signin': [
+        _step('account', '#checkup', 'Your security checkup',
+              'This card shows what is left to make your account safe. Work through it top to bottom.'),
+        _step('account', '#password', 'Your password',
+              'Change it here. It needs at least 8 characters. Forgot it one day? Ask a club admin for a '
+              '<b>reset link</b>; there is no reset email.'),
+        _step('account', '#two-step', 'Two-step sign-in',
+              'Turn this on and scan the code with an authenticator app. Then save your <b>backup codes</b> '
+              'somewhere safe.'),
+        _step('account', '#devices', 'Where you\'re signed in',
+              'Every device on your account. Sign one out, or <b>Sign out everywhere</b> if a phone goes missing.'),
+    ],
+    'around': [
+        _step('index', '.menu-toggle', 'The menu',
+              'Everything on the site starts here. Tap <b>MENU</b> on any page.'),
+        _step('index', '#mySidenav .nav-links', 'Every page',
+              '<b>Explore</b> and <b>Get involved</b> are the public pages. The <b>Members</b> section only '
+              'shows while you are signed in.', nav='open'),
+        _step('index', '#mySidenav [aria-controls="teamDropdown"]', 'Teams',
+              'Every robot team, newest season first, with groups like Media at the bottom.', nav='open'),
+        _step('index', '#mySidenav .nav-footer', 'That\'s you',
+              'Your name opens <b>your member page</b>. <b>Account</b> and <b>Log out</b> sit right below it.',
+              nav='open'),
+        _step('index', None, 'Search anything',
+              'Press <kbd>Ctrl</kbd> + <kbd>K</kbd> (<kbd>⌘</kbd> + <kbd>K</kbd> on a Mac) on any page to jump '
+              'to a page or a team.'),
+        _step('index', '.theme-toggle', 'Light or dark',
+              'Switch the colour theme here, at the very bottom of every page.'),
+        _step('index', '#chatbot-bubble', 'Ask Steven',
+              'Steven is the club assistant. Ask him about meetings, teams or how things work.',
+              when='assistant', optional=True),
+    ],
+    'account': [
+        _step('account', '#profile', 'Your name and photo',
+              'Set your <b>full name</b>, email and <b>photo</b> here. They update your rosters, member page '
+              'and the About page in one go.'),
+        _step('account', '#preferences', 'Preferences',
+              'Pick where you land <b>after signing in</b>, and set the theme and motion for this device.'),
+        _step('account', '#history', 'My history',
+              'The teams and seasons you have been part of, kept for you.'),
+        _step('account', '#activity', 'Recent activity',
+              'Password, two-step and device changes show up here, so you can spot anything odd.'),
+    ],
+    'page': [
+        _step('my_person_page', '[data-edit-toggle]', 'Edit your page',
+              'Click <b>Edit page</b> to write a headline, an About me and your Class of year, and to choose '
+              '<b>who can see this page</b>.', match=PEOPLE),
+        _step('my_person_page', '#honors', 'Awards, roles and outreach',
+              '<b>Add an entry</b> with the hours and a <b>proof link</b>. <b>Pin</b> your best ones to show them '
+              'in Highlights.', match=PEOPLE, optional=True),
+        _step('my_person_page', '#photos', 'Photos',
+              'Drop photos straight onto the page while you are editing.', match=PEOPLE, optional=True),
+        _step('my_person_page', '[data-copy-link]', 'Share it',
+              '<b>Copy link</b> sends your page to anyone allowed to see it. <b>Print portfolio</b> makes a '
+              'paper or PDF copy.', match=PEOPLE),
+        _step('my_person_page', '#kit', 'College-app kit',
+              'Only you and the admins see this: a checklist for your portfolio and a Common App activity '
+              'you can <b>Copy</b>.', match=PEOPLE, optional=True),
+    ],
+    'team': [
+        _step('my_team', '.my-team-empty', 'Not on a team yet',
+              'Once an admin puts you on a roster, this page becomes your team\'s editor.',
+              match=TEAM, optional=True),
+        _step('my_team', '.team-picker', 'Pick a page',
+              'You are on more than one roster, so pick the page you want to edit.', match=TEAM, optional=True),
+        _step('my_team', '#saveStatus', 'It saves as you type',
+              'No save button: watch for <b>All changes saved</b> here.', match=TEAM, optional=True),
+        _step('my_team', '#s-identity', 'Team identity',
+              'Nickname, team photo and the <b>layout</b> the public page uses.', match=TEAM, optional=True),
+        _step('my_team', '#s-specs', 'Robot specs',
+              'What your robot is built from. It shows on the public team page.', match=TEAM, optional=True),
+        _step('my_team', '#s-goals', 'Season goals',
+              'Add goals and set how far along each one is.', match=TEAM, optional=True),
+        _step('my_team', '#s-roster', 'Your roster row',
+              'You can edit <b>your own row</b>: role, sub-team and the year you joined. Ask an admin to add '
+              'or move teammates.', match=TEAM, optional=True),
+    ],
+    'hub': [
+        _step('resources', '.hub-guide', 'This guide lives here',
+              'Come back to the Member Hub any time to retake the tour or read the written guide.',
+              optional=True),
+        _step('resources', '.hub-week', 'This week',
+              'The next meeting (it says <b>Now</b> while one is on), days to the next competition and your '
+              'rosters.', optional=True),
+        _step('resources', '.hub-search', 'Search the library',
+              'Press <kbd>/</kbd> to jump here and find any link, doc or tool.', optional=True),
+        _step('resources', '.hub-chips', 'Starred and New',
+              'Tap the <b>star</b> on any link to keep it on your account. <b>New</b> shows links added since '
+              'your last visit.', optional=True),
+        _step('resources', '#drivetrain', 'Drivetrain calculator',
+              'Compare gear ratios, wheel sizes and motor cartridges before you build.', optional=True),
+    ],
+    'events': [
+        _step('events_page', '.ev-card--feed', 'Never miss one',
+              '<b>Subscribe</b> once and every new event lands in your own calendar.', optional=True),
+        _step('events_page', '.ev-filters', 'Filter by kind',
+              'Show only competitions, outreach, fundraisers or meetings.', optional=True),
+        _step('events_page', '#calendar', 'The calendar',
+              'Open any event to answer <b>Are you coming?</b> Members see who else is going.', optional=True),
+    ],
+    'club': [
+        _step('about', '#subteams', 'About: the sub-teams',
+              'Everyone on each sub-team. Families and new students start here.', optional=True),
+        _step('achievements', '#awards', 'Achievements',
+              'Every award and result by season. <b>Share</b> one with your family.', optional=True),
+        _step('alumni', '#ask', 'Alumni',
+              'Where past members went. Some are open to questions about college and careers.', optional=True),
+        _step('donate', '#fundraisers', 'Donate',
+              'Fundraisers, what the money is spent on, and sponsorship tiers.', optional=True),
+        _step('contact', '#contact-form', 'Contact',
+              'The message form, where we meet, and answers to common questions.', optional=True),
+    ],
+    'safety': [
+        _step('safety_quiz', '#quizContainer', 'Workshop Safety Quiz',
+              'Take this before you use any tool. You need <b>70%</b> to pass and can retake it any time.'),
+    ],
+    'editors': [
+        _step('my_team', '.team-picker', 'Team Pages',
+              'Every team and group by season, yours first. Open any of them to edit rosters, the journey and '
+              'the editors-only <b>Details</b>.', match=TEAM, optional=True),
+    ],
+    'admins': [
+        _step('admin_dashboard', '.admin-tabs', 'The Admin Panel',
+              'Overview, People, Teams, Events, Awards, Messages, Sponsors, Site and Activity.'),
+        _step('admin_dashboard', '#tab-users', 'People',
+              'Approve sign-ups, set roles, make reset links and turn off two-step for someone who lost their '
+              'phone.', optional=True),
+        _step('admin_dashboard', '#tab-site', 'Site',
+              'Edit any page\'s text and images, preview a draft and roll back from history.', optional=True),
+    ],
+}
+
+assert set(TOURS) == KEYS, 'every chapter needs a tour'

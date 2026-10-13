@@ -924,12 +924,7 @@ function showToast(message, type = 'info') {
     document.addEventListener('click', function (e) {
         if (e.target.closest('.search-close')) {
             closeSearch();
-        }
-        // Any button can open search, like the new member guide's "Open search".
-        if (e.target.closest('[data-search-open]')) {
-            openSearch();
-        }
-    });
+        }    });
 
     document.addEventListener('keydown', function (e) {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {

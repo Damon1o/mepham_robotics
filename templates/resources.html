@@ -50,17 +50,22 @@ href="{{ row.url }}"{% if row.url.startswith('http') %} target="_blank" rel="noo
 </nav>
 
 <div class="hub">
-    {% set guide_steps = guide_progress() %}
-    {% if guide_steps and guide_steps[0] < guide_steps[1] %}
-    <a class="hub-guide" href="{{ url_for('guide_page') }}">
-        <span class="hub-guide-icon"><i data-lucide="milestone" aria-hidden="true"></i></span>
-        <span class="hub-guide-text">
-            <strong>{{ 'New here? Take the member guide' if not guide_steps[0] else 'Finish the member guide' }}</strong>
-            <span>A step-by-step tour of every part of the site · {{ guide_steps[0] }} of {{ guide_steps[1] }} chapters done</span>
-        </span>
-        <i data-lucide="arrow-right" class="hub-guide-go" aria-hidden="true"></i>
-    </a>
-    {% endif %}
+    {#- The new member guide lives here: the guided tour and the written chapters. -#}
+    {% set done, total = guide_progress() %}
+    <div class="hub-guide{{ ' is-complete' if done == total }}">
+        <span class="hub-guide-icon"><i data-lucide="{{ 'party-popper' if done == total else 'milestone' }}" aria-hidden="true"></i></span>
+        <div class="hub-guide-text">
+            <strong>{{ 'New here? Take the tour' if not done else ('You\'ve seen it all' if done == total else 'Keep the tour going') }}</strong>
+            <span>A guided walk through every part of the site, on the real pages · {{ done }} of {{ total }} chapters done</span>
+            <progress class="hub-guide-bar" max="{{ total }}" value="{{ done }}" aria-label="Guide chapters done">{{ done }} of {{ total }}</progress>
+        </div>
+        <div class="hub-guide-actions">
+            <button type="button" class="hub-guide-btn" data-tour-start>
+                <i data-lucide="sparkles" aria-hidden="true"></i> {{ 'Retake the tour' if done == total else 'Start the tour' }}</button>
+            <a class="hub-guide-btn hub-guide-btn--ghost" href="{{ url_for('guide_page') }}">
+                <i data-lucide="book-open" aria-hidden="true"></i> Read the guide</a>
+        </div>
+    </div>
 
     {% if week %}
     <div class="hub-week" aria-labelledby="hub-week-title">

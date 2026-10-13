@@ -1927,10 +1927,17 @@ def _guide_chapters(user):
         if chapter.get('role') and not role_at_least(role, chapter['role']):
             continue
         steps = [s if isinstance(s, str) else s[0] for s in chapter['steps'] if isinstance(s, str) or on[s[1]]]
-        label, endpoint, anchor = chapter['try']
-        href = url_for(endpoint) + (f'#{anchor}' if anchor else '')
-        chapters.append(chapter | {'steps': steps, 'try': {'label': label, 'href': href}})
+        tour = [_tour_step(s) for s in guide.TOURS[chapter['key']] if on.get(s.get('when'), True)]
+        chapters.append(chapter | {'steps': steps, 'tour': tour})
     return chapters
+
+
+def _tour_step(step):
+    """One guided-tour step as the browser needs it: where to go and what to spotlight."""
+    url = url_for(step['page'])
+    return {'url': url, 'match': step.get('match') or f'^{re.escape(url)}$', 'target': step['target'],
+            'title': step['title'], 'text': step['text'], 'nav': step.get('nav') == 'open',
+            'optional': bool(step.get('optional'))}
 
 
 def guide_progress():
@@ -1954,6 +1961,16 @@ def guide_page():
     chapters = _guide_chapters(user)
     done = {c['key'] for c in chapters} & set(user.get('guide_done') or [])
     return render_template('guide.html', active_page='guide', chapters=chapters, done=done)
+
+
+@app.route('/api/guide/tour')
+@role_required('member')
+def api_guide_tour():
+    """The guided tour's chapters and steps for this member (static/js/tour.js)."""
+    user = _session_user()
+    return jsonify({'chapters': [{'key': c['key'], 'title': c['title'], 'steps': c['tour']}
+                                 for c in _guide_chapters(user)],
+                    'done': list(user.get('guide_done') or []), 'hub': url_for('resources')})
 
 
 @app.route('/api/guide/step', methods=['POST'])
