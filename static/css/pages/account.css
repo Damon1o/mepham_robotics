@@ -1729,3 +1729,14 @@
         display: none;
     }
 }
+
+/* Discord link */
+.acct-discord-hint {
+    margin: 0.75rem 0 0;
+    font-size: 0.875rem;
+    color: var(--acct-muted);
+}
+
+.acct-discord-hint code {
+    font-size: 0.8125rem;
+}
