@@ -208,13 +208,19 @@ def test_editor_edits_and_deletes_sheets(client, make_user, db, clock):
     assert db['signup_sheets'].count_documents({}) == 0
 
 
-def test_past_sheets_are_closed(client, make_user, db, clock):
+def test_past_sheets_are_closed_to_members_but_not_editors(client, make_user, db, clock):
+    alice = make_user(username='alice', password='alice-password', email='alice@example.com')
     login(client, make_user, 'ed', role='editor')
     make_sheet(client, date='2026-10-01T09:00')
     sheet_id = db['signup_sheets'].find_one()['_id']
-    reply = client.post(f'/api/hub/sheets/{sheet_id}/signup', json={'role': 'baker', 'on': True})
-    assert reply.status_code == 400
     assert 'Recent sheets (1)' in client.get('/resources').get_data(as_text=True)
+    # Editors record who really came, after the day.
+    reply = client.post(f'/api/hub/sheets/{sheet_id}/signup',
+                        json={'role': 'baker', 'on': True, 'user_id': str(alice['_id']), 'note': 'Pie'})
+    assert reply.status_code == 200 and 'Pie' in reply.get_json()['html']
+    client.post('/logout')
+    client.post('/login', data={'username': 'alice', 'password': 'alice-password'})
+    assert client.post(f'/api/hub/sheets/{sheet_id}/signup', json={'role': 'seller', 'on': True}).status_code == 400
 
 
 def test_members_cannot_make_sheets(client, make_user, clock):
@@ -224,7 +230,106 @@ def test_members_cannot_make_sheets(client, make_user, clock):
 
 def test_settings_can_hide_both(client, make_user, clock):
     login(client, make_user, 'root', role='admin')
-    for key in ('resources.show_attendance', 'resources.show_sheets'):
+    for key in ('resources.show_attendance', 'resources.show_sheets', 'resources.show_events'):
         assert client.post('/admin/api/site', json={'key': key, 'value': False}).status_code == 200
     html = client.get('/resources').get_data(as_text=True)
-    assert 'data-attendance' not in html and 'data-sheets' not in html
+    assert 'data-attendance' not in html and 'data-sheets' not in html and 'data-hub-events' not in html
+
+
+# --- Editors fill in past attendance -----------------------------------------------------
+
+def test_editor_backfills_any_day_with_times(client, make_user, db, clock):
+    bob = make_user(username='bob', password='bob-password', email='bob@example.com')
+    cara = make_user(username='cara', password='cara-password', email='cara@example.com')
+    login(client, make_user, 'ed', role='editor')
+    # A Saturday in September: not a meeting day, still allowed.
+    day = '2026-09-12'
+    sheet = client.get(f'/api/hub/attendance/sheet?day={day}').get_json()['html']
+    assert 'not a usual meeting day' in sheet
+
+    reply = client.post('/api/hub/attendance/sheet', json={
+        'day': day, 'action': 'in', 'user_ids': [str(bob['_id']), str(cara['_id'])],
+        'in_time': '10:00', 'out_time': '13:30'})
+    assert reply.status_code == 200
+    rows = list(db['attendance'].find({'day': day}))
+    assert len(rows) == 2 and all((r['in_at'].hour, r['out_at'].hour, r['out_at'].minute) == (10, 13, 30) for r in rows)
+
+    # Fix one person's times.
+    client.post('/api/hub/attendance/sheet', json={'day': day, 'action': 'set', 'user_id': str(bob['_id']),
+                                                   'in_time': '11:00', 'out_time': ''})
+    row = db['attendance'].find_one({'day': day, 'user_id': str(bob['_id'])})
+    assert row['in_at'].hour == 11 and row['out_at'] is None
+
+    bad = {'day': day, 'action': 'set', 'user_id': str(bob['_id'])}
+    assert client.post('/api/hub/attendance/sheet', json=dict(bad, in_time='14:00', out_time='13:00')).status_code == 400
+    assert client.post('/api/hub/attendance/sheet', json=dict(bad, in_time='noon')).status_code == 400
+    assert client.post('/api/hub/attendance/sheet', json=dict(bad, action='in', user_ids=[])).status_code == 400
+
+    # It counts toward the member's totals.
+    client.post('/logout')
+    client.post('/login', data={'username': 'cara', 'password': 'cara-password'})
+    assert '3h 30m' in client.get('/resources').get_data(as_text=True)
+
+
+def test_past_meeting_day_defaults_to_the_meeting_times(client, make_user, db, clock):
+    bob = make_user(username='bob', password='bob-password', email='bob@example.com')
+    login(client, make_user, 'ed', role='editor')
+    html = client.get('/api/hub/attendance/sheet?day=2026-10-09').get_json()['html']
+    assert 'value="15:00"' in html and 'value="17:00"' in html
+    client.post('/api/hub/attendance/sheet', json={'day': '2026-10-09', 'action': 'in', 'user_id': str(bob['_id'])})
+    row = db['attendance'].find_one()
+    assert (row['in_at'].hour, row['out_at'].hour) == (15, 17)
+
+
+# --- Event sign-ups -------------------------------------------------------------------------
+
+@pytest.fixture
+def events_db(db):
+    upcoming = db['competitions'].insert_one({'name': 'Regional Qualifier', 'kind': 'competition',
+                                              'date': datetime.datetime(2026, 10, 24, 8, 0)}).inserted_id
+    past = db['competitions'].insert_one({'name': 'Fall Scrimmage', 'kind': 'scrimmage',
+                                          'date': datetime.datetime(2026, 10, 3, 9, 0)}).inserted_id
+    return upcoming, past
+
+
+def test_member_signs_up_for_an_event_in_one_tap(client, make_user, db, clock, events_db):
+    upcoming, past = events_db
+    alice = login(client, make_user, 'alice')
+    html = client.get('/resources').get_data(as_text=True)
+    assert 'Regional Qualifier' in html and 'data-event-toggle' in html and 'Fall Scrimmage' not in html
+
+    reply = client.post(f'/api/hub/events/{upcoming}', json={'on': True})
+    assert "You're going" in reply.get_json()['html']
+    assert db['competitions'].find_one({'_id': upcoming})['rsvps'][str(alice['_id'])]['status'] == 'going'
+
+    client.post(f'/api/hub/events/{upcoming}', json={'on': False})
+    assert str(alice['_id']) not in db['competitions'].find_one({'_id': upcoming}).get('rsvps', {})
+    assert client.post(f'/api/hub/events/{past}', json={'on': True}).status_code == 400
+    other = make_user(username='zed', password='zed-password', email='zed@example.com')
+    assert client.post(f'/api/hub/events/{upcoming}', json={'on': True, 'user_id': str(other['_id'])}).status_code == 403
+
+
+def test_events_page_list_has_one_tap_signup(client, make_user, db, events_db):
+    upcoming, _ = events_db
+    db['competitions'].update_one({'_id': upcoming}, {'$set': {'date': app_module.club_now() + datetime.timedelta(days=5)}})
+    assert 'data-ev-signup' not in client.get('/events').get_data(as_text=True)  # signed out: no button
+    alice = login(client, make_user, 'alice')
+    assert 'data-ev-signup' in client.get('/events').get_data(as_text=True)
+    # The button posts the event page's own "Going" answer.
+    assert client.post(f'/api/events/{upcoming}/rsvp', json={'status': 'going'}).status_code == 200
+    assert 'class="ev-signup is-on"' in client.get('/events').get_data(as_text=True)
+    assert db['competitions'].find_one({'_id': upcoming})['rsvps'][str(alice['_id'])]['status'] == 'going'
+
+
+def test_editor_records_who_came_to_past_events(client, make_user, db, clock, events_db):
+    upcoming, past = events_db
+    bob = make_user(username='bob', password='bob-password', email='bob@example.com')
+    login(client, make_user, 'ed', role='editor')
+    html = client.get('/resources').get_data(as_text=True)
+    assert 'Past events: record who came (1)' in html and 'Fall Scrimmage' in html
+
+    reply = client.post(f'/api/hub/events/{past}', json={'on': True, 'user_id': str(bob['_id'])})
+    assert reply.status_code == 200
+    assert db['competitions'].find_one({'_id': past})['rsvps'][str(bob['_id'])]['status'] == 'going'
+    client.post(f'/api/hub/events/{past}', json={'on': False, 'user_id': str(bob['_id'])})
+    assert str(bob['_id']) not in db['competitions'].find_one({'_id': past}).get('rsvps', {})

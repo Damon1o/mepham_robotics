@@ -1,0 +1,72 @@
+{#- Member Hub event sign-ups: one tap to say you're going. Editors add or take off anyone,
+    past events included. Drawn in resources.html and again by /api/hub/events. -#}
+{% macro event_card(e) %}
+{% set going_ids = e.going|map(attribute='user_id')|list %}
+<article class="hub-event{% if e.mine == 'going' %} is-going{% endif %}{% if not e.open %} is-past{% endif %}" data-event="{{ e.id }}">
+    <div class="hub-sheet-date" aria-hidden="true">
+        <span>{{ e.start.strftime('%b') }}</span><strong>{{ e.start.day }}</strong>
+    </div>
+    <div class="hub-event-body">
+        <p class="hub-event-kind"><i data-lucide="{{ e.icon }}" aria-hidden="true"></i> {{ e.label }}</p>
+        <h3><a href="{{ event_url(e) }}">{{ e.name }}</a></h3>
+        <p class="hub-event-meta">{{ e.start.strftime('%A') }} · {{ fmt_time(e.start.strftime('%H:%M')) }}{% if e.location %} · {{ e.location }}{% endif %}</p>
+        <p class="hub-event-count"><strong>{{ e.going|length }}</strong> going{% if e.maybe %} · {{ e.maybe }} maybe{% endif %}</p>
+        {% if e.going %}
+        <ul class="hub-role-people">
+            {% for p in e.going %}
+            <li><span class="hub-person-name">{{ p.name }}</span>
+                {% if keeper %}<button type="button" class="hub-x" data-event-remove="{{ p.user_id }}" data-name="{{ p.name }}"
+                    aria-label="Take {{ p.name }} off {{ e.name }}"><i data-lucide="x" aria-hidden="true"></i></button>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if keeper %}
+        {% set others = member_choices|rejectattr(0, 'in', going_ids)|list %}
+        {% if others %}
+        <form class="hub-keeper-add" data-event-add>
+            <label class="hub-field"><span class="visually-hidden">Add a member to {{ e.name }}</span>
+                <select name="user_id" required>
+                    <option value="">Add a member…</option>
+                    {% for uid, name in others %}<option value="{{ uid }}">{{ name }}</option>{% endfor %}
+                </select>
+            </label>
+            <button type="submit" class="hub-mini-btn"><i data-lucide="user-plus" aria-hidden="true"></i> Add</button>
+        </form>
+        {% endif %}
+        {% endif %}
+    </div>
+    {% if e.open %}
+    <button type="button" class="hub-event-toggle{% if e.mine == 'going' %} is-on{% endif %}" data-event-toggle
+        aria-pressed="{{ 'true' if e.mine == 'going' else 'false' }}">
+        {% if e.mine == 'going' %}<i data-lucide="circle-check-big" aria-hidden="true"></i> You're going
+        {% else %}<i data-lucide="hand" aria-hidden="true"></i> Sign up{% endif %}
+    </button>
+    {% endif %}
+</article>
+{% endmacro %}
+
+<div class="hub-sheets-head">
+    <div>
+        <p class="hub-kicker"><i data-lucide="calendar-days" aria-hidden="true"></i> Events</p>
+        <h2 class="hub-heading hub-heading--big">Sign up for events</h2>
+    </div>
+    <a class="hub-guide-btn" href="{{ url_for('events_page') }}"><i data-lucide="calendar" aria-hidden="true"></i> Full calendar</a>
+</div>
+
+{% if hub_events %}
+<div class="hub-event-list">
+    {% for e in hub_events %}{{ event_card(e) }}{% endfor %}
+</div>
+{% else %}
+<p class="hub-sheets-empty">Nothing on the calendar yet.{% if keeper %} Add events in the admin dashboard.{% endif %}</p>
+{% endif %}
+
+{% if past_events %}
+<details class="hub-sheets-past">
+    <summary>Past events: record who came ({{ past_events|length }})</summary>
+    <div class="hub-event-list">
+        {% for e in past_events %}{{ event_card(e) }}{% endfor %}
+    </div>
+</details>
+{% endif %}

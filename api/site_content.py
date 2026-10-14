@@ -619,6 +619,8 @@ SECTIONS = (
               hint='Next meeting, next competition and your team, worked out automatically.'),
         Field('show_attendance', 'toggle', 'Meeting sign-in sheet', True, group='Sign-in & sign-ups',
               hint='Members sign in and out on meeting days. Editors see the sheet and download it.'),
+        Field('show_events', 'toggle', 'Event sign-ups', True, group='Sign-in & sign-ups',
+              hint='Upcoming events with one-tap sign-up. It is the same as answering "Going" on the event page.'),
         Field('show_sheets', 'toggle', 'Sign-up sheets', True, group='Sign-in & sign-ups',
               hint='Bake sales and other sign-ups: editors make them, members take a spot as baker, seller and so on.'),
         Field('library', 'list', 'Library', [

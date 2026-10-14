@@ -1441,6 +1441,13 @@ def events_page():
             {'date': {'$lt': now}, **events.competitive_query()}).sort('date', -1).limit(RECENT_EVENTS_SHOWN)]
     prev_month, next_month = events.shift_month(year, month, -1), events.shift_month(year, month, 1)
     feed_url = _public_url('events_ics')
+    # Signed-in members sign up from the list with one tap: the event page's "Going".
+    user = _session_user()
+    going_ids = set()
+    if user:
+        ids = [ObjectId(i['id']) for i in upcoming if i['source'] == 'event' and ObjectId.is_valid(i['id'])]
+        going_ids = {str(r['_id']) for r in db['competitions'].find(
+            {'_id': {'$in': ids}, f"rsvps.{user['_id']}.status": 'going'}, {'_id': 1})}
     return render_template(
         'events.html', active_page='events', now=now, today=today,
         month_start=datetime.date(year, month, 1), weeks=events.month_weeks(year, month, on_grid, today),
@@ -1451,7 +1458,7 @@ def events_page():
         kinds=events.kinds_present(on_grid + upcoming), recent=[r for r in recent if r],
         feed_url=feed_url, webcal_url='webcal://' + feed_url.split('://', 1)[-1],
         google_url=lambda item: events.google_url(item, CLUB_TIMEZONE), maps_url=events.maps_url,
-        jsonld=events_jsonld(upcoming))
+        jsonld=events_jsonld(upcoming), signed_in=bool(user), going_ids=going_ids)
 
 
 def _ics_response(body, filename):
@@ -1847,8 +1854,10 @@ def resources():
     attendance = (Markup(render_template('partials/hub_attendance.html', **_attendance_context(user)))
                   if hub.show_attendance else None)
     signups = Markup(render_template('partials/hub_sheets.html', **_sheets_context(user))) if hub.show_sheets else None
+    hub_events = (Markup(render_template('partials/hub_events.html', **_events_context(user)))
+                  if hub.show_events else None)
     return render_template('resources.html', active_page='resources', week=week, now=now, shelves=shelves,
-                           attendance=attendance, signups=signups,
+                           attendance=attendance, signups=signups, hub_events=hub_events,
                            hub_new=new, hub_stars={u for u in user.get('hub_stars') or [] if u in rows},
                            hub_recent=[rows[u] for u in user.get('hub_recent') or [] if u in rows],
                            hub_stars_imported='hub_stars' in user)
@@ -1951,7 +1960,7 @@ def _attendance_context(user, day=None):
         rows = sheets.sheet_rows(db['attendance'].find({'day': day.isoformat()}), names,
                                  bounds[1] if bounds else None, now)
         signed = {r['user_id'] for r in rows}
-        context.update(sheet_day=day, sheet_days=days, sheet_rows=rows,
+        context.update(sheet_day=day, sheet_days=days, sheet_rows=rows, sheet_bounds=bounds,
                        sheet_here=sum(r['here'] and not r['forgot'] for r in rows),
                        sheet_others=sorted(((i, n) for i, n in names.items() if i not in signed),
                                            key=lambda p: p[1].lower()))
@@ -2004,34 +2013,64 @@ def api_hub_attendance_sheet():
 @app.route('/api/hub/attendance/sheet', methods=['POST'])
 @role_required('editor')
 def api_hub_attendance_edit():
-    """An editor signs someone in or out, or takes their row off the day's sheet."""
+    """An editor writes the sheet for any day up to today.
+
+    'in' adds one member (user_id) or several (user_ids), with optional in_time and
+    out_time ('HH:MM'). 'set' changes a row's times. 'out' signs someone out now
+    (or at the meeting's end on a past day), and 'remove' takes the row off.
+    """
     user = _session_user()
     body = _json_body()
     now = club_now()
     day = sheets.parse_day(body.get('day'))
-    uid, action = str(body.get('user_id') or ''), str(body.get('action') or '')
+    action = str(body.get('action') or '')
     if not day or day > now.date():
-        return _json_error('Pick a meeting day.')
-    if uid not in _member_names():
+        return _json_error('Pick a day up to today.')
+    raw_ids = body.get('user_ids') if action == 'in' and isinstance(body.get('user_ids'), list) else [body.get('user_id')]
+    uids = list(dict.fromkeys(str(u or '') for u in raw_ids))
+    names = _member_names()
+    if uids in ([], ['']):
+        return _json_error('Pick a member.')
+    if any(u not in names for u in uids):
         return _json_error('That member is no longer here.', 404)
-    # On a past day, the times written are the meeting's own start and end.
+    try:
+        in_at, out_at = sheets.at_clock(day, body.get('in_time')), sheets.at_clock(day, body.get('out_time'))
+    except ValueError:
+        return _json_error('Times look like 15:30.')
+    if in_at and out_at and out_at < in_at:
+        return _json_error('Signed out before signing in? Check the times.')
+    # Without times: now on today's sheet, the meeting's own start and end on a past day.
+    bounds = sheets.meeting_bounds(site().meeting, day)
     if day == now.date():
-        at_in = at_out = now
+        default_in, default_out = now, None
     else:
         noon = datetime.datetime.combine(day, datetime.time(12))
-        at_in, at_out = sheets.meeting_bounds(site().meeting, day) or (noon, noon)
-    query = {'user_id': uid, 'day': day.isoformat()}
+        default_in, default_out = bounds or (noon, noon)
+    query = {'day': day.isoformat()}
     if action == 'in':
-        db['attendance'].update_one(query, {'$setOnInsert': {'in_at': at_in, 'out_at': None, 'by': user['username']}},
-                                    upsert=True)
+        start = in_at or default_in
+        end = out_at if out_at else (default_out if not in_at else None)
+        if end and end < start:
+            end = None
+        for uid in uids:
+            db['attendance'].update_one(dict(query, user_id=uid), {'$setOnInsert': {
+                'in_at': start, 'out_at': end, 'by': user['username']}}, upsert=True)
+    elif action == 'set':
+        if not in_at:
+            return _json_error('Give a sign-in time.')
+        if not db['attendance'].update_one(dict(query, user_id=uids[0]), {'$set': {
+                'in_at': in_at, 'out_at': out_at, 'by': user['username']}}).matched_count:
+            return _json_error('That row is gone.', 404)
     elif action == 'out':
-        db['attendance'].update_one(query, {'$set': {'out_at': at_out}})
+        out = now if day == now.date() else (default_out or now)
+        db['attendance'].update_one(dict(query, user_id=uids[0]), {'$set': {'out_at': out}})
     elif action == 'remove':
-        db['attendance'].delete_one(query)
+        db['attendance'].delete_one(dict(query, user_id=uids[0]))
     else:
-        return _json_error('Sign in, sign out or remove.')
-    log_activity('attendance', f"{user['username']} {action} {_member_names()[uid]} for {day.isoformat()}",
-                 user=user['username'], details={'day': day.isoformat(), 'user_id': uid, 'action': action})
+        return _json_error('Sign in, sign out, change times or remove.')
+    who = ', '.join(names[u] for u in uids)
+    log_activity('attendance', f"{user['username']} {action} {who} for {day.isoformat()}",
+                 user=user['username'], details={'day': day.isoformat(), 'user_ids': uids, 'action': action})
     return _attendance_reply(user, day)
 
 
@@ -2072,7 +2111,8 @@ def _sheets_context(user):
     names, uid = _member_names(), str(user['_id'])
     return {'sheets': [_sheet_card(s, names, uid, now) for s in upcoming],
             'past_sheets': [_sheet_card(s, names, uid, now) for s in past], 'keeper': keeper,
-            'bake_sale_roles': sheets.BAKE_SALE_ROLES, 'limits': sheets}
+            'bake_sale_roles': sheets.BAKE_SALE_ROLES, 'limits': sheets,
+            'member_choices': sorted(names.items(), key=lambda p: p[1].lower()) if keeper else []}
 
 
 def _sheets_reply(user):
@@ -2120,7 +2160,7 @@ def api_hub_sheet_edit(sheet_id):
 def api_hub_sheet_signup(sheet_id):
     """Take a spot on a role (with a note, like what you are baking) or give it back.
 
-    Editors can also take someone else off a role by sending their user_id.
+    Editors can put anyone on a role or take them off (user_id), even after the sheet's day.
     """
     user = _session_user()
     body = _json_body()
@@ -2132,11 +2172,15 @@ def api_hub_sheet_signup(sheet_id):
         return _json_error('That role is no longer on the sheet.', 404)
     uid = str(user['_id'])
     other = str(body.get('user_id') or '')
+    keeper = _can_keep_sheets(user)
     if other and other != uid:
-        if not _can_keep_sheets(user) or body.get('on'):
+        if not keeper:
             return _json_error('You can only sign yourself up.', 403)
+        if other not in _member_names():
+            return _json_error('That member is no longer here.', 404)
         uid = other
-    elif not sheets.is_open(sheet, club_now()):
+    # Editors can still fill in a sheet after its day, to record who really came.
+    if not keeper and not sheets.is_open(sheet, club_now()):
         return _json_error('Sign-ups for that sheet are closed.', 400)
     path = f"signups.{role['key']}"
     if not body.get('on'):
@@ -2154,6 +2198,70 @@ def api_hub_sheet_signup(sheet_id):
     if not taken.matched_count:
         return _json_error(f"{role['name']} is full.", 409)
     return _sheets_reply(user)
+
+
+# --- Member Hub: event sign-ups -------------------------------------------------------------
+# One tap signs a member up for an event: it is the "Going" RSVP from the event's
+# page, so counts and names match everywhere. Editors add or take off anyone,
+# and fill in past events to record who came.
+HUB_EVENTS_SHOWN = 6
+PAST_EVENTS_SHOWN = 3
+
+
+def _hub_event(row, uid, now):
+    item = events.event_item(row)
+    summary = rsvp_summary(row, uid, with_people=True)
+    going = [{'user_id': str(p['_id']), 'name': _display_name(p)} for p in summary['people'] if p['status'] == 'going']
+    return dict(item, going=going, maybe=summary['counts']['maybe'], mine=summary['mine'], open=item['end'] >= now)
+
+
+def _events_context(user):
+    now = club_now()
+    keeper, uid = _can_keep_sheets(user), str(user['_id'])
+    upcoming = db['competitions'].find({'date': {'$gte': now - datetime.timedelta(hours=12)}}).sort('date', 1)
+    shown = [e for e in (_hub_event(r, uid, now) for r in upcoming if events.event_item(r)) if e['open']]
+    past = []
+    if keeper:
+        rows = db['competitions'].find({'date': {'$lt': now}}).sort('date', -1).limit(PAST_EVENTS_SHOWN * 2)
+        past = [e for e in (_hub_event(r, uid, now) for r in rows if events.event_item(r)) if not e['open']]
+    names = sorted(_member_names().items(), key=lambda p: p[1].lower()) if keeper else []
+    return {'hub_events': shown[:HUB_EVENTS_SHOWN], 'past_events': past[:PAST_EVENTS_SHOWN], 'keeper': keeper,
+            'member_choices': names, 'event_url': lambda e: url_for('event_page', event_id=e['id'])}
+
+
+def _events_reply(user):
+    return jsonify({'html': render_template('partials/hub_events.html', **_events_context(user))})
+
+
+@app.route('/api/hub/events/<event_id>', methods=['POST'])
+@role_required('member')
+def api_hub_event_signup(event_id):
+    """Sign up for an event (on) or back out. Editors send user_id to do it for someone, past events too."""
+    user = _session_user()
+    body = _json_body()
+    row, item = _event_row_and_item(event_id)
+    if not item:
+        return _json_error('That event is no longer on the calendar.', 404)
+    uid = str(user['_id'])
+    other = str(body.get('user_id') or '')
+    keeper = _can_keep_sheets(user)
+    if other and other != uid:
+        if not keeper:
+            return _json_error('You can only sign yourself up.', 403)
+        if other not in _member_names():
+            return _json_error('That member is no longer here.', 404)
+        uid = other
+    if not keeper and item['end'] < club_now():
+        return _json_error('That event is over.', 400)
+    if body.get('on'):
+        update = {'$set': {f'rsvps.{uid}': {'status': 'going', 'at': _utcnow()}}}
+    else:
+        update = {'$unset': {f'rsvps.{uid}': ''}}
+    db['competitions'].update_one({'_id': row['_id']}, update)
+    if uid != str(user['_id']):
+        log_activity('event_signup', f"{user['username']} {'added' if body.get('on') else 'removed'} "
+                     f"{_member_names()[uid]} for {item['name']}", user=user['username'])
+    return _events_reply(user)
 
 
 @app.route('/glossary')

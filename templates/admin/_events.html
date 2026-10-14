@@ -37,7 +37,9 @@
         <p class="form-hint">Click any field to change it; it saves when you leave the field (Enter saves, Esc
             undoes). Everything here is on the <a href="{{ url_for('events_page') }}">events page</a> and its
             calendar feed. The soonest competition or scrimmage drives the homepage countdown. Add the RobotEvents
-            link so visitors can find the event page.</p>
+            link so visitors can find the event page. To add or take members off an event, or record who came to a
+            past one, use <a href="{{ url_for('resources', _anchor='event-signups') }}">{{ site.resources.hero_title }} → Events</a>.
+            Meeting sign-ins and bake sale sheets are there too.</p>
         <div class="event-head" aria-hidden="true"><span>Event</span><span>Type</span><span>Location</span><span>When</span><span>Link</span></div>
         <div class="data-list list-events">
             {% for comp in upcoming %}{{ event_row(comp) }}{% else %}
