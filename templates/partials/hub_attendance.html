@@ -1,0 +1,99 @@
+{#- Member Hub sign-in card, and for editors the day's sign-in sheet.
+    Drawn in resources.html and again by the /api/hub/attendance routes. -#}
+{% macro t(moment) -%}{{ fmt_time(moment.strftime('%H:%M')) }}{%- endmacro %}
+
+<div class="hub-sign-card{% if mine and not mine.out_at %} is-in{% endif %}">
+    <div class="hub-sign-main">
+        <p class="hub-kicker"><i data-lucide="signature" aria-hidden="true"></i> Meeting sign-in</p>
+        {% if window %}
+            {% if not mine %}
+            <h2 class="hub-sign-title">You're not signed in yet</h2>
+            <p class="hub-sign-line">Today's meeting runs {{ t(window.start) }}–{{ t(window.end) }}. Sign in when you get here.</p>
+            <button type="button" class="hub-sign-btn" data-attend="in">
+                <i data-lucide="log-in" aria-hidden="true"></i> Sign in</button>
+            {% elif not mine.out_at %}
+            <h2 class="hub-sign-title">Signed in at {{ t(mine.in_at) }}</h2>
+            <p class="hub-sign-line"><span class="hub-pulse" aria-hidden="true"></span> Here for {{ fmt_minutes(mine_minutes) }}. Sign out before you leave.</p>
+            <button type="button" class="hub-sign-btn hub-sign-btn--out" data-attend="out">
+                <i data-lucide="log-out" aria-hidden="true"></i> Sign out</button>
+            {% else %}
+            <h2 class="hub-sign-title">Signed out at {{ t(mine.out_at) }}</h2>
+            <p class="hub-sign-line">{{ fmt_minutes(mine_minutes) }} at today's meeting. See you next time.</p>
+            <button type="button" class="hub-sign-btn hub-sign-btn--ghost" data-attend="undo">
+                <i data-lucide="undo-2" aria-hidden="true"></i> Still here? Undo sign-out</button>
+            {% endif %}
+        {% elif next_meeting %}
+            <h2 class="hub-sign-title">Sign-in is closed</h2>
+            <p class="hub-sign-line">It opens an hour before the next meeting:
+                {{ next_meeting[0].strftime('%A') }} at {{ t(next_meeting[0]) }}.</p>
+        {% else %}
+            <h2 class="hub-sign-title">No meeting days are set</h2>
+            <p class="hub-sign-line">Sign-in opens on meeting days.</p>
+        {% endif %}
+    </div>
+    <div class="hub-sign-stats">
+        <dl>
+            <div><dt>Meetings</dt><dd>{{ attended }}</dd></div>
+            <div><dt>Time in the shop</dt><dd>{{ fmt_minutes(year_minutes) }}</dd></div>
+        </dl>
+        <p class="hub-sign-note">This school year</p>
+    </div>
+</div>
+
+{% if keeper %}
+<div class="hub-roll" data-roll-day="{{ sheet_day.isoformat() }}">
+    <div class="hub-roll-head">
+        <h3 class="hub-heading"><i data-lucide="clipboard-list" aria-hidden="true"></i> Sign-in sheet</h3>
+        <label class="hub-roll-day">
+            <span class="visually-hidden">Meeting day</span>
+            <select data-roll-pick>
+                {% for d in sheet_days %}
+                <option value="{{ d.isoformat() }}"{% if d == sheet_day %} selected{% endif %}>
+                    {%- if d == now.date() %}Today · {% endif %}{{ d.strftime('%a %b') }} {{ d.day }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <span class="hub-roll-count">
+            {%- if sheet_day == now.date() %}<strong>{{ sheet_here }}</strong> here now · {% endif -%}
+            <strong>{{ sheet_rows|length }}</strong> signed in</span>
+        <a class="hub-roll-csv" href="{{ url_for('hub_attendance_csv') }}" download>
+            <i data-lucide="download" aria-hidden="true"></i> CSV</a>
+    </div>
+
+    {% if sheet_rows %}
+    <ul class="hub-roll-list">
+        {% for r in sheet_rows %}
+        <li class="hub-roll-row{% if r.here and not r.forgot %} is-here{% endif %}">
+            <span class="hub-roll-name">{{ r.name }}</span>
+            <span class="hub-roll-times">
+                {{ t(r.in_at) }} – {% if r.out_at %}{{ t(r.out_at) }}{% elif r.forgot %}<em>no sign-out</em>{% else %}<em>here</em>{% endif %}
+                · {{ fmt_minutes(r.minutes) }}{% if r.by %} · <span title="Signed in by {{ r.by }}">by {{ r.by }}</span>{% endif %}
+            </span>
+            <span class="hub-roll-actions">
+                {% if r.here %}
+                <button type="button" class="hub-mini-btn" data-roll="out" data-user="{{ r.user_id }}"
+                    aria-label="Sign out {{ r.name }}"><i data-lucide="log-out" aria-hidden="true"></i> Sign out</button>
+                {% endif %}
+                <button type="button" class="hub-mini-btn hub-mini-btn--danger" data-roll="remove" data-user="{{ r.user_id }}"
+                    data-name="{{ r.name }}" aria-label="Take {{ r.name }} off the sheet"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="hub-roll-empty">Nobody has signed in{{ ' yet' if sheet_day == now.date() }}.</p>
+    {% endif %}
+
+    {% if sheet_others %}
+    <form class="hub-roll-add" data-roll-add>
+        <label class="hub-field">Sign someone in
+            <select name="user_id" required>
+                <option value="">Pick a member</option>
+                {% for uid, name in sheet_others %}<option value="{{ uid }}">{{ name }}</option>{% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="hub-mini-btn"><i data-lucide="user-plus" aria-hidden="true"></i> Sign in</button>
+    </form>
+    {% endif %}
+</div>
+{% endif %}
