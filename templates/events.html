@@ -216,6 +216,13 @@
                             {% if item.location %}<p class="ev-meta"><i data-lucide="map-pin" aria-hidden="true"></i> {{ item.location }}</p>{% endif %}
                             {% if item.details %}<p class="ev-details">{{ item.details }}</p>{% endif %}
                             {{ actions(item) }}
+                            {% if signed_in and item.source == 'event' %}
+                            {% set going = item.id in going_ids %}
+                            <button type="button" class="ev-signup{% if going %} is-on{% endif %}" data-ev-signup
+                                data-url="{{ url_for('api_event_rsvp', event_id=item.id) }}" aria-pressed="{{ 'true' if going else 'false' }}">
+                                <i data-lucide="{{ 'circle-check-big' if going else 'hand' }}" aria-hidden="true"></i>
+                                <span>{{ "You're going" if going else 'Sign up' }}</span></button>
+                            {% endif %}
                         </div>
                     </li>
                     {% endfor %}

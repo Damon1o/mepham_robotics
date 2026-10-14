@@ -1147,6 +1147,7 @@
 .hub-sign .hub-field select,
 .hub-roll-day select,
 .hub-sheets .hub-field input,
+.hub-sheets .hub-field select,
 .hub-sheets .hub-field textarea,
 .hub-role-note input {
     width: 100%;
@@ -1725,6 +1726,245 @@
     margin-bottom: 1rem;
 }
 
+/* --- Editors fill in for anyone ---------------------------------------------------------- */
+
+.hub-roll-date input {
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+}
+
+.hub-roll-note,
+.hub-roll-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: -0.25rem 0 1rem;
+    font-size: 0.85rem;
+    color: var(--hub-muted);
+}
+
+.hub-roll-hint {
+    margin: 0.5rem 0 0;
+}
+
+.hub-roll-note svg {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+}
+
+.hub-roll-edit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 0.6rem;
+    grid-column: 1 / -1;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--hub-rule);
+}
+
+.hub-roll-edit .hub-field,
+.hub-roll-add .hub-field:not(.hub-roll-who) {
+    flex: 0 1 8.5rem;
+}
+
+.hub-roll-add .hub-roll-who {
+    flex: 1 1 14rem;
+}
+
+.hub-roll-bulk {
+    margin-top: 1rem;
+}
+
+.hub-roll-bulk summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 700;
+    color: var(--hub-ink);
+    cursor: pointer;
+}
+
+.hub-roll-bulk summary svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.hub-roll-bulk form {
+    display: grid;
+    gap: 0.9rem;
+    margin-top: 0.9rem;
+}
+
+.hub-roll-checks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+    gap: 0.35rem 1rem;
+    max-height: 16rem;
+    padding: 0.75rem;
+    border-radius: 12px;
+    background: var(--hub-paper);
+    overflow-y: auto;
+}
+
+.hub-roll-checks label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--hub-ink);
+    cursor: pointer;
+}
+
+.hub-roll-checks input {
+    width: 1.05rem;
+    height: 1.05rem;
+    accent-color: var(--maroon-dark);
+}
+
+.hub-keeper-add {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 0.55rem;
+    border-top: 1px dashed var(--hub-rule);
+}
+
+.hub-keeper-add .hub-field {
+    flex: 1 1 8rem;
+}
+
+.hub-keeper-add select {
+    min-height: 2.25rem;
+    padding: 0.35rem 2rem 0.35rem 0.75rem !important;
+    border-radius: 999px !important;
+    font-size: 0.85rem !important;
+}
+
+/* --- Event sign-ups ----------------------------------------------------------------------- */
+
+.hub-event-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    gap: 1rem;
+}
+
+.hub-event {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.9rem 1rem;
+    align-content: start;
+    padding: 1.25rem;
+    border: 1px solid var(--hub-rule);
+    border-radius: 20px;
+    background: var(--hub-paper);
+    box-shadow: 0 12px 32px rgba(80, 0, 0, 0.06);
+}
+
+.hub-event.is-going {
+    border-color: rgba(34, 160, 90, 0.45);
+}
+
+.hub-event.is-past {
+    box-shadow: none;
+}
+
+.hub-event .hub-sheet-date {
+    align-self: start;
+}
+
+.hub-event-body {
+    display: grid;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.hub-event-body h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    overflow-wrap: anywhere;
+}
+
+.hub-event-body h3 a {
+    color: var(--hub-ink);
+    text-decoration: none;
+}
+
+.hub-event-body h3 a:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--accent-gold);
+    text-decoration-thickness: 2px;
+}
+
+.hub-event-kind {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--maroon-light);
+}
+
+.hub-event-kind svg {
+    width: 0.9rem;
+    height: 0.9rem;
+}
+
+.hub-event-meta,
+.hub-event-count {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--hub-muted);
+}
+
+.hub-event-count strong {
+    color: var(--hub-ink);
+}
+
+.hub-event-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    grid-column: 1 / -1;
+    min-height: 2.75rem;
+    border: 2px solid #1a1414;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: #1a1414;
+    font: inherit;
+    font-weight: 800;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.hub-event-toggle svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.hub-event-toggle:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.hub-event-toggle.is-on {
+    border-color: rgba(34, 160, 90, 0.6);
+    background: rgba(34, 160, 90, 0.1);
+    color: #1d7a46;
+    box-shadow: none;
+}
+
+.hub-event-toggle.is-busy {
+    opacity: 0.6;
+    cursor: progress;
+}
+
 /* --- Editors' sheet form ----------------------------------------------------------------- */
 
 .hub-sheet-form {
@@ -1873,6 +2113,7 @@
     color: #fff;
 }
 
+[data-theme="dark"] .hub-event-toggle.is-on,
 [data-theme="dark"] .hub-sheet-fill strong {
     color: #6fd39a;
 }

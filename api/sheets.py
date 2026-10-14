@@ -247,3 +247,11 @@ def fill(roles):
 def signup_user_ids(sheets):
     """Every user id signed up on these sheets, for one name lookup."""
     return {s.get('user_id') for sheet in sheets for rows in (sheet.get('signups') or {}).values() for s in rows}
+
+
+def at_clock(day, value):
+    """`day` at 'HH:MM', or None when `value` is empty. Raises ValueError on a bad time."""
+    value = str(value or '').strip()
+    if not value:
+        return None
+    return datetime.datetime.combine(day, datetime.datetime.strptime(value, '%H:%M').time())

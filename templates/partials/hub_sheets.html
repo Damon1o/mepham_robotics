@@ -36,13 +36,29 @@
                 {% for p in r.people %}
                 <li>
                     <span class="hub-person-name">{{ p.name }}</span>{% if p.note %}<span class="hub-person-note">{{ p.note }}</span>{% endif %}
-                    {% if keeper and p.user_id != (r.mine.user_id if r.mine else '') %}
+                    {% if keeper %}
                     <button type="button" class="hub-x" data-signup-remove="{{ p.user_id }}" data-name="{{ p.name }}"
                         aria-label="Take {{ p.name }} off {{ r.name }}"><i data-lucide="x" aria-hidden="true"></i></button>
                     {% endif %}
                 </li>
                 {% endfor %}
             </ul>
+            {% endif %}
+            {% if keeper %}
+            {% set others = member_choices|rejectattr(0, 'in', r.people|map(attribute='user_id')|list)|list %}
+            {% if others and not r.full %}
+            <form class="hub-keeper-add" data-signup-add>
+                <label class="hub-field"><span class="visually-hidden">Add a member to {{ r.name }}</span>
+                    <select name="user_id" required>
+                        <option value="">Add a member…</option>
+                        {% for uid, name in others %}<option value="{{ uid }}">{{ name }}</option>{% endfor %}
+                    </select>
+                </label>
+                <label class="hub-role-note"><span class="visually-hidden">Note</span>
+                    <input type="text" name="note" maxlength="{{ limits.NOTE_MAX }}" placeholder="{{ r.prompt or 'Note (optional)' }}"></label>
+                <button type="submit" class="hub-mini-btn"><i data-lucide="user-plus" aria-hidden="true"></i> Add</button>
+            </form>
+            {% endif %}
             {% endif %}
             {% if s.open %}
                 {% if r.mine %}

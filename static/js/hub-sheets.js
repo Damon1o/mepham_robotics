@@ -1,4 +1,5 @@
-// Member Hub (/resources): meeting sign-in/sign-out and sign-up sheets.
+// Member Hub (/resources): meeting sign-in/sign-out, event sign-ups and sign-up sheets.
+// Editors can fill in any of them for anyone, past days and past events included.
 //
 // Both sections are server-rendered. Every action posts and gets the section back
 // as HTML, which replaces the old one, so the page never drifts from what was saved.
@@ -45,8 +46,10 @@
 
     if (attendance) {
         const day = () => attendance.querySelector('[data-roll-day]')?.dataset.rollDay;
-        const roll = (button, action, userId) => act(attendance, button,
-            send('/api/hub/attendance/sheet', { day: day(), user_id: userId, action }));
+        const roll = (button, body) => act(attendance, button,
+            send('/api/hub/attendance/sheet', Object.assign({ day: day() }, body)));
+        const openDay = value => act(attendance, null,
+            send(`/api/hub/attendance/sheet?day=${encodeURIComponent(value)}`, undefined, 'GET'));
 
         attendance.addEventListener('click', e => {
             const own = e.target.closest('[data-attend]');
@@ -54,29 +57,82 @@
                 act(attendance, own, send('/api/hub/attendance', { action: own.dataset.attend }));
                 return;
             }
+            const edit = e.target.closest('[data-roll-edit]');
+            if (edit) {
+                const box = edit.closest('[data-roll-row]').querySelector('[data-roll-set]');
+                box.hidden = !box.hidden;
+                edit.setAttribute('aria-expanded', String(!box.hidden));
+                if (!box.hidden) box.elements.in_time.focus();
+                return;
+            }
             const button = e.target.closest('[data-roll]');
             if (!button) return;
             if (button.dataset.roll === 'remove') {
                 Fuse.arm(button, {
                     label: `Taking ${button.dataset.name} off the sheet`,
-                    run: () => roll(null, 'remove', button.dataset.user),
+                    run: () => roll(null, { action: 'remove', user_id: button.dataset.user }),
                 });
             } else {
-                roll(button, button.dataset.roll, button.dataset.user);
+                roll(button, { action: button.dataset.roll, user_id: button.dataset.user });
             }
         });
 
         attendance.addEventListener('change', e => {
-            if (!e.target.matches('[data-roll-pick]')) return;
-            act(attendance, null, send(`/api/hub/attendance/sheet?day=${encodeURIComponent(e.target.value)}`,
-                undefined, 'GET'));
+            if (e.target.matches('[data-roll-pick]')) openDay(e.target.value);
+            else if (e.target.matches('[data-roll-date]') && e.target.value && e.target.value !== day()) {
+                openDay(e.target.value);
+            }
         });
 
         attendance.addEventListener('submit', e => {
-            if (!e.target.matches('[data-roll-add]')) return;
+            const f = e.target;
+            const submit = f.querySelector('[type="submit"]');
+            const times = { in_time: f.elements.in_time?.value || '', out_time: f.elements.out_time?.value || '' };
+            if (f.matches('[data-roll-add]') && f.elements.user_id) {
+                e.preventDefault();
+                if (f.elements.user_id.value) roll(submit, Object.assign({ action: 'in', user_id: f.elements.user_id.value }, times));
+            } else if (f.matches('[data-roll-bulk]')) {
+                e.preventDefault();
+                const ids = [...f.querySelectorAll('[name="user_ids"]:checked')].map(box => box.value);
+                if (!ids.length) return showToast('Check at least one member.', 'error');
+                roll(submit, Object.assign({ action: 'in', user_ids: ids }, times));
+            } else if (f.matches('[data-roll-set]')) {
+                e.preventDefault();
+                roll(submit, Object.assign({ action: 'set', user_id: f.dataset.user }, times));
+            }
+        });
+    }
+
+    // --- Event sign-ups -----------------------------------------------------------------
+
+    const hubEvents = document.querySelector('[data-hub-events]');
+    if (hubEvents) {
+        const signup = (card, button, body) => act(hubEvents, button,
+            send(`/api/hub/events/${card.dataset.event}`, body));
+
+        hubEvents.addEventListener('click', e => {
+            const card = e.target.closest('[data-event]');
+            if (!card) return;
+            const toggle = e.target.closest('[data-event-toggle]');
+            if (toggle) {
+                signup(card, toggle, { on: toggle.getAttribute('aria-pressed') !== 'true' });
+                return;
+            }
+            const remove = e.target.closest('[data-event-remove]');
+            if (remove) {
+                Fuse.arm(remove, {
+                    label: `Taking ${remove.dataset.name} off`,
+                    run: () => signup(card, null, { on: false, user_id: remove.dataset.eventRemove }),
+                });
+            }
+        });
+
+        hubEvents.addEventListener('submit', e => {
+            if (!e.target.matches('[data-event-add]')) return;
             e.preventDefault();
             const userId = e.target.elements.user_id.value;
-            if (userId) roll(e.target.querySelector('[type="submit"]'), 'in', userId);
+            if (userId) signup(e.target.closest('[data-event]'), e.target.querySelector('[type="submit"]'),
+                { on: true, user_id: userId });
         });
     }
 
@@ -189,6 +245,15 @@
     signups.addEventListener('submit', e => {
         const f = e.target;
         e.preventDefault();
+        if (f.matches('[data-signup-add]')) {
+            const card = f.closest('[data-sheet]');
+            if (!f.elements.user_id.value) return;
+            act(signups, f.querySelector('[type="submit"]'), send(`/api/hub/sheets/${card.dataset.sheet}/signup`, {
+                role: f.closest('[data-role]').dataset.role, on: true,
+                user_id: f.elements.user_id.value, note: f.elements.note.value,
+            }));
+            return;
+        }
         if (f.matches('[data-signup-on]')) {
             const card = f.closest('[data-sheet]');
             act(signups, f.querySelector('[type="submit"]'), send(`/api/hub/sheets/${card.dataset.sheet}/signup`,

@@ -41,6 +41,9 @@
 </div>
 
 {% if keeper %}
+{%- set past_day = sheet_day != now.date() %}
+{%- set default_in = sheet_bounds[0].strftime('%H:%M') if past_day and sheet_bounds else '' %}
+{%- set default_out = sheet_bounds[1].strftime('%H:%M') if past_day and sheet_bounds else '' %}
 <div class="hub-roll" data-roll-day="{{ sheet_day.isoformat() }}">
     <div class="hub-roll-head">
         <h3 class="hub-heading"><i data-lucide="clipboard-list" aria-hidden="true"></i> Sign-in sheet</h3>
@@ -53,47 +56,83 @@
                 {% endfor %}
             </select>
         </label>
+        <label class="hub-roll-day hub-roll-date">
+            <span class="visually-hidden">Any other day</span>
+            <input type="date" data-roll-date value="{{ sheet_day.isoformat() }}" max="{{ now.date().isoformat() }}"
+                aria-label="Open the sheet for any day">
+        </label>
         <span class="hub-roll-count">
-            {%- if sheet_day == now.date() %}<strong>{{ sheet_here }}</strong> here now · {% endif -%}
+            {%- if not past_day %}<strong>{{ sheet_here }}</strong> here now · {% endif -%}
             <strong>{{ sheet_rows|length }}</strong> signed in</span>
         <a class="hub-roll-csv" href="{{ url_for('hub_attendance_csv') }}" download>
             <i data-lucide="download" aria-hidden="true"></i> CSV</a>
     </div>
+    {% if past_day %}
+    <p class="hub-roll-note"><i data-lucide="history" aria-hidden="true"></i>
+        {{ sheet_day.strftime('%A, %B') }} {{ sheet_day.day }}, {{ sheet_day.year }}{% if not sheet_bounds %} · not a usual meeting day{% endif %}.
+        Add or fix anything here and it counts toward everyone's totals.</p>
+    {% endif %}
 
     {% if sheet_rows %}
     <ul class="hub-roll-list">
         {% for r in sheet_rows %}
-        <li class="hub-roll-row{% if r.here and not r.forgot %} is-here{% endif %}">
+        <li class="hub-roll-row{% if r.here and not r.forgot %} is-here{% endif %}" data-roll-row="{{ r.user_id }}">
             <span class="hub-roll-name">{{ r.name }}</span>
             <span class="hub-roll-times">
                 {{ t(r.in_at) }} – {% if r.out_at %}{{ t(r.out_at) }}{% elif r.forgot %}<em>no sign-out</em>{% else %}<em>here</em>{% endif %}
-                · {{ fmt_minutes(r.minutes) }}{% if r.by %} · <span title="Signed in by {{ r.by }}">by {{ r.by }}</span>{% endif %}
+                · {{ fmt_minutes(r.minutes) }}{% if r.by %} · <span title="Written by {{ r.by }}">by {{ r.by }}</span>{% endif %}
             </span>
             <span class="hub-roll-actions">
-                {% if r.here %}
+                {% if r.here and not past_day %}
                 <button type="button" class="hub-mini-btn" data-roll="out" data-user="{{ r.user_id }}"
                     aria-label="Sign out {{ r.name }}"><i data-lucide="log-out" aria-hidden="true"></i> Sign out</button>
                 {% endif %}
+                <button type="button" class="hub-mini-btn" data-roll-edit aria-expanded="false"
+                    aria-label="Change {{ r.name }}'s times"><i data-lucide="pencil" aria-hidden="true"></i></button>
                 <button type="button" class="hub-mini-btn hub-mini-btn--danger" data-roll="remove" data-user="{{ r.user_id }}"
                     data-name="{{ r.name }}" aria-label="Take {{ r.name }} off the sheet"><i data-lucide="trash-2" aria-hidden="true"></i></button>
             </span>
+            <form class="hub-roll-edit" data-roll-set data-user="{{ r.user_id }}" hidden>
+                <label class="hub-field">In <input type="time" name="in_time" value="{{ r.in_at.strftime('%H:%M') }}" required></label>
+                <label class="hub-field">Out <input type="time" name="out_time" value="{{ r.out_at.strftime('%H:%M') if r.out_at else '' }}"></label>
+                <button type="submit" class="hub-mini-btn hub-mini-btn--go"><i data-lucide="save" aria-hidden="true"></i> Save</button>
+            </form>
         </li>
         {% endfor %}
     </ul>
     {% else %}
-    <p class="hub-roll-empty">Nobody has signed in{{ ' yet' if sheet_day == now.date() }}.</p>
+    <p class="hub-roll-empty">Nobody has signed in{{ ' yet' if not past_day }}.</p>
     {% endif %}
 
     {% if sheet_others %}
     <form class="hub-roll-add" data-roll-add>
-        <label class="hub-field">Sign someone in
+        <label class="hub-field hub-roll-who">Add someone
             <select name="user_id" required>
                 <option value="">Pick a member</option>
                 {% for uid, name in sheet_others %}<option value="{{ uid }}">{{ name }}</option>{% endfor %}
             </select>
         </label>
-        <button type="submit" class="hub-mini-btn"><i data-lucide="user-plus" aria-hidden="true"></i> Sign in</button>
+        <label class="hub-field">In <input type="time" name="in_time" value="{{ default_in }}"></label>
+        <label class="hub-field">Out <input type="time" name="out_time" value="{{ default_out }}"></label>
+        <button type="submit" class="hub-mini-btn hub-mini-btn--go"><i data-lucide="user-plus" aria-hidden="true"></i> Add</button>
     </form>
+    <p class="hub-roll-hint">{{ 'Leave the times empty to sign them in now.' if not past_day else "Times start at the meeting's own; change them if someone came late or left early." }}</p>
+
+    <details class="hub-roll-bulk">
+        <summary><i data-lucide="users" aria-hidden="true"></i> Add several at once</summary>
+        <form data-roll-bulk>
+            <div class="hub-roll-checks">
+                {% for uid, name in sheet_others %}
+                <label><input type="checkbox" name="user_ids" value="{{ uid }}"> {{ name }}</label>
+                {% endfor %}
+            </div>
+            <div class="hub-roll-add">
+                <label class="hub-field">In <input type="time" name="in_time" value="{{ default_in }}"></label>
+                <label class="hub-field">Out <input type="time" name="out_time" value="{{ default_out }}"></label>
+                <button type="submit" class="hub-mini-btn hub-mini-btn--go"><i data-lucide="user-plus" aria-hidden="true"></i> Add checked</button>
+            </div>
+        </form>
+    </details>
     {% endif %}
 </div>
 {% endif %}

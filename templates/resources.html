@@ -133,6 +133,12 @@ href="{{ row.url }}"{% if row.url.startswith('http') %} target="_blank" rel="noo
     </section>
     {% endif %}
 
+    {% if hub_events %}
+    <section class="hub-sheets hub-events" id="event-signups" aria-label="Event sign-ups" data-hub-events>
+        {{ hub_events }}
+    </section>
+    {% endif %}
+
     {% if signups %}
     <section class="hub-sheets" id="signups" aria-label="Sign-up sheets" data-sheets>
         {{ signups }}

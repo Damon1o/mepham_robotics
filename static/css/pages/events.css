@@ -1045,6 +1045,48 @@ html.ev-cal-locked {
     text-decoration: underline;
 }
 
+/* One-tap sign-up for signed-in members, under each event's buttons. */
+.ev-signup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.5rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 1.1rem;
+    border: 2px solid #1a1414;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: #1a1414;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 800;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.ev-signup svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.ev-signup:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.ev-signup.is-on {
+    border-color: #1d7a46;
+    background: rgba(34, 160, 90, 0.12);
+    color: #1d7a46;
+    box-shadow: none;
+}
+
+.ev-signup:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
 /* ================================================================
    7. INVITE BAND
    ================================================================ */
@@ -1328,6 +1370,11 @@ html.ev-cal-locked {
 [data-theme="dark"] .ev-invite {
     background: linear-gradient(135deg, #5e1a1b 0%, #3a0c0c 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .ev-signup.is-on {
+    border-color: #6fd39a;
+    color: #6fd39a;
 }
 
 /* ================================================================

@@ -2,6 +2,7 @@
 // view under the month grid, zooming and maximizing the calendar, the "Next up"
 // countdown, copying the feed link, and closing "Add to calendar" menus. On one
 // event's page (/events/<id>) it also runs the countdown and members' RSVPs.
+// Signed-in members sign up for an event straight from the "Coming up" list.
 //
 // The page is complete without this file: the grid, the list and every link are
 // server-rendered. The chosen filter and zoom are remembered in this browser only.
@@ -390,7 +391,34 @@
         });
     }
 
+    // One-tap sign-up in the "Coming up" list: the same "Going" answer as the event's page.
+    function initListSignup() {
+        page.addEventListener('click', e => {
+            const button = e.target.closest('[data-ev-signup]');
+            if (!button || button.disabled) return;
+            const on = button.getAttribute('aria-pressed') !== 'true';
+            button.disabled = true;
+            fetch(button.dataset.url, {
+                method: 'POST', credentials: 'same-origin', headers: jsonHeaders(),
+                body: JSON.stringify({ status: on ? 'going' : '' }),
+            }).then(r => r.json().then(data => {
+                if (!r.ok) throw new Error(data.error || 'Could not save that.');
+                button.setAttribute('aria-pressed', String(on));
+                button.classList.toggle('is-on', on);
+                const icon = document.createElement('i');
+                icon.dataset.lucide = on ? 'circle-check-big' : 'hand';
+                icon.setAttribute('aria-hidden', 'true');
+                const label = document.createElement('span');
+                label.textContent = on ? "You're going" : 'Sign up';
+                button.replaceChildren(icon, label);
+                window.lucide?.createIcons();
+            })).catch(err => showToast(err.message, 'error'))
+                .finally(() => { button.disabled = false; });
+        });
+    }
+
     initFilters();
+    initListSignup();
     initMonthNav();
     initDayView();
     initCalTools();
