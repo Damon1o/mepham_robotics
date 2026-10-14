@@ -1,0 +1,133 @@
+{#- Member Hub sign-up sheets (bake sales and the like), plus the editors' sheet form.
+    Drawn in resources.html and again by the /api/hub/sheets routes. -#}
+{% macro sheet_card(s) %}
+<article class="hub-sheet{% if not s.open %} is-past{% endif %}" data-sheet="{{ s.id }}">
+    <header class="hub-sheet-head">
+        <div class="hub-sheet-date" aria-hidden="true">
+            <span>{{ s.date.strftime('%b') }}</span><strong>{{ s.date.day }}</strong>
+        </div>
+        <div class="hub-sheet-title">
+            <h3>{{ s.title }}</h3>
+            <p>{{ s.date.strftime('%A') }} · {{ fmt_time(s.date.strftime('%H:%M')) }}{% if s.location %} · {{ s.location }}{% endif %}</p>
+        </div>
+        {% if keeper %}
+        <div class="hub-sheet-tools">
+            <button type="button" class="hub-mini-btn" data-sheet-edit="{{ s.edit|tojson|forceescape }}"
+                aria-label="Edit {{ s.title }}"><i data-lucide="pencil" aria-hidden="true"></i></button>
+            <button type="button" class="hub-mini-btn hub-mini-btn--danger" data-sheet-delete data-name="{{ s.title }}"
+                aria-label="Delete {{ s.title }}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+        </div>
+        {% endif %}
+    </header>
+    {% if s.details %}<p class="hub-sheet-details">{{ s.details }}</p>{% endif %}
+    <div class="hub-sheet-fill">
+        <progress max="{{ s.total }}" value="{{ s.taken }}" aria-label="Spots filled">{{ s.taken }} of {{ s.total }}</progress>
+        <span>{{ s.taken }} of {{ s.total }} spots filled{% if s.mine %} · <strong>you're on it</strong>{% endif %}</span>
+    </div>
+    <ul class="hub-roles">
+        {% for r in s.roles %}
+        <li class="hub-role{% if r.mine %} is-mine{% elif r.full %} is-full{% endif %}" data-role="{{ r.key }}">
+            <div class="hub-role-head">
+                <strong>{{ r.name }}</strong>
+                <span class="hub-role-count">{{ r.taken }}/{{ r.slots }}</span>
+            </div>
+            {% if r.people %}
+            <ul class="hub-role-people">
+                {% for p in r.people %}
+                <li>
+                    <span class="hub-person-name">{{ p.name }}</span>{% if p.note %}<span class="hub-person-note">{{ p.note }}</span>{% endif %}
+                    {% if keeper and p.user_id != (r.mine.user_id if r.mine else '') %}
+                    <button type="button" class="hub-x" data-signup-remove="{{ p.user_id }}" data-name="{{ p.name }}"
+                        aria-label="Take {{ p.name }} off {{ r.name }}"><i data-lucide="x" aria-hidden="true"></i></button>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if s.open %}
+                {% if r.mine %}
+                <button type="button" class="hub-mini-btn hub-mini-btn--ghost" data-signup-off>
+                    <i data-lucide="user-minus" aria-hidden="true"></i> Drop out</button>
+                {% elif not r.full %}
+                <form class="hub-role-join" data-signup-on>
+                    {% if r.prompt %}
+                    <label class="hub-role-note"><span class="visually-hidden">{{ r.prompt }}</span>
+                        <input type="text" name="note" maxlength="{{ limits.NOTE_MAX }}" placeholder="{{ r.prompt }}"></label>
+                    {% endif %}
+                    <button type="submit" class="hub-mini-btn hub-mini-btn--go">
+                        <i data-lucide="hand" aria-hidden="true"></i> Sign up · {{ r.open_slots }} left</button>
+                </form>
+                {% else %}
+                <span class="hub-role-full">Full</span>
+                {% endif %}
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</article>
+{% endmacro %}
+
+<div class="hub-sheets-head">
+    <div>
+        <p class="hub-kicker"><i data-lucide="heart-handshake" aria-hidden="true"></i> Sign-ups</p>
+        <h2 class="hub-heading hub-heading--big">Bake sales & volunteering</h2>
+    </div>
+    {% if keeper %}
+    <button type="button" class="hub-guide-btn" data-sheet-new>
+        <i data-lucide="plus" aria-hidden="true"></i> New sheet</button>
+    {% endif %}
+</div>
+
+{% if keeper %}
+<form class="hub-sheet-form" data-sheet-form hidden>
+    <h3 class="hub-heading" data-sheet-form-title>New sign-up sheet</h3>
+    <div class="hub-sheet-form-grid">
+        <label class="hub-field">Title
+            <input type="text" name="title" maxlength="{{ limits.TITLE_MAX }}" required placeholder="Fall bake sale"></label>
+        <label class="hub-field">Date and time
+            <input type="datetime-local" name="date" required></label>
+        <label class="hub-field">Where
+            <input type="text" name="location" maxlength="{{ limits.LOCATION_MAX }}" placeholder="Front lobby"></label>
+        <label class="hub-field hub-field--wide">Details
+            <textarea name="details" rows="2" maxlength="{{ limits.DETAILS_MAX }}"
+                placeholder="Drop baked goods off by 7:30. Label anything with nuts."></textarea></label>
+    </div>
+    <fieldset class="hub-sheet-roles">
+        <legend>Roles</legend>
+        <div data-role-rows></div>
+        <button type="button" class="hub-mini-btn" data-role-add><i data-lucide="plus" aria-hidden="true"></i> Add a role</button>
+    </fieldset>
+    <template data-role-template>
+        <div class="hub-role-row" data-role-row>
+            <input type="hidden" name="key">
+            <label class="hub-field">Role <input type="text" name="name" maxlength="{{ limits.ROLE_NAME_MAX }}" placeholder="Baker" required></label>
+            <label class="hub-field hub-field--slots">Spots <input type="number" name="slots" min="1" max="{{ limits.SLOTS_MAX }}" value="2" required></label>
+            <label class="hub-field">Ask them <input type="text" name="prompt" maxlength="{{ limits.PROMPT_MAX }}" placeholder="Optional, like &quot;What are you bringing?&quot;"></label>
+            <button type="button" class="hub-x" data-role-remove aria-label="Remove this role"><i data-lucide="x" aria-hidden="true"></i></button>
+        </div>
+    </template>
+    <script type="application/json" data-bake-sale-roles>{{ bake_sale_roles|tojson }}</script>
+    <p class="hub-sheet-error" data-sheet-error role="alert" hidden></p>
+    <div class="hub-sheet-form-actions">
+        <button type="submit" class="hub-guide-btn"><i data-lucide="save" aria-hidden="true"></i> Save sheet</button>
+        <button type="button" class="hub-guide-btn hub-guide-btn--ghost" data-sheet-cancel>Cancel</button>
+    </div>
+</form>
+{% endif %}
+
+{% if sheets %}
+<div class="hub-sheet-list">
+    {% for s in sheets %}{{ sheet_card(s) }}{% endfor %}
+</div>
+{% else %}
+<p class="hub-sheets-empty">No sign-ups right now.{% if keeper %} Make one for the next bake sale with <strong>New sheet</strong>.{% else %} When there's a bake sale, you'll sign up here.{% endif %}</p>
+{% endif %}
+
+{% if past_sheets %}
+<details class="hub-sheets-past">
+    <summary>Recent sheets ({{ past_sheets|length }})</summary>
+    <div class="hub-sheet-list">
+        {% for s in past_sheets %}{{ sheet_card(s) }}{% endfor %}
+    </div>
+</details>
+{% endif %}

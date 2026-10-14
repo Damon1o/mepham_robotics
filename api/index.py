@@ -20,17 +20,19 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort, g, send_from_directory
 from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
+from markupsafe import Markup
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
 import requests
 
 try:  # package import on Vercel, flat import when run from the api/ directory
-    from api import devices, events, guide, people, robotevents, site_content, totp
+    from api import devices, events, guide, people, robotevents, sheets, site_content, totp
 except ImportError:  # pragma: no cover
     import events
     import guide
     import people
     import robotevents
+    import sheets
     import site_content
     import totp
 
@@ -438,6 +440,10 @@ def _ensure_core_indexes(database):
         ('competitions', 'date', {}),
         ('activities', 'timestamp', {}),
         ('newsletter_subscribers', 'unsubscribe_token', {}),
+        # One sign-in row per member per meeting day.
+        ('attendance', [('user_id', 1), ('day', 1)], {'unique': True}),
+        ('attendance', 'day', {}),
+        ('signup_sheets', 'date', {}),
     ]
     for collection, key, options in specs:
         try:
@@ -1837,7 +1843,12 @@ def resources():
     new = set() if seen is None else set(rows) - set(seen)
     if seen is None or set(seen) != set(rows):
         db['users'].update_one({'_id': user['_id']}, {'$set': {'hub_seen': list(rows)}})
+    # Drawn the same way the sign-in and sign-up routes redraw them.
+    attendance = (Markup(render_template('partials/hub_attendance.html', **_attendance_context(user)))
+                  if hub.show_attendance else None)
+    signups = Markup(render_template('partials/hub_sheets.html', **_sheets_context(user))) if hub.show_sheets else None
     return render_template('resources.html', active_page='resources', week=week, now=now, shelves=shelves,
+                           attendance=attendance, signups=signups,
                            hub_new=new, hub_stars={u for u in user.get('hub_stars') or [] if u in rows},
                            hub_recent=[rows[u] for u in user.get('hub_recent') or [] if u in rows],
                            hub_stars_imported='hub_stars' in user)
@@ -1894,6 +1905,256 @@ def api_hub_opened():
     recent = [url] + [u for u in user.get('hub_recent') or [] if u != url]
     db['users'].update_one({'_id': user['_id']}, {'$set': {'hub_recent': recent[:HUB_RECENT_KEPT]}})
     return Response(status=204)
+
+# --- Member Hub: meeting sign-in/sign-out and volunteer sign-up sheets (api/sheets.py) ---------
+# Members sign themselves in and out on meeting days; editors keep the day's sheet,
+# sign in or out anyone who forgot, and download it all as CSV. Sign-up sheets
+# (bake sales, mostly) are made by editors and filled in by members. Every change
+# answers with its section redrawn, so the page swaps it in place.
+
+def _member_names():
+    """{user id: display name} for every account that can sign in, looked up once per request."""
+    if 'member_names' not in g:
+        rows = db['users'].find({'status': {'$nin': ['pending', 'rejected']}}, {'username': 1, 'full_name': 1})
+        g.member_names = {str(u['_id']): _display_name(u) for u in rows}
+    return g.member_names
+
+
+def _school_year_start(today):
+    return datetime.date(today.year if today.month >= 7 else today.year - 1, 7, 1)
+
+
+def _can_keep_sheets(user):
+    return role_at_least(user.get('role', 'member'), 'editor')
+
+
+def _attendance_context(user, day=None):
+    """Everything the sign-in card (and, for editors, the day's sheet) draws."""
+    now = club_now()
+    meeting = site().meeting
+    uid = str(user['_id'])
+    window = sheets.sign_in_window(meeting, now)
+    mine = db['attendance'].find_one({'user_id': uid, 'day': now.date().isoformat()}) if window else None
+    year_rows = db['attendance'].find({'user_id': uid, 'day': {'$gte': _school_year_start(now.date()).isoformat()}})
+    attended, minutes = sheets.member_totals(year_rows, meeting, now)
+    context = {'now': now, 'window': window, 'mine': mine,
+               'mine_minutes': sheets.minutes_present(mine, window['end'], now) if mine else 0,
+               'next_meeting': site_content.next_meeting(meeting, now), 'attended': attended,
+               'year_minutes': minutes, 'fmt_minutes': sheets.fmt_minutes, 'keeper': _can_keep_sheets(user)}
+    if context['keeper']:
+        days = sheets.recent_meeting_days(meeting, now.date())
+        day = day or (days[0] if days else now.date())
+        if day not in days:
+            days = sorted(set(days) | {day}, reverse=True)
+        bounds = sheets.meeting_bounds(meeting, day)
+        names = _member_names()
+        rows = sheets.sheet_rows(db['attendance'].find({'day': day.isoformat()}), names,
+                                 bounds[1] if bounds else None, now)
+        signed = {r['user_id'] for r in rows}
+        context.update(sheet_day=day, sheet_days=days, sheet_rows=rows,
+                       sheet_here=sum(r['here'] and not r['forgot'] for r in rows),
+                       sheet_others=sorted(((i, n) for i, n in names.items() if i not in signed),
+                                           key=lambda p: p[1].lower()))
+    return context
+
+
+def _attendance_reply(user, day=None):
+    return jsonify({'html': render_template('partials/hub_attendance.html', **_attendance_context(user, day))})
+
+
+@app.route('/api/hub/attendance', methods=['POST'])
+@role_required('member')
+def api_hub_attendance():
+    """Sign the member in or out of today's meeting. 'undo' takes back a sign-out."""
+    user = _session_user()
+    action = str(_json_body().get('action') or '')
+    now = club_now()
+    if not sheets.sign_in_window(site().meeting, now):
+        return _json_error('Sign-in is only open around a meeting.', 400)
+    uid, day = str(user['_id']), now.date().isoformat()
+    row = db['attendance'].find_one({'user_id': uid, 'day': day})
+    if action == 'in':
+        if not row:
+            try:
+                db['attendance'].insert_one({'user_id': uid, 'day': day, 'in_at': now, 'out_at': None})
+            except DuplicateKeyError:
+                pass  # a double tap; the first one counted
+    elif action == 'out':
+        if not row:
+            return _json_error('Sign in first.', 400)
+        db['attendance'].update_one({'_id': row['_id']}, {'$set': {'out_at': now}})
+    elif action == 'undo':
+        if row:
+            db['attendance'].update_one({'_id': row['_id']}, {'$set': {'out_at': None}})
+    else:
+        return _json_error('Sign in or sign out.')
+    return _attendance_reply(user)
+
+
+@app.route('/api/hub/attendance/sheet')
+@role_required('editor')
+def api_hub_attendance_sheet():
+    """The sign-in sheet for another meeting day."""
+    day = sheets.parse_day(request.args.get('day'))
+    if not day or day > club_now().date():
+        return _json_error('Pick a meeting day.')
+    return _attendance_reply(_session_user(), day)
+
+
+@app.route('/api/hub/attendance/sheet', methods=['POST'])
+@role_required('editor')
+def api_hub_attendance_edit():
+    """An editor signs someone in or out, or takes their row off the day's sheet."""
+    user = _session_user()
+    body = _json_body()
+    now = club_now()
+    day = sheets.parse_day(body.get('day'))
+    uid, action = str(body.get('user_id') or ''), str(body.get('action') or '')
+    if not day or day > now.date():
+        return _json_error('Pick a meeting day.')
+    if uid not in _member_names():
+        return _json_error('That member is no longer here.', 404)
+    # On a past day, the times written are the meeting's own start and end.
+    if day == now.date():
+        at_in = at_out = now
+    else:
+        noon = datetime.datetime.combine(day, datetime.time(12))
+        at_in, at_out = sheets.meeting_bounds(site().meeting, day) or (noon, noon)
+    query = {'user_id': uid, 'day': day.isoformat()}
+    if action == 'in':
+        db['attendance'].update_one(query, {'$setOnInsert': {'in_at': at_in, 'out_at': None, 'by': user['username']}},
+                                    upsert=True)
+    elif action == 'out':
+        db['attendance'].update_one(query, {'$set': {'out_at': at_out}})
+    elif action == 'remove':
+        db['attendance'].delete_one(query)
+    else:
+        return _json_error('Sign in, sign out or remove.')
+    log_activity('attendance', f"{user['username']} {action} {_member_names()[uid]} for {day.isoformat()}",
+                 user=user['username'], details={'day': day.isoformat(), 'user_id': uid, 'action': action})
+    return _attendance_reply(user, day)
+
+
+@app.route('/hub/attendance.csv')
+@role_required('editor')
+def hub_attendance_csv():
+    """Every sign-in this school year, for a spreadsheet."""
+    now = club_now()
+    rows = db['attendance'].find({'day': {'$gte': _school_year_start(now.date()).isoformat()}})
+    response = Response(sheets.attendance_csv(rows, _member_names(), site().meeting, now), mimetype='text/csv')
+    response.headers['Content-Disposition'] = f'attachment; filename="attendance-{now.date().isoformat()}.csv"'
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+# Editors also see this many sheets that already happened, to check who came through.
+PAST_SHEETS_SHOWN = 3
+
+
+def _sheet_card(sheet, names, uid, now):
+    roles = sheets.role_view(sheet, names, uid)
+    taken, total = sheets.fill(roles)
+    return {'id': str(sheet['_id']), 'title': sheet['title'], 'date': sheet['date'], 'location': sheet.get('location'),
+            'details': sheet.get('details'), 'roles': roles, 'taken': taken, 'total': total,
+            'open': sheets.is_open(sheet, now), 'mine': any(r['mine'] for r in roles),
+            'edit': {'title': sheet['title'], 'date': sheet['date'].strftime('%Y-%m-%dT%H:%M'),
+                     'location': sheet.get('location') or '', 'details': sheet.get('details') or '',
+                     'roles': [{k: r[k] for k in ('key', 'name', 'slots', 'prompt')} for r in sheet['roles']]}}
+
+
+def _sheets_context(user):
+    now = club_now()
+    today = datetime.datetime.combine(now.date(), datetime.time())
+    keeper = _can_keep_sheets(user)
+    upcoming = list(db['signup_sheets'].find({'date': {'$gte': today}}).sort('date', 1))
+    past = list(db['signup_sheets'].find({'date': {'$lt': today}}).sort('date', -1).limit(PAST_SHEETS_SHOWN)) \
+        if keeper else []
+    names, uid = _member_names(), str(user['_id'])
+    return {'sheets': [_sheet_card(s, names, uid, now) for s in upcoming],
+            'past_sheets': [_sheet_card(s, names, uid, now) for s in past], 'keeper': keeper,
+            'bake_sale_roles': sheets.BAKE_SALE_ROLES, 'limits': sheets}
+
+
+def _sheets_reply(user):
+    return jsonify({'html': render_template('partials/hub_sheets.html', **_sheets_context(user))})
+
+
+@app.route('/api/hub/sheets', methods=['POST'])
+@role_required('editor')
+def api_hub_sheet_create():
+    user = _session_user()
+    fields, error = sheets.clean_sheet(_json_body())
+    if error:
+        return _json_error(error)
+    db['signup_sheets'].insert_one(dict(fields, signups={}, created_by=user['username'], created_at=_utcnow()))
+    log_activity('signup_sheet', f"{user['username']} made the sign-up sheet {fields['title']}", user=user['username'])
+    return _sheets_reply(user)
+
+
+@app.route('/api/hub/sheets/<sheet_id>', methods=['POST', 'DELETE'])
+@role_required('editor')
+def api_hub_sheet_edit(sheet_id):
+    """Edit a sheet (people stay on roles that are kept) or delete it with everyone's sign-ups."""
+    user = _session_user()
+    sheet = _find_by_id('signup_sheets', sheet_id)
+    if not sheet:
+        return _json_error('That sheet is gone.', 404)
+    if request.method == 'DELETE':
+        db['signup_sheets'].delete_one({'_id': sheet['_id']})
+        log_activity('signup_sheet', f"{user['username']} deleted the sign-up sheet {sheet['title']}",
+                     user=user['username'])
+        return _sheets_reply(user)
+    fields, error = sheets.clean_sheet(_json_body(), sheet.get('roles') or ())
+    if error:
+        return _json_error(error)
+    keys = {r['key'] for r in fields['roles']}
+    signups = {k: v for k, v in (sheet.get('signups') or {}).items() if k in keys}
+    db['signup_sheets'].update_one({'_id': sheet['_id']}, {'$set': dict(fields, signups=signups)})
+    log_activity('signup_sheet', f"{user['username']} edited the sign-up sheet {fields['title']}",
+                 user=user['username'])
+    return _sheets_reply(user)
+
+
+@app.route('/api/hub/sheets/<sheet_id>/signup', methods=['POST'])
+@role_required('member')
+def api_hub_sheet_signup(sheet_id):
+    """Take a spot on a role (with a note, like what you are baking) or give it back.
+
+    Editors can also take someone else off a role by sending their user_id.
+    """
+    user = _session_user()
+    body = _json_body()
+    sheet = _find_by_id('signup_sheets', sheet_id)
+    if not sheet:
+        return _json_error('That sheet is gone.', 404)
+    role = next((r for r in sheet.get('roles') or () if r['key'] == body.get('role')), None)
+    if not role:
+        return _json_error('That role is no longer on the sheet.', 404)
+    uid = str(user['_id'])
+    other = str(body.get('user_id') or '')
+    if other and other != uid:
+        if not _can_keep_sheets(user) or body.get('on'):
+            return _json_error('You can only sign yourself up.', 403)
+        uid = other
+    elif not sheets.is_open(sheet, club_now()):
+        return _json_error('Sign-ups for that sheet are closed.', 400)
+    path = f"signups.{role['key']}"
+    if not body.get('on'):
+        db['signup_sheets'].update_one({'_id': sheet['_id']}, {'$pull': {path: {'user_id': uid}}})
+        return _sheets_reply(user)
+    note = ' '.join(str(body.get('note') or '').split())[:sheets.NOTE_MAX]
+    # Already on this role: only the note changes.
+    if db['signup_sheets'].update_one({'_id': sheet['_id'], f'{path}.user_id': uid},
+                                      {'$set': {f'{path}.$.note': note}}).matched_count:
+        return _sheets_reply(user)
+    # The slot check rides in the filter, so two people racing for the last spot can't both get it.
+    taken = db['signup_sheets'].update_one(
+        {'_id': sheet['_id'], f"{path}.{role['slots'] - 1}": {'$exists': False}},
+        {'$push': {path: {'user_id': uid, 'note': note, 'at': _utcnow()}}})
+    if not taken.matched_count:
+        return _json_error(f"{role['name']} is full.", 409)
+    return _sheets_reply(user)
+
 
 @app.route('/glossary')
 @role_required('member')

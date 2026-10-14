@@ -617,6 +617,10 @@ SECTIONS = (
               group='Top of the page'),
         Field('show_week', 'toggle', 'Show "This week"', True, group='This week',
               hint='Next meeting, next competition and your team, worked out automatically.'),
+        Field('show_attendance', 'toggle', 'Meeting sign-in sheet', True, group='Sign-in & sign-ups',
+              hint='Members sign in and out on meeting days. Editors see the sheet and download it.'),
+        Field('show_sheets', 'toggle', 'Sign-up sheets', True, group='Sign-in & sign-ups',
+              hint='Bake sales and other sign-ups: editors make them, members take a spot as baker, seller and so on.'),
         Field('library', 'list', 'Library', [
             _resource('start', 'Safety quiz', '/safety-quiz', 'Pass it before you touch a tool.'),
             _resource('start', 'Design standards', '/standards', 'How we build, wire and name things.'),

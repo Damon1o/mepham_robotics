@@ -127,6 +127,18 @@ href="{{ row.url }}"{% if row.url.startswith('http') %} target="_blank" rel="noo
     </div>
     {% endif %}
 
+    {% if attendance %}
+    <section class="hub-sign" id="attendance" aria-label="Meeting sign-in" data-attendance>
+        {{ attendance }}
+    </section>
+    {% endif %}
+
+    {% if signups %}
+    <section class="hub-sheets" id="signups" aria-label="Sign-up sheets" data-sheets>
+        {{ signups }}
+    </section>
+    {% endif %}
+
     {% if shelves %}
     <div class="hub-browse">
     <div class="hub-bar" role="search">
@@ -286,4 +298,5 @@ href="{{ row.url }}"{% if row.url.startswith('http') %} target="_blank" rel="noo
 
 {% block page_scripts %}
 <script src="{{ url_for('static', filename='js/resources.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/hub-sheets.js') }}" defer></script>
 {% endblock %}

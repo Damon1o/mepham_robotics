@@ -9,6 +9,7 @@
      5. Start here steps
      6. Shelves
      7. Drivetrain calculator
+    7b. Sign-in and sign-ups
      8. Dark mode
      9. Responsive
     10. Reduced motion
@@ -1052,6 +1053,760 @@
 }
 
 /* ================================================================
+   7b. SIGN-IN AND SIGN-UPS
+   ================================================================ */
+
+/* Buttons and fields shared by the sign-in sheet and the sign-up sheets. */
+.hub-mini-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 2.25rem;
+    padding: 0.4rem 0.8rem;
+    border: 1.5px solid var(--hub-rule);
+    border-radius: 999px;
+    background: var(--hub-paper);
+    color: var(--hub-ink);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.hub-mini-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.hub-mini-btn:hover {
+    border-color: var(--maroon-dark);
+}
+
+.hub-mini-btn:active {
+    transform: scale(0.96);
+}
+
+.hub-mini-btn--go {
+    border-color: var(--maroon-dark);
+    background: var(--maroon-dark);
+    color: #fff;
+}
+
+.hub-mini-btn--go:hover {
+    background: var(--maroon-light);
+}
+
+.hub-mini-btn--ghost {
+    background: transparent;
+}
+
+.hub-mini-btn--danger:hover {
+    border-color: #c0392b;
+    color: #c0392b;
+}
+
+.hub-mini-btn.is-busy,
+.hub-sign-btn.is-busy {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+.hub-x {
+    display: inline-grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    flex: none;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--hub-muted);
+    cursor: pointer;
+}
+
+.hub-x svg {
+    width: 0.9rem;
+    height: 0.9rem;
+}
+
+.hub-x:hover {
+    background: rgba(192, 57, 43, 0.12);
+    color: #c0392b;
+}
+
+.hub-sign .hub-field,
+.hub-sheets .hub-field {
+    color: var(--hub-muted);
+}
+
+.hub-sign .hub-field input,
+.hub-sign .hub-field select,
+.hub-roll-day select,
+.hub-sheets .hub-field input,
+.hub-sheets .hub-field textarea,
+.hub-role-note input {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1.5px solid var(--hub-rule);
+    border-radius: 12px;
+    background: var(--hub-soft);
+    color: var(--hub-ink);
+    font: inherit;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.hub-sheets .hub-field textarea {
+    resize: vertical;
+}
+
+.hub-sign input:focus-visible,
+.hub-sheets input:focus-visible,
+.hub-sheets textarea:focus-visible {
+    outline: 2px solid var(--maroon-dark);
+    outline-offset: 1px;
+}
+
+/* --- Sign-in card -------------------------------------------------------------------- */
+
+.hub-sign {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.hub-sign-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.75rem;
+    border: 1px solid var(--hub-rule);
+    border-radius: 24px;
+    background: var(--hub-paper);
+    box-shadow: 0 12px 32px rgba(80, 0, 0, 0.06);
+    overflow: hidden;
+}
+
+.hub-sign-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    background: var(--maroon-dark);
+}
+
+.hub-sign-card.is-in {
+    border-color: rgba(34, 160, 90, 0.4);
+}
+
+.hub-sign-card.is-in::before {
+    background: #22a05a;
+}
+
+.hub-sign-main .hub-kicker {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.5rem;
+}
+
+.hub-sign-main .hub-kicker svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.hub-sign-title {
+    width: auto;
+    margin: 0 0 0.35rem;
+    font-size: clamp(1.4rem, 3vw, 1.9rem);
+    text-align: left;
+    color: var(--hub-ink);
+}
+
+.hub-sign-title::after {
+    display: none;
+}
+
+.hub-sign-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1.1rem;
+    color: var(--hub-muted);
+}
+
+.hub-sign-line:last-child {
+    margin-bottom: 0;
+}
+
+.hub-sign-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 3.25rem;
+    padding: 0.8rem 1.6rem;
+    border: 2px solid #1a1414;
+    border-radius: 999px;
+    background: var(--accent-gold);
+    color: #1a1414;
+    font: inherit;
+    font-size: 1.1rem;
+    font-weight: 800;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.hub-sign-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+.hub-sign-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.hub-sign-btn svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.hub-sign-btn--out {
+    background: var(--maroon-dark);
+    color: #fff;
+}
+
+.hub-sign-btn--ghost {
+    border-color: var(--hub-rule);
+    background: transparent;
+    color: var(--hub-ink);
+    font-size: 0.95rem;
+    box-shadow: none;
+}
+
+.hub-sign-btn--ghost:hover {
+    box-shadow: none;
+    border-color: var(--maroon-dark);
+}
+
+.hub-sign-stats {
+    display: grid;
+    gap: 0.4rem;
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--hub-rule);
+}
+
+.hub-sign-stats dl {
+    display: flex;
+    gap: 1.5rem;
+    margin: 0;
+}
+
+.hub-sign-stats dt {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--hub-muted);
+}
+
+.hub-sign-stats dd {
+    margin: 0.2rem 0 0;
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--maroon-dark);
+}
+
+.hub-sign-note {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--hub-muted);
+}
+
+/* --- Editors' sign-in sheet ------------------------------------------------------------ */
+
+.hub-roll {
+    padding: 1.5rem;
+    border: 1px dashed var(--hub-rule);
+    border-radius: 20px;
+    background: var(--hub-soft);
+}
+
+.hub-roll-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.hub-roll-head .hub-heading {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.hub-roll-day {
+    min-width: 11rem;
+}
+
+.hub-roll-day select {
+    padding: 0.4rem 2rem 0.4rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+}
+
+.hub-roll-count {
+    font-size: 0.9rem;
+    color: var(--hub-muted);
+}
+
+.hub-roll-count strong {
+    color: var(--hub-ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.hub-roll-csv {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--maroon-dark);
+}
+
+.hub-roll-csv svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.hub-roll-list {
+    display: grid;
+    gap: 0.4rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.hub-roll-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.6rem 0.55rem 0.9rem;
+    border-radius: 12px;
+    background: var(--hub-paper);
+}
+
+.hub-roll-row.is-here {
+    box-shadow: inset 3px 0 0 #22a05a;
+}
+
+.hub-roll-name {
+    font-weight: 700;
+    color: var(--hub-ink);
+    overflow-wrap: anywhere;
+}
+
+.hub-roll-times {
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--hub-muted);
+}
+
+.hub-roll-actions {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.hub-roll-empty {
+    margin: 0 0 1rem;
+    color: var(--hub-muted);
+}
+
+.hub-roll-add {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 0.6rem;
+}
+
+.hub-roll-add .hub-field {
+    flex: 1 1 14rem;
+}
+
+/* --- Sign-up sheets ---------------------------------------------------------------------- */
+
+.hub-sheets {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.hub-sheets-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.hub-sheets-head .hub-kicker {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.hub-sheets-head .hub-kicker svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.hub-sheets-head .hub-heading {
+    margin: 0;
+}
+
+.hub-sheets-empty {
+    margin: 0;
+    padding: 1.5rem;
+    border: 1px dashed var(--hub-rule);
+    border-radius: 20px;
+    color: var(--hub-muted);
+    text-align: center;
+}
+
+.hub-sheet-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 30rem), 1fr));
+    gap: 1.25rem;
+}
+
+.hub-sheet {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    padding: 1.5rem;
+    border: 1px solid var(--hub-rule);
+    border-radius: 24px;
+    background: var(--hub-paper);
+    box-shadow: 0 12px 32px rgba(80, 0, 0, 0.06);
+}
+
+.hub-sheet.is-past {
+    box-shadow: none;
+    opacity: 0.85;
+}
+
+.hub-sheet-head {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* A tear-off calendar page for the day. */
+.hub-sheet-date {
+    display: grid;
+    flex: none;
+    width: 3.5rem;
+    border-radius: 12px;
+    background: var(--maroon-dark);
+    color: #fff;
+    text-align: center;
+    overflow: hidden;
+}
+
+.hub-sheet-date span {
+    padding: 0.15rem 0;
+    background: var(--accent-gold);
+    color: #1a1414;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.hub-sheet-date strong {
+    padding: 0.2rem 0 0.35rem;
+    font-size: 1.5rem;
+    line-height: 1.1;
+}
+
+.hub-sheet-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.hub-sheet-title h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--hub-ink);
+    overflow-wrap: anywhere;
+}
+
+.hub-sheet-title p {
+    margin: 0.15rem 0 0;
+    font-size: 0.9rem;
+    color: var(--hub-muted);
+}
+
+.hub-sheet-tools {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.hub-sheet-tools .hub-mini-btn {
+    width: 2.25rem;
+    padding: 0;
+}
+
+.hub-sheet-details {
+    margin: 0;
+    white-space: pre-line;
+    color: var(--hub-ink);
+}
+
+.hub-sheet-fill {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: var(--hub-muted);
+}
+
+.hub-sheet-fill strong {
+    color: #1d7a46;
+}
+
+.hub-sheet-fill progress {
+    width: 100%;
+    height: 0.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--hub-soft);
+    appearance: none;
+    overflow: hidden;
+}
+
+.hub-sheet-fill progress::-webkit-progress-bar {
+    background: rgba(128, 0, 0, 0.08);
+}
+
+.hub-sheet-fill progress::-webkit-progress-value {
+    border-radius: 999px;
+    background: var(--maroon-dark);
+}
+
+.hub-sheet-fill progress::-moz-progress-bar {
+    border-radius: 999px;
+    background: var(--maroon-dark);
+}
+
+.hub-roles {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hub-role {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--hub-rule);
+    border-radius: 16px;
+}
+
+.hub-role.is-mine {
+    border-color: rgba(34, 160, 90, 0.45);
+    background: rgba(34, 160, 90, 0.06);
+}
+
+.hub-role.is-full {
+    background: var(--hub-soft);
+}
+
+.hub-role-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--hub-ink);
+}
+
+.hub-role-count {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--hub-muted);
+}
+
+.hub-role-people {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hub-role-people li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 100%;
+    padding: 0.25rem 0.3rem 0.25rem 0.7rem;
+    border-radius: 999px;
+    background: var(--hub-soft);
+    font-size: 0.85rem;
+}
+
+.hub-person-name {
+    font-weight: 700;
+    color: var(--hub-ink);
+}
+
+.hub-person-note {
+    color: var(--hub-muted);
+    overflow-wrap: anywhere;
+}
+
+.hub-person-note::before {
+    content: '· ';
+}
+
+.hub-role-people li:not(:has(.hub-x)) {
+    padding-right: 0.7rem;
+}
+
+.hub-role-join {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.hub-role-note {
+    flex: 1 1 12rem;
+}
+
+.hub-role-note input {
+    min-height: 2.25rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+}
+
+.hub-role > .hub-mini-btn {
+    justify-self: start;
+}
+
+.hub-role-full {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--hub-muted);
+}
+
+.hub-sheets-past summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--hub-muted);
+}
+
+.hub-sheets-past[open] summary {
+    margin-bottom: 1rem;
+}
+
+/* --- Editors' sheet form ----------------------------------------------------------------- */
+
+.hub-sheet-form {
+    display: grid;
+    gap: 1.1rem;
+    padding: 1.5rem;
+    border: 1.5px solid var(--maroon-dark);
+    border-radius: 24px;
+    background: var(--hub-paper);
+    scroll-margin-top: calc(var(--nav-height, 60px) + 1rem);
+}
+
+.hub-sheet-form .hub-heading {
+    margin: 0;
+}
+
+.hub-sheet-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+.hub-field--wide {
+    grid-column: 1 / -1;
+}
+
+.hub-sheet-roles {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.hub-sheet-roles legend {
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    color: var(--hub-ink);
+}
+
+.hub-sheet-roles [data-role-rows] {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.hub-role-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) 6rem minmax(0, 1.6fr) auto;
+    align-items: end;
+    gap: 0.6rem;
+}
+
+.hub-role-row .hub-x {
+    margin-bottom: 0.45rem;
+}
+
+.hub-sheet-roles > .hub-mini-btn {
+    justify-self: start;
+}
+
+.hub-sheet-error {
+    margin: 0;
+    padding: 0.6rem 0.9rem;
+    border-radius: 12px;
+    background: rgba(192, 57, 43, 0.1);
+    color: #a83226;
+    font-weight: 700;
+}
+
+.hub-sheet-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+/* The ghost button is drawn for the dark guide banner; here it sits on paper. */
+.hub-sheet-form .hub-guide-btn--ghost {
+    border-color: var(--hub-rule);
+    color: var(--hub-ink);
+}
+
+/* ================================================================
    8. DARK MODE
    ================================================================ */
 
@@ -1106,6 +1861,38 @@
     background: linear-gradient(90deg, rgba(255, 215, 0, 0.1), transparent 70%);
 }
 
+[data-theme="dark"] .hub-sign-stats dd,
+[data-theme="dark"] .hub-roll-csv {
+    color: #e6b8b9;
+}
+
+[data-theme="dark"] .hub-sign-btn--out,
+[data-theme="dark"] .hub-mini-btn--go {
+    border-color: #a33a3c;
+    background: #a33a3c;
+    color: #fff;
+}
+
+[data-theme="dark"] .hub-sheet-fill strong {
+    color: #6fd39a;
+}
+
+[data-theme="dark"] .hub-sheet-error {
+    color: #f19a90;
+}
+
+[data-theme="dark"] .hub-sheet-fill progress::-webkit-progress-bar {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .hub-sheet-fill progress::-webkit-progress-value {
+    background: #c25456;
+}
+
+[data-theme="dark"] .hub-sheet-fill progress::-moz-progress-bar {
+    background: #c25456;
+}
+
 [data-theme="dark"] .hub-calc {
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -1150,12 +1937,69 @@
     }
 }
 
+@media (max-width: 820px) {
+    .hub-sign-card {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hub-sign-stats {
+        padding: 1rem 0 0;
+        border-left: 0;
+        border-top: 1px solid var(--hub-rule);
+    }
+
+    .hub-sheet-form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hub-role-row {
+        grid-template-columns: minmax(0, 1fr) 5.5rem auto;
+    }
+
+    .hub-role-row > :nth-child(4) {
+        grid-column: 1 / 3;
+        grid-row: 2;
+    }
+}
+
 @media (max-width: 600px) {
     .hub {
         padding: 2rem 1rem 4rem;
         gap: 2.75rem;
     }
 
+    .hub-sign-card,
+    .hub-roll,
+    .hub-sheet,
+    .hub-sheet-form {
+        padding: 1.1rem;
+    }
+
+    .hub-sign-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .hub-roll-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .hub-roll-times {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .hub-roll-actions {
+        grid-row: 1 / span 2;
+        grid-column: 2;
+    }
+
+    .hub-roll-csv {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 600px) {
     .hub-bar {
         top: calc(var(--nav-height, 60px) + 0.25rem);
         padding: 0.6rem;
