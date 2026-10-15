@@ -93,6 +93,7 @@
                     <span class="acct-dot {{ 'is-on' if two_step else 'is-off' }}" aria-label="{{ 'On' if two_step else 'Off' }}"></span></a></li>
                 <li><a href="#devices" data-acct-link><i data-lucide="monitor-smartphone" aria-hidden="true"></i> Devices
                     <span class="acct-count">{{ devices|length }}</span></a></li>
+                <li><a href="#discord" data-acct-link><i data-lucide="message-circle" aria-hidden="true"></i> Discord</a></li>
                 <li><a href="#activity" data-acct-link><i data-lucide="history" aria-hidden="true"></i> Activity</a></li>
                 <li><a href="#preferences" data-acct-link><i data-lucide="sliders-horizontal" aria-hidden="true"></i> Preferences</a></li>
             </ul>
@@ -467,6 +468,36 @@
                             <i data-lucide="log-out" aria-hidden="true"></i> Sign out everywhere</button>
                     </form>
                 </div>
+            </section>
+
+            {# --- Discord ------------------------------------------------------------------- #}
+            <section class="acct-panel" id="discord" aria-labelledby="discord_title">
+                {% call panel_head('message-circle', 'Discord', 'discord_title',
+                    'Link your Discord so the club bot knows who you are: sign in to meetings, RSVP and take sign-up spots from Discord.') %}{% endcall %}
+                {% if account.discord %}
+                <div class="acct-device">
+                    <span class="acct-device-icon" aria-hidden="true"><i data-lucide="message-circle"></i></span>
+                    <div class="acct-device-text">
+                        <b>{{ account.discord.global_name or account.discord.username }}
+                            <span class="acct-tag acct-tag--live">Linked</span></b>
+                        <small>@{{ account.discord.username }} · Linked {{ account.discord.linked_at|short_date }}</small>
+                    </div>
+                    <form method="POST" action="{{ url_for('account_discord_disconnect') }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="account-btn account-btn--small">
+                            <i data-lucide="x" aria-hidden="true"></i> Unlink</button>
+                    </form>
+                </div>
+                <p class="acct-discord-hint">Try <code>/signin</code>, <code>/events</code>, <code>/signups</code> or <code>/asksteven</code> in the club server.</p>
+                {% elif discord_ready %}
+                <form method="POST" action="{{ url_for('account_discord_connect') }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="account-btn">
+                        <i data-lucide="link" aria-hidden="true"></i> Link Discord</button>
+                </form>
+                {% else %}
+                <p class="acct-empty">Discord linking isn't set up yet. An admin needs to add the bot's keys.</p>
+                {% endif %}
             </section>
 
             {# --- Activity ------------------------------------------------------------------ #}

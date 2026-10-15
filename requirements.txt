@@ -9,3 +9,5 @@ requests==2.32.*
 # zoneinfo reads the OS time zone database, which serverless images may not
 # ship; without it club time silently falls back to UTC.
 tzdata
+# Checks the Ed25519 signature on every Discord bot request (api/discord_bot.py).
+cryptography==46.*

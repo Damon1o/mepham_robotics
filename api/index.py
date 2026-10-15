@@ -26,8 +26,9 @@ from pymongo.errors import DuplicateKeyError
 import requests
 
 try:  # package import on Vercel, flat import when run from the api/ directory
-    from api import devices, events, guide, people, robotevents, sheets, site_content, totp
+    from api import devices, discord_bot, events, guide, people, robotevents, sheets, site_content, totp
 except ImportError:  # pragma: no cover
+    import discord_bot
     import events
     import guide
     import people
@@ -1545,6 +1546,16 @@ def event_page(event_id):
         jsonld=events_jsonld([item]))
 
 
+def _save_rsvp(row, uid, status):
+    """Set one member's answer for an event (an empty status clears it) and return the fresh row."""
+    if status:
+        update = {'$set': {f'rsvps.{uid}': {'status': status, 'at': _utcnow()}}}
+    else:
+        update = {'$unset': {f'rsvps.{uid}': ''}}
+    db['competitions'].update_one({'_id': row['_id']}, update)
+    return db['competitions'].find_one({'_id': row['_id']}) or row
+
+
 @app.route('/api/events/<event_id>/rsvp', methods=['POST'])
 @login_required
 def api_event_rsvp(event_id):
@@ -1559,12 +1570,7 @@ def api_event_rsvp(event_id):
     if status and status not in RSVP_CHOICES:
         return _json_error("Pick going, maybe or can't go.")
     uid = str(user['_id'])
-    if status:
-        update = {'$set': {f'rsvps.{uid}': {'status': status, 'at': _utcnow()}}}
-    else:
-        update = {'$unset': {f'rsvps.{uid}': ''}}
-    db['competitions'].update_one({'_id': row['_id']}, update)
-    row = db['competitions'].find_one({'_id': row['_id']}) or row
+    row = _save_rsvp(row, uid, status)
     return jsonify(_rsvp_json(rsvp_summary(row, uid, with_people=True)))
 
 
@@ -1976,10 +1982,19 @@ def _attendance_reply(user, day=None):
 def api_hub_attendance():
     """Sign the member in or out of today's meeting. 'undo' takes back a sign-out."""
     user = _session_user()
-    action = str(_json_body().get('action') or '')
+    error = _attendance_action(user, str(_json_body().get('action') or ''))
+    if error:
+        return _json_error(error, 400)
+    return _attendance_reply(user)
+
+
+def _attendance_action(user, action):
+    """Sign a member in ('in'), out ('out') or take back a sign-out ('undo') for today. Returns an error or ''."""
     now = club_now()
+    if action not in ('in', 'out', 'undo'):
+        return 'Sign in or sign out.'
     if not sheets.sign_in_window(site().meeting, now):
-        return _json_error('Sign-in is only open around a meeting.', 400)
+        return 'Sign-in is only open around a meeting.'
     uid, day = str(user['_id']), now.date().isoformat()
     row = db['attendance'].find_one({'user_id': uid, 'day': day})
     if action == 'in':
@@ -1990,14 +2005,11 @@ def api_hub_attendance():
                 pass  # a double tap; the first one counted
     elif action == 'out':
         if not row:
-            return _json_error('Sign in first.', 400)
+            return 'Sign in first.'
         db['attendance'].update_one({'_id': row['_id']}, {'$set': {'out_at': now}})
-    elif action == 'undo':
-        if row:
-            db['attendance'].update_one({'_id': row['_id']}, {'$set': {'out_at': None}})
-    else:
-        return _json_error('Sign in or sign out.')
-    return _attendance_reply(user)
+    elif row:
+        db['attendance'].update_one({'_id': row['_id']}, {'$set': {'out_at': None}})
+    return ''
 
 
 @app.route('/api/hub/attendance/sheet')
@@ -2164,40 +2176,47 @@ def api_hub_sheet_signup(sheet_id):
     """
     user = _session_user()
     body = _json_body()
-    sheet = _find_by_id('signup_sheets', sheet_id)
+    error, status = _sheet_signup(user, _find_by_id('signup_sheets', sheet_id), body.get('role'),
+                                  bool(body.get('on')), body.get('note'), str(body.get('user_id') or ''))
+    if error:
+        return _json_error(error, status)
+    return _sheets_reply(user)
+
+
+def _sheet_signup(user, sheet, role_key, on, note='', other=''):
+    """Put someone on a sheet's role (or take them off). Returns (error, HTTP status); error is '' when it worked."""
     if not sheet:
-        return _json_error('That sheet is gone.', 404)
-    role = next((r for r in sheet.get('roles') or () if r['key'] == body.get('role')), None)
+        return 'That sheet is gone.', 404
+    role = next((r for r in sheet.get('roles') or () if r['key'] == role_key), None)
     if not role:
-        return _json_error('That role is no longer on the sheet.', 404)
+        return 'That role is no longer on the sheet.', 404
     uid = str(user['_id'])
-    other = str(body.get('user_id') or '')
     keeper = _can_keep_sheets(user)
     if other and other != uid:
         if not keeper:
-            return _json_error('You can only sign yourself up.', 403)
+            return 'You can only sign yourself up.', 403
         if other not in _member_names():
-            return _json_error('That member is no longer here.', 404)
+            return 'That member is no longer here.', 404
         uid = other
     # Editors can still fill in a sheet after its day, to record who really came.
     if not keeper and not sheets.is_open(sheet, club_now()):
-        return _json_error('Sign-ups for that sheet are closed.', 400)
+        return 'Sign-ups for that sheet are closed.', 400
     path = f"signups.{role['key']}"
-    if not body.get('on'):
+    if not on:
         db['signup_sheets'].update_one({'_id': sheet['_id']}, {'$pull': {path: {'user_id': uid}}})
-        return _sheets_reply(user)
-    note = ' '.join(str(body.get('note') or '').split())[:sheets.NOTE_MAX]
+        return '', 200
+    note = ' '.join(str(note or '').split())[:sheets.NOTE_MAX]
     # Already on this role: only the note changes.
     if db['signup_sheets'].update_one({'_id': sheet['_id'], f'{path}.user_id': uid},
                                       {'$set': {f'{path}.$.note': note}}).matched_count:
-        return _sheets_reply(user)
+        return '', 200
     # The slot check rides in the filter, so two people racing for the last spot can't both get it.
     taken = db['signup_sheets'].update_one(
         {'_id': sheet['_id'], f"{path}.{role['slots'] - 1}": {'$exists': False}},
         {'$push': {path: {'user_id': uid, 'note': note, 'at': _utcnow()}}})
     if not taken.matched_count:
-        return _json_error(f"{role['name']} is full.", 409)
-    return _sheets_reply(user)
+        return f"{role['name']} is full.", 409
+    return '', 200
 
 
 # --- Member Hub: event sign-ups -------------------------------------------------------------
@@ -5044,7 +5063,7 @@ def _render_account(user, status=200, **extra):
         history=account_history(user),
         full_name_max=FULL_NAME_MAX, password_min=PASSWORD_MIN_LENGTH,
         avatar_tones=AVATAR_TONES, start_pages=START_PAGES, photo_types=sorted(MEMBER_UPLOAD_EXTENSIONS),
-        **extra), status
+        discord_ready=discord_bot.linking_ready(), **extra), status
 
 
 def _password_attempt_ok(user, password):
@@ -6200,9 +6219,16 @@ def api_chat():
                      f'{"minute" if minutes == 1 else "minutes"}.'
         }), 429
 
-    if not os.getenv('CHATBOT_API_KEY'):
-        return jsonify({'error': 'The assistant is offline right now.'}), 503
+    reply, error, status = steven_reply(user_message, chat_history(data.get('history')))
+    if error:
+        return jsonify({'error': error}), status
+    return jsonify({'reply': reply})
 
+
+def steven_reply(question, history=()):
+    """Ask the assistant upstream. Returns (reply, error, HTTP status); the site chat and the Discord bot share it."""
+    if not os.getenv('CHATBOT_API_KEY'):
+        return '', 'The assistant is offline right now.', 503
     try:
         response = requests.post(
             os.getenv('CHATBOT_API_URL', "https://ai.hackclub.com/proxy/v1/chat/completions"),
@@ -6210,17 +6236,459 @@ def api_chat():
                      "Content-Type": "application/json"},
             json={"model": os.getenv('CHATBOT_MODEL', "gpt-4o-mini"),
                   "messages": [{"role": "system", "content": chat_system_prompt()},
-                               *chat_history(data.get('history')),
-                               {"role": "user", "content": user_message}]},
+                               *history,
+                               {"role": "user", "content": question}]},
             timeout=CHAT_TIMEOUT_SECONDS)
         response.raise_for_status()
-        return jsonify({'reply': response.json()['choices'][0]['message']['content']})
+        return response.json()['choices'][0]['message']['content'], '', 200
     except requests.Timeout:
-        logger.warning('api_chat: upstream timed out')
-        return jsonify({'error': 'Steven took too long to answer. Try again.'}), 504
+        logger.warning('steven_reply: upstream timed out')
+        return '', 'Steven took too long to answer. Try again.', 504
     except Exception:
-        logger.exception('api_chat: upstream request failed')
-        return jsonify({'error': 'Failed to process request'}), 502
+        logger.exception('steven_reply: upstream request failed')
+        return '', 'Failed to process request', 502
+
+# --- Discord bot -----------------------------------------------------------------------------
+# Slash commands reach /api/discord/interactions as signed POSTs (api/discord_bot.py holds the
+# protocol). Members link their Discord on the account page with Discord's own sign-in, so the
+# bot acts as them: signing in to a meeting, RSVPing or taking a sign-up spot through the same
+# helpers the Member Hub uses. Unlinked people only get what the public site shows.
+DISCORD_EVENTS_SHOWN = 5
+DISCORD_SHEETS_SHOWN = 5
+DISCORD_ROSTER_SHOWN = 30
+CSRF_EXEMPT_ENDPOINTS.add('discord_interactions')
+
+
+def _discord_when(moment, style='f'):
+    """A club wall-clock time as a Discord timestamp, which each reader sees in their own zone."""
+    try:
+        from zoneinfo import ZoneInfo
+        return discord_bot.stamp(moment.replace(tzinfo=ZoneInfo(CLUB_TIMEZONE)), style)
+    except Exception:
+        return moment.strftime('%a %b %d, %I:%M %p')
+
+
+def _discord_member(interaction):
+    """The active club account linked to whoever sent this interaction, or None."""
+    discord_id = discord_bot.user_id(interaction)
+    if not discord_id:
+        return None
+    user = db['users'].find_one({'discord.id': discord_id})
+    return user if user and _is_active(user) else None
+
+
+def _discord_link_prompt():
+    return discord_bot.message(
+        'Connect your Discord to your club account first, then try again.',
+        components=[discord_bot.row(discord_bot.button('Connect Discord', style='link',
+                                                       url=_public_url('account') + '#discord'))],
+        private=True)
+
+
+def _event_rows_ahead(limit=None):
+    now = club_now()
+    cursor = db['competitions'].find({'date': {'$gte': now - datetime.timedelta(hours=12)}}).sort('date', 1)
+    rows = [(r, events.event_item(r)) for r in cursor]
+    rows = [(r, i) for r, i in rows if i and i['end'] >= now]
+    return rows[:limit] if limit else rows
+
+
+def _event_embed(row, item, uid=None):
+    summary = rsvp_summary(row, uid, with_people=bool(uid))
+    when = _discord_when(item['start'])
+    lines = [f"**{item['label']}** · {when} ({_discord_when(item['start'], 'R')})"]
+    if item['location']:
+        lines.append(f"📍 {item['location']}")
+    if item['details']:
+        lines.append(item['details'])
+    counts = summary['counts']
+    fields = [('Going', str(counts['going']), True), ('Maybe', str(counts['maybe']), True)]
+    if uid:
+        going = [_display_name(p) for p in summary['people'] if p['status'] == 'going']
+        if going:
+            fields.append(('Who is going', ', '.join(going), False))
+        mine = RSVP_CHOICES.get(summary['mine'])
+        fields.append(('Your answer', mine or 'Not answered yet', False))
+    return discord_bot.embed(item['name'], '\n'.join(lines), _public_url('event_page', event_id=item['id']), fields)
+
+
+def _rsvp_buttons(item):
+    return discord_bot.row(*[discord_bot.button(label, f"rsvp:{item['id']}:{status}",
+                                                'success' if status == 'going' else 'secondary')
+                             for status, label in RSVP_CHOICES.items()])
+
+
+def _discord_events(interaction):
+    rows = _event_rows_ahead(DISCORD_EVENTS_SHOWN)
+    if not rows:
+        return discord_bot.say('Nothing is on the calendar right now.', private=False)
+    fields = [(i['name'], f"{i['label']} · {_discord_when(i['start'])}"
+               + (f"\n📍 {i['location']}" if i['location'] else ''), False) for _, i in rows]
+    return discord_bot.message(embeds=[discord_bot.embed(
+        'Coming up', 'Use `/event` to see one and say if you are going.', _public_url('events_page'), fields)])
+
+
+def _discord_event(interaction):
+    row, item = _event_row_and_item(str(discord_bot.options(interaction).get('event') or ''))
+    if not item:
+        return discord_bot.say('That event is not on the calendar. Pick one from the list.')
+    member = _discord_member(interaction)
+    uid = str(member['_id']) if member else None
+    open_now = item['end'] >= club_now()
+    return discord_bot.message(embeds=[_event_embed(row, item, uid)],
+                               components=[_rsvp_buttons(item)] if open_now else [], private=bool(uid))
+
+
+def _discord_rsvp(interaction, event_id, status):
+    member = _discord_member(interaction)
+    if not member:
+        return _discord_link_prompt()
+    row, item = _event_row_and_item(event_id)
+    if not item:
+        return discord_bot.say('That event is no longer on the calendar.')
+    if item['end'] < club_now():
+        return discord_bot.say('That event is over.')
+    status = '' if status == 'clear' else status
+    if status and status not in RSVP_CHOICES:
+        return discord_bot.say("Pick going, maybe or can't go.")
+    row = _save_rsvp(row, str(member['_id']), status)
+    note = f"You're down as **{RSVP_CHOICES[status]}**." if status else 'Your answer is cleared.'
+    return discord_bot.message(note, embeds=[_event_embed(row, item, str(member['_id']))],
+                               components=[_rsvp_buttons(item)], private=True)
+
+
+def _discord_next(interaction):
+    competition = next_competition(club_now())
+    if not competition:
+        return discord_bot.say('No competition is on the calendar yet.', private=False)
+    item = events.event_item(competition)
+    text = f"**{item['name']}** {_discord_when(item['start'], 'R')} · {_discord_when(item['start'])}"
+    if item['location']:
+        text += f"\n📍 {item['location']}"
+    return discord_bot.message(embeds=[discord_bot.embed(
+        'Next competition', text, _public_url('event_page', event_id=item['id']))])
+
+
+def _attendance_summary(member):
+    context = _attendance_context(member)
+    lines = [f"**{context['attended']}** meetings and **{sheets.fmt_minutes(context['year_minutes'])}** this school year."]
+    mine = context['mine']
+    if context['window']:
+        if not mine:
+            lines.append("You haven't signed in today.")
+        elif mine.get('out_at'):
+            lines.append(f"Signed out today after {sheets.fmt_minutes(context['mine_minutes'])}.")
+        else:
+            lines.append(f"Signed in today, here for {sheets.fmt_minutes(context['mine_minutes'])} so far.")
+    elif context['next_meeting']:
+        lines.append(f"Next meeting {_discord_when(context['next_meeting'][0], 'R')}; sign-in opens an hour before.")
+    return '\n'.join(lines)
+
+
+def _discord_sign(interaction, action):
+    member = _discord_member(interaction)
+    if not member:
+        return _discord_link_prompt()
+    error = _attendance_action(member, action)
+    if error:
+        return discord_bot.say(error)
+    done = {'in': "You're signed in. 👋", 'out': "You're signed out. See you next time!"}[action]
+    return discord_bot.say(done + '\n' + _attendance_summary(member))
+
+
+def _discord_attendance(interaction):
+    member = _discord_member(interaction)
+    if not member:
+        return _discord_link_prompt()
+    return discord_bot.say(_attendance_summary(member))
+
+
+def _open_sheets():
+    today = datetime.datetime.combine(club_now().date(), datetime.time())
+    return list(db['signup_sheets'].find({'date': {'$gte': today}}).sort('date', 1))
+
+
+def _discord_signups(interaction):
+    sheet_rows = _open_sheets()[:DISCORD_SHEETS_SHOWN]
+    if not sheet_rows:
+        return discord_bot.say('No sign-up sheets are open right now.', private=False)
+    member = _discord_member(interaction)
+    names, uid = _member_names(), str(member['_id']) if member else ''
+    embeds = []
+    for sheet in sheet_rows:
+        roles = sheets.role_view(sheet, names, uid)
+        fields = [(f"{r['name']} · {r['taken']}/{r['slots']}" + (' ✅' if r['mine'] else ''),
+                   ', '.join(p['name'] + (f" ({p['note']})" if p['note'] else '') for p in r['people'])
+                   if member else f"{r['open_slots']} spots left", True) for r in roles]
+        text = _discord_when(sheet['date']) + (f"\n📍 {sheet['location']}" if sheet.get('location') else '')
+        if sheet.get('details'):
+            text += '\n' + sheet['details']
+        embeds.append(discord_bot.embed(sheet['title'], text, _public_url('resources') + '#sheets', fields))
+    return discord_bot.message('Take a spot with `/signup`.', embeds=embeds[:10], private=bool(member))
+
+
+def _discord_signup(interaction):
+    member = _discord_member(interaction)
+    if not member:
+        return _discord_link_prompt()
+    opts = discord_bot.options(interaction)
+    sheet = _find_by_id('signup_sheets', str(opts.get('sheet') or ''))
+    leave = bool(opts.get('leave'))
+    error, _ = _sheet_signup(member, sheet, str(opts.get('role') or ''), not leave, opts.get('note') or '')
+    if error:
+        return discord_bot.say(error)
+    role = next(r for r in sheet['roles'] if r['key'] == opts.get('role'))
+    if leave:
+        return discord_bot.say(f"You're off **{role['name']}** for {sheet['title']}.")
+    return discord_bot.say(f"You're on **{role['name']}** for {sheet['title']} ({_discord_when(sheet['date'])}).")
+
+
+def _discord_team(interaction):
+    number = str(discord_bot.options(interaction).get('team') or '').strip()
+    docs = list(db['teams'].find({'team_number': number}))
+    if not docs:
+        return discord_bot.say(f'No team called {number}. Pick one from the list.')
+    team = max(docs, key=lambda d: d.get('season') or '')
+    group = is_group(team)
+    title = (team.get('title') or number) if group else f'Team {number}'
+    members = roster_order(team.get('members') or [])
+    roster = ', '.join((m.get('name') or 'Member') for m in members[:DISCORD_ROSTER_SHOWN])
+    if len(members) > DISCORD_ROSTER_SHOWN:
+        roster += f' and {len(members) - DISCORD_ROSTER_SHOWN} more'
+    fields = [('Season', team.get('season') or '—', True), ('Members', str(len(members)), True)]
+    if not group:
+        fields.append(('Awards', str(db['awards'].count_documents({'team_number': number})), True))
+    fields.append(('Roster', roster or 'No one listed yet', False))
+    return discord_bot.message(embeds=[discord_bot.embed(
+        title, team.get('tagline') or team.get('description') or '', _public_url('team_page', team_number=number),
+        fields)])
+
+
+def _discord_person(interaction):
+    person = _person(str(discord_bot.options(interaction).get('name') or ''))
+    viewer = _discord_member(interaction)
+    if person is None:
+        return discord_bot.say('No member by that name. Pick one from the list.')
+    if not _can_view_person(person, viewer):
+        return discord_bot.say("That member's page is only for club members. Link your Discord to see it.")
+    profile = people.profile_view(person.get('profile'))
+    history = account_history(person)
+    teams = ', '.join(t['label'] for t in history['seasons'][0]['teams']) if history['seasons'] else ''
+    fields = [('Teams', teams or '—', True)]
+    if profile['grad_year']:
+        fields.append(('Class of', str(profile['grad_year']), True))
+    if profile['skills']:
+        fields.append(('Skills', ', '.join(profile['skills']), False))
+    text = '\n'.join(x for x in (profile['headline'], profile['bio']) if x)
+    return discord_bot.message(embeds=[discord_bot.embed(
+        _display_name(person), text, _public_url('person_page', user_id=str(person['_id'])), fields)],
+        private=not _is_public(profile))
+
+
+def _discord_alumni(interaction):
+    view = site_content.alumni_view(site().alumni.people)
+    if not view['people']:
+        return discord_bot.say('No alumni are listed yet.', private=False)
+    text = (f"**{view['count']}** alumni from **{view['class_count']}** classes at **{view['school_count']}** schools; "
+            f"{view['stem_percent']}% went into STEM.")
+    fields = [(f"{p['name']} · {p['class_year']}", ', '.join(x for x in (p.get('school'), ', '.join(p['topic_list']))
+                                                          if x) or 'Happy to help', True)
+              for p in view['mentors'][:12]]
+    return discord_bot.message(embeds=[discord_bot.embed(
+        'Alumni', text + ('\n\nHappy to answer questions:' if fields else ''), _public_url('alumni'), fields)])
+
+
+def _discord_hub(interaction):
+    links = [('Member Hub', 'resources'), ('Events', 'events_page'), ('Member guide', 'guide_page'),
+             ('My team', 'my_team'), ('Account', 'account')]
+    return discord_bot.message(
+        f"Everything for {site().general.short_name} members:",
+        components=[discord_bot.row(*[discord_bot.button(label, style='link', url=_public_url(endpoint))
+                                      for label, endpoint in links])])
+
+
+def _discord_link(interaction):
+    member = _discord_member(interaction)
+    url = _public_url('account') + '#discord'
+    if member:
+        return discord_bot.message(f"You're linked to **{_display_name(member)}**. Manage it on your account page.",
+                                   components=[discord_bot.row(discord_bot.button('Account', style='link', url=url))],
+                                   private=True)
+    return _discord_link_prompt()
+
+
+# /asksteven spends the chatbot's API key, so it is held back three ways: a cooldown
+# between one person's questions, an hourly cap per person, and a cap for the whole
+# server so a crowd (or many throwaway accounts) can't drain it either.
+STEVEN_COOLDOWN = datetime.timedelta(seconds=30)
+STEVEN_USER_LIMIT = 10
+STEVEN_USER_WINDOW = datetime.timedelta(hours=1)
+STEVEN_SERVER_LIMIT = 40
+STEVEN_SERVER_WINDOW = datetime.timedelta(minutes=10)
+
+
+def _wait_text(seconds):
+    if seconds < 90:
+        return f'{seconds} seconds'
+    minutes = math.ceil(seconds / 60)
+    return f'{minutes} minutes'
+
+
+def _steven_hold(interaction):
+    """Why this question has to wait, or '' when it can go upstream. Each check records a hit."""
+    who = f'discord:{discord_bot.user_id(interaction)}'
+    wait = rate_limit('steven_cooldown', who, 1, STEVEN_COOLDOWN)
+    if wait:
+        return f'Steven is still catching his breath. Ask again in {_wait_text(wait)}.'
+    wait = rate_limit('steven_user', who, STEVEN_USER_LIMIT, STEVEN_USER_WINDOW)
+    if wait:
+        return f"You've asked {STEVEN_USER_LIMIT} questions this hour. Try again in {_wait_text(wait)}."
+    wait = rate_limit('steven_server', 'discord', STEVEN_SERVER_LIMIT, STEVEN_SERVER_WINDOW)
+    if wait:
+        return f'Steven is swamped right now. Try again in {_wait_text(wait)}.'
+    return ''
+
+
+def _discord_ask_steven(interaction):
+    question = ' '.join(str(discord_bot.options(interaction).get('question') or '').split())
+    if not question:
+        return discord_bot.say('Ask Steven a question.')
+    if len(question) > CHAT_MESSAGE_MAX:
+        return discord_bot.say(f'Keep it under {CHAT_MESSAGE_MAX} characters.')
+    hold = _steven_hold(interaction)
+    if hold:
+        return discord_bot.say(hold)
+    # The model can take longer than Discord's 3 seconds, so the reply is deferred and
+    # filled in once it arrives, all inside this request.
+    if not discord_bot.defer(interaction):
+        return discord_bot.say('Discord did not take the question. Try again.')
+    reply, error, _ = steven_reply(question)
+    discord_bot.edit_reply(interaction, f'> {discord_bot.clip(question, 300)}\n\n{reply or error}')
+    return None
+
+
+DISCORD_COMMANDS = {
+    'asksteven': _discord_ask_steven,
+    'events': _discord_events, 'event': _discord_event, 'next': _discord_next,
+    'rsvp': lambda i: _discord_rsvp(i, str(discord_bot.options(i).get('event') or ''),
+                                    str(discord_bot.options(i).get('answer') or '')),
+    'signin': lambda i: _discord_sign(i, 'in'), 'signout': lambda i: _discord_sign(i, 'out'),
+    'attendance': _discord_attendance, 'signups': _discord_signups, 'signup': _discord_signup,
+    'team': _discord_team, 'member': _discord_person, 'alumni': _discord_alumni,
+    'hub': _discord_hub, 'link': _discord_link,
+}
+
+
+def _discord_autocomplete(interaction):
+    command = (interaction.get('data') or {}).get('name')
+    field, text = discord_bot.focused(interaction)
+    match = discord_bot.matches
+    if field == 'event':
+        return discord_bot.choices((f"{i['name']} · {i['start']:%b %d}", i['id'])
+                                   for _, i in _event_rows_ahead() if match(text, i['name'], i['location']))
+    if command == 'signup' and field == 'sheet':
+        return discord_bot.choices((f"{s['title']} · {s['date']:%b %d}", str(s['_id']))
+                                   for s in _open_sheets() if match(text, s['title']))
+    if command == 'signup' and field == 'role':
+        sheet = _find_by_id('signup_sheets', str(discord_bot.options(interaction).get('sheet') or ''))
+        roles = sheets.role_view(sheet, _member_names(), '') if sheet else []
+        return discord_bot.choices((f"{r['name']} · {r['open_slots']} left", r['key'])
+                                   for r in roles if match(text, r['name']))
+    if field == 'team':
+        teams = {t['team_number']: t for t in listed_teams()}
+        return discord_bot.choices((t.get('title') or n if is_group(t) else f'Team {n}', n)
+                                   for n, t in teams.items() if match(text, n, t.get('title')))
+    if field == 'name':
+        viewer = _discord_member(interaction)
+        rows = db['users'].find({'status': {'$nin': ['pending', 'rejected']}},
+                                {'username': 1, 'full_name': 1, 'profile.visibility': 1})
+        found = [(_display_name(u), str(u['_id'])) for u in rows
+                 if (viewer or _can_view_person(u, None)) and match(text, _display_name(u))]
+        return discord_bot.choices(sorted(found, key=lambda p: p[0].lower()))
+    return discord_bot.choices([])
+
+
+@app.route('/api/discord/interactions', methods=['POST'])
+def discord_interactions():
+    if not discord_bot.interactions_ready():
+        return jsonify({'error': 'The Discord bot is not set up.'}), 503
+    body = request.get_data()
+    if not discord_bot.verify(request.headers.get('X-Signature-Ed25519', ''),
+                              request.headers.get('X-Signature-Timestamp', ''), body):
+        return jsonify({'error': 'Bad signature.'}), 401
+    interaction = json.loads(body or b'{}')
+    kind = interaction.get('type')
+    if kind == discord_bot.PING:
+        return jsonify({'type': discord_bot.PONG})
+    if kind == discord_bot.AUTOCOMPLETE:
+        return jsonify(_discord_autocomplete(interaction))
+    if kind == discord_bot.COMPONENT:
+        parts = str((interaction.get('data') or {}).get('custom_id') or '').split(':')
+        if len(parts) == 3 and parts[0] == 'rsvp':
+            return jsonify(_discord_rsvp(interaction, parts[1], parts[2]))
+        return jsonify(discord_bot.say('That button is out of date.'))
+    if kind == discord_bot.COMMAND:
+        handler = DISCORD_COMMANDS.get((interaction.get('data') or {}).get('name'))
+        if handler:
+            try:
+                reply = handler(interaction)
+                # None: the handler already answered through Discord's callback (a deferred reply).
+                return jsonify(reply) if reply is not None else ('', 202)
+            except Exception:
+                logger.exception('Discord command failed')
+                return jsonify(discord_bot.say('Something went wrong. Try again in a minute.'))
+        return jsonify(discord_bot.say('The bot does not know that command yet.'))
+    return jsonify({'error': 'Unknown interaction.'}), 400
+
+
+def _discord_redirect_uri():
+    return _public_url('account_discord_callback')
+
+
+@app.route('/account/discord/connect', methods=['POST'])
+@login_required
+def account_discord_connect():
+    if not discord_bot.linking_ready():
+        flash('Discord linking is not set up yet. Ask an admin.', 'error')
+        return redirect(url_for('account') + '#discord')
+    session['discord_state'] = secrets.token_urlsafe(24)
+    return redirect(discord_bot.authorize_url(_discord_redirect_uri(), session['discord_state']))
+
+
+@app.route('/account/discord/callback')
+@login_required
+def account_discord_callback():
+    back = redirect(url_for('account') + '#discord')
+    state = session.pop('discord_state', '')
+    if request.args.get('error'):
+        flash('Discord linking was cancelled.', 'error')
+        return back
+    if not state or not hmac.compare_digest(state, str(request.args.get('state') or '')):
+        flash('That Discord link expired. Try again.', 'error')
+        return back
+    identity = discord_bot.fetch_identity(str(request.args.get('code') or ''), _discord_redirect_uri())
+    if not identity:
+        flash("Discord didn't confirm your account. Try again.", 'error')
+        return back
+    user = _account_user()
+    # One club account per Discord account: linking here unlinks it anywhere else.
+    db['users'].update_many({'discord.id': identity['id'], '_id': {'$ne': user['_id']}}, {'$unset': {'discord': ''}})
+    db['users'].update_one({'_id': user['_id']}, {'$set': {'discord': dict(identity, linked_at=_utcnow())}})
+    log_activity('discord_link', f"{user['username']} linked Discord account {identity['username']}",
+                 user=user['username'])
+    flash(f"Discord linked as {identity['global_name'] or identity['username']}.", 'success')
+    return back
+
+
+@app.route('/account/discord/disconnect', methods=['POST'])
+@login_required
+def account_discord_disconnect():
+    user = _account_user()
+    db['users'].update_one({'_id': user['_id']}, {'$unset': {'discord': ''}})
+    log_activity('discord_link', f"{user['username']} unlinked Discord", user=user['username'])
+    flash('Discord unlinked.', 'success')
+    return redirect(url_for('account') + '#discord')
+
 
 @app.context_processor
 def inject_user():
