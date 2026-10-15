@@ -103,3 +103,33 @@ def test_editor_deletes_a_sheet(client, make_user, db, clock):
     sheet_id = db['signup_sheets'].find_one()['_id']
     client.post(f'/admin/delete-sheet/{sheet_id}')
     assert db['signup_sheets'].count_documents({}) == 0
+
+
+# --- Fundraisers in the Events tab ------------------------------------------------------
+
+def test_fundraiser_lists_moved_to_the_events_tab(client, make_user, db, clock):
+    login(client, make_user, 'root', 'admin')
+    events_tab = client.get('/admin').get_data(as_text=True)
+    assert 'data-key="fundraisers.entries"' in events_tab and 'data-key="fundraisers.history"' in events_tab
+    site_page = client.get('/admin/site').get_data(as_text=True)
+    assert 'data-key="fundraisers.entries"' not in site_page and 'data-key="fundraisers.history"' not in site_page
+    assert 'Fundraisers are now in' in site_page
+    # How the homepage shows them stays in Site settings.
+    assert 'data-key="fundraisers.heading"' in site_page
+
+
+def test_editor_edits_fundraisers_from_the_events_tab(client, make_user, db, clock):
+    login(client, make_user, 'ed', 'editor')
+    page = client.get('/admin').get_data(as_text=True)
+    assert 'data-key="fundraisers.entries"' in page and 'id="siteEditor"' in page
+    entry = {'name': 'Car wash', 'starts': '2026-10-24T10:00'}
+    reply = client.post('/admin/api/site', json={'key': 'fundraisers.entries', 'value': [entry]})
+    assert reply.status_code == 200
+    assert 'Car wash' in client.get('/admin').get_data(as_text=True)
+    assert 'Car wash' in client.get('/events?month=2026-10').get_data(as_text=True)
+
+
+def test_fundraising_group_page_still_has_the_lists(client, make_user, db, clock):
+    login(client, make_user, 'ed', 'editor')
+    page = client.get('/manage/fundraisers').get_data(as_text=True)
+    assert 'data-key="fundraisers.entries"' in page
