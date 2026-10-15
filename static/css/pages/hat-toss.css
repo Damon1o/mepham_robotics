@@ -1,0 +1,730 @@
+/* 404 page: Hat Toss, a ring toss game over pointed hats from history
+   (static/js/hat-toss.js). The page is dark in both themes, like the other
+   error pages. */
+.hat-toss-page {
+    --ht-gold: #ffd700;
+    --ht-ink: #f7ecdc;
+    --ht-muted: rgba(247, 236, 220, 0.72);
+    --ht-line: rgba(255, 255, 255, 0.12);
+    --ht-card: rgba(255, 255, 255, 0.05);
+    --ht-card-strong: rgba(20, 2, 2, 0.88);
+    min-height: 100vh;
+    min-height: 100svh;
+    padding: 2rem 1rem 3rem;
+    background: radial-gradient(circle at 50% 0%, #2a0000 0%, #0a0000 70%, #000 100%);
+    color: var(--ht-ink);
+    font-family: var(--font-body);
+}
+
+body:has(.hat-toss-page) {
+    background: #000;
+}
+
+.hat-toss-page *,
+.hat-toss-page *::before,
+.hat-toss-page *::after {
+    box-sizing: border-box;
+}
+
+/* --- Intro ----------------------------------------------------------------- */
+.ht-intro {
+    max-width: 960px;
+    margin: 0 auto 1.25rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1.25rem;
+    align-items: center;
+}
+
+.ht-code {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(3rem, 9vw, 5.5rem);
+    font-weight: 700;
+    line-height: 1;
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.ht-intro .error-message {
+    margin: 0 0 0.25rem;
+    font-size: clamp(1.25rem, 3vw, 1.6rem);
+}
+
+.ht-lede {
+    margin: 0;
+    color: var(--ht-muted);
+}
+
+.ht-intro-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.ht-intro-actions .cta-button,
+.ht-card-actions .cta-button,
+.ht-card > .cta-button {
+    padding: 0.7rem 1.4rem;
+    font-size: 0.95rem;
+}
+
+/* --- Game frame ------------------------------------------------------------ */
+.ht-game {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+.ht-hud {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.ht-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--ht-line);
+    border-radius: 12px;
+    background: var(--ht-card);
+    min-width: 0;
+}
+
+.ht-stat-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ht-muted);
+}
+
+.ht-stat-label svg,
+.ht-stat-label i {
+    width: 0.9rem;
+    height: 0.9rem;
+}
+
+.ht-stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ht-ink);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.ht-mult {
+    font-size: 0.85rem;
+    color: var(--ht-muted);
+}
+
+.ht-stat-streak.is-hot {
+    border-color: rgba(255, 160, 60, 0.7);
+    background: linear-gradient(180deg, rgba(255, 120, 30, 0.22), rgba(255, 120, 30, 0.05));
+    animation: ht-glow 1.2s ease-in-out infinite alternate;
+}
+
+.ht-stat-streak.is-hot .ht-stat-label,
+.ht-stat-streak.is-hot .ht-mult {
+    color: #ffb46b;
+}
+
+@keyframes ht-glow {
+    from { box-shadow: 0 0 0 rgba(255, 140, 40, 0); }
+    to { box-shadow: 0 0 18px rgba(255, 140, 40, 0.45); }
+}
+
+.ht-stage {
+    position: relative;
+    border: 1px solid var(--ht-line);
+    border-radius: 18px;
+    overflow: hidden;
+    background: #0a0000;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+}
+
+.ht-canvas {
+    display: block;
+    width: 100%;
+    height: clamp(340px, 62vw, 540px);
+    touch-action: none;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ht-canvas:active {
+    cursor: grabbing;
+}
+
+.ht-canvas:focus-visible {
+    outline: 3px solid var(--ht-gold);
+    outline-offset: -3px;
+}
+
+.ht-noscript {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+/* --- Title and round-over cards ---------------------------------------------- */
+.ht-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    overflow-y: auto;
+    background: rgba(5, 0, 0, 0.55);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+.ht-overlay[hidden] {
+    display: none;
+}
+
+.ht-card {
+    width: min(100%, 420px);
+    padding: 1.4rem 1.5rem;
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    border-radius: 18px;
+    background: var(--ht-card-strong);
+    text-align: center;
+    animation: ht-pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.ht-card p {
+    margin: 0 0 0.75rem;
+    color: var(--ht-muted);
+}
+
+@keyframes ht-pop {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.ht-kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.ht-card .ht-kicker {
+    color: var(--ht-gold);
+    margin-bottom: 0.25rem;
+}
+
+.ht-card-title {
+    margin: 0 0 0.5rem;
+    font-size: 2rem;
+    color: var(--ht-ink);
+}
+
+.ht-rules {
+    list-style: none;
+    margin: 0 0 1.1rem;
+    padding: 0;
+    text-align: left;
+    color: var(--ht-ink);
+    font-size: 0.95rem;
+}
+
+.ht-rules li {
+    position: relative;
+    padding: 0.2rem 0 0.2rem 1.4rem;
+}
+
+.ht-rules li::before {
+    content: '';
+    position: absolute;
+    left: 0.15rem;
+    top: 0.62rem;
+    width: 0.7rem;
+    height: 0.38rem;
+    border: 2px solid var(--ht-gold);
+    border-radius: 50%;
+}
+
+.ht-card .ht-keys {
+    margin: 0.85rem 0 0;
+    font-size: 0.8rem;
+}
+
+.ht-final {
+    font-family: 'Space Mono', monospace;
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.ht-card .ht-final {
+    color: var(--ht-ink);
+}
+
+.ht-final span {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--ht-muted);
+}
+
+.ht-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+}
+
+.ht-summary div {
+    padding: 0.5rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.ht-summary dt {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ht-muted);
+}
+
+.ht-summary dd {
+    margin: 0.15rem 0 0;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.ht-card .ht-unlocked {
+    color: var(--ht-gold);
+}
+
+.ht-card-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* --- Unlock progress ---------------------------------------------------------- */
+.ht-progress {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    column-gap: 1rem;
+    row-gap: 0.4rem;
+    align-items: center;
+    margin: 0.8rem 0 1.4rem;
+}
+
+.ht-progress-text {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.9rem;
+    flex-wrap: wrap;
+}
+
+.ht-lifetime {
+    color: var(--ht-muted);
+}
+
+.ht-bar {
+    grid-column: 1;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+
+.ht-bar span {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #b35d5f, var(--ht-gold));
+    transition: width 0.5s ease;
+}
+
+.ht-sound {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid var(--ht-line);
+    border-radius: 999px;
+    background: var(--ht-card);
+    color: var(--ht-ink);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.ht-sound svg,
+.ht-sound i {
+    width: 1rem;
+    height: 1rem;
+}
+
+.ht-sound[aria-pressed="false"] {
+    color: var(--ht-muted);
+}
+
+.ht-sound:hover {
+    border-color: rgba(255, 215, 0, 0.5);
+}
+
+/* --- Museum and Workshop tabs --------------------------------------------------- */
+.ht-tabs {
+    display: flex;
+    gap: 0.4rem;
+    border-bottom: 1px solid var(--ht-line);
+    margin-bottom: 1rem;
+}
+
+.ht-tabs [role="tab"] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.65rem 1rem;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: none;
+    color: var(--ht-muted);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ht-tabs [role="tab"] svg,
+.ht-tabs [role="tab"] i {
+    width: 1.05rem;
+    height: 1.05rem;
+}
+
+.ht-tabs [role="tab"][aria-selected="true"] {
+    color: var(--ht-ink);
+    border-bottom-color: var(--ht-gold);
+}
+
+.ht-tabs [role="tab"]:focus-visible {
+    outline: 2px solid var(--ht-gold);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+.ht-badge {
+    min-width: 1.3rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: var(--ht-gold);
+    color: var(--ink-on-gold);
+    font-size: 0.75rem;
+    line-height: 1.3rem;
+    text-align: center;
+}
+
+.ht-badge[hidden] {
+    display: none;
+}
+
+.ht-museum {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.85rem;
+}
+
+.ht-hat {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 0.75rem;
+    padding: 0.85rem;
+    border: 1px solid var(--ht-line);
+    border-radius: 14px;
+    background: var(--ht-card);
+}
+
+.ht-hat-art {
+    width: 96px;
+    height: 90px;
+    border-radius: 10px;
+    background: radial-gradient(circle at 50% 40%, rgba(179, 93, 95, 0.35), rgba(0, 0, 0, 0) 70%);
+}
+
+.ht-hat h3 {
+    margin: 0 0 0.2rem;
+    font-size: 1.05rem;
+    color: var(--ht-ink);
+}
+
+.ht-hat p {
+    margin: 0 0 0.4rem;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: var(--ht-ink);
+}
+
+.ht-hat .ht-hat-meta,
+.ht-panel .ht-hat-meta {
+    font-size: 0.78rem;
+    color: var(--ht-muted);
+}
+
+.ht-hat.is-locked h3 {
+    color: var(--ht-muted);
+}
+
+.ht-pill {
+    display: inline-block;
+    margin-left: 0.3rem;
+    padding: 0 0.45rem;
+    border-radius: 999px;
+    background: var(--ht-gold);
+    color: var(--ink-on-gold);
+    font-size: 0.7rem;
+    vertical-align: middle;
+}
+
+.ht-wallet {
+    margin: 0 0 0.85rem;
+    color: var(--ht-muted);
+}
+
+.ht-wallet strong {
+    color: var(--ht-gold);
+    font-family: 'Space Mono', monospace;
+}
+
+.ht-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.75rem;
+}
+
+.ht-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.9rem;
+    border: 1px solid var(--ht-line);
+    border-radius: 14px;
+    background: var(--ht-card);
+}
+
+.ht-item h3 {
+    margin: 0 0 0.2rem;
+    font-size: 1rem;
+    color: var(--ht-ink);
+}
+
+.ht-item p {
+    margin: 0 0 0.45rem;
+    font-size: 0.85rem;
+    color: var(--ht-muted);
+}
+
+.ht-pips {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.ht-pip {
+    width: 1.1rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.ht-pip.is-on {
+    background: var(--ht-gold);
+}
+
+.ht-buy {
+    flex-shrink: 0;
+    padding: 0.5rem 0.85rem;
+    border: 2px solid var(--ht-gold);
+    border-radius: 10px;
+    background: rgba(255, 215, 0, 0.12);
+    color: var(--ht-gold);
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ht-buy:hover:not(:disabled) {
+    background: var(--ht-gold);
+    color: var(--ink-on-gold);
+}
+
+.ht-buy:disabled {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: none;
+    color: var(--ht-muted);
+    cursor: not-allowed;
+}
+
+.ht-maxed {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #7dffb3;
+}
+
+.ht-sub-head {
+    margin: 1.25rem 0 0.6rem;
+    font-size: 1rem;
+    color: var(--ht-ink);
+}
+
+.ht-skins {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.6rem;
+}
+
+.ht-skin {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.75rem 0.5rem;
+    border: 1px solid var(--ht-line);
+    border-radius: 14px;
+    background: var(--ht-card);
+    color: var(--ht-ink);
+    font: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+}
+
+.ht-skin small {
+    color: var(--ht-muted);
+    font-size: 0.75rem;
+}
+
+.ht-skin.is-on {
+    border-color: var(--ht-gold);
+    box-shadow: inset 0 0 0 1px var(--ht-gold);
+}
+
+.ht-skin:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.ht-swatch {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    border: 0.45rem solid transparent;
+    background-clip: padding-box;
+    -webkit-mask: radial-gradient(circle, transparent 0.75rem, #000 0.78rem);
+    mask: radial-gradient(circle, transparent 0.75rem, #000 0.78rem);
+}
+
+.ht-skin.is-rainbow .ht-swatch {
+    background: conic-gradient(#ff4d4d, #ffb84d, #ffe14d, #5ce07a, #4dc3ff, #9b6bff, #ff4d4d);
+}
+
+/* --- Small screens --------------------------------------------------------------- */
+@media (max-width: 760px) {
+    .ht-intro {
+        grid-template-columns: auto 1fr;
+    }
+
+    .ht-intro-actions {
+        grid-column: 1 / -1;
+    }
+
+    .ht-hud {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .ht-stat-minor {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .hat-toss-page {
+        padding: 1.25rem 1rem 2rem;
+    }
+
+    /* The field is short on a phone: keep the cards to what fits over it. */
+    .ht-rules,
+    .ht-card .ht-keys {
+        display: none;
+    }
+
+    .ht-card {
+        padding: 1rem;
+    }
+
+    .ht-card-title {
+        font-size: 1.6rem;
+    }
+
+    .ht-final {
+        font-size: 2.2rem;
+    }
+
+    .ht-summary {
+        margin-bottom: 0.75rem;
+    }
+
+    .ht-summary dd {
+        font-size: 0.95rem;
+    }
+
+    .ht-stat {
+        padding: 0.45rem 0.5rem;
+    }
+
+    .ht-stat-value {
+        font-size: 1.05rem;
+    }
+
+    .ht-progress {
+        grid-template-columns: 1fr;
+    }
+
+    .ht-sound {
+        grid-column: 1;
+        grid-row: auto;
+        justify-self: start;
+    }
+
+    .ht-hat {
+        grid-template-columns: 72px 1fr;
+    }
+
+    .ht-hat-art {
+        width: 72px;
+        height: 68px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ht-stat-streak.is-hot,
+    .ht-card {
+        animation: none;
+    }
+
+    .ht-bar span {
+        transition: none;
+    }
+}

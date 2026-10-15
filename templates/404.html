@@ -4,31 +4,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
     <title>404 — Page Not Found | Mepham Robotics</title>
-    <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:wght@700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/hat-toss.css') }}">
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='assets/icons/favicon-32.png') }}">
 </head>
 
 <body>
-    <div class="error-page">
-        <div class="error-content">
-            <i data-lucide="bot" class="error-emoji" aria-hidden="true"></i>
-            <div class="error-code">404</div>
-            <h1 class="error-message">Robot Lost in the Field!</h1>
-            <p class="error-submessage">The page you're looking for has either been moved, deleted, or never existed —
-                kind of like our first autonomous routine.</p>
-            <div class="error-actions">
+    <main class="hat-toss-page" id="main-content">
+        <header class="ht-intro">
+            <div class="ht-code">404</div>
+            <div class="ht-intro-text">
+                <h1 class="error-message">This page wandered off.</h1>
+                <p class="ht-lede">It was moved, deleted, or never existed. While you're here, toss hoops onto
+                    history's pointiest hats.</p>
+            </div>
+            <div class="ht-intro-actions">
                 <a href="{{ url_for('index') }}" class="cta-button cta-primary">Go Home</a>
                 <a href="{{ url_for('contact') }}" class="cta-button cta-secondary">Contact Us</a>
             </div>
-        </div>
-    </div>
+        </header>
+
+        <section class="ht-game" data-hat-toss aria-label="Hat Toss, a ring toss game">
+            <div class="ht-hud">
+                <div class="ht-stat">
+                    <span class="ht-stat-label">Score</span>
+                    <span class="ht-stat-value" data-ht="score">0</span>
+                </div>
+                <div class="ht-stat ht-stat-streak" data-ht-streak>
+                    <span class="ht-stat-label"><i data-lucide="flame" aria-hidden="true"></i> Streak</span>
+                    <span class="ht-stat-value"><span data-ht="streak">0</span> <span class="ht-mult" data-ht="mult">×1</span></span>
+                </div>
+                <div class="ht-stat">
+                    <span class="ht-stat-label"><i data-lucide="target" aria-hidden="true"></i> Rings</span>
+                    <span class="ht-stat-value" data-ht="rings">10</span>
+                </div>
+                <div class="ht-stat">
+                    <span class="ht-stat-label"><i data-lucide="cog" aria-hidden="true"></i> Gears</span>
+                    <span class="ht-stat-value" data-ht="gears">0</span>
+                </div>
+                <div class="ht-stat ht-stat-minor">
+                    <span class="ht-stat-label"><i data-lucide="trophy" aria-hidden="true"></i> Best</span>
+                    <span class="ht-stat-value" data-ht="best">0</span>
+                </div>
+                <div class="ht-stat ht-stat-minor">
+                    <span class="ht-stat-label"><i data-lucide="shield" aria-hidden="true"></i> Savers</span>
+                    <span class="ht-stat-value" data-ht="saves">0</span>
+                </div>
+            </div>
+
+            <div class="ht-stage">
+                <canvas class="ht-canvas" tabindex="0"
+                    aria-label="Hat Toss field. Drag down and release to throw a ring, or use the arrow keys to aim and Space to throw."></canvas>
+                <div class="ht-overlay" data-ht-overlay hidden></div>
+                <noscript><p class="ht-noscript">Hat Toss needs JavaScript. The links above still work.</p></noscript>
+            </div>
+
+            <div class="ht-progress">
+                <div class="ht-progress-text">
+                    <span data-ht="next">Next hat unlocks soon</span>
+                    <span class="ht-lifetime"><span data-ht="lifetime">0</span> lifetime points</span>
+                </div>
+                <div class="ht-bar"><span data-ht="bar"></span></div>
+                <button type="button" class="ht-sound" data-ht-sound aria-pressed="true">
+                    <i data-lucide="music-2" aria-hidden="true"></i><span>Sound on</span>
+                </button>
+            </div>
+
+            <div class="ht-tabs" role="tablist" aria-label="Hat Toss extras">
+                <button type="button" role="tab" id="ht-tab-museum" aria-controls="ht-panel-museum" aria-selected="true"
+                    data-ht-tab="museum">
+                    <i data-lucide="library" aria-hidden="true"></i> Hat museum
+                    <span class="ht-badge" data-ht="new" hidden>0</span>
+                </button>
+                <button type="button" role="tab" id="ht-tab-shop" aria-controls="ht-panel-shop" aria-selected="false"
+                    tabindex="-1" data-ht-tab="shop">
+                    <i data-lucide="wrench" aria-hidden="true"></i> Workshop
+                </button>
+            </div>
+            <div class="ht-panel" id="ht-panel-museum" role="tabpanel" aria-labelledby="ht-tab-museum" data-ht-panel="museum">
+                <div class="ht-museum" data-ht-museum></div>
+            </div>
+            <div class="ht-panel" id="ht-panel-shop" role="tabpanel" aria-labelledby="ht-tab-shop" data-ht-panel="shop" hidden>
+                <div data-ht-shop></div>
+            </div>
+        </section>
+    </main>
 
     <script src="{{ url_for('static', filename='js/icons.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/hat-toss.js') }}" defer></script>
 </body>
 
 </html>
