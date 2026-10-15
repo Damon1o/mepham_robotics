@@ -178,7 +178,7 @@ body:has(.hat-toss-page) {
     position: absolute;
     inset: 0;
     display: grid;
-    place-items: center;
+    place-items: safe center;
     padding: 1rem;
     overflow-y: auto;
     background: rgba(5, 0, 0, 0.55);
@@ -203,6 +203,66 @@ body:has(.hat-toss-page) {
 .ht-card p {
     margin: 0 0 0.75rem;
     color: var(--ht-muted);
+}
+
+/* Difficulty picker: one segmented row on the title and round-over cards. */
+.ht-levels {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.35rem;
+    padding: 0.3rem;
+    margin: 0 0 0.45rem;
+    border: 1px solid var(--ht-line);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.ht-level {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.05rem;
+    padding: 0.45rem 0.25rem;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: none;
+    color: var(--ht-muted);
+    font: inherit;
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.ht-level strong {
+    font-size: 0.95rem;
+}
+
+.ht-level small {
+    font-size: 0.7rem;
+}
+
+.ht-level:hover {
+    color: var(--ht-ink);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.ht-level.is-on {
+    color: var(--ht-ink);
+    border-color: rgba(255, 215, 0, 0.6);
+    background: rgba(255, 215, 0, 0.14);
+}
+
+.ht-level.is-on small {
+    color: var(--ht-gold);
+}
+
+.ht-level:focus-visible {
+    outline: 2px solid var(--ht-gold);
+    outline-offset: 2px;
+}
+
+.ht-card .ht-level-note {
+    margin: 0 0 0.9rem;
+    font-size: 0.82rem;
 }
 
 @keyframes ht-pop {
@@ -666,8 +726,17 @@ body:has(.hat-toss-page) {
 
     /* The field is short on a phone: keep the cards to what fits over it. */
     .ht-rules,
-    .ht-card .ht-keys {
+    .ht-card .ht-level-note,
+    .ht-card .ht-unlocked {
         display: none;
+    }
+
+    .ht-levels {
+        margin-bottom: 0.75rem;
+    }
+
+    .ht-canvas {
+        height: 440px;
     }
 
     .ht-card {
