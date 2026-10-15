@@ -7,105 +7,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/site_editor.css') }}">
 {% endblock %}
 
-{#- One control for a field. `name` is the id stem; list rows pass their own. -#}
-{% macro control(field, value, id, in_list=False) -%}
-{%- set kind = field.kind -%}
-{%- if field.key == 'owner_group' and group_choices is defined -%}
-<select id="{{ id }}" data-value{% if not can_pick_group %} disabled{% endif %}>
-    {% if value not in group_choices|map('first') %}<option value="{{ value }}" selected>{{ value }} (no such group)</option>{% endif %}
-    {% for slug, title in group_choices %}
-    <option value="{{ slug }}"{% if value == slug %} selected{% endif %}>{{ title }}</option>
-    {% endfor %}
-</select>
-{%- elif kind in ('text', 'email', 'url', 'link') -%}
-<input id="{{ id }}" type="{{ 'email' if kind == 'email' else 'url' if kind == 'url' else 'text' }}"
-    {%- if field.max %} maxlength="{{ field.max }}"{% endif %} value="{{ value or '' }}"
-    {%- if kind == 'link' %} list="dl-site-links" placeholder="/contact or https://…"{% elif kind == 'url' %} placeholder="https://…"{% elif field.default is string and field.default %} placeholder="{{ field.default }}"{% endif %}
-    {%- if in_list %} data-item="{{ field.key }}"{% else %} data-value{% endif %}
-    {%- if in_list %} aria-label="{{ field.label }}"{% endif %}{% if field.required %} required{% endif %}>
-{%- elif kind in ('textarea', 'rich') -%}
-<div class="text-with-count">
-    <textarea id="{{ id }}" rows="{{ 2 if in_list else 3 }}"{% if field.max %} maxlength="{{ field.max }}"{% endif %}
-        {%- if in_list %} data-item="{{ field.key }}" aria-label="{{ field.label }}"{% else %} data-value{% endif %}
-        {%- if field.required %} required{% endif %}>{{ value or '' }}</textarea>
-    {% if field.max %}<small class="char-count" aria-hidden="true">{{ (value or '')|length }} / {{ field.max }}</small>{% endif %}
-</div>
-{%- elif kind == 'toggle' -%}
-<label class="switch">
-    <input id="{{ id }}" type="checkbox"{% if value %} checked{% endif %}{% if in_list %} data-item="{{ field.key }}"{% else %} data-value{% endif %}>
-    <span class="switch-track" aria-hidden="true"></span>
-    <span class="switch-text" data-switch-text>{{ 'On' if value else 'Off' }}</span>
-</label>
-{%- elif kind == 'choice' and field.choices|length <= 5 and not in_list -%}
-<div class="segmented" role="radiogroup" aria-labelledby="{{ id }}-label">
-    {% for choice in field.choices %}
-    <label class="segment"><input type="radio" name="{{ id }}" value="{{ choice }}" data-value
-        {%- if value == choice %} checked{% endif %}><span>{{ field.choices[choice] if field.choices is mapping else choice|replace('_', ' ')|capitalize }}</span></label>
-    {% endfor %}
-</div>
-{%- elif kind == 'choice' -%}
-<select id="{{ id }}"{% if in_list %} data-item="{{ field.key }}" aria-label="{{ field.label }}"{% else %} data-value{% endif %}
-    {%- if field.key == 'icon' %} data-icon-select{% endif %}>
-    {% for choice in field.choices %}
-    <option value="{{ choice }}"{% if field.key == 'icon' %} data-icon="{{ choice }}"{% endif %}{% if value == choice %} selected{% endif %}>{{ platforms[choice][0] if field.key == 'platform' else field.choices[choice] if field.choices is mapping else choice|replace('-', ' ')|capitalize }}</option>
-    {% endfor %}
-</select>
-{%- if field.key == 'icon' %}<i class="icon-preview" data-lucide="{{ value }}" aria-hidden="true"></i>{% endif -%}
-{%- elif kind == 'number' -%}
-<input id="{{ id }}" type="number" inputmode="numeric" step="1" min="{{ field.min_value }}" max="{{ field.max_value }}"
-    value="{{ value if value is not none else '' }}"
-    {%- if in_list %} data-item="{{ field.key }}" aria-label="{{ field.label }}"{% else %} data-value{% endif %}>
-{%- elif kind == 'time' -%}
-<input id="{{ id }}" type="time" value="{{ value }}" data-value>
-{%- elif kind in ('date', 'datetime') -%}
-<input id="{{ id }}" type="{{ 'date' if kind == 'date' else 'datetime-local' }}" value="{{ value }}"
-    {%- if in_list %} data-item="{{ field.key }}" aria-label="{{ field.label }}"{% else %} data-value{% endif %}
-    {%- if field.required %} required{% endif %}>
-{% if not in_list %}<button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-action="clear-value"{% if not value %} hidden{% endif %}>Clear</button>{% endif %}
-{%- elif kind == 'days' -%}
-<div class="day-picker" role="group" aria-labelledby="{{ id }}-label">
-    {% for name in day_names %}
-    <label class="day-chip"><input type="checkbox" value="{{ loop.index0 }}" data-day{% if loop.index0 in value %} checked{% endif %}>
-        <span>{{ name[:3] }}</span></label>
-    {% endfor %}
-</div>
-{%- elif kind == 'image' -%}
-{%- set url = site_image_url(value) -%}
-<div class="site-image"{% if in_list %} data-item="{{ field.key }}"{% endif %} data-image="{{ value|tojson|forceescape }}">
-    <label class="drop-zone site-image-zone">
-        <img class="site-image-preview" alt=""{% if url %} src="{{ url }}"{% else %} hidden{% endif %}>
-        <span class="drop-zone-text"><i data-lucide="image-up" aria-hidden="true"></i>
-            <span data-image-label>{{ 'Replace' if url else 'Drop a photo or browse' }}</span></span>
-        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="visually-hidden" data-image-input
-            aria-label="Upload {{ field.label|lower }}">
-    </label>
-    {% if not in_list %}
-    <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-action="clear-image"{% if not value %} hidden{% endif %}>Remove</button>
-    {% endif %}
-</div>
-{%- endif -%}
-{%- endmacro %}
-
-{% macro list_row(field, row, section_key, index) -%}
-<li class="list-row" data-row>
-    <div class="list-row-fields">
-        {% for item in field.items %}
-        <div class="list-cell list-cell--{{ item.kind }} list-cell--{{ item.key }}"{% if item.required %} data-required{% endif %}>
-            <span class="list-cell-label">{{ item.label }}{% if item.required %} <span class="required-mark" aria-hidden="true">*</span>{% endif %}</span>
-            {{ control(item, row.get(item.key, item.default), 'c-' ~ section_key ~ '-' ~ field.key ~ '-' ~ index ~ '-' ~ item.key, in_list=True) }}
-        </div>
-        {% endfor %}
-        {% if field.items|selectattr('required')|list %}
-        <p class="list-row-note" data-incomplete-note hidden>Fill in the fields marked * to save this entry.</p>
-        {% endif %}
-    </div>
-    <div class="list-row-tools">
-        <button type="button" class="icon-btn icon-btn--tiny" data-action="row-up" aria-label="Move up"><i data-lucide="chevron-up" aria-hidden="true"></i></button>
-        <button type="button" class="icon-btn icon-btn--tiny" data-action="row-down" aria-label="Move down"><i data-lucide="chevron-down" aria-hidden="true"></i></button>
-        <button type="button" class="icon-btn icon-btn--danger icon-btn--tiny" data-action="row-remove" aria-label="Remove this entry"><i data-lucide="x" aria-hidden="true"></i></button>
-    </div>
-</li>
-{%- endmacro %}
+{% from "partials/site_fields.html" import setting_row with context %}
 
 {% block content %}
 <div class="admin-container admin-editor site-editor" id="siteEditor">
@@ -185,7 +87,6 @@
 
         <div class="settings-main" id="settingsMain">
             {% for section in sections %}
-            {% set stored = overrides.get(section.key) or {} %}
             <section class="settings-section" id="{{ section.key }}" aria-labelledby="h-{{ section.key }}">
                 <div class="settings-section-head">
                     <h2 id="h-{{ section.key }}"><i data-lucide="{{ section.icon }}" aria-hidden="true"></i> {{ section.title }}</h2>
@@ -199,61 +100,14 @@
                 {% set ns.group = field.group %}
                 <h3 class="settings-group-title">{{ field.group }}</h3>
                 {% endif %}
-                {% set key = section.key ~ '.' ~ field.key %}
-                {% set id = 'c-' ~ section.key ~ '-' ~ field.key %}
-                {% set value = values[section.key][field.key] %}
-                {% set custom = field.key in stored %}
-                {% set is_drafted = field.key in (drafted.get(section.key) or ()) %}
-                {% set locked = field.key == 'owner_group' and not can_pick_group %}
-                {% set photo_list = field.key == 'photos' and field.items|selectattr('kind', 'equalto', 'image')|list %}
-                <div class="setting-row{% if field.kind in ('textarea', 'rich', 'list', 'image') %} setting-row--top setting-row--wide{% endif %}"
-                    data-key="{{ key }}" data-kind="{{ field.kind }}"
-                    {%- if field.kind == 'image' %} data-drop data-drop-label="Use this photo"
-                    {%- elif photo_list %} data-drop="event" data-drop-multiple data-drop-accept="image/png,image/jpeg,image/webp,image/gif"
-                    data-drop-label="Drop photos to add them" data-drop-label-many="Drop {n} photos to add them"{% endif %}>
-                    <div class="setting-label">
-                        {% if field.kind in ('text', 'email', 'url', 'link', 'textarea', 'rich', 'time', 'date', 'datetime', 'toggle', 'number')
-                              or (field.kind == 'choice' and field.choices|length > 5) %}
-                        <label for="{{ id }}" id="{{ id }}-label">{{ field.label }}</label>
-                        {% else %}
-                        <span id="{{ id }}-label">{{ field.label }}</span>
-                        {% endif %}
-                        {% if field.hint %}<small>{{ field.hint }}
-                            {%- if field.hint_link and not fundraiser_editor %} <a href="{{ url_for('admin_dashboard', _anchor=field.hint_link[1]) }}">Open {{ field.hint_link[0] }}</a>{% endif %}</small>{% endif %}
-                        {% if field.kind == 'rich' %}<small class="format-hint">**bold** · [link text](/page)</small>{% endif %}
-                        {% if field.kind in ('textarea', 'rich', 'list') or (value is string and '{' in value) %}
-                        <details class="token-help">
-                            <summary>Placeholders</summary>
-                            <ul>{% for token, meaning in tokens.items() %}<li><code>{{ '{' ~ token ~ '}' }}</code> {{ meaning }}</li>{% endfor %}</ul>
-                        </details>
-                        {% endif %}
-                        <span class="custom-chip"{% if not custom %} hidden{% endif %}>Changed</span>
-                        <span class="draft-chip"{% if not is_drafted %} hidden{% endif %}>Draft</span>
-                    </div>
-                    <div class="setting-control">
-                        {% if field.kind == 'list' %}
-                        <ol class="list-editor" data-list data-max="{{ field.max_items or 99 }}">
-                            {% for row in value %}{{ list_row(field, row, section.key, loop.index0) }}{% endfor %}
-                        </ol>
-                        <template data-row-template>{{ list_row(field, {}, section.key, 'new') }}</template>
-                        <button type="button" class="add-more-btn" data-action="row-add"
-                            {% if field.max_items and value|length >= field.max_items %} disabled{% endif %}>
-                            <i data-lucide="plus" aria-hidden="true"></i> Add {{ 'photo' if field.key == 'photos' else 'fundraiser' if field.key == 'entries' else 'entry' }}</button>
-                        {% if photo_list %}<small class="drop-hint">or drop several photos here at once</small>{% endif %}
-                        {% else %}
-                        {{ control(field, value, id) }}
-                        {% endif %}
-                        <button type="button" class="icon-btn reset-btn" data-action="reset" title="Put back the original"
-                            aria-label="Put {{ field.label|lower }} back to the original"
-                            {%- if locked %} data-locked{% endif %}{% if not custom or locked %} hidden{% endif %}>
-                            <i data-lucide="rotate-ccw" aria-hidden="true"></i></button>
-                        {% if not locked %}
-                        <button type="button" class="icon-btn history-btn" data-action="history" title="Earlier versions"
-                            aria-label="Earlier versions of {{ field.label|lower }}" aria-haspopup="true" aria-expanded="false">
-                            <i data-lucide="history" aria-hidden="true"></i></button>
-                        {% endif %}
-                    </div>
+                {% if moved_keys and (section.key ~ '.' ~ field.key) in moved_keys %}
+                <div class="setting-row setting-row--moved">
+                    <p><i data-lucide="calendar-days" aria-hidden="true"></i> {{ field.label }} are now in
+                        <a href="{{ url_for('admin_dashboard', _anchor='events') }}">Admin → Events</a>, next to the events and bake sales.</p>
                 </div>
+                {% else %}
+                {{ setting_row(section, field) }}
+                {% endif %}
                 {% endfor %}
             </section>
             {% endfor %}

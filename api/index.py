@@ -2825,6 +2825,8 @@ def _attention_items(pending, counts, past_events, upcoming, teams, stats_doc, a
     return items
 
 
+# The fundraiser lists live in the admin Events tab; the site editor keeps how the homepage shows them.
+FUNDRAISER_LIST_KEYS = ('fundraisers.entries', 'fundraisers.history')
 # Sheets that already happened stay in the admin Events tab a while, to check who came.
 ADMIN_PAST_SHEETS_SHOWN = 6
 
@@ -2862,7 +2864,15 @@ def _events_panel_context():
     names = _member_names()
     rows = db['signup_sheets'].find({'date': {'$gte': today}}).sort('date', 1)
     old = db['signup_sheets'].find({'date': {'$lt': today}}).sort('date', -1).limit(ADMIN_PAST_SHEETS_SHOWN)
-    return {'upcoming': upcoming, 'past_events': past, 'event_kinds': events.KINDS, 'kind_of': events.kind_of,
+    # Fundraisers are stored with the site content (the homepage, Donate page and calendar read them
+    # there) and drawn with the site editor's own controls, so they save and check the same way.
+    fundraisers = site_content.SECTION_MAP['fundraisers']
+    editor = _site_editor_context((fundraisers,))
+    editor.pop('sections')
+    return {**editor, 'fundraiser_section': fundraisers,
+            'fundraiser_fields': [f for f in fundraisers.fields if f'fundraisers.{f.key}' in FUNDRAISER_LIST_KEYS],
+            'can_pick_group': False,
+            'upcoming': upcoming, 'past_events': past, 'event_kinds': events.KINDS, 'kind_of': events.kind_of,
             'event_locations': sorted({c['location'] for c in db['competitions'].find(
                 {'location': {'$nin': [None, '']}}, {'location': 1})}),
             'sheets': [_admin_sheet_row(s, names) for s in rows],
@@ -4572,7 +4582,7 @@ def admin_site():
     return render_template('site_editor.html', active_page='admin',
                            **_site_editor_context(site_content.SECTIONS),
                            gallery_keys=sorted(k for k in image_manifest if k.startswith('photos/carousel')),
-                           group_choices=_group_choices(), can_pick_group=True)
+                           group_choices=_group_choices(), can_pick_group=True, moved_keys=FUNDRAISER_LIST_KEYS)
 
 
 def _site_editor_context(sections):

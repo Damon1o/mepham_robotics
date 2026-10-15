@@ -1,4 +1,5 @@
 {% from "admin/_macros.html" import card_head, empty %}
+{% from "partials/site_fields.html" import setting_row with context %}
 {% macro event_row(comp) -%}
 <div class="data-item event-item event-inline" data-event-id="{{ comp._id }}">
     <input type="text" class="inline-input inline-input--title" value="{{ comp.name }}" maxlength="200"
@@ -75,7 +76,7 @@
             calendar feed. The soonest competition or scrimmage drives the homepage countdown. Add the RobotEvents
             link so visitors can find the event page. To add or take members off an event, or record who came to a
             past one, use <a href="{{ url_for('resources', _anchor='event-signups') }}">{{ site.resources.hero_title }} → Events</a>.
-            Bake sales and volunteer sign-ups are <a href="#signup-sheets">below</a>.</p>
+            Bake sales, volunteer sign-ups and fundraisers are <a href="#signup-sheets">below</a>.</p>
         <div class="event-head" aria-hidden="true"><span>Event</span><span>Type</span><span>Location</span><span>When</span><span>Link</span></div>
         <div class="data-list list-events">
             {% for comp in upcoming %}{{ event_row(comp) }}{% else %}
@@ -153,6 +154,7 @@
         </form>
     </div>
 
+
     {% if past_sheets %}
     <details class="admin-card past-events" id="past-sheets">
         <summary><i data-lucide="history" aria-hidden="true"></i> Recent sign-up sheets <span class="count-chip">{{ past_sheets|length }}</span>
@@ -162,6 +164,36 @@
         </div>
     </details>
     {% endif %}
+
+    {#- Fundraisers: stored with the site content and drawn with the site editor's controls
+        (partials/site_fields.html, saved by site-editor.js), so every change checks and saves
+        exactly as it did in Site settings. -#}
+    <div class="admin-card site-editor site-editor--embedded" id="siteEditor">
+        {% call card_head('piggy-bank', 'Fundraisers', values.fundraisers.entries|length) %}
+        <span class="save-status" id="saveStatus" role="status" aria-live="polite">All changes saved</span>
+        <a class="admin-btn admin-btn-secondary admin-btn-small"
+            href="{{ url_for('admin_site', _anchor='fundraisers') if admin_access else url_for('manage_fundraisers') }}">
+            <i data-lucide="panels-top-left" aria-hidden="true"></i> Homepage section</a>
+        {% endcall %}
+        <p class="form-hint">Fundraisers show on the homepage, the <a href="{{ url_for('donate') }}">Donate page</a> and
+            the <a href="{{ url_for('events_page') }}">events calendar</a>. Every change saves on its own; a
+            fundraiser that has ended moves to the track record by itself. How the homepage shows them is under
+            <strong>Homepage section</strong>.</p>
+        {% if draft_mode %}
+        <p class="form-hint form-hint--warn"><i data-lucide="pencil-ruler" aria-hidden="true"></i>
+            Draft mode is on: changes here wait in the draft until it is published.</p>
+        {% endif %}
+        <datalist id="dl-site-links">
+            {% for endpoint in ['index', 'about', 'achievements', 'donate', 'contact', 'safety_quiz', 'signup'] %}
+            <option value="{{ url_for(endpoint) }}"></option>
+            {% endfor %}
+            <option value="/donate#donate"></option>
+        </datalist>
+        {% for field in fundraiser_fields %}
+        {% if field.group %}<h3 class="settings-group-title">{{ field.group }}</h3>{% endif %}
+        {{ setting_row(fundraiser_section, field) }}
+        {% endfor %}
+    </div>
 
     {% if past_events %}
     <details class="admin-card past-events" id="past-events">

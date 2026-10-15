@@ -547,3 +547,51 @@
         animation: none;
     }
 }
+
+/* --- Moved settings ------------------------------------------------------------------- */
+/* A list that now lives elsewhere (the fundraisers moved to Admin → Events) leaves a pointer. */
+.setting-row--moved p {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--admin-muted);
+    font-size: 0.9rem;
+}
+
+.setting-row--moved svg {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.3rem;
+    vertical-align: -0.15em;
+}
+
+.setting-row--moved a {
+    color: var(--admin-accent-ink);
+    font-weight: 700;
+}
+
+/* --- Inside the admin Events tab ------------------------------------------------------- */
+/* The fundraiser lists drawn in an admin card: the card is the editor's root, so its first
+   group title needs no rule above it. */
+.site-editor--embedded .settings-group-title:first-of-type {
+    margin-top: 0.5rem;
+}
+
+.site-editor--embedded .form-hint--warn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 10px;
+    background: var(--admin-warn-soft);
+    color: var(--admin-warn);
+}
+
+.site-editor--embedded .form-hint--warn svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+}
+
+.site-editor--embedded .save-status {
+    margin-left: auto;
+}
