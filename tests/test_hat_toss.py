@@ -48,6 +48,27 @@ def test_every_hat_has_a_history_note_and_a_profile_that_ends_at_a_tip():
         assert profile.startswith('[0,') and re.search(r'\[1, [\d.]+$', profile)
 
 
+def test_three_difficulty_levels_and_hard_gets_no_help():
+    levels = GAME_JS.split('var LEVELS = {')[1].split('};')[0]
+    ids = re.findall(r'^\s+(\w+): \{ name:', levels, re.M)
+    assert ids == ['easy', 'normal', 'hard']
+    assert "var LEVEL_ORDER = ['easy', 'normal', 'hard'];" in GAME_JS
+    hard = levels.split('hard: {')[1]
+    assert 'range: 0,' in hard and 'pull: 0,' in hard and 'wobble: 0,' in hard
+    scores = [float(x) for x in re.findall(r'score: ([\d.]+)', levels)]
+    assert scores == sorted(scores) and scores[0] < scores[-1]
+
+
+def test_best_scores_are_kept_per_level():
+    assert 'state.bests[state.difficulty]' in GAME_JS
+    assert 'data-ht-level' in GAME_JS
+
+
+def test_hud_shows_the_level(client):
+    page = client.get('/nope').get_data(as_text=True)
+    assert 'data-ht="level"' in page
+
+
 def test_progress_storage_is_guarded():
     # Private windows throw on localStorage; the game must still load.
     for line in GAME_JS.splitlines():

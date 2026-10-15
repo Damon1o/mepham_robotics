@@ -35,9 +35,22 @@
     var CAM_Z = -1.3;
     var HAND = { x: 0, y: 0.7, z: 0.4 };
     var LAUNCH_ANGLE = 0.84;
-    var ASSIST_RANGE = 2.4;     // metres: how far off a throw can be and still get help
-    var ASSIST_PULL = 0.9;      // most of the miss a throw can have corrected
-    var WOBBLE = 0.15;          // metres of random scatter on every throw
+    // Difficulty levels.
+    //   range:  metres a throw can be off and still get pulled toward a tip
+    //   pull:   most of the miss that pull can correct
+    //   wobble: metres of random scatter on every throw
+    //   rattle: chance a hoop that clips a hat drops on anyway
+    //   hoop:   hoop size, as a share of the Wider rings upgrade
+    //   score:  points multiplier
+    var LEVELS = {
+        easy: { name: 'Easy', tag: 'Most help', note: 'Hoops drift onto the nearest tip.',
+            range: 2.4, pull: 0.9, wobble: 0.15, rattle: 0.45, hoop: 1, score: 1 },
+        normal: { name: 'Normal', tag: '×1.5 points', note: 'A gentle nudge. Your aim matters.',
+            range: 1.3, pull: 0.55, wobble: 0.1, rattle: 0.3, hoop: 0.9, score: 1.5 },
+        hard: { name: 'Hard', tag: '×2 points', note: 'No help and smaller hoops. Use the aim guide.',
+            range: 0, pull: 0, wobble: 0, rattle: 0.15, hoop: 0.75, score: 2 }
+    };
+    var LEVEL_ORDER = ['easy', 'normal', 'hard'];
     var THICK = 0.022;          // half the ring's tube thickness
     var WALL_Z = 12.5;
     var FIELD_X = 4.2;
@@ -360,7 +373,8 @@
 
     function loadState() {
         var base = {
-            best: 0, lifetime: 0, gears: 0, rounds: 0, ringers: 0, bestStreak: 0,
+            best: 0, bests: { easy: 0, normal: 0, hard: 0 }, difficulty: 'easy',
+            lifetime: 0, gears: 0, rounds: 0, ringers: 0, bestStreak: 0,
             up: { ring: 0, guide: 0, gearbox: 0, bag: 0 }, saves: 0,
             skin: 'maroon', skins: ['maroon'], sound: true,
             unlocked: ['pickelhaube'], seen: ['pickelhaube'], rung: {}
@@ -380,12 +394,23 @@
             base.up[u.id] = typeof level === 'number' ? clamp(Math.floor(level), 0, u.costs.length) : 0;
         });
         if (base.skins.indexOf(base.skin) === -1) base.skin = 'maroon';
+        if (!LEVELS[base.difficulty]) base.difficulty = 'easy';
+        LEVEL_ORDER.forEach(function (id) {
+            if (typeof base.bests[id] !== 'number') base.bests[id] = 0;
+        });
+        // Bests from before there were levels were all played on Easy.
+        base.bests.easy = Math.max(base.bests.easy, base.best);
+        delete base.best;
         return base;
     }
 
     function saveState() {
         try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (err) { /* see loadState */ }
     }
+
+    function level() { return LEVELS[state.difficulty]; }
+
+    function hoopSize() { return upgrade('ring') * level().hoop; }
 
     function upgrade(id) {
         var u = UPGRADES.filter(function (x) { return x.id === id; })[0];
@@ -696,7 +721,9 @@
     // nudge, and every throw keeps a little wobble, so it is easy but never
     // automatic.
     function aimAssist(vel) {
-        var best = null, bestD = ASSIST_RANGE, bestT = 0;
+        var lv = level();
+        if (!lv.range) return vel;
+        var best = null, bestD = lv.range, bestT = 0;
         game.hats.forEach(function (hat) {
             if (!hat) return;
             var T = flightTime(vel.vy, hat.def.h);
@@ -706,10 +733,10 @@
             if (d < bestD) { best = hat; bestD = d; bestT = T; }
         });
         if (!best) return vel;
-        var pull = clamp(1.15 - bestD / ASSIST_RANGE, 0, ASSIST_PULL);
+        var pull = clamp(1.15 - bestD / lv.range, 0, lv.pull);
         var x = HAND.x + vel.vx * bestT, z = HAND.z + vel.vz * bestT;
-        x += (best.x - x) * pull + rand(-WOBBLE, WOBBLE);
-        z += (best.z - z) * pull + rand(-WOBBLE, WOBBLE);
+        x += (best.x - x) * pull + rand(-lv.wobble, lv.wobble);
+        z += (best.z - z) * pull + rand(-lv.wobble, lv.wobble);
         return { vx: (x - HAND.x) / bestT, vy: vel.vy, vz: (z - HAND.z) / bestT };
     }
 
@@ -718,7 +745,7 @@
         var vel = aimAssist(launchVelocity(power, aim));
         game.ring = {
             x: HAND.x, y: HAND.y, z: HAND.z, vx: vel.vx, vy: vel.vy, vz: vel.vz,
-            R: upgrade('ring'), spin: 0, age: 0, threaded: null, bounced: false, swish: false,
+            R: hoopSize(), spin: 0, age: 0, threaded: null, bounced: false, swish: false,
             floorHits: 0, cool: 0, state: 'fly'
         };
         game.ringsLeft -= 1;
@@ -802,7 +829,7 @@
         r.cool = 0.09;
         sfx('clink');
         var nx = d > 1e-4 ? dx / d : 0, nz = d > 1e-4 ? dz / d : -1;
-        if (Math.random() < 0.45) {
+        if (Math.random() < level().rattle) {
             // Rattles around the tip and drops on.
             r.threaded = hat;
             say('Rattled in!', r, '#ffe066', 13);
@@ -846,7 +873,7 @@
         var tags = [];
         if (r.bounced) { base = Math.round(base * 1.5); tags.push('Bank shot'); }
         if (r.swish) { base += 5; tags.push('Swish'); }
-        var pts = base * mult;
+        var pts = Math.round(base * mult * level().score);
         var gears = 1 + upgrade('gearbox') + (game.streak >= 3 ? 1 : 0) + (game.streak >= 6 ? 1 : 0);
 
         game.score += pts;
@@ -926,12 +953,12 @@
         state.gears += bonus;
         game.gearsThisRound += bonus;
         state.rounds += 1;
-        var newBest = game.score > state.best;
-        if (newBest) state.best = game.score;
+        var newBest = game.score > state.bests[state.difficulty];
+        if (newBest) state.bests[state.difficulty] = game.score;
         saveState();
         game.phase = 'over';
         hud();
-        showOverlay('over', { newBest: newBest, bonus: bonus });
+        showOverlay('over', { newBest: newBest, bonus: bonus, level: state.difficulty });
     }
 
     // --- Effects -------------------------------------------------------------------------
@@ -1065,6 +1092,7 @@
         });
 
         if (game.phase === 'aim' || game.phase === 'title') drawHand();
+        drawLevel();
         drawEffects();
     }
 
@@ -1151,7 +1179,7 @@
 
     function drawHand() {
         var a = currentAim();
-        var R = upgrade('ring');
+        var R = hoopSize();
         if (a && a.power > 0.02) drawGuide(a);
         var p = project(HAND.x, HAND.y, HAND.z);
         var bob = reduceMotion || a ? 0 : Math.sin(game.now * 2.4) * 4;
@@ -1201,6 +1229,22 @@
         }
     }
 
+
+    function drawLevel() {
+        if (game.phase === 'title' || game.phase === 'over') return;
+        var lv = level();
+        var text = lv.name.toUpperCase() + (lv.score > 1 ? '  ×' + lv.score : '');
+        ctx.font = '700 11px "Space Mono", monospace';
+        var w = ctx.measureText(text).width + 24, x = view.W / 2, y = 22;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x - w / 2, y - 13, w, 26, 13); else ctx.rect(x - w / 2, y - 13, w, 26);
+        ctx.fill();
+        ctx.fillStyle = state.difficulty === 'hard' ? '#ff9a9a' : state.difficulty === 'normal' ? '#ffd700' : '#7dffb3';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, x, y + 1);
+    }
 
     function drawEffects() {
         game.sparks.forEach(function (s) {
@@ -1277,7 +1321,8 @@
 
     function hud() {
         el('score').textContent = fmt(game.score);
-        el('best').textContent = fmt(Math.max(state.best, game.score));
+        el('best').textContent = fmt(Math.max(state.bests[state.difficulty], game.score));
+        el('level').textContent = level().name;
         el('streak').textContent = game.streak;
         el('mult').textContent = '×' + Math.max(1, Math.min(5, game.streak));
         el('rings').textContent = game.ringsLeft;
@@ -1306,7 +1351,20 @@
 
     var overlay = root.querySelector('[data-ht-overlay]');
 
+    var lastOverlay = null;
+
+    function levelPicker() {
+        return '<div class="ht-levels" role="group" aria-label="Difficulty">' +
+            LEVEL_ORDER.map(function (id) {
+                var lv = LEVELS[id], on = id === state.difficulty;
+                return '<button type="button" class="ht-level' + (on ? ' is-on' : '') + '" data-ht-level="' + id + '"' +
+                    ' aria-pressed="' + (on ? 'true' : 'false') + '"><strong>' + lv.name + '</strong><small>' + lv.tag + '</small></button>';
+            }).join('') +
+            '</div><p class="ht-level-note">' + level().note + '</p>';
+    }
+
     function showOverlay(kind, info) {
+        lastOverlay = kind ? { kind: kind, info: info } : null;
         if (!kind) { overlay.hidden = true; return; }
         overlay.hidden = false;
         if (kind === 'title') {
@@ -1317,24 +1375,24 @@
                 '<p>Every peg is a pointed hat from a famous head in history, or a cone from a robotics game. Pull down and let go to drop a hoop over its tip.</p>' +
                 '<ul class="ht-rules">' +
                 '<li>Ring hats in a row for up to <strong>×5</strong> points.</li>' +
-                '<li>Points unlock new hats. Gears buy upgrades.</li>' +
-                '<li>Get close and the hoop drifts toward the nearest tip.</li>' +
+                '<li>Points unlock new hats. Gears buy upgrades. Keyboard: arrows and Space.</li>' +
                 '</ul>' +
+                levelPicker() +
                 '<button type="button" class="cta-button cta-primary" data-ht-action="start">Start throwing</button>' +
-                '<p class="ht-keys">Keyboard: arrows to aim, Space to throw.</p>' +
                 '</div>';
         } else {
             var unlocked = game.unlockedThisRound.map(function (id) { return HAT_BY_ID[id].name; });
             overlay.innerHTML =
                 '<div class="ht-card">' +
-                '<p class="ht-kicker">' + (info.newBest ? 'New best!' : 'Round over') + '</p>' +
+                '<p class="ht-kicker">' + (info.newBest ? 'New best on ' : 'Round over · ') + LEVELS[info.level].name + '</p>' +
                 '<p class="ht-final">' + fmt(game.score) + '<span>points</span></p>' +
                 '<dl class="ht-summary">' +
                 '<div><dt>Best streak</dt><dd>' + game.roundBestStreak + '</dd></div>' +
                 '<div><dt>Gears earned</dt><dd>' + game.gearsThisRound + '</dd></div>' +
-                '<div><dt>Best ever</dt><dd>' + fmt(state.best) + '</dd></div>' +
+                '<div><dt>Best on ' + LEVELS[info.level].name + '</dt><dd>' + fmt(state.bests[info.level]) + '</dd></div>' +
                 '</dl>' +
                 (unlocked.length ? '<p class="ht-unlocked">Unlocked: ' + unlocked.join(', ') + '</p>' : '') +
+                levelPicker() +
                 '<div class="ht-card-actions">' +
                 '<button type="button" class="cta-button cta-primary" data-ht-action="start">Play again</button>' +
                 '<button type="button" class="cta-button cta-secondary" data-ht-action="shop">Spend gears</button>' +
@@ -1481,6 +1539,14 @@
         else if (action === 'shop') {
             showTab('shop');
             root.querySelector('[data-ht-tab="shop"]').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+        }
+        if (t.hasAttribute('data-ht-level') && LEVELS[t.getAttribute('data-ht-level')] && lastOverlay) {
+            state.difficulty = t.getAttribute('data-ht-level');
+            saveState();
+            showOverlay(lastOverlay.kind, lastOverlay.info);
+            hud();
+            var picked = overlay.querySelector('[data-ht-level="' + state.difficulty + '"]');
+            if (picked) picked.focus();
         }
         if (t.hasAttribute('data-ht-buy')) buy(t.getAttribute('data-ht-buy'));
         if (t.hasAttribute('data-ht-skin')) chooseSkin(t.getAttribute('data-ht-skin'));
