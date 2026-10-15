@@ -1965,6 +1965,147 @@
     cursor: progress;
 }
 
+/* Upcoming events turn past one at a time (hub-sheets.js): the current card sits in the
+   middle at full size, its neighbours peek in smaller and dimmer at the sides. The spacers
+   before and after let the first and last cards reach the middle too. */
+.hub-carousel {
+    --hub-card-w: min(26rem, 86%);
+    display: grid;
+    gap: 0.75rem;
+}
+
+.hub-carousel-track {
+    position: relative;
+    display: flex;
+    gap: 1rem;
+    margin: -0.75rem 0 -1.5rem;
+    padding: 0.75rem 0 1.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 1.5rem, #000 calc(100% - 1.5rem), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 1.5rem, #000 calc(100% - 1.5rem), transparent);
+}
+
+.hub-carousel-track::-webkit-scrollbar {
+    display: none;
+}
+
+.hub-carousel-track::before,
+.hub-carousel-track::after {
+    content: '';
+    flex: 0 0 max(0px, calc((100% - var(--hub-card-w)) / 2 - 1rem));
+}
+
+.hub-carousel-track > .hub-event {
+    flex: 0 0 var(--hub-card-w);
+    scroll-snap-align: center;
+    transition: opacity 0.35s ease, transform 0.45s var(--ctl-ease-out, ease), box-shadow 0.35s ease;
+}
+
+.hub-carousel.is-ready .hub-event:not(.is-current) {
+    opacity: 0.5;
+    transform: scale(0.92);
+    box-shadow: none;
+    cursor: pointer;
+}
+
+.hub-carousel-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.hub-carousel-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 1.5px solid var(--hub-rule);
+    border-radius: 50%;
+    background: var(--hub-paper);
+    color: var(--hub-ink);
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.hub-carousel-btn svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.hub-carousel-btn:hover {
+    border-color: var(--maroon-light);
+    transform: translateY(-1px);
+}
+
+.hub-carousel-play {
+    margin-left: 0.25rem;
+}
+
+.hub-carousel-play[aria-pressed='true'] {
+    border-color: #1a1414;
+    background: var(--hub-gold);
+    color: #1a1414;
+}
+
+.hub-carousel-dots {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.15rem;
+    max-width: 60%;
+}
+
+/* A 24px target around a small pill; the current one stretches out and turns gold. */
+.hub-carousel-dot {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    transition: width 0.3s var(--ctl-ease-out, ease);
+}
+
+.hub-carousel-dot::before {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--hub-rule);
+    box-shadow: inset 0 0 0 1.5px var(--hub-muted);
+    transition: width 0.3s var(--ctl-ease-out, ease), background 0.3s ease;
+}
+
+.hub-carousel-dot[aria-current='true'] {
+    width: 2rem;
+}
+
+.hub-carousel-dot[aria-current='true']::before {
+    width: 1.5rem;
+    background: var(--hub-gold);
+    box-shadow: inset 0 0 0 1.5px #1a1414;
+}
+
+.hub-carousel-dot:focus-visible {
+    outline: 2px solid var(--maroon-light);
+    outline-offset: 1px;
+    border-radius: 999px;
+}
+
+/* The sign-in sheet scrolls after six rows (data-animated-list, controls.css); a little
+   side room keeps the shrinking rows' edges inside the fade. */
+.hub-roll-list[data-animated-list] {
+    padding: 0.15rem 0.25rem;
+    margin-inline: -0.25rem;
+}
+
 /* --- Editors' sheet form ----------------------------------------------------------------- */
 
 .hub-sheet-form {
@@ -2295,6 +2436,9 @@
     }
 
     .hub-balance-dot,
+    .hub-carousel-track > .hub-event,
+    .hub-carousel-dot,
+    .hub-carousel-dot::before,
     .hub-step > a,
     .hub-guide-btn,
     .hub-rosters a {

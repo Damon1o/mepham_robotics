@@ -55,8 +55,27 @@
 </div>
 
 {% if hub_events %}
-<div class="hub-event-list">
-    {% for e in hub_events %}{{ event_card(e) }}{% endfor %}
+{#- Upcoming events turn past one at a time (hub-sheets.js); past events below stay a grid. -#}
+<div class="hub-carousel" data-carousel role="region" aria-roledescription="carousel" aria-label="Upcoming events">
+    <div class="hub-carousel-track" data-carousel-track>
+        {% for e in hub_events %}{{ event_card(e) }}{% endfor %}
+    </div>
+    {% if hub_events|length > 1 %}
+    <div class="hub-carousel-nav">
+        <button type="button" class="hub-carousel-btn" data-carousel-step="-1" aria-label="Previous event">
+            <i data-lucide="chevron-left" aria-hidden="true"></i></button>
+        <div class="hub-carousel-dots" role="group" aria-label="Jump to an event">
+            {% for e in hub_events %}
+            <button type="button" class="hub-carousel-dot" data-carousel-go="{{ loop.index0 }}"
+                aria-label="{{ e.name }}, {{ e.start.strftime('%b') }} {{ e.start.day }}"></button>
+            {% endfor %}
+        </div>
+        <button type="button" class="hub-carousel-btn" data-carousel-step="1" aria-label="Next event">
+            <i data-lucide="chevron-right" aria-hidden="true"></i></button>
+        <button type="button" class="hub-carousel-btn hub-carousel-play" data-carousel-play aria-pressed="false"
+            aria-label="Pause turning"><i data-lucide="pause" aria-hidden="true"></i></button>
+    </div>
+    {% endif %}
 </div>
 {% else %}
 <p class="hub-sheets-empty">Nothing on the calendar yet.{% if keeper %} Add events in the admin dashboard.{% endif %}</p>

@@ -22,8 +22,10 @@
     }
 
     function swap(section, data) {
+        section.dispatchEvent(new CustomEvent('hub:swap'));
         section.innerHTML = data.html;
         refreshLucideIcons();
+        section.dispatchEvent(new CustomEvent('hub:swapped'));
     }
 
     function busy(button, on) {
@@ -134,6 +136,142 @@
             if (userId) signup(e.target.closest('[data-event]'), e.target.querySelector('[type="submit"]'),
                 { on: true, user_id: userId });
         });
+
+        // The upcoming events turn one card at a time. A redraw keeps the card that was showing
+        // and whether turning was paused.
+        let ring = carousel(hubEvents.querySelector('[data-carousel]'));
+        hubEvents.addEventListener('hub:swap', () => ring && ring.stop());
+        hubEvents.addEventListener('hub:swapped', () => {
+            const was = ring;
+            ring = carousel(hubEvents.querySelector('[data-carousel]'), was && was.state());
+        });
+    }
+
+    // A row of cards that snaps one to the middle and moves on by itself every few seconds.
+    // It holds still while the pointer or focus is on it, while the tab is hidden, when the
+    // visitor pauses it, and always under reduced motion.
+    function carousel(root, from) {
+        if (!root) return null;
+        const track = root.querySelector('[data-carousel-track]');
+        const cards = Array.from(track.children);
+        const dots = Array.from(root.querySelectorAll('[data-carousel-go]'));
+        const play = root.querySelector('[data-carousel-play]');
+        const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const EVERY = 6000;
+        let index = Math.max(0, cards.findIndex(c => from && c.dataset.event === from.event));
+        let held = Boolean(from && from.held) || still;
+        let hovering = false;
+        let timer = null;
+        let frame = 0;
+        let aim = null;  // the card a turn is gliding to; scrolling passes others on the way
+
+        function mark() {
+            cards.forEach((card, i) => card.classList.toggle('is-current', i === index));
+            dots.forEach((dot, i) => dot.setAttribute('aria-current', i === index ? 'true' : 'false'));
+            if (play) play.setAttribute('aria-pressed', held ? 'true' : 'false');
+            root.classList.toggle('is-held', held);
+        }
+
+        function go(i, smooth = true) {
+            index = (i + cards.length) % cards.length;
+            aim = smooth && !still ? index : null;
+            const card = cards[index];
+            track.scrollTo({
+                left: card.offsetLeft - (track.clientWidth - card.offsetWidth) / 2,
+                behavior: smooth && !still ? 'smooth' : 'auto',
+            });
+            mark();
+        }
+
+        function restart() {
+            clearInterval(timer);
+            timer = null;
+            // Focus on a card (signing up, adding someone) holds it; focus on the arrows doesn't.
+            const active = document.activeElement;
+            const focused = root.contains(active) && !active.closest('.hub-carousel-nav');
+            if (cards.length < 2 || held || hovering || focused || document.hidden) return;
+            timer = setInterval(() => go(index + 1), EVERY);
+        }
+
+        // A swipe or a scroll by hand: the card nearest the middle becomes the current one.
+        function settle() {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => {
+                const middle = track.scrollLeft + track.clientWidth / 2;
+                let best = index;
+                let gap = Infinity;
+                cards.forEach((card, i) => {
+                    const d = Math.abs(card.offsetLeft + card.offsetWidth / 2 - middle);
+                    if (d < gap) { gap = d; best = i; }
+                });
+                if (aim !== null) {
+                    if (best === aim) aim = null;
+                    return;
+                }
+                if (best !== index) { index = best; mark(); }
+            });
+        }
+
+        const onClick = e => {
+            // A card peeking in at the side comes to the middle before anything on it works.
+            const card = e.target.closest('[data-event]');
+            if (card && !card.classList.contains('is-current')) {
+                e.preventDefault();
+                go(cards.indexOf(card));
+                restart();
+                return;
+            }
+            const step = e.target.closest('[data-carousel-step]');
+            const dot = e.target.closest('[data-carousel-go]');
+            if (step) go(index + Number(step.dataset.carouselStep));
+            else if (dot) go(Number(dot.dataset.carouselGo));
+            else if (e.target.closest('[data-carousel-play]')) { held = !held; mark(); }
+            else return;
+            restart();
+        };
+        const onKey = e => {
+            if (e.target.closest('input, select, textarea, [contenteditable]')) return;
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                go(index + (e.key === 'ArrowRight' ? 1 : -1));
+            }
+        };
+        const enter = () => { hovering = true; restart(); };
+        const leave = () => { hovering = false; restart(); };
+        const focusOut = () => setTimeout(restart);
+
+        root.addEventListener('click', onClick);
+        root.addEventListener('keydown', onKey);
+        root.addEventListener('pointerenter', enter);
+        root.addEventListener('pointerleave', leave);
+        root.addEventListener('focusin', e => {
+            const card = e.target.closest('[data-event]');
+            if (card && card !== cards[index]) go(cards.indexOf(card));
+            restart();
+        });
+        root.addEventListener('focusout', focusOut);
+        track.addEventListener('scroll', settle, { passive: true });
+        // A hand on the track takes over from a turn still gliding.
+        ['pointerdown', 'wheel', 'touchstart'].forEach(type =>
+            track.addEventListener(type, () => { aim = null; }, { passive: true }));
+        document.addEventListener('visibilitychange', restart);
+        // Cards change width with the page; keep the current one in the middle.
+        const resized = 'ResizeObserver' in window && new ResizeObserver(() => go(index, false));
+        if (resized) resized.observe(track);
+
+        root.classList.add('is-ready');
+        go(index, false);
+        restart();
+
+        return {
+            state: () => ({ event: cards[index] && cards[index].dataset.event, held: held && !still }),
+            stop() {
+                clearInterval(timer);
+                cancelAnimationFrame(frame);
+                document.removeEventListener('visibilitychange', restart);
+                if (resized) resized.disconnect();
+            },
+        };
     }
 
     // --- Sign-up sheets -----------------------------------------------------------------

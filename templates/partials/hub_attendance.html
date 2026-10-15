@@ -74,7 +74,7 @@
     {% endif %}
 
     {% if sheet_rows %}
-    <ul class="hub-roll-list">
+    <ul class="hub-roll-list" data-animated-list=".hub-roll-row" data-animated-list-rows="6">
         {% for r in sheet_rows %}
         <li class="hub-roll-row{% if r.here and not r.forgot %} is-here{% endif %}" data-roll-row="{{ r.user_id }}">
             <span class="hub-roll-name">{{ r.name }}</span>
