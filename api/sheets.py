@@ -41,6 +41,11 @@ BAKE_SALE_ROLES = (
     {'name': 'Setup', 'slots': 2, 'prompt': ''},
     {'name': 'Cleanup', 'slots': 2, 'prompt': ''},
 )
+VOLUNTEER_ROLES = (
+    {'name': 'Volunteer', 'slots': 6, 'prompt': 'Which shift can you do?'},
+)
+# What the admin Events tab can start a sheet as: key -> (label, starting roles).
+SHEET_KINDS = {'bake_sale': ('Bake sale', BAKE_SALE_ROLES), 'volunteer': ('Volunteering', VOLUNTEER_ROLES)}
 
 
 # --- Meeting days -----------------------------------------------------------------------

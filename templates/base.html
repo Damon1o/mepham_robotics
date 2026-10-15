@@ -125,6 +125,8 @@
             {{ nav_link(url_for('resources'), 'book-open', site.resources.hero_title, active_page in ('resources', 'guide', 'glossary', 'standards', 'branding', 'notebook')) }}
             {% if session.get('role') == 'admin' %}
             {{ nav_link(url_for('admin_dashboard'), 'shield', 'Admin Panel', active_page == 'admin') }}
+            {% elif session.get('role') == 'editor' %}
+            {{ nav_link(url_for('admin_dashboard', _anchor='events'), 'calendar-days', 'Manage Events', active_page == 'admin') }}
             {% endif %}
             {% endif %}
         </nav>

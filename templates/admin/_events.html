@@ -27,6 +27,42 @@
     </form>
 </div>
 {%- endmacro %}
+{% macro sheet_row(s) -%}
+<div class="data-item event-item event-inline sheet-item" data-sheet-id="{{ s._id }}">
+    <input type="text" class="inline-input inline-input--title" value="{{ s.title }}" maxlength="{{ sheet_limits.TITLE_MAX }}"
+        data-sheet-field="title" aria-label="Sheet title" required>
+    <input type="text" class="inline-input" value="{{ s.location }}" maxlength="{{ sheet_limits.LOCATION_MAX }}"
+        data-sheet-field="location" aria-label="Where {{ s.title }} is" placeholder="Where"
+        list="dl-event-locations" autocomplete="off">
+    <input type="datetime-local" class="inline-input" value="{{ s.date_str }}"
+        data-sheet-field="date" aria-label="Date and time for {{ s.title }}">
+    <span class="sheet-fill{% if s.total and s.taken >= s.total %} is-full{% endif %}"
+        title="{{ s.people }} {{ 'person' if s.people == 1 else 'people' }} signed up">
+        <strong>{{ s.taken }}</strong>/{{ s.total }} spots</span>
+    <input type="text" class="inline-input inline-input--details" value="{{ s.details }}" maxlength="{{ sheet_limits.DETAILS_MAX }}"
+        data-sheet-field="details" aria-label="Details for {{ s.title }}"
+        placeholder="Details for members (optional): drop-off time, what to bring">
+    <ul class="sheet-roles" aria-label="Who signed up for {{ s.title }}">
+        {% for r in s.roles %}
+        <li class="sheet-role{% if r.full %} is-full{% endif %}">
+            <span class="sheet-role-name">{{ r.name }} <span class="sheet-role-count">{{ r.taken }}/{{ r.slots }}</span></span>
+            {%- if r.people %}
+            <span class="sheet-role-people">{% for p in r.people %}{{ p.name }}{% if p.note %} <em>({{ p.note }})</em>{% endif %}{{ ', ' if not loop.last }}{% endfor %}</span>
+            {%- else %}
+            <span class="sheet-role-people sheet-role-people--empty">Nobody yet</span>
+            {%- endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    <span class="field-status" aria-hidden="true"></span>
+    <form class="form-flush" action="{{ url_for('admin_delete_sheet', sheet_id=s._id) }}" method="POST"
+        data-confirm-delete="sheet" data-confirm-name="{{ s.title }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="icon-btn icon-btn--danger"
+            aria-label="Delete sign-up sheet: {{ s.title }}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+    </form>
+</div>
+{%- endmacro %}
 <section class="admin-panel" data-panel="events" id="panel-events" role="tabpanel" aria-labelledby="tab-events"
     tabindex="0" hidden>
     <div class="admin-card">
@@ -39,7 +75,7 @@
             calendar feed. The soonest competition or scrimmage drives the homepage countdown. Add the RobotEvents
             link so visitors can find the event page. To add or take members off an event, or record who came to a
             past one, use <a href="{{ url_for('resources', _anchor='event-signups') }}">{{ site.resources.hero_title }} → Events</a>.
-            Meeting sign-ins and bake sale sheets are there too.</p>
+            Bake sales and volunteer sign-ups are <a href="#signup-sheets">below</a>.</p>
         <div class="event-head" aria-hidden="true"><span>Event</span><span>Type</span><span>Location</span><span>When</span><span>Link</span></div>
         <div class="data-list list-events">
             {% for comp in upcoming %}{{ event_row(comp) }}{% else %}
@@ -74,6 +110,58 @@
             <button type="submit" class="admin-btn admin-btn-success">Add</button>
         </form>
     </div>
+
+    {#- Bake sales and volunteer sign-ups: the same sheets as the Member Hub, so whatever
+        changes here or there shows on both. -#}
+    <div class="admin-card" id="signup-sheets">
+        {% call card_head('heart-handshake', 'Bake sales & volunteering', sheets|length) %}
+        <a class="admin-btn admin-btn-secondary admin-btn-small" href="{{ url_for('resources', _anchor='signups') }}">
+            <i data-lucide="external-link" aria-hidden="true"></i> Open in {{ site.resources.hero_title }}</a>
+        {% endcall %}
+        <p class="form-hint">These are the sign-up sheets members fill in at
+            <a href="{{ url_for('resources', _anchor='signups') }}">{{ site.resources.hero_title }} → Bake sales &amp; volunteering</a>.
+            Change a title, time, place or details here and it changes there. To change the roles or put
+            someone on a role, use <strong>Open in {{ site.resources.hero_title }}</strong>.</p>
+        <div class="event-head sheet-head" aria-hidden="true"><span>Sheet</span><span>Where</span><span>When</span><span>Spots</span></div>
+        <div class="data-list list-sheets">
+            {% for s in sheets %}{{ sheet_row(s) }}{% else %}
+            <p class="list-empty">No bake sales or volunteer sign-ups coming up. Add one below.</p>
+            {% endfor %}
+        </div>
+
+        <h3 class="form-section-title" id="sheet_form_title">Add a sign-up sheet</h3>
+        <form id="sheet_form" class="inline-create inline-create--sheet" action="{{ url_for('admin_add_sheet') }}" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <label class="visually-hidden" for="f-sheet_title">Title</label>
+            <input id="f-sheet_title" type="text" name="sheet_title" placeholder="Fall bake sale"
+                maxlength="{{ sheet_limits.TITLE_MAX }}" required>
+            <label class="visually-hidden" for="f-sheet_kind">Kind of sheet</label>
+            <select id="f-sheet_kind" name="sheet_kind">
+                {% for key, (label, roles) in sheet_kinds.items() %}
+                <option value="{{ key }}">{{ label }}: {{ roles|map(attribute='name')|join(', ') }}</option>
+                {% endfor %}
+            </select>
+            <label class="visually-hidden" for="f-sheet_location">Where</label>
+            <input id="f-sheet_location" type="text" name="sheet_location" placeholder="Where" maxlength="{{ sheet_limits.LOCATION_MAX }}"
+                list="dl-event-locations" autocomplete="off">
+            <label class="visually-hidden" for="f-sheet_date">Date and time</label>
+            <input id="f-sheet_date" type="datetime-local" name="sheet_date" required>
+            <label class="visually-hidden" for="f-sheet_details">Details</label>
+            <input id="f-sheet_details" class="inline-create-wide" type="text" name="sheet_details"
+                maxlength="{{ sheet_limits.DETAILS_MAX }}" placeholder="Details for members (optional): drop-off time, what to bring">
+            <button type="submit" class="admin-btn admin-btn-success">Add</button>
+        </form>
+    </div>
+
+    {% if past_sheets %}
+    <details class="admin-card past-events" id="past-sheets">
+        <summary><i data-lucide="history" aria-hidden="true"></i> Recent sign-up sheets <span class="count-chip">{{ past_sheets|length }}</span>
+            <span class="summary-hint">Already happened; still open to editors to record who came.</span></summary>
+        <div class="data-list list-sheets list-events--past">
+            {% for s in past_sheets %}{{ sheet_row(s) }}{% endfor %}
+        </div>
+    </details>
+    {% endif %}
 
     {% if past_events %}
     <details class="admin-card past-events" id="past-events">

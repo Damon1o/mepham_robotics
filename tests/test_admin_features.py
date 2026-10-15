@@ -409,7 +409,7 @@ def test_overview_lists_what_needs_attention(admin, db):
     assert 'No upcoming events' in page
 
 
-@pytest.mark.parametrize('path', ['/admin/api/award-categories', '/admin/api/events/prune', '/admin/api/roster/link',
+@pytest.mark.parametrize('path', ['/admin/api/award-categories', '/admin/api/stats', '/admin/api/roster/link',
                                   '/admin/api/messages/bulk', f'/admin/api/teams/{"a" * 24}/new-season'])
 def test_new_admin_endpoints_need_admin(client, make_user, path):
     make_user(username='ed', password='editor-password', email='ed@example.com', role='editor')

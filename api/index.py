@@ -2825,17 +2825,24 @@ def _attention_items(pending, counts, past_events, upcoming, teams, stats_doc, a
     return items
 
 
-@app.route('/admin')
-@role_required('admin')
-def admin_dashboard():
-    _ensure_member_ids()
-    _reconcile_profiles()
-    _ensure_award_order()
-    auto = refresh_auto_stats() or {}
-    stats_doc = db['site_metadata'].find_one({'_id': 'global_stats'}) or {}
-    stats = public_stats(stats_doc)
-    modes = stats_doc.get('modes') or {}
+# Sheets that already happened stay in the admin Events tab a while, to check who came.
+ADMIN_PAST_SHEETS_SHOWN = 6
 
+
+def _admin_sheet_row(sheet, names):
+    roles = sheets.role_view(sheet, names, '')
+    taken, total = sheets.fill(roles)
+    return {'_id': str(sheet['_id']), 'title': sheet['title'], 'location': sheet.get('location') or '',
+            'details': sheet.get('details') or '', 'date_str': sheet['date'].strftime('%Y-%m-%dT%H:%M'),
+            'roles': roles, 'taken': taken, 'total': total,
+            'people': len({p['user_id'] for r in roles for p in r['people']})}
+
+
+def _events_panel_context():
+    """What the admin Events tab draws: events, plus the Member Hub's bake sale and volunteer sheets.
+
+    The sheets are the same signup_sheets rows the hub shows, so a change on either page shows on both.
+    """
     # Events: upcoming first (soonest first), past newest first. Undated rows count as past.
     now = club_now()
     upcoming, past = [], []
@@ -2850,6 +2857,37 @@ def admin_dashboard():
             c['date_str'], c['display_date'] = '', 'No date'
             past.append(c)
     past.reverse()
+
+    today = datetime.datetime.combine(now.date(), datetime.time())
+    names = _member_names()
+    rows = db['signup_sheets'].find({'date': {'$gte': today}}).sort('date', 1)
+    old = db['signup_sheets'].find({'date': {'$lt': today}}).sort('date', -1).limit(ADMIN_PAST_SHEETS_SHOWN)
+    return {'upcoming': upcoming, 'past_events': past, 'event_kinds': events.KINDS, 'kind_of': events.kind_of,
+            'event_locations': sorted({c['location'] for c in db['competitions'].find(
+                {'location': {'$nin': [None, '']}}, {'location': 1})}),
+            'sheets': [_admin_sheet_row(s, names) for s in rows],
+            'past_sheets': [_admin_sheet_row(s, names) for s in old],
+            'sheet_kinds': sheets.SHEET_KINDS, 'sheet_limits': sheets}
+
+
+@app.route('/admin')
+@role_required('editor')
+def admin_dashboard():
+    # Editors get the Events tab (events and sign-up sheets); everything else is for admins.
+    if not role_at_least(_session_user().get('role', 'member'), 'admin'):
+        return render_template('admin.html', active_page='admin', admin_access=False, team_awards=[],
+                               **_events_panel_context())
+
+    _ensure_member_ids()
+    _reconcile_profiles()
+    _ensure_award_order()
+    auto = refresh_auto_stats() or {}
+    stats_doc = db['site_metadata'].find_one({'_id': 'global_stats'}) or {}
+    stats = public_stats(stats_doc)
+    modes = stats_doc.get('modes') or {}
+
+    panel = _events_panel_context()
+    upcoming, past = panel['upcoming'], panel['past_events']
 
     live = dict(auto, events_count=len(upcoming))
     monthly_changes = monthly_stat_changes(live)
@@ -2932,11 +2970,10 @@ def admin_dashboard():
     reset_link_user = session.pop('_generated_reset_link_user', None)
 
     return render_template(
-        'admin.html', active_page='admin',
+        'admin.html', active_page='admin', admin_access=True, **panel,
         stats=stats, stats_doc=stats_doc, modes=modes, auto=auto, live=live, monthly_changes=monthly_changes,
         stat_fields=STAT_FIELDS, auto_stat_fields=AUTO_STAT_FIELDS, stat_labels=STAT_LABELS,
         stat_limits=STAT_LIMITS,
-        upcoming=upcoming, past_events=past,
         attention=_attention_items(pending_users, message_counts, past, upcoming, current_robot_teams,
                                    stats_doc, auto, users),
         users=users, pending_users=pending_users, board=board, unassigned=unassigned,
@@ -2952,9 +2989,6 @@ def admin_dashboard():
         site_summary=site_summary, announcement=announcement,
         announcement_on=site_content.announcement_live(announcement, club_now()),
         reset_link=reset_link, reset_link_user=reset_link_user,
-        event_kinds=events.KINDS, kind_of=events.kind_of,
-        event_locations=sorted({c['location'] for c in db['competitions'].find(
-            {'location': {'$nin': [None, '']}}, {'location': 1})}),
         team_number_suggestions=next_team_numbers(t.get('team_number') for t in teams if not is_group(t)))
 
 
@@ -2989,7 +3023,7 @@ def _admin_redirect(tab):
 
 
 @app.route('/admin/add-competition', methods=['POST'])
-@role_required('admin')
+@role_required('editor')
 def admin_add_competition():
     try:
         event = {
@@ -3018,7 +3052,7 @@ def admin_add_competition():
 
 
 @app.route('/admin/delete-competition/<comp_id>', methods=['POST'])
-@role_required('admin')
+@role_required('editor')
 def admin_delete_competition(comp_id):
     competition = _find_by_id('competitions', comp_id)
     if not competition:
@@ -4217,7 +4251,7 @@ EVENT_FIELDS = ('name', 'kind', 'location', 'date', 'link', 'details')
 
 
 @app.route('/admin/api/events/<id>', methods=['POST'])
-@role_required('admin')
+@role_required('editor')
 def admin_api_event(id):
     body = _json_body()
     field = body.get('field')
@@ -4250,7 +4284,7 @@ def admin_api_event(id):
 
 
 @app.route('/admin/api/events/prune', methods=['POST'])
-@role_required('admin')
+@role_required('editor')
 def admin_api_events_prune():
     """Delete every event whose start time has passed."""
     result = db['competitions'].delete_many({'date': {'$lt': club_now()}})
@@ -4258,6 +4292,70 @@ def admin_api_events_prune():
         log_activity('competition_delete', f'Cleared {result.deleted_count} past event'
                      f'{"s" if result.deleted_count != 1 else ""}', details={'count': result.deleted_count})
     return jsonify({'ok': True, 'deleted': result.deleted_count})
+
+
+# --- Admin Events tab: bake sale and volunteer sheets ---
+# The same signup_sheets rows the Member Hub shows and members sign up on. Roles and
+# who is on them are managed in the hub; here editors add a sheet, change its title,
+# date, place and details, or delete it.
+
+SHEET_FIELDS = ('title', 'date', 'location', 'details')
+
+
+@app.route('/admin/add-sheet', methods=['POST'])
+@role_required('editor')
+def admin_add_sheet():
+    user = _session_user()
+    _label, roles = sheets.SHEET_KINDS.get(request.form.get('sheet_kind'), sheets.SHEET_KINDS['bake_sale'])
+    fields, error = sheets.clean_sheet({
+        'title': request.form.get('sheet_title'), 'date': request.form.get('sheet_date'),
+        'location': request.form.get('sheet_location'), 'details': request.form.get('sheet_details'),
+        'roles': [dict(r) for r in roles]})
+    if error:
+        flash(error, 'error')
+        return _admin_redirect('events')
+    db['signup_sheets'].insert_one(dict(fields, signups={}, created_by=user['username'], created_at=_utcnow()))
+    log_activity('signup_sheet', f"{user['username']} made the sign-up sheet {fields['title']}", user=user['username'])
+    flash(f"Added {fields['title']}. Members can sign up for it in {site().resources['hero_title']}.", 'success')
+    return _admin_redirect('events')
+
+
+@app.route('/admin/api/sheets/<sheet_id>', methods=['POST'])
+@role_required('editor')
+def admin_api_sheet(sheet_id):
+    """Save one field of a sheet. Its roles and everyone on them stay as they are."""
+    user = _session_user()
+    body = _json_body()
+    field = body.get('field')
+    sheet = _find_by_id('signup_sheets', sheet_id)
+    if not sheet:
+        return _json_error('That sheet is gone.', 404)
+    if field not in SHEET_FIELDS:
+        return _json_error('That field cannot be edited here.')
+    current = {'title': sheet['title'], 'date': sheet['date'].strftime('%Y-%m-%dT%H:%M'),
+               'location': sheet.get('location') or '', 'details': sheet.get('details') or '',
+               'roles': sheet.get('roles') or []}
+    fields, error = sheets.clean_sheet(dict(current, **{field: body.get('value')}), sheet.get('roles') or ())
+    if error:
+        return _json_error(error)
+    db['signup_sheets'].update_one({'_id': sheet['_id']}, {'$set': {field: fields[field]}})
+    log_activity('signup_sheet', f"{user['username']} edited the sign-up sheet {fields['title']}",
+                 user=user['username'])
+    return jsonify({'ok': True})
+
+
+@app.route('/admin/delete-sheet/<sheet_id>', methods=['POST'])
+@role_required('editor')
+def admin_delete_sheet(sheet_id):
+    user = _session_user()
+    sheet = _find_by_id('signup_sheets', sheet_id)
+    if not sheet:
+        flash('That sheet is gone.', 'error')
+        return _admin_redirect('events')
+    db['signup_sheets'].delete_one({'_id': sheet['_id']})
+    log_activity('signup_sheet', f"{user['username']} deleted the sign-up sheet {sheet['title']}", user=user['username'])
+    flash(f"Removed {sheet['title']}.", 'success')
+    return _admin_redirect('events')
 
 
 def _loggable(value, limit=200):

@@ -257,6 +257,7 @@ const DELETE_WARNINGS = {
     group: 'This removes this season\'s group page and roster. Members keep their robot teams and other groups.',
     account: 'They will no longer be able to sign in. Their roster card stays, without a login.',
     event: 'The event disappears from the homepage.',
+    sheet: 'It comes off the Member Hub, with everyone signed up for it.',
     sponsor: 'The sponsor and its logo disappear from the Donate page.',
 };
 
@@ -532,7 +533,7 @@ function validateUserForm(e) {
 
 // --- Autosave: homepage numbers, award counts, event fields, award names ------------------
 
-const AUTOSAVE_FIELDS = '[data-stat-field], [data-award-id], [data-event-field], .award-title-input';
+const AUTOSAVE_FIELDS = '[data-stat-field], [data-award-id], [data-event-field], [data-sheet-field], .award-title-input';
 
 const Autosave = (function () {
     const timers = new Map();
@@ -558,6 +559,10 @@ const Autosave = (function () {
         }
         if (input.matches('.award-title-input')) {
             return Awards.saveField(input.closest('[data-category-id]'), 'title', input.value.trim());
+        }
+        if (input.dataset.sheetField) {
+            const sheet = input.closest('[data-sheet-id]');
+            return api(`/admin/api/sheets/${sheet.dataset.sheetId}`, { field: input.dataset.sheetField, value: input.value });
         }
         const row = input.closest('[data-event-id]');
         return api(`/admin/api/events/${row.dataset.eventId}`, { field: input.dataset.eventField, value: input.value });
@@ -637,7 +642,7 @@ const Autosave = (function () {
 
         // Enter commits an inline text field; Escape puts the saved value back.
         document.addEventListener('keydown', e => {
-            if (!e.target.matches('[data-event-field], .award-title-input')) return;
+            if (!e.target.matches('[data-event-field], [data-sheet-field], .award-title-input')) return;
             if (e.key === 'Enter') {
                 e.preventDefault();
                 e.target.blur();
