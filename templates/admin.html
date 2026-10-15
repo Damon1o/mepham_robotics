@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Command Center | {{ site.general.short_name }}{% endblock %}
+{% block title %}{{ 'Command Center' if admin_access else 'Events' }} | {{ site.general.short_name }}{% endblock %}
 
 {% block page_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/swipe-row.css') }}">
@@ -12,7 +12,8 @@
 
 {% from "admin/_macros.html" import stepper, card_head, empty %}
 
-{% set tabs = [
+{#- Editors see only the Events tab (events and sign-up sheets); admins see them all. -#}
+{% set tabs = [('events', 'calendar-days', 'Events', 0, '')] if not admin_access else [
     ('overview', 'layout-dashboard', 'Overview', attention|length if attention else 0, 'to do'),
     ('users', 'users', 'People', pending_users|length, 'waiting'),
     ('teams', 'bot', 'Teams', 0, ''),
@@ -32,7 +33,7 @@
 <div class="admin-container admin" id="adminApp">
     <header class="admin-topbar">
         <div class="admin-title">
-            <h1>Command Center</h1>
+            <h1>{{ 'Command Center' if admin_access else 'Events' }}</h1>
             <p>Signed in as <strong>{{ current_user }}</strong>. Most changes save the moment you make them.</p>
         </div>
         <div class="admin-topbar-actions">
@@ -67,15 +68,19 @@
     </nav>
 
     <div class="admin-panels">
+        {% if admin_access %}
         {% include "admin/_overview.html" %}
         {% include "admin/_people.html" %}
         {% include "admin/_teams.html" %}
+        {% endif %}
         {% include "admin/_events.html" %}
+        {% if admin_access %}
         {% include "admin/_awards.html" %}
         {% include "admin/_sponsors.html" %}
         {% include "admin/_messages.html" %}
         {% include "admin/_site.html" %}
         {% include "admin/_activity.html" %}
+        {% endif %}
     </div>
 </div>
 
