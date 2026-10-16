@@ -1938,6 +1938,7 @@
     color: #1a1414;
     font: inherit;
     font-weight: 800;
+    text-decoration: none;
     box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
     cursor: pointer;
     transition: transform var(--transition-fast), box-shadow var(--transition-fast);

@@ -1,7 +1,7 @@
 {#- Member Hub sign-up sheets (bake sales and the like), plus the editors' sheet form.
     Drawn in resources.html and again by the /api/hub/sheets routes. -#}
 {% macro sheet_card(s) %}
-<article class="hub-sheet{% if not s.open %} is-past{% endif %}" data-sheet="{{ s.id }}">
+<article class="hub-sheet{% if not s.open %} is-past{% endif %}" id="sheet-{{ s.id }}" data-sheet="{{ s.id }}">
     <header class="hub-sheet-head">
         <div class="hub-sheet-date" aria-hidden="true">
             <span>{{ s.date.strftime('%b') }}</span><strong>{{ s.date.day }}</strong>

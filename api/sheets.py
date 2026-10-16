@@ -10,7 +10,9 @@ the username of the editor who wrote the row for someone else, or absent.
 A sign-up sheet is one row in `signup_sheets`:
 
     {title, date, location, details, roles: [{key, name, slots, prompt}],
-     signups: {role key: [{user_id, note, at}]}, created_by, created_at}
+     signups: {role key: [{user_id, note, at}]}, created_by, created_at, event_id}
+
+`event_id` is set on the sheet a bake sale event made for itself (see event_sheet).
 
 This module is pure: no Flask app, no database. api/index.py wires the routes.
 """
@@ -46,6 +48,8 @@ VOLUNTEER_ROLES = (
 )
 # What the admin Events tab can start a sheet as: key -> (label, starting roles).
 SHEET_KINDS = {'bake_sale': ('Bake sale', BAKE_SALE_ROLES), 'volunteer': ('Volunteering', VOLUNTEER_ROLES)}
+# A bake sale put on the calendar gets a sheet of its own: members sign up to bake or to sell.
+EVENT_SHEET_ROLES = BAKE_SALE_ROLES[:2]
 
 
 # --- Meeting days -----------------------------------------------------------------------
@@ -224,6 +228,23 @@ def clean_sheet(body, old_roles=()):
     details = str(body.get('details') or '').replace('\r\n', '\n').strip()[:DETAILS_MAX]
     return {'title': title, 'date': date, 'location': _clean_text(body.get('location'), LOCATION_MAX),
             'details': details, 'roles': roles}, None
+
+
+def event_sheet(event):
+    """The title, date and place a calendar event's sheet takes from the event."""
+    return {'title': _clean_text(event.get('name'), TITLE_MAX), 'date': event['date'],
+            'location': _clean_text(event.get('location'), LOCATION_MAX)}
+
+
+def new_event_sheet(event):
+    """A fresh sheet for a bake sale event, with its Baker and Seller roles and nobody on them yet."""
+    taken, roles = set(), []
+    for role in EVENT_SHEET_ROLES:
+        key = _role_key(role['name'], taken)
+        taken.add(key)
+        roles.append(dict(role, key=key))
+    return dict(event_sheet(event), details=_clean_text(event.get('details'), DETAILS_MAX), roles=roles,
+                signups={}, event_id=str(event['_id']))
 
 
 def is_open(sheet, now):

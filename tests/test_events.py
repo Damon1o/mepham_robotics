@@ -266,3 +266,8 @@ def test_competition_log_leaves_out_outreach(client, db):
     db['competitions'].insert_one({'name': 'Old Library Day', 'date': soon(-10), 'kind': 'outreach'})
     page = client.get('/achievements').get_data(as_text=True)
     assert 'Last Spring Open' in page and 'Old Library Day' not in page
+
+
+def test_every_kind_has_a_plural_and_a_duration():
+    assert set(events.ALL_KINDS) <= set(events.PLURALS)
+    assert set(events.KINDS) <= set(events.DURATION_HOURS)

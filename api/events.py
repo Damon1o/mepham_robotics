@@ -19,14 +19,17 @@ KINDS = {
     'scrimmage': ('Scrimmage', 'swords'),
     'outreach': ('Outreach', 'megaphone'),
     'club': ('Club event', 'party-popper'),
+    'bake_sale': ('Bake sale', 'cake-slice'),
 }
 DEFAULT_KIND = 'competition'
 # Kinds the homepage countdown, the Member Hub and the competition log count as competitions.
 COMPETITIVE_KINDS = ('competition', 'scrimmage')
+# Kinds that get their own sign-up sheet in the Member Hub (api/sheets.py event_sheet).
+SHEET_KINDS = ('bake_sale',)
 # Every kind the calendar shows, in filter-chip order.
 ALL_KINDS = dict(KINDS, fundraiser=('Fundraiser', 'piggy-bank'), meeting=('Meeting', 'calendar-clock'))
 # Events store only a start time; tournaments run all day, the rest are an afternoon.
-DURATION_HOURS = {'competition': 8, 'scrimmage': 6, 'outreach': 2, 'club': 2}
+DURATION_HOURS = {'competition': 8, 'scrimmage': 6, 'outreach': 2, 'club': 2, 'bake_sale': 3}
 DETAILS_MAX = 300
 
 
@@ -174,7 +177,7 @@ def by_month(items):
 
 
 PLURALS = {'competition': 'Competitions', 'scrimmage': 'Scrimmages', 'outreach': 'Outreach',
-           'club': 'Club events', 'fundraiser': 'Fundraisers', 'meeting': 'Meetings'}
+           'club': 'Club events', 'bake_sale': 'Bake sales', 'fundraiser': 'Fundraisers', 'meeting': 'Meetings'}
 
 
 def kinds_present(items):

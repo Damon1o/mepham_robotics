@@ -36,7 +36,9 @@
         {% endif %}
         {% endif %}
     </div>
-    {% if e.open %}
+    {% if e.open and e.sheet %}
+    <a class="hub-event-toggle" href="#sheet-{{ e.sheet }}"><i data-lucide="cake-slice" aria-hidden="true"></i> Bake or sell</a>
+    {% elif e.open %}
     <button type="button" class="hub-event-toggle{% if e.mine == 'going' %} is-on{% endif %}" data-event-toggle
         aria-pressed="{{ 'true' if e.mine == 'going' else 'false' }}">
         {% if e.mine == 'going' %}<i data-lucide="circle-check-big" aria-hidden="true"></i> You're going
