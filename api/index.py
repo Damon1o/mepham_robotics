@@ -2227,18 +2227,23 @@ HUB_EVENTS_SHOWN = 6
 PAST_EVENTS_SHOWN = 3
 
 
-def _hub_event(row, uid, now):
+def _hub_event(row, uid, now, sheet_ids=None):
     item = events.event_item(row)
     summary = rsvp_summary(row, uid, with_people=True)
     going = [{'user_id': str(p['_id']), 'name': _display_name(p)} for p in summary['people'] if p['status'] == 'going']
-    return dict(item, going=going, maybe=summary['counts']['maybe'], mine=summary['mine'], open=item['end'] >= now)
+    return dict(item, going=going, maybe=summary['counts']['maybe'], mine=summary['mine'], open=item['end'] >= now,
+                sheet=(sheet_ids or {}).get(item['id'], ''))
 
 
 def _events_context(user):
     now = club_now()
     keeper, uid = _can_keep_sheets(user), str(user['_id'])
     upcoming = db['competitions'].find({'date': {'$gte': now - datetime.timedelta(hours=12)}}).sort('date', 1)
-    shown = [e for e in (_hub_event(r, uid, now) for r in upcoming if events.event_item(r)) if e['open']]
+    # A bake sale's sign-up is its sheet (bake or sell), so its card points there instead.
+    sheet_ids = {s['event_id']: str(s['_id']) for s in db['signup_sheets'].find(
+        {'event_id': {'$exists': True}, 'date': {'$gte': now - datetime.timedelta(hours=12)}},
+        {'event_id': 1})} if site().resources.show_sheets else {}
+    shown = [e for e in (_hub_event(r, uid, now, sheet_ids) for r in upcoming if events.event_item(r)) if e['open']]
     past = []
     if keeper:
         rows = db['competitions'].find({'date': {'$lt': now}}).sort('date', -1).limit(PAST_EVENTS_SHOWN * 2)
@@ -3032,6 +3037,27 @@ def _admin_redirect(tab):
     return redirect(url_for('admin_dashboard', _anchor=tab))
 
 
+def _sync_event_sheet(event):
+    """Give a bake sale on the calendar its Member Hub sign-up sheet, and keep the sheet on the event's
+    name, time and place. Returns the new sheet's title when this made one, else ''.
+
+    An event that stops being a bake sale loses its sheet only while nobody has signed up on it.
+    """
+    sheet = db['signup_sheets'].find_one({'event_id': str(event['_id'])})
+    if events.kind_of(event) not in events.SHEET_KINDS:
+        if sheet and not sheets.signup_user_ids([sheet]):
+            db['signup_sheets'].delete_one({'_id': sheet['_id']})
+        return ''
+    if sheet:
+        db['signup_sheets'].update_one({'_id': sheet['_id']}, {'$set': sheets.event_sheet(event)})
+        return ''
+    username = (_session_user() or {}).get('username', '')
+    fields = sheets.new_event_sheet(event)
+    db['signup_sheets'].insert_one(dict(fields, created_by=username, created_at=_utcnow()))
+    log_activity('signup_sheet', f"Made the sign-up sheet {fields['title']} for the bake sale", user=username or None)
+    return fields['title']
+
+
 @app.route('/admin/add-competition', methods=['POST'])
 @role_required('editor')
 def admin_add_competition():
@@ -3049,7 +3075,11 @@ def admin_add_competition():
         if details:
             event['details'] = details
         db['competitions'].insert_one(event)
-        flash(f'Added {event["name"]}.', 'success')
+        if _sync_event_sheet(event):
+            flash(f'Added {event["name"]}. Members can sign up to bake or sell in {site().resources["hero_title"]}.',
+                  'success')
+        else:
+            flash(f'Added {event["name"]}.', 'success')
         log_activity('competition_add', f'Added new competition: {event["name"]}',
                      details={'name': event['name'], 'location': event['location'],
                               'date': event['date'].strftime('%Y-%m-%d %H:%M')})
@@ -3069,6 +3099,8 @@ def admin_delete_competition(comp_id):
         flash('That event no longer exists.', 'error')
         return _admin_redirect('events')
     db['competitions'].delete_one({'_id': competition['_id']})
+    # A bake sale's own sign-up sheet goes with it.
+    db['signup_sheets'].delete_one({'event_id': str(competition['_id'])})
     flash(f'Removed {competition.get("name") or "the event"}.', 'success')
     log_activity('competition_delete', f'Deleted competition: {competition.get("name", "Unknown")}',
                  details={'name': competition.get('name', 'Unknown'),
@@ -4287,6 +4319,8 @@ def admin_api_event(id):
         return _json_error(str(e))
     old = event.get(field)
     db['competitions'].update_one({'_id': event['_id']}, {'$set': {field: value}})
+    if field in ('name', 'kind', 'location', 'date'):
+        _sync_event_sheet(dict(event, **{field: value}))
     log_activity('competition_update', f'Updated {field} of {event.get("name", "an event")}',
                  details={'name': event.get('name'), 'field': field,
                           'from': _loggable(old), 'to': _loggable(value)})

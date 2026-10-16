@@ -41,6 +41,7 @@
 .ev-k-scrimmage { --k: #c0504f; }
 .ev-k-outreach { --k: #1b6f8a; }
 .ev-k-club { --k: #6b4aa6; }
+.ev-k-bake_sale { --k: #b5562a; }
 .ev-k-fundraiser { --k: #b07d00; }
 .ev-k-meeting { --k: #857676; }
 
@@ -1311,6 +1312,7 @@ html.ev-cal-locked {
 [data-theme="dark"] .ev-k-scrimmage { --k: #f0a08f; }
 [data-theme="dark"] .ev-k-outreach { --k: #5fb7d4; }
 [data-theme="dark"] .ev-k-club { --k: #b39ae6; }
+[data-theme="dark"] .ev-k-bake_sale { --k: #ec9a6e; }
 [data-theme="dark"] .ev-k-fundraiser { --k: #e8bd45; }
 [data-theme="dark"] .ev-k-meeting { --k: #a99a9a; }
 

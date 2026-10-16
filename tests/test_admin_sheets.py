@@ -105,6 +105,78 @@ def test_editor_deletes_a_sheet(client, make_user, db, clock):
     assert db['signup_sheets'].count_documents({}) == 0
 
 
+# --- Bake sale events make their own sheet -----------------------------------------------
+
+def add_bake_sale(client, db, **form):
+    data = {'comp_name': 'Halloween bake sale', 'comp_kind': 'bake_sale', 'comp_location': 'Cafeteria',
+            'comp_date': SOON.strftime('%Y-%m-%dT%H:%M'), 'comp_details': 'Drop off by 8.'}
+    data.update(form)
+    client.post('/admin/add-competition', data=data)
+    return db['competitions'].find_one({'kind': 'bake_sale'})
+
+
+def test_scheduling_a_bake_sale_makes_a_baker_and_seller_sheet(client, make_user, db, clock):
+    login(client, make_user, 'ed', 'editor')
+    event = add_bake_sale(client, db)
+    sheet = db['signup_sheets'].find_one({'event_id': str(event['_id'])})
+    assert [(r['key'], r['name']) for r in sheet['roles']] == [('baker', 'Baker'), ('seller', 'Seller')]
+    assert (sheet['title'], sheet['date'], sheet['location']) == ('Halloween bake sale', SOON, 'Cafeteria')
+    assert sheet['details'] == 'Drop off by 8.' and sheet['signups'] == {}
+    hub = client.get('/resources').get_data(as_text=True)
+    assert f'href="#sheet-{sheet["_id"]}"' in hub and f'id="sheet-{sheet["_id"]}"' in hub
+    assert 'ev-k-bake_sale' in client.get('/events?month=2026-10').get_data(as_text=True)
+    # Members sign up on it like any other sheet.
+    reply = client.post(f"/api/hub/sheets/{sheet['_id']}/signup", json={'role': 'seller', 'on': True, 'note': '9-10'})
+    assert reply.status_code == 200
+
+
+def test_other_events_get_no_sheet(client, make_user, db, clock):
+    login(client, make_user, 'ed', 'editor')
+    client.post('/admin/add-competition', data={'comp_name': 'Demo day', 'comp_kind': 'outreach',
+                                                'comp_date': '2026-10-20T09:00'})
+    assert db['signup_sheets'].count_documents({}) == 0
+
+
+def test_bake_sale_sheet_follows_event_edits(client, make_user, db, clock):
+    login(client, make_user, 'ed', 'editor')
+    event = add_bake_sale(client, db)
+    for field, value in (('name', 'Spooky bake sale'), ('date', '2026-10-31T11:00'), ('location', 'Gym')):
+        assert client.post(f"/admin/api/events/{event['_id']}", json={'field': field, 'value': value}).status_code == 200
+    sheet = db['signup_sheets'].find_one({'event_id': str(event['_id'])})
+    assert (sheet['title'], sheet['date'], sheet['location']) == (
+        'Spooky bake sale', datetime.datetime(2026, 10, 31, 11, 0), 'Gym')
+    assert db['signup_sheets'].count_documents({}) == 1
+
+
+def test_switching_an_event_to_a_bake_sale_makes_its_sheet(client, make_user, db, clock):
+    login(client, make_user, 'ed', 'editor')
+    client.post('/admin/add-competition', data={'comp_name': 'Fundraiser', 'comp_kind': 'club',
+                                                'comp_date': '2026-10-20T09:00'})
+    event = db['competitions'].find_one()
+    client.post(f"/admin/api/events/{event['_id']}", json={'field': 'kind', 'value': 'bake_sale'})
+    assert db['signup_sheets'].find_one({'event_id': str(event['_id'])})
+    # Switching back drops the sheet while nobody is on it.
+    client.post(f"/admin/api/events/{event['_id']}", json={'field': 'kind', 'value': 'club'})
+    assert db['signup_sheets'].count_documents({}) == 0
+
+
+def test_switching_away_keeps_a_sheet_people_signed_up_on(client, make_user, db, clock):
+    login(client, make_user, 'ed', 'editor')
+    event = add_bake_sale(client, db)
+    sheet = db['signup_sheets'].find_one()
+    client.post(f"/api/hub/sheets/{sheet['_id']}/signup", json={'role': 'baker', 'on': True, 'note': 'Cookies'})
+    client.post(f"/admin/api/events/{event['_id']}", json={'field': 'kind', 'value': 'club'})
+    assert db['signup_sheets'].find_one()['signups']['baker'][0]['note'] == 'Cookies'
+
+
+def test_deleting_a_bake_sale_deletes_its_sheet(client, make_user, db, clock):
+    login(client, make_user, 'ed', 'editor')
+    event = add_bake_sale(client, db)
+    add_sheet(client, sheet_title='Unrelated sheet')
+    client.post(f"/admin/delete-competition/{event['_id']}")
+    assert [s['title'] for s in db['signup_sheets'].find()] == ['Unrelated sheet']
+
+
 # --- Fundraisers in the Events tab ------------------------------------------------------
 
 def test_fundraiser_lists_moved_to_the_events_tab(client, make_user, db, clock):
