@@ -12,7 +12,8 @@ A sign-up sheet is one row in `signup_sheets`:
     {title, date, location, details, roles: [{key, name, slots, prompt}],
      signups: {role key: [{user_id, note, at}]}, created_by, created_at, event_id}
 
-`event_id` is set on the sheet a bake sale event made for itself (see event_sheet).
+`event_id` (and `synced`) are set on a sheet made for a bake sale: the event's id, or
+'fundraiser:<start>' for a fundraiser. See bake_sale_sources.
 
 This module is pure: no Flask app, no database. api/index.py wires the routes.
 """
@@ -230,21 +231,84 @@ def clean_sheet(body, old_roles=()):
             'details': details, 'roles': roles}, None
 
 
-def event_sheet(event):
-    """The title, date and place a calendar event's sheet takes from the event."""
-    return {'title': _clean_text(event.get('name'), TITLE_MAX), 'date': event['date'],
-            'location': _clean_text(event.get('location'), LOCATION_MAX)}
+# Anything named like a bake sale counts, whatever type it was scheduled as.
+BAKE_SALE_NAME = re.compile(r'\bbake[\s-]*sales?\b', re.I)
 
 
-def new_event_sheet(event):
-    """A fresh sheet for a bake sale event, with its Baker and Seller roles and nobody on them yet."""
+def is_bake_sale(kind, name):
+    return kind == 'bake_sale' or bool(BAKE_SALE_NAME.search(name or ''))
+
+
+def _when(value):
+    try:
+        return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M') if value else None
+    except (TypeError, ValueError):
+        return None
+
+
+def bake_sale_sources(event_rows, fundraiser_entries, since):
+    """{source key: {title, date, location, details}} for every bake sale from `since` on.
+
+    A bake sale is a calendar event of the Bake sale type (or named like one), or a
+    fundraiser named like one. Events are keyed by their id, fundraisers (which have no
+    id) by 'fundraiser:' and their start time.
+    """
+    sources = {}
+    for row in event_rows:
+        date = row.get('date')
+        if isinstance(date, datetime.datetime) and date >= since and is_bake_sale(row.get('kind'), row.get('name')):
+            sources[str(row['_id'])] = _source(row.get('name'), date, row.get('location'), row.get('details'))
+    for entry in fundraiser_entries or ():
+        start = _when(entry.get('starts'))
+        end = _when(entry.get('ends')) or start
+        if start and not entry.get('hidden') and max(start, end) >= since and is_bake_sale(None, entry.get('name')):
+            sources[f"fundraiser:{entry['starts']}"] = _source(entry['name'], start, entry.get('location'),
+                                                               entry.get('description'))
+    return sources
+
+
+def _source(name, date, location, details):
+    return {'title': _clean_text(name, TITLE_MAX), 'date': date.replace(tzinfo=None),
+            'location': _clean_text(location, LOCATION_MAX),
+            'details': str(details or '').replace('\r\n', '\n').strip()[:DETAILS_MAX]}
+
+
+def new_event_sheet(source, key):
+    """A fresh sheet for a bake sale, with its Baker and Seller roles and nobody on them yet.
+
+    `synced` remembers what the sheet last took from its bake sale, so the sheet only
+    follows the bake sale when that changes, and an editor's own changes stick otherwise.
+    """
     taken, roles = set(), []
     for role in EVENT_SHEET_ROLES:
-        key = _role_key(role['name'], taken)
-        taken.add(key)
-        roles.append(dict(role, key=key))
-    return dict(event_sheet(event), details=_clean_text(event.get('details'), DETAILS_MAX), roles=roles,
-                signups={}, event_id=str(event['_id']))
+        role_key = _role_key(role['name'], taken)
+        taken.add(role_key)
+        roles.append(dict(role, key=role_key))
+    return dict(source, roles=roles, signups={}, event_id=key, synced=source)
+
+
+def reconcile_bake_sales(sources, sheets, dismissed):
+    """(new sheets, {sheet _id: fields to set}, sheet _ids to delete) to match `sheets` to `sources`.
+
+    `sheets` are the upcoming sheets made for a bake sale; `dismissed` are source keys whose
+    sheet an editor deleted, which are never made again. A sheet whose bake sale is gone
+    is deleted while nobody is on it, and kept otherwise.
+    """
+    by_key = {s['event_id']: s for s in sheets}
+    new, updates, deletes = [], {}, []
+    for key, source in sources.items():
+        sheet = by_key.pop(key, None)
+        if sheet is None:
+            if key not in dismissed:
+                new.append(new_event_sheet(source, key))
+        elif sheet.get('synced') != source:
+            old = sheet.get('synced') or {}
+            changed = {f: v for f, v in source.items() if old.get(f) != v}
+            updates[sheet['_id']] = dict(changed, synced=source)
+    for sheet in by_key.values():
+        if not signup_user_ids([sheet]):
+            deletes.append(sheet['_id'])
+    return new, updates, deletes
 
 
 def is_open(sheet, now):

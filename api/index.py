@@ -2114,6 +2114,7 @@ def _sheet_card(sheet, names, uid, now):
 
 
 def _sheets_context(user):
+    _sync_bake_sale_sheets()
     now = club_now()
     today = datetime.datetime.combine(now.date(), datetime.time())
     keeper = _can_keep_sheets(user)
@@ -2153,6 +2154,7 @@ def api_hub_sheet_edit(sheet_id):
         return _json_error('That sheet is gone.', 404)
     if request.method == 'DELETE':
         db['signup_sheets'].delete_one({'_id': sheet['_id']})
+        _dismiss_bake_sale_sheet(sheet)
         log_activity('signup_sheet', f"{user['username']} deleted the sign-up sheet {sheet['title']}",
                      user=user['username'])
         return _sheets_reply(user)
@@ -2867,6 +2869,7 @@ def _events_panel_context():
 
     today = datetime.datetime.combine(now.date(), datetime.time())
     names = _member_names()
+    _sync_bake_sale_sheets()
     rows = db['signup_sheets'].find({'date': {'$gte': today}}).sort('date', 1)
     old = db['signup_sheets'].find({'date': {'$lt': today}}).sort('date', -1).limit(ADMIN_PAST_SHEETS_SHOWN)
     # Fundraisers are stored with the site content (the homepage, Donate page and calendar read them
@@ -3037,25 +3040,39 @@ def _admin_redirect(tab):
     return redirect(url_for('admin_dashboard', _anchor=tab))
 
 
-def _sync_event_sheet(event):
-    """Give a bake sale on the calendar its Member Hub sign-up sheet, and keep the sheet on the event's
-    name, time and place. Returns the new sheet's title when this made one, else ''.
+def _sync_bake_sale_sheets():
+    """Give every upcoming bake sale its Baker and Seller sign-up sheet in the Member Hub.
 
-    An event that stops being a bake sale loses its sheet only while nobody has signed up on it.
+    Bake sales are events of that type or named like one, and fundraisers named like one
+    (sheets.bake_sale_sources). Runs whenever the hub or the admin Events tab is drawn, so
+    bake sales scheduled any way, or before this existed, get a sheet. A sheet follows its
+    bake sale's name, time and place; one an editor deleted stays deleted (sheet_dismissals).
+    Returns the titles of the sheets it made.
     """
-    sheet = db['signup_sheets'].find_one({'event_id': str(event['_id'])})
-    if events.kind_of(event) not in events.SHEET_KINDS:
-        if sheet and not sheets.signup_user_ids([sheet]):
-            db['signup_sheets'].delete_one({'_id': sheet['_id']})
-        return ''
-    if sheet:
-        db['signup_sheets'].update_one({'_id': sheet['_id']}, {'$set': sheets.event_sheet(event)})
-        return ''
-    username = (_session_user() or {}).get('username', '')
-    fields = sheets.new_event_sheet(event)
-    db['signup_sheets'].insert_one(dict(fields, created_by=username, created_at=_utcnow()))
-    log_activity('signup_sheet', f"Made the sign-up sheet {fields['title']} for the bake sale", user=username or None)
-    return fields['title']
+    today = datetime.datetime.combine(club_now().date(), datetime.time())
+    sources = sheets.bake_sale_sources(db['competitions'].find({'date': {'$gte': today}}),
+                                       site().fundraisers.entries, today)
+    linked = list(db['signup_sheets'].find({'event_id': {'$exists': True}, 'date': {'$gte': today}}))
+    dismissed = {d['_id'] for d in db['sheet_dismissals'].find({'_id': {'$in': list(sources)}})} if sources else set()
+    new, updates, deletes = sheets.reconcile_bake_sales(sources, linked, dismissed)
+    for sheet_id, fields in updates.items():
+        db['signup_sheets'].update_one({'_id': sheet_id}, {'$set': fields})
+    if deletes:
+        db['signup_sheets'].delete_many({'_id': {'$in': deletes}})
+    for fields in new:
+        # The filter stops two page loads at once from both making the sheet.
+        made = db['signup_sheets'].update_one({'event_id': fields['event_id']},
+                                              {'$setOnInsert': dict(fields, created_by='', created_at=_utcnow())},
+                                              upsert=True)
+        if made.upserted_id:
+            log_activity('signup_sheet', f"Made the sign-up sheet {fields['title']} for the bake sale", user='System')
+    return [f['title'] for f in new]
+
+
+def _dismiss_bake_sale_sheet(sheet):
+    """An editor deleted a bake sale's sheet on purpose: don't make it again."""
+    if sheet.get('event_id'):
+        db['sheet_dismissals'].update_one({'_id': sheet['event_id']}, {'$set': {'at': _utcnow()}}, upsert=True)
 
 
 @app.route('/admin/add-competition', methods=['POST'])
@@ -3075,7 +3092,7 @@ def admin_add_competition():
         if details:
             event['details'] = details
         db['competitions'].insert_one(event)
-        if _sync_event_sheet(event):
+        if _sync_bake_sale_sheets():
             flash(f'Added {event["name"]}. Members can sign up to bake or sell in {site().resources["hero_title"]}.',
                   'success')
         else:
@@ -4319,8 +4336,8 @@ def admin_api_event(id):
         return _json_error(str(e))
     old = event.get(field)
     db['competitions'].update_one({'_id': event['_id']}, {'$set': {field: value}})
-    if field in ('name', 'kind', 'location', 'date'):
-        _sync_event_sheet(dict(event, **{field: value}))
+    if field != 'link':
+        _sync_bake_sale_sheets()
     log_activity('competition_update', f'Updated {field} of {event.get("name", "an event")}',
                  details={'name': event.get('name'), 'field': field,
                           'from': _loggable(old), 'to': _loggable(value)})
@@ -4397,6 +4414,7 @@ def admin_delete_sheet(sheet_id):
         flash('That sheet is gone.', 'error')
         return _admin_redirect('events')
     db['signup_sheets'].delete_one({'_id': sheet['_id']})
+    _dismiss_bake_sale_sheet(sheet)
     log_activity('signup_sheet', f"{user['username']} deleted the sign-up sheet {sheet['title']}", user=user['username'])
     flash(f"Removed {sheet['title']}.", 'success')
     return _admin_redirect('events')

@@ -24,8 +24,6 @@ KINDS = {
 DEFAULT_KIND = 'competition'
 # Kinds the homepage countdown, the Member Hub and the competition log count as competitions.
 COMPETITIVE_KINDS = ('competition', 'scrimmage')
-# Kinds that get their own sign-up sheet in the Member Hub (api/sheets.py event_sheet).
-SHEET_KINDS = ('bake_sale',)
 # Every kind the calendar shows, in filter-chip order.
 ALL_KINDS = dict(KINDS, fundraiser=('Fundraiser', 'piggy-bank'), meeting=('Meeting', 'calendar-clock'))
 # Events store only a start time; tournaments run all day, the rest are an afternoon.

@@ -177,6 +177,55 @@ def test_deleting_a_bake_sale_deletes_its_sheet(client, make_user, db, clock):
     assert [s['title'] for s in db['signup_sheets'].find()] == ['Unrelated sheet']
 
 
+def test_bake_sale_scheduled_earlier_gets_a_sheet_when_the_hub_opens(client, make_user, db, clock):
+    """Bake sales already on the calendar, of any type, named like one."""
+    login(client, make_user, 'mo', 'member')
+    db['competitions'].insert_many([
+        {'name': 'Fall Bake Sale', 'kind': 'club', 'date': SOON, 'location': 'Lobby'},
+        {'name': 'Old bake sale', 'kind': 'bake_sale', 'date': datetime.datetime(2026, 9, 1, 9, 0)},
+        {'name': 'Robot demo', 'kind': 'outreach', 'date': SOON}])
+    page = client.get('/resources').get_data(as_text=True)
+    sheet = db['signup_sheets'].find_one()
+    assert db['signup_sheets'].count_documents({}) == 1
+    assert sheet['title'] == 'Fall Bake Sale' and [r['name'] for r in sheet['roles']] == ['Baker', 'Seller']
+    assert 'Fall Bake Sale' in page and f'href="#sheet-{sheet["_id"]}"' in page
+    # Opening it again makes nothing new.
+    client.get('/resources')
+    assert db['signup_sheets'].count_documents({}) == 1
+
+
+def test_bake_sale_fundraiser_gets_a_sheet(client, make_user, db, clock):
+    login(client, make_user, 'ed', 'editor')
+    entry = {'name': 'Bake sale for Worlds', 'starts': '2026-10-24T10:00', 'location': 'Cafeteria'}
+    assert client.post('/admin/api/site', json={'key': 'fundraisers.entries', 'value': [entry]}).status_code == 200
+    assert 'Bake sale for Worlds' in client.get('/resources').get_data(as_text=True)
+    sheet = db['signup_sheets'].find_one({'event_id': 'fundraiser:2026-10-24T10:00'})
+    assert sheet['date'] == datetime.datetime(2026, 10, 24, 10, 0) and sheet['location'] == 'Cafeteria'
+
+
+def test_deleted_bake_sale_sheet_stays_deleted(client, make_user, db, clock):
+    login(client, make_user, 'ed', 'editor')
+    add_bake_sale(client, db)
+    sheet = db['signup_sheets'].find_one()
+    client.post(f"/admin/delete-sheet/{sheet['_id']}")
+    client.get('/resources')
+    client.get('/admin')
+    assert db['signup_sheets'].count_documents({}) == 0
+
+
+def test_own_edits_to_a_bake_sale_sheet_stick(client, make_user, db, clock):
+    login(client, make_user, 'ed', 'editor')
+    event = add_bake_sale(client, db)
+    sheet = db['signup_sheets'].find_one()
+    client.post(f"/admin/api/sheets/{sheet['_id']}", json={'field': 'title', 'value': 'Treats table'})
+    client.get('/resources')
+    assert db['signup_sheets'].find_one()['title'] == 'Treats table'
+    # Until the bake sale itself changes.
+    client.post(f"/admin/api/events/{event['_id']}", json={'field': 'location', 'value': 'Gym'})
+    saved = db['signup_sheets'].find_one()
+    assert (saved['title'], saved['location']) == ('Treats table', 'Gym')
+
+
 # --- Fundraisers in the Events tab ------------------------------------------------------
 
 def test_fundraiser_lists_moved_to_the_events_tab(client, make_user, db, clock):
