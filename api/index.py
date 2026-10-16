@@ -1834,22 +1834,6 @@ def privacy():
 def credits_page():
     return render_template('credits.html', active_page='credits')
 
-@app.route('/science/', strict_slashes=False)
-def science():
-    # Unlisted on purpose: no nav entry, link, search result or sitemap row
-    # points here. Browsers send Sec-Fetch-Site: none only for navigations the
-    # visitor started themselves (typing the address, a bookmark), so a
-    # followed link, an embed or a script gets the ordinary 404 instead.
-    # strict_slashes=False keeps /science from leaking a redirect.
-    if request.headers.get('Sec-Fetch-Site') != 'none':
-        abort(404)
-    resp = Response(render_template('science.html'))
-    resp.headers['X-Robots-Tag'] = 'noindex, nofollow'
-    resp.headers['Cache-Control'] = 'no-store'
-    resp.headers['Vary'] = 'Sec-Fetch-Site'
-    resp.headers['Referrer-Policy'] = 'no-referrer'
-    return resp
-
 @app.route('/resources')
 @role_required('member')
 def resources():
