@@ -6565,7 +6565,8 @@ def _discord_team(interaction):
         roster += f' and {len(members) - DISCORD_ROSTER_SHOWN} more'
     fields = [('Season', team.get('season') or '—', True), ('Members', str(len(members)), True)]
     if not group:
-        fields.append(('Awards', str(db['awards'].count_documents({'team_number': number})), True))
+        won = sum(int(a.get('count') or 0) for a in db['awards'].find({'team_number': number}, {'count': 1}))
+        fields.append(('Awards', str(won), True))
     fields.append(('Roster', roster or 'No one listed yet', False))
     return discord_bot.message(embeds=[discord_bot.embed(
         title, team.get('tagline') or team.get('description') or '', _public_url('team_page', team_number=number),

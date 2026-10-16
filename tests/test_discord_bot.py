@@ -58,6 +58,15 @@ def test_events_lists_whats_coming(bot, db):
     assert reply['data']['embeds'][0]['fields'][0]['name'] == 'Fall Scrimmage'
 
 
+def test_team_counts_awards_won_not_award_rows(bot, db):
+    db['teams'].insert_one({'team_number': '6418', 'season': '2026', 'members': []})
+    # Every team carries one row per award category; only the counts are wins.
+    db['awards'].insert_many([{'team_number': '6418', 'title': f'Award {n}', 'count': c}
+                              for n, c in enumerate([0] * 10 + [2, 1])])
+    fields = bot(command('team', team='6418')).get_json()['data']['embeds'][0]['fields']
+    assert dict((f['name'], f['value']) for f in fields)['Awards'] == '3'
+
+
 def test_personal_commands_ask_unlinked_people_to_link(bot, db):
     reply = bot(command('signin')).get_json()
     assert 'Connect your Discord' in reply['data']['content']
