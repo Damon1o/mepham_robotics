@@ -109,11 +109,21 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 document.addEventListener('DOMContentLoaded', () => {
     // Fade-in sections with staggered animation
     const fadeInSections = document.querySelectorAll('.fade-in-section');
+    // Tells theme.js the reveal is running, so it leaves the sections hidden until scrolled to.
+    window.MephamRevealReady = true;
 
+    if (!('IntersectionObserver' in window)) {
+        fadeInSections.forEach(section => section.classList.add('is-visible'));
+        return;
+    }
+
+    // Reveal once the section's top is a little way into the viewport. A share of the
+    // section's own height (the old threshold: 0.15) is never reached by a section more
+    // than six or seven screens tall, which then stayed invisible.
     const observerOptions = {
         root: null,
-        rootMargin: '0px',
-        threshold: 0.15
+        rootMargin: '0px 0px -10% 0px',
+        threshold: 0
     };
 
     const fadeInObserver = new IntersectionObserver((entries) => {
@@ -1210,8 +1220,13 @@ function showToast(message, type = 'info') {
     }
 
     // Toggle Window
+    function setChatOpen(open) {
+        windowEl.classList.toggle('active', open);
+        bubble.setAttribute('aria-expanded', String(open));
+    }
+
     bubble.addEventListener('click', () => {
-        windowEl.classList.toggle('active');
+        setChatOpen(!windowEl.classList.contains('active'));
         if (windowEl.classList.contains('active')) {
             loadRenderer();
             restoreHistory();
@@ -1220,7 +1235,16 @@ function showToast(message, type = 'info') {
     });
 
     closeBtn.addEventListener('click', () => {
-        windowEl.classList.remove('active');
+        setChatOpen(false);
+        bubble.focus();
+    });
+
+    // Escape closes the chat and hands focus back to the button that opened it.
+    windowEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            setChatOpen(false);
+            bubble.focus();
+        }
     });
 
     // Helper: Add Message to UI

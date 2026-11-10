@@ -16,7 +16,7 @@
             {% else %}
             <span class="roster-initials" aria-hidden="true">{{ member.name|initials }}</span>
             {% endif %}
-            <h4 class="roster-name">{{ person_name(member) }}</h4>
+            <h3 class="roster-name">{{ person_name(member) }}</h3>
             {% set subteam = (member.subteam or '')|trim %}
             {% if subteam %}<p class="roster-subteam">{{ subteam }}</p>{% endif %}
             {% set roles = member|member_roles %}

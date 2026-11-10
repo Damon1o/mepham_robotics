@@ -29,6 +29,7 @@
     /* Typography */
     --font-display: 'Balsamiq Sans', cursive;
     --font-body: 'Balsamiq Sans', cursive;
+    --font-mono: 'Space Mono', monospace;
 
     /* Effects */
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -544,8 +545,9 @@ a.nav-user:focus-visible .nav-user-go {
 /* Avatars (partials/avatar.html): the colour a member picked on My Account, and their photo.
    Each avatar class reads --avatar-bg / --avatar-ink with its own colours as the fallback. */
 .avatar-tone--maroon { --avatar-bg: #800000; --avatar-ink: #ffffff; }
-.avatar-tone--rose { --avatar-bg: #e25c7a; --avatar-ink: #ffffff; }
-.avatar-tone--teal { --avatar-bg: #138a8a; --avatar-ink: #ffffff; }
+/* Rose and teal are a shade deeper than the first picks so white initials reach 4.5:1. */
+.avatar-tone--rose { --avatar-bg: #c93f62; --avatar-ink: #ffffff; }
+.avatar-tone--teal { --avatar-bg: #0e7c7c; --avatar-ink: #ffffff; }
 .avatar-tone--navy { --avatar-bg: #23396b; --avatar-ink: #ffffff; }
 .avatar-tone--plum { --avatar-bg: #6b2f73; --avatar-ink: #ffffff; }
 .avatar-tone--forest { --avatar-bg: #2f6b3a; --avatar-ink: #ffffff; }
@@ -568,6 +570,19 @@ a.nav-user:focus-visible .nav-user-go {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+}
+
+/* The device's own "reduce motion" setting gets the same treatment without visiting
+   My Account: smooth scrolling and the scroll-reveal used to keep running under it. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 .nav-user-text {
@@ -1025,15 +1040,18 @@ footer {
     text-align: left;
 }
 
-.footer-col h3 {
+.footer-col .footer-title {
     font-family: var(--font-display);
+    font-size: 1.17em;
+    font-weight: 700;
     color: var(--accent-gold);
     margin-bottom: 0.5rem;
 }
 
-.footer-col h4 {
+.footer-col .footer-heading {
     font-family: 'Space Mono', monospace;
     font-size: 1rem;
+    font-weight: 700;
     margin-bottom: 1rem;
     color: var(--accent-gold);
     display: flex;
@@ -1051,7 +1069,8 @@ footer {
     color: rgba(255, 255, 255, 0.8);
     text-decoration: none;
     font-size: 0.95rem;
-    padding: 0.3rem 0;
+    /* Tall enough to be a 24px touch target. */
+    padding: 0.4rem 0;
     transition: var(--transition-fast);
 }
 
@@ -1115,7 +1134,7 @@ footer {
         justify-content: center;
     }
 
-    .footer-col h4 {
+    .footer-col .footer-heading {
         justify-content: center;
     }
 }
@@ -1319,15 +1338,25 @@ footer::before {
 /* --- ANIMATIONS --- */
 
 /* Fade In Animation */
-.fade-in-section {
+/* Hidden only once scripts are known to run (theme.js puts `js` on <html> and takes it
+   back if the observer in script.js never starts). Without that guard a blocked or
+   failed script left most of every page blank. */
+.js .fade-in-section {
     opacity: 0;
     transform: translateY(30px);
     transition: opacity var(--transition-slow), transform var(--transition-slow);
 }
 
-.fade-in-section.is-visible {
+.js .fade-in-section.is-visible {
     opacity: 1;
     transform: translateY(0);
+}
+
+@media print {
+    .js .fade-in-section {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 /* Shimmer Effect */
@@ -3977,6 +4006,8 @@ footer::before {
 #chatbot-bubble {
     width: 60px;
     height: 60px;
+    padding: 0;
+    border: none;
     background: var(--maroon-dark);
     border-radius: 50%;
     display: flex;

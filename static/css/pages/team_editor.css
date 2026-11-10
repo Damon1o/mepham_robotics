@@ -578,6 +578,24 @@ select[data-member-field] {
     gap: 0.5rem;
 }
 
+/* .cta-secondary is white for a photo hero; on this light page it has to be drawn in ink. */
+.team-picker-extra .cta-secondary {
+    color: var(--maroon-dark);
+    border-color: var(--maroon-dark);
+    box-shadow: 6px 6px 0 rgba(128, 0, 0, 0.18);
+}
+
+.team-picker-extra .cta-secondary:hover {
+    background: rgba(128, 0, 0, 0.06);
+    box-shadow: 9px 9px 0 rgba(128, 0, 0, 0.22);
+}
+
+[data-theme="dark"] .team-picker-extra .cta-secondary {
+    color: #fff;
+    border-color: #fff;
+    box-shadow: 6px 6px 0 rgba(255, 255, 255, 0.2);
+}
+
 /* --- Page layout picker ------------------------------------------------------------ */
 .layout-picker {
     display: grid;

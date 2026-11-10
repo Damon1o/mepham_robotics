@@ -61,6 +61,18 @@
 
     apply(stored());
 
+    // Scroll-reveal: sections only start hidden when scripts run (`.js .fade-in-section`
+    // in styles.css). If script.js is blocked or fails, its observer never starts, so
+    // the class is taken back and everything shows.
+    document.documentElement.classList.add('js');
+    window.addEventListener('load', function () {
+        setTimeout(function () {
+            if (!window.MephamRevealReady) {
+                document.documentElement.classList.remove('js');
+            }
+        }, 2500);
+    });
+
     // Follow the OS while the user is on "system".
     if (window.matchMedia) {
         var query = window.matchMedia('(prefers-color-scheme: dark)');

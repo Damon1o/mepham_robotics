@@ -277,6 +277,12 @@
     border-color: #666;
 }
 
+/* The light theme's white halo washed the percentage out on the dark bar. */
+[data-theme="dark"] .gt-mini span {
+    color: #fff;
+    text-shadow: 0 0 3px #000, 0 0 3px #000;
+}
+
 [data-theme="dark"] .gt-person {
     border-bottom-color: rgba(255, 255, 255, 0.12);
 }
