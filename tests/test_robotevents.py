@@ -174,6 +174,49 @@ def test_build_scoreboard_counts_triple_crown():
     assert board['triple_crowns'] == 1
 
 
+def test_mark_upcoming_flags_only_unplayed_future_events():
+    import datetime
+    events = re.mark_upcoming([
+        {'name': 'Next week', 'start': '2026-11-14T00:00:00-05:00'},
+        {'name': 'Today', 'start': '2026-11-10T00:00:00-05:00'},
+        {'name': 'Last month', 'start': '2026-10-03T00:00:00-05:00'},
+        # A wrong date upstream must not hide a result that already exists.
+        {'name': 'Has a record', 'start': '2026-12-01', 'record': {'wins': 3}},
+        {'name': 'Has an award', 'start': '2026-12-01', 'awards': ['Judges Award']},
+        {'name': 'No date'},
+    ], today=datetime.date(2026, 11, 10))
+    assert [e['name'] for e in events if e['upcoming']] == ['Next week']
+
+
+def test_scoreboard_does_not_count_events_that_have_not_happened():
+    events = [{'name': 'Next week', 'bucket': 'local', 'upcoming': True},
+              {'name': 'Played', 'bucket': 'local', 'upcoming': False}]
+    board = re.build_scoreboard(events, [])
+    assert board['competitions'] == 1 and board['local'] == 1
+
+
+def test_team_summary_keeps_a_registered_event_out_of_the_results(token, db, upstream):
+    """RobotEvents lists a team at an event as soon as it registers."""
+    upstream.responses['/teams'] = envelope([{'id': 7, 'number': '77628A'}])
+    upstream.responses['/teams/7/skills'] = envelope([])
+    upstream.responses['/teams/7/events'] = envelope([
+        {'name': 'Far Future Open', 'start': '2999-01-01T00:00:00-05:00', 'level': 'Other'}])
+    upstream.responses['/teams/7/awards'] = envelope([])
+    upstream.responses['/teams/7/rankings'] = envelope([])
+
+    summary = re.team_summary(db, '77628A')
+
+    assert summary['events'][0]['upcoming'] is True
+    assert summary['scoreboard']['competitions'] == 0
+
+
+def test_team_page_script_treats_upcoming_events_as_not_yet_results():
+    import pathlib
+    script = (pathlib.Path(__file__).resolve().parent.parent / 'static' / 'js' / 'team.js').read_text(encoding='utf-8')
+    assert 'return !event.upcoming' in script
+    assert "'Next Event'" in script
+
+
 def test_build_scoreboard_partial_sweep_is_not_a_triple_crown():
     events = re.parse_events(envelope([{'name': 'States', 'start': '2026-03-01', 'level': 'State'}]))
     awards = [{'title': 'Excellence Award', 'event': 'States'}]

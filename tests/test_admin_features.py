@@ -409,6 +409,18 @@ def test_overview_lists_what_needs_attention(admin, db):
     assert 'No upcoming events' in page
 
 
+def test_overview_flags_club_awards_that_disagree_with_the_teams(admin, db):
+    """Achievements showed "3 awards won" above teams that each had none."""
+    category = db['awards'].insert_one({'title': 'Judges Award', 'count': 3}).inserted_id
+    db['awards'].insert_one({'title': 'Judges Award', 'team_number': '77628A', 'count': 1,
+                             'category_id': str(category)})
+    page = admin.get('/admin').get_data(as_text=True)
+    assert 'The club has 3 awards but its teams&#39; own counts add up to 1' in page
+
+    db['awards'].update_one({'team_number': '77628A'}, {'$set': {'count': 3}})
+    assert 'own counts add up to' not in admin.get('/admin').get_data(as_text=True)
+
+
 @pytest.mark.parametrize('path', ['/admin/api/award-categories', '/admin/api/stats', '/admin/api/roster/link',
                                   '/admin/api/messages/bulk', f'/admin/api/teams/{"a" * 24}/new-season'])
 def test_new_admin_endpoints_need_admin(client, make_user, path):

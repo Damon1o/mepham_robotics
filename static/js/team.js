@@ -120,7 +120,7 @@
 
         const date = document.createElement('span');
         date.className = 'results-date';
-        date.textContent = (event.start || '').slice(0, 10);
+        date.textContent = shortDate(event.start) || (event.start || '').slice(0, 10);
 
         const name = document.createElement('h3');
         name.className = 'results-name';
@@ -189,7 +189,8 @@
 
     function fillResults(section, data, photosByEvent) {
         if (!section) return;
-        const events = data.events || [];
+        // A competition the team is only registered for is not a result yet.
+        const events = (data.events || []).filter(function (event) { return !event.upcoming; });
         if (!events.length) {
             drop(section);
             return;
@@ -216,8 +217,11 @@
             const events = (data.events || []).slice().sort(function (a, b) {
                 return (b.start || '').localeCompare(a.start || '');
             });
-            const latest = events[0];
+            // Newest played event; with none yet, the soonest one the team is registered for.
+            const played = events.filter(function (event) { return !event.upcoming; });
+            const latest = played[0] || events[events.length - 1];
             if (!latest) return drop(tile);
+            setText(tile, 'label', latest.upcoming ? 'Next Event' : 'Latest Result');
             setText(tile, 'event', latest.name || 'Competition');
             const parts = [recordLine(latest.record)].concat(latest.awards || []).filter(Boolean);
             setText(tile, 'record', parts.join(' · ') || shortDate(latest.start));
@@ -251,7 +255,7 @@
         meta.className = 'tl-meta';
         const kind = document.createElement('span');
         kind.className = 'tl-kind';
-        kind.textContent = 'Competition';
+        kind.textContent = event.upcoming ? 'Upcoming' : 'Competition';
         meta.appendChild(kind);
         const title = document.createElement('h3');
         title.className = 'tl-title';
