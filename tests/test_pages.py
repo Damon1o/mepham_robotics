@@ -98,9 +98,25 @@ def test_google_site_verification_is_served_from_the_root(client):
 
 
 def test_static_assets_are_cached_hard(client):
-    resp = client.get('/static/js/theme.js')
+    import api.index as module
+    resp = client.get('/static/js/theme.js?v=' + module._static_version('js/theme.js'))
     assert resp.status_code == 200
     assert 'immutable' in resp.headers['Cache-Control']
+
+
+def test_static_url_without_the_current_version_is_only_cached_briefly(client):
+    """An image named from a stylesheet has no version, and an old page may ask for an old one."""
+    for url in ('/static/js/theme.js', '/static/js/theme.js?v=bca8900'):
+        resp = client.get(url)
+        assert resp.status_code == 200
+        assert 'immutable' not in resp.headers['Cache-Control'], url
+        assert 'max-age=3600' in resp.headers['Cache-Control'], url
+
+
+def test_missing_static_file_is_not_cached(client):
+    resp = client.get('/static/css/no-such-file.css?v=0')
+    assert resp.status_code == 404
+    assert resp.headers['Cache-Control'] == 'no-cache'
 
 
 def test_static_urls_carry_a_version(client):
@@ -114,11 +130,25 @@ def test_static_urls_carry_a_version(client):
 
 def test_static_version_changes_with_the_file(tmp_path, monkeypatch):
     import api.index as module
+    (tmp_path / 'a.css').write_text('body { color: red }', encoding='utf-8')
+    monkeypatch.setattr(module.app, 'static_folder', str(tmp_path))
+    monkeypatch.setattr(module, '_static_versions', {})
+    first = module._static_version('a.css')
+    (tmp_path / 'a.css').write_text('body { color: blue }', encoding='utf-8')
     module._static_versions.clear()
-    first = module._static_version('js/theme.js')
-    module._static_versions.clear()
-    monkeypatch.setattr(module.os.path, 'getmtime', lambda p: 1234567890)
-    assert module._static_version('js/theme.js') != first
+    assert module._static_version('a.css') != first
+
+
+def test_static_version_ignores_the_modification_time(tmp_path, monkeypatch):
+    """Vercel gives every bundled file the same fixed mtime, so the version must come from the bytes."""
+    import os
+    import api.index as module
+    for name, text in (('a.css', 'one'), ('b.css', 'two')):
+        (tmp_path / name).write_text(text, encoding='utf-8')
+        os.utime(tmp_path / name, (1540000000, 1540000000))
+    monkeypatch.setattr(module.app, 'static_folder', str(tmp_path))
+    monkeypatch.setattr(module, '_static_versions', {})
+    assert module._static_version('a.css') != module._static_version('b.css')
 
 
 def test_missing_static_file_still_builds_a_url(client):
