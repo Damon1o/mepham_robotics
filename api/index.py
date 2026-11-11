@@ -1159,18 +1159,25 @@ def add_security_headers(response):
 # --- Static asset versioning ----------------------------------------------
 # Static files are served with `immutable` and a one-year max-age, so a URL
 # without a version can pin a stale stylesheet in a browser for a year. This
-# stamps every url_for('static', ...) with the file's modification time, which
+# stamps every url_for('static', ...) with a hash of the file's contents, which
 # makes the aggressive caching safe and removes the hand-maintained ?v=N.
+#
+# Not the modification time: Vercel packs every file into the function bundle
+# with the same fixed 2018 timestamp, so an mtime-based version was identical
+# for every file on every deploy and returning visitors kept year-old CSS and JS.
 _static_versions = {}
 
 
 def _static_version(filename):
     if filename not in _static_versions:
+        digest = hashlib.sha1()
         try:
-            mtime = os.path.getmtime(os.path.join(app.static_folder, filename))
+            with open(os.path.join(app.static_folder, filename), 'rb') as handle:
+                for chunk in iter(lambda: handle.read(65536), b''):
+                    digest.update(chunk)
+            _static_versions[filename] = digest.hexdigest()[:10]
         except OSError:
-            mtime = 0
-        _static_versions[filename] = format(int(mtime) & 0xFFFFFFF, 'x')
+            _static_versions[filename] = '0'
     return _static_versions[filename]
 
 
@@ -7028,10 +7035,24 @@ def handle_unexpected_error(e):
         return jsonify({'error': SERVER_ERROR_TEXT}), 500
     return render_template('500.html'), 500
 
+# A static URL without the current version (an image named from a stylesheet, a
+# hand-typed link) can't be told apart from an older copy, so it is only kept briefly.
+STATIC_UNVERSIONED_MAX_AGE = 3600
+
+
 @app.after_request
 def add_static_cache_headers(response):
-    if request.path.startswith('/static/'):
+    if not request.path.startswith('/static/'):
+        return response
+    if response.status_code not in (200, 206, 304):
+        # A missing file cached as `immutable` stayed missing for a year after it was added.
+        response.headers['Cache-Control'] = 'no-cache'
+        return response
+    filename = (request.view_args or {}).get('filename') or ''
+    if request.args.get('v') == _static_version(filename) != '0':
         response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    else:
+        response.headers['Cache-Control'] = f'public, max-age={STATIC_UNVERSIONED_MAX_AGE}'
     return response
 
 if __name__ == '__main__':
