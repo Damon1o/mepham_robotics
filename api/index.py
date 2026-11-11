@@ -28,6 +28,7 @@ import requests
 try:  # package import on Vercel, flat import when run from the api/ directory
     from api import devices, discord_bot, events, guide, people, robotevents, sheets, site_content, totp
 except ImportError:  # pragma: no cover
+    import devices
     import discord_bot
     import events
     import guide
@@ -392,6 +393,10 @@ ACTIVITY_TYPES = {
     'subscribers_export': ('📤', 'Subscriber list exported', 'messages'),
     'site_edit': ('🖊️', 'Site content edited', 'site'),
     'fundraiser_edit': ('💰', 'Fundraisers edited', 'events'),
+    'signup_sheet': ('📝', 'Sign-up sheet changed', 'events'),
+    'event_signup': ('🙋', 'Event sign-up changed', 'events'),
+    'attendance': ('🕒', 'Sign-in sheet edited', 'people'),
+    'discord_link': ('🔗', 'Discord link changed', 'people'),
 }
 ACTIVITY_GROUPS = (('people', 'People'), ('teams', 'Teams'), ('events', 'Events'), ('awards', 'Awards'),
                    ('sponsors', 'Sponsors'), ('messages', 'Messages'), ('site', 'Site'))
@@ -750,6 +755,19 @@ def _safe_next(target):
         if not parsed.scheme and not parsed.netloc:
             return target
     return url_for('index')
+
+def _same_site_referrer():
+    """The page this request came from, as a path, when it was one of ours; otherwise ''.
+
+    A redirect to the raw Referer header would send the browser wherever another site's
+    page said it came from.
+    """
+    referrer = urllib.parse.urlsplit(request.referrer or '')
+    if referrer.netloc != request.host or not referrer.path.startswith('/'):
+        return ''
+    target = referrer.path + (f'?{referrer.query}' if referrer.query else '')
+    return target if _safe_next(target) == target else ''
+
 
 def _login_redirect():
     return redirect(url_for('login', next=request.full_path.rstrip('?')))
@@ -1114,7 +1132,7 @@ def payload_too_large(e):
     if _wants_json():
         return jsonify({'error': f'File too large (max {megabytes} MB).'}), 413
     flash(f'That file is too large. The limit is {megabytes} MB.', 'error')
-    return redirect(request.referrer or url_for('index')), 302
+    return redirect(_same_site_referrer() or url_for('index')), 302
 
 
 # --- Security headers ------------------------------------------------------
@@ -6966,19 +6984,27 @@ def robots_txt():
 @app.route('/sitemap.xml')
 def sitemap_xml():
     urls = []
+    construction = site().construction
+
+    def hidden(endpoint):
+        # A page showing the under construction notice answers 503; keep it out of the index.
+        return site_content.under_construction(construction, endpoint)
+
     for endpoint, priority, changefreq in STATIC_PUBLIC_PAGES:
+        if hidden(endpoint):
+            continue
         urls.append({
             'loc': url_for(endpoint, _external=True),
             'priority': priority,
             'changefreq': changefreq,
         })
-    for team in listed_teams():
+    for team in [] if hidden('team_page') else listed_teams():
         urls.append({
             'loc': url_for('team_page', team_number=team['team_number'], _external=True),
             'priority': 0.6,
             'changefreq': 'weekly',
         })
-    for item in _calendar_sources(club_now()):
+    for item in [] if hidden('events_page') else _calendar_sources(club_now()):
         if item['source'] == 'event':
             urls.append({'loc': url_for('event_page', event_id=item['id'], _external=True),
                          'priority': 0.5, 'changefreq': 'weekly'})
@@ -7008,7 +7034,14 @@ def page_not_found(e):
 def method_not_allowed(e):
     if _wants_json():
         return jsonify({'error': 'That action is not supported here.'}), 405
-    return e
+    # The same card as a rejected form: Werkzeug's bare page was the only unstyled one left.
+    response = app.make_response((render_template(
+        '400.html', code=405, title='Not Allowed', heading="That Doesn't Work Here",
+        message='This address only answers a form or button on the site, so opening it directly does nothing. '
+                'Nothing was changed.'), 405))
+    if getattr(e, 'valid_methods', None):
+        response.headers['Allow'] = ', '.join(e.valid_methods)
+    return response
 
 @app.errorhandler(500)
 def internal_server_error(e):
