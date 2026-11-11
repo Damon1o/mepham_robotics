@@ -61,6 +61,7 @@
 
 {% block content %}
 <div {{ hero_attrs(donate.hero_image) }}>
+    {% include "partials/hero_sea.html" %}
     <div class="hero-content">
         <h1>{{ donate.hero_title }}</h1>
         {% if donate.hero_tagline %}<p>{{ donate.hero_tagline }}</p>{% endif %}

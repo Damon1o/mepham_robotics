@@ -175,13 +175,15 @@ body:has(.sidenav.active) #custom-chatbot-container {
     overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 215, 0, 0.45) transparent;
-    transition: transform 0.45s var(--nav-ease);
+    transition: transform 0.45s var(--nav-ease), box-shadow 0.45s var(--nav-ease);
     transform: translateX(-100%);
-    box-shadow: 10px 0 0 rgba(0, 0, 0, 0.18), 18px 0 40px rgba(0, 0, 0, 0.35);
 }
 
+/* The shadow belongs to the open drawer only: on the closed one it reached past the
+   drawer and left a grey band down the left edge of every page. */
 .sidenav.active {
     transform: translateX(0);
+    box-shadow: 10px 0 0 rgba(0, 0, 0, 0.18), 18px 0 40px rgba(0, 0, 0, 0.35);
 }
 
 .sidenav::-webkit-scrollbar {

@@ -36,6 +36,7 @@ href="{{ row.url }}"{% if row.url.startswith('http') %} target="_blank" rel="noo
 
 {% block content %}
 <div {{ hero_attrs(None) }}>
+    {% include "partials/hero_sea.html" %}
     <div class="hero-content">
         <h1>{{ hub.hero_title }}</h1>
         {% if hub.hero_tagline %}<p>{{ hub.hero_tagline }}</p>{% endif %}

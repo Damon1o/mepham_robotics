@@ -1,4 +1,5 @@
 <div class="hero-image fade-in-section" style="--team-hero-image: url('{{ get_image_url(team.hero_image) }}')">
+    {% include "partials/hero_sea.html" %}
     <div class="hero-content">
         <h1>{{ team_name }}</h1>
         <p>{{ (team.tagline or site.teams.default_tagline) if is_group else team.nickname or site.teams.default_tagline }}</p>

@@ -281,6 +281,8 @@ SECTIONS = (
               hint='Only while a competition on the calendar is happening, and only with a RobotEvents key.'),
         Field('show_stats', 'toggle', 'Show the club numbers', True, group='Sections',
               hint='The numbers themselves are set on the dashboard.', hint_link=('Overview', 'overview')),
+        Field('stats_heading', 'text', 'Club numbers heading', 'The Voyage So Far', max=60, group='Sections',
+              hint='Sits above the numbers while the ship sails past them.'),
         Field('show_gallery', 'toggle', 'Show the photo gallery', True, group='Sections'),
         Field('gallery_heading', 'text', 'Gallery heading', 'Team Gallery', max=60, group='Sections'),
         Field('show_donate', 'toggle', 'Show the donation band', True, group='Sections'),

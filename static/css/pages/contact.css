@@ -725,7 +725,8 @@
 }
 
 /* The band is meant to sit flush against the footer, so drop the global gap. */
-.closing-band+footer {
+.closing-band+footer,
+.closing-band+.footer-sea {
     margin-top: 0;
 }
 

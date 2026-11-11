@@ -979,3 +979,341 @@
         animation: none;
     }
 }
+
+/* ============================================
+   THE VOYAGE (club numbers)
+   A sea chart the mascot's ship sails across. voyage.js pins the section and sets --p
+   (0 to 1) from the scroll; everything that moves here is derived from that one number.
+   Without the script, or with motion reduced, .is-live is never set and this is a
+   plain row of numbers above a still sea. Waves, cog and bobbing: css/motion.css.
+   ============================================ */
+.voyage {
+    --p: 0.14;
+    --lean: 0;
+    --ship-w: clamp(120px, 17vw, 248px);
+    --chart: #f4e7cb;
+    --chart-line: rgba(58, 29, 20, 0.09);
+    --chart-ink: rgba(58, 29, 20, 0.24);
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    background:
+        linear-gradient(var(--chart-line) 1px, transparent 1px) 0 0 / 100% 56px,
+        linear-gradient(90deg, var(--chart-line) 1px, transparent 1px) 0 0 / 56px 100%,
+        var(--chart);
+    border-top: 4px solid #1a1a1a;
+}
+
+.voyage-stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(4rem, 9vh, 5.5rem) 2rem 0;
+}
+
+.voyage-heading {
+    margin-bottom: 3rem;
+    color: var(--maroon-dark);
+}
+
+.voyage .stats-container {
+    width: 100%;
+}
+
+.voyage-sea {
+    position: relative;
+    flex: none;
+    height: calc(var(--ship-w) * 1.13 + 64px);
+    margin: 2.5rem -2rem 0;
+    overflow: hidden;
+    container-type: inline-size;
+}
+
+.voyage-sea .sea-wave--back {
+    --wave-h: 66px;
+}
+
+.voyage-sea .sea-wave--mid {
+    --wave-h: 44px;
+}
+
+.voyage-sea .sea-wave--front {
+    --wave-h: 26px;
+}
+
+/* The ship: across the chart with --p, nose down or up with --lean (scroll speed),
+   while the picture inside bobs on its own. vw is the fallback for cqw. */
+.voyage-ship {
+    position: absolute;
+    left: 3%;
+    bottom: 26px;
+    width: var(--ship-w);
+    transform-origin: 50% 90%;
+    transform: translate3d(calc(var(--p) * (82vw - var(--ship-w))), 0, 0) rotate(calc(var(--lean) * 1deg));
+    transform: translate3d(calc(var(--p) * (82cqw - var(--ship-w))), 0, 0) rotate(calc(var(--lean) * 1deg));
+    will-change: transform;
+}
+
+.voyage-ship img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transform-origin: 50% 90%;
+    animation: sea-bob 2.6s ease-in-out infinite alternate;
+}
+
+/* The course: faint dashes to the X, inked in as far as the ship has come. Both sit high
+   enough to clear the chat bubble in the corner of the screen. */
+.voyage-route {
+    position: absolute;
+    left: 3%;
+    right: calc(4% + 18px);
+    bottom: 110px;
+    border-top: 4px dashed var(--chart-ink);
+}
+
+.voyage-route::after {
+    content: '';
+    position: absolute;
+    inset: -4px 0 auto;
+    border-top: 4px dashed var(--maroon-dark);
+    clip-path: inset(0 calc(100% - var(--ship-w) / 2 - var(--p) * (82vw - var(--ship-w))) 0 0);
+    clip-path: inset(0 calc(100% - var(--ship-w) / 2 - var(--p) * (82cqw - var(--ship-w))) 0 0);
+}
+
+/* X marks the spot. */
+.voyage-mark {
+    position: absolute;
+    right: 4%;
+    bottom: 94px;
+    width: 36px;
+    height: 36px;
+}
+
+.voyage-mark::before,
+.voyage-mark::after {
+    content: '';
+    position: absolute;
+    top: calc(50% - 4px);
+    left: -2px;
+    right: -2px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--maroon-dark);
+    transform: rotate(45deg);
+    transition: background-color 0.3s ease;
+}
+
+.voyage-mark::after {
+    transform: rotate(-45deg);
+}
+
+.voyage.is-landed .voyage-mark {
+    animation: mark-found 0.7s var(--ease-out-quart) both;
+}
+
+.voyage.is-landed .voyage-mark::before,
+.voyage.is-landed .voyage-mark::after {
+    background: var(--accent-gold);
+    box-shadow: 0 0 0 2px #1a1a1a;
+}
+
+@keyframes mark-found {
+    0% {
+        transform: scale(1);
+    }
+
+    40% {
+        transform: scale(1.7) rotate(-12deg);
+    }
+
+    100% {
+        transform: scale(1.25);
+    }
+}
+
+/* A cog for a sun, in the corner of the chart. It idles here; pinned, the scroll turns it. */
+.voyage-sun {
+    top: clamp(3.25rem, 8vh, 4.75rem);
+    right: 7%;
+    width: clamp(64px, 7vw, 96px);
+    filter: drop-shadow(3px 3px 0 rgba(26, 26, 26, 0.85));
+}
+
+/* No corner to spare beside the heading on a narrow screen. */
+@media (max-width: 900px) {
+    .voyage-sun {
+        display: none;
+    }
+}
+
+/* Pinned: the section is taller than the screen and its stage sticks while the extra
+   height scrolls by. Short screens (a phone on its side) keep the plain layout. */
+@media (min-height: 620px) {
+    .voyage.is-live {
+        height: 240vh;
+    }
+
+    .voyage.is-live .voyage-stage {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        height: 100svh;
+        justify-content: space-between;
+        overflow: hidden;
+    }
+
+    .voyage.is-live .stats-container {
+        margin-top: auto;
+        margin-bottom: auto;
+    }
+
+    .voyage.is-live .voyage-sea {
+        margin-top: 1.5rem;
+    }
+
+    .voyage.is-live .voyage-sun {
+        animation: none;
+        transform: rotate(calc(var(--p) * 320deg));
+    }
+
+    /* Each number waits below the line, faded, until the ship is under it. */
+    .voyage.is-live [data-voyage-stop] {
+        opacity: 0.28;
+        transform: translateY(28px) scale(0.93);
+        transition: opacity 0.45s ease, transform 0.7s var(--ease-out-quart),
+            border-color var(--transition-base), box-shadow var(--transition-base);
+    }
+
+    .voyage.is-live [data-voyage-stop].is-reached {
+        opacity: 1;
+        transform: none;
+    }
+
+    .voyage.is-live [data-voyage-stop].is-reached:hover {
+        transform: translateY(-6px);
+    }
+}
+
+@media (max-width: 600px) {
+    .voyage {
+        --ship-w: 124px;
+    }
+
+    .voyage-stage {
+        padding: 4.75rem 1rem 0;
+    }
+
+    .voyage-heading {
+        margin-bottom: 1.5rem;
+    }
+
+    .voyage-sea {
+        margin: 1.5rem -1rem 0;
+    }
+
+    .voyage .stat-item {
+        padding: 0.85rem 0.5rem;
+    }
+
+    .voyage .stat-number {
+        margin-bottom: 0.15rem;
+        line-height: 1.25;
+    }
+}
+
+@media (min-height: 620px) and (max-width: 600px) {
+    .voyage.is-live .voyage-sea {
+        margin-top: 1rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .voyage-ship img,
+    .voyage-sun {
+        animation: none;
+    }
+}
+
+[data-motion="reduce"] .voyage-ship img,
+[data-motion="reduce"] .voyage-sun {
+    animation: none;
+}
+
+@media print {
+    .voyage-sea {
+        display: none;
+    }
+}
+
+[data-theme="dark"] .voyage {
+    --chart: #1f1815;
+    --chart-line: rgba(255, 215, 0, 0.055);
+    --chart-ink: rgba(244, 231, 203, 0.26);
+}
+
+[data-theme="dark"] .voyage-route::after {
+    border-top-color: var(--accent-gold);
+}
+
+[data-theme="dark"] .voyage-mark::before,
+[data-theme="dark"] .voyage-mark::after {
+    background: var(--maroon-accent);
+}
+
+[data-theme="dark"] .voyage.is-landed .voyage-mark::before,
+[data-theme="dark"] .voyage.is-landed .voyage-mark::after {
+    background: var(--accent-gold);
+}
+
+/* ============================================
+   SEA AND RIGGING ON THE HOMEPAGE (css/motion.css)
+   ============================================ */
+/* The hero's waves run straight into the countdown, which is the same maroon. */
+.hero-image + .countdown-section {
+    border-top: 0;
+}
+
+/* The countdown's wheel moves one notch a second, like the clock above it. */
+.countdown-section::before,
+.countdown-section::after {
+    content: '';
+    position: absolute;
+    aspect-ratio: 1;
+    background: center / contain no-repeat;
+    pointer-events: none;
+}
+
+.countdown-section::before {
+    left: clamp(-170px, -8vw, -90px);
+    bottom: -150px;
+    width: clamp(300px, 34vw, 460px);
+    background-image: var(--rig-helm);
+    opacity: 0.16;
+    animation: rig-turn 60s steps(60) infinite;
+}
+
+.countdown-section::after {
+    top: -46px;
+    right: clamp(-40px, 4vw, 90px);
+    width: clamp(110px, 13vw, 170px);
+    background-image: var(--rig-cog);
+    opacity: 0.13;
+    animation: rig-turn 24s linear infinite reverse;
+}
+
+.countdown-section > * {
+    position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .countdown-section::before,
+    .countdown-section::after {
+        animation: none;
+    }
+}
+
+[data-motion="reduce"] .countdown-section::before,
+[data-motion="reduce"] .countdown-section::after {
+    animation: none;
+}

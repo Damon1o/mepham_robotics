@@ -35,6 +35,7 @@
         rel="stylesheet">
     {% endblock %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/motion.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/controls.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fuse.css') }}">
     {% if 'user' in session %}<link rel="stylesheet" href="{{ url_for('static', filename='css/tour.css') }}">{% endif %}
@@ -179,6 +180,16 @@
         {% include "partials/announcement.html" %}
         {% block content %}{% endblock %}
     </main>
+
+    {#- Waves rolling in above the footer, and the mascot's ship crossing them (css/motion.css). -#}
+    {% set ship = image_manifest['icons/mascot_ship'] %}
+    <div class="footer-sea" aria-hidden="true">
+        <span class="sea-wave sea-wave--back"></span>
+        <span class="footer-ship"><img src="{{ url_for('static', filename=ship.src) }}" alt=""
+                width="{{ ship.width }}" height="{{ ship.height }}" loading="lazy" decoding="async"></span>
+        <span class="sea-wave sea-wave--mid"></span>
+        <span class="sea-wave sea-wave--front"></span>
+    </div>
 
     <footer>
         <div class="footer-grid">

@@ -3,6 +3,11 @@
     "apple_touch": "assets/icons/apple-touch-icon.png",
     "favicon": "assets/icons/favicon-32.png"
   },
+  "icons/mascot_ship": {
+    "height": 352,
+    "src": "assets/icons/mascot-ship.webp",
+    "width": 312
+  },
   "icons/steven": {
     "height": 96,
     "jpg": "assets/icons/steven-96.jpg",

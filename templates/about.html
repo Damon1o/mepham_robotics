@@ -13,6 +13,7 @@
 {% set about = site.about %}
 {% block content %}
 <div {{ hero_attrs(about.hero_image) }}>
+    {% include "partials/hero_sea.html" %}
     <div class="hero-content">
         <h1>{{ about.hero_title }}</h1>
         {% if about.hero_tagline %}<p>{{ about.hero_tagline }}</p>{% endif %}

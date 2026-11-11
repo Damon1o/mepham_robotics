@@ -61,6 +61,7 @@ href="{{ url }}"{% if url.startswith('http') %} target="_blank" rel="noopener"{%
 
 {% block content %}
 <div {{ hero_attrs(al.hero_image) }}>
+    {% include "partials/hero_sea.html" %}
     <div class="hero-content">
         <h1>{{ al.hero_title }}</h1>
         {% if al.hero_tagline %}<p>{{ al.hero_tagline }}</p>{% endif %}

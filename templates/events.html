@@ -15,6 +15,7 @@
 
 {% block content %}
 <div {{ hero_attrs(ev.hero_image) }}>
+    {% include "partials/hero_sea.html" %}
     <div class="hero-content">
         <h1>{{ ev.hero_title }}</h1>
         {% if ev.hero_tagline %}<p>{{ ev.hero_tagline }}</p>{% endif %}

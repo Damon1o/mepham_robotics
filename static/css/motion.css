@@ -1,0 +1,324 @@
+/*
+ ============================================
+   THE SEA AND THE RIGGING
+   Shared motion pieces drawn from the mascot, a robot pirate on the
+   S.S. Robotics Club: paper-theatre waves, a ship's wheel, a cog, an anchor
+   and the ship itself. Page heroes and the footer use them on every page;
+   the homepage voyage (pages/index.css) builds its scene from the same parts.
+
+   Everything here is decoration: aria-hidden in the markup, no pointer events,
+   and still (not hidden) when motion is reduced.
+ ============================================
+*/
+
+:root {
+    --sea-front: #800000;
+    --sea-mid: #944547;
+    --sea-back: #b35d5f;
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+
+    /* One scallop per 80px tile, inked on its top edge like the site's borders. */
+    --wave-front: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'%3E%3Cpath d='M-2 2Q40 38 82 2V44H-2Z' fill='%23800000' stroke='%231a1a1a' stroke-width='3'/%3E%3C/svg%3E");
+    --wave-mid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'%3E%3Cpath d='M-2 2Q40 38 82 2V44H-2Z' fill='%23944547' stroke='%231a1a1a' stroke-width='3'/%3E%3C/svg%3E");
+    --wave-back: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'%3E%3Cpath d='M-2 2Q40 38 82 2V44H-2Z' fill='%23b35d5f' stroke='%231a1a1a' stroke-width='3'/%3E%3C/svg%3E");
+
+    --rig-helm: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23ffd700' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M50 5V95M5 50H95M18.2 18.2L81.8 81.8M81.8 18.2L18.2 81.8'/%3E%3Ccircle cx='50' cy='50' r='30'/%3E%3Ccircle cx='50' cy='50' r='21' stroke-width='2.5'/%3E%3C/g%3E%3Ccircle cx='50' cy='50' r='9' fill='%23ffd700'/%3E%3C/svg%3E");
+    --rig-cog: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23ffd700' fill-rule='evenodd' d='M84.4 43.4L95.7 45.1L95.7 54.9L84.4 56.6L81.7 64.9L89.9 72.9L84.1 80.9L74 75.5L66.9 80.7L68.8 92L59.5 95L54.4 84.7L45.6 84.7L40.5 95L31.2 92L33.1 80.7L26 75.5L15.9 80.9L10.1 72.9L18.3 64.9L15.6 56.6L4.3 54.9L4.3 45.1L15.6 43.4L18.3 35.1L10.1 27.1L15.9 19.1L26 24.5L33.1 19.3L31.2 8L40.5 5L45.6 15.3L54.4 15.3L59.5 5L68.8 8L66.9 19.3L74 24.5L84.1 19.1L89.9 27.1L81.7 35.1ZM50 36a14 14 0 1 0 0 28a14 14 0 1 0 0-28Z'/%3E%3C/svg%3E");
+    --rig-anchor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='5' r='3'/%3E%3Cpath d='M12 22V8M5 12H2a10 10 0 0 0 20 0h-3M8 12h8'/%3E%3C/svg%3E");
+}
+
+/* --- WAVES ---------------------------------------------------------------- */
+/* A strip of scallops over a solid fill. It is wider than its box by a tile on each
+   side so it can slide from side to side, the way stage waves do, without showing an end. */
+.sea-wave {
+    --wave-tile: var(--wave-front);
+    --wave-fill: var(--sea-front);
+    position: absolute;
+    left: -80px;
+    right: -80px;
+    bottom: 0;
+    height: var(--wave-h, 40px);
+    background:
+        var(--wave-tile) repeat-x 0 0 / 80px 40px,
+        linear-gradient(var(--wave-fill), var(--wave-fill)) no-repeat 0 38px / 100% 100%;
+    animation: sea-sway var(--wave-time, 5.5s) ease-in-out infinite alternate;
+    will-change: transform;
+}
+
+.sea-wave--mid {
+    --wave-tile: var(--wave-mid);
+    --wave-fill: var(--sea-mid);
+    --wave-time: 7s;
+    animation-direction: alternate-reverse;
+}
+
+.sea-wave--back {
+    --wave-tile: var(--wave-back);
+    --wave-fill: var(--sea-back);
+    --wave-time: 9s;
+}
+
+@keyframes sea-sway {
+    from {
+        transform: translate3d(-34px, 0, 0);
+    }
+
+    to {
+        transform: translate3d(34px, 5px, 0);
+    }
+}
+
+/* --- THE WHEEL AND THE COG -------------------------------------------------- */
+.rig-helm,
+.rig-cog {
+    position: absolute;
+    aspect-ratio: 1;
+    background: center / contain no-repeat;
+    animation: rig-turn 60s linear infinite;
+}
+
+.rig-helm {
+    background-image: var(--rig-helm);
+}
+
+.rig-cog {
+    background-image: var(--rig-cog);
+    animation-duration: 18s;
+    animation-direction: reverse;
+}
+
+@keyframes rig-turn {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Anything riding the water: bobs and rocks about its keel. */
+@keyframes sea-bob {
+    from {
+        transform: translateY(0) rotate(-2.5deg);
+    }
+
+    to {
+        transform: translateY(5px) rotate(2.5deg);
+    }
+}
+
+/* --- PAGE HEROES ------------------------------------------------------------ */
+/* Every hero photo sits above a strip of sea, with the wheel and a cog half under it. */
+.hero-sea {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.hero-sea .rig-helm {
+    left: clamp(-110px, -4vw, -50px);
+    bottom: -150px;
+    width: clamp(220px, 26vw, 340px);
+    opacity: 0.5;
+}
+
+.hero-sea .rig-cog {
+    left: clamp(120px, 19vw, 262px);
+    bottom: -8px;
+    width: clamp(64px, 8vw, 104px);
+    opacity: 0.38;
+}
+
+.hero-sea .sea-wave--back {
+    --wave-h: 58px;
+}
+
+.hero-sea .sea-wave--front {
+    --wave-h: 36px;
+}
+
+/* The scroll cue is an anchor dropped in that sea, swinging on its chain. It sits in the
+   strip of waves, clear of the hero's buttons. (The old float animation also dropped the
+   translateX that centred it.) */
+.scroll-indicator {
+    bottom: 8px;
+    transform-origin: 50% -46px;
+    animation: anchor-swing 2.8s ease-in-out infinite alternate;
+}
+
+.scroll-indicator::before {
+    content: '';
+    width: 30px;
+    height: 30px;
+    flex: none;
+    background: rgba(255, 255, 255, 0.9);
+    -webkit-mask: var(--rig-anchor) center / contain no-repeat;
+    mask: var(--rig-anchor) center / contain no-repeat;
+}
+
+@keyframes anchor-swing {
+    from {
+        transform: translateX(-50%) rotate(-9deg);
+    }
+
+    to {
+        transform: translateX(-50%) rotate(9deg);
+    }
+}
+
+/* --- FOOTER ----------------------------------------------------------------- */
+/* The footer is the sea floor: waves roll in above it and the ship keeps crossing. */
+.footer-sea {
+    position: relative;
+    height: 128px;
+    margin-top: var(--spacing-md);
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.footer-sea + footer {
+    margin-top: 0;
+}
+
+.footer-sea + footer::before {
+    content: none;
+}
+
+.footer-sea .sea-wave--back {
+    --wave-h: 56px;
+}
+
+.footer-sea .sea-wave--mid {
+    --wave-h: 42px;
+}
+
+.footer-sea .sea-wave--front {
+    --wave-h: 26px;
+}
+
+.footer-ship {
+    position: absolute;
+    left: 0;
+    bottom: 22px;
+    width: 88px;
+    /* Starts part of the way across, so there is a ship in sight on arrival. */
+    animation: ship-cross 90s linear -20s infinite;
+    will-change: transform;
+}
+
+.footer-ship img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transform-origin: 50% 90%;
+    animation: sea-bob 2.6s ease-in-out infinite alternate;
+}
+
+@keyframes ship-cross {
+    from {
+        transform: translate3d(-80px, 0, 0);
+    }
+
+    to {
+        transform: translate3d(calc(100vw + 12px), 0, 0);
+    }
+}
+
+/* --- SMALL PARTS ------------------------------------------------------------ */
+/* The crest in the open menu rocks at its mooring. `rotate` is its own property, so
+   the tilt and hover scale set with `transform` in styles.css keep working. */
+.sidenav.active .nav-brand img {
+    animation: crest-rock 3.4s ease-in-out infinite alternate;
+}
+
+@keyframes crest-rock {
+    from {
+        rotate: -2.5deg;
+    }
+
+    to {
+        rotate: 3deg;
+    }
+}
+
+/* The chat bubble floats like a buoy. */
+#chatbot-bubble {
+    animation: buoy-bob 3.2s ease-in-out infinite alternate;
+}
+
+@keyframes buoy-bob {
+    from {
+        translate: 0 0;
+        rotate: -3deg;
+    }
+
+    to {
+        translate: 0 -5px;
+        rotate: 3deg;
+    }
+}
+
+/* --- REDUCED MOTION --------------------------------------------------------- */
+/* styles.css already cuts every animation to an instant; these would otherwise stop on
+   their last frame (waves pushed aside, the ship off the page), so they are stilled in
+   their resting place instead. */
+@media (prefers-reduced-motion: reduce) {
+    .sea-wave,
+    .rig-helm,
+    .rig-cog,
+    .footer-ship,
+    .footer-ship img,
+    .scroll-indicator,
+    .sidenav.active .nav-brand img,
+    #chatbot-bubble {
+        animation: none;
+    }
+
+    .footer-ship {
+        left: 68%;
+    }
+
+    .scroll-indicator {
+        transform: translateX(-50%);
+    }
+}
+
+[data-motion="reduce"] .sea-wave,
+[data-motion="reduce"] .rig-helm,
+[data-motion="reduce"] .rig-cog,
+[data-motion="reduce"] .footer-ship,
+[data-motion="reduce"] .footer-ship img,
+[data-motion="reduce"] .scroll-indicator,
+[data-motion="reduce"] .sidenav.active .nav-brand img,
+[data-motion="reduce"] #chatbot-bubble {
+    animation: none;
+}
+
+[data-motion="reduce"] .footer-ship {
+    left: 68%;
+}
+
+[data-motion="reduce"] .scroll-indicator {
+    transform: translateX(-50%);
+}
+
+@media (max-width: 600px) {
+    .hero-sea .rig-helm {
+        bottom: -110px;
+    }
+
+    .footer-sea {
+        height: 104px;
+    }
+
+    .footer-ship {
+        width: 66px;
+        bottom: 20px;
+    }
+}
+
+@media print {
+    .hero-sea,
+    .footer-sea {
+        display: none;
+    }
+}
