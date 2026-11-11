@@ -9,6 +9,7 @@
 
 {% block page_scripts %}
 {% if live_event %}<script src="{{ url_for('static', filename='js/home-live.js') }}" defer></script>{% endif %}
+{% if site.home.show_stats %}<script src="{{ url_for('static', filename='js/voyage.js') }}" defer></script>{% endif %}
 {% endblock %}
 
 {% from "partials/picture.html" import picture %}
@@ -49,6 +50,7 @@
 {% block content %}
 <!-- HERO SECTION -->
 <div {{ hero_attrs(home.hero_image) }}>
+    {% include "partials/hero_sea.html" %}
     {{ picture('photos/carousel2', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--l1', decorative=True) }}
     {{ picture('photos/carousel1', '', '342px', class_='hero-side-photo hero-side-photo--landscape hero-side-photo--l2', decorative=True) }}
     {{ picture('photos/carousel3', '', '342px', class_='hero-side-photo hero-side-photo--portrait hero-side-photo--l3', decorative=True) }}
@@ -216,23 +218,40 @@
 
 <!-- STATS SECTION -->
 {% if home.show_stats %}
-<section class="stats-section fade-in-section">
-    <div class="stats-container">
-        <div class="stat-item">
-            <div class="stat-number">{{ stats.teams_count }}</div>
-            <div class="stat-label">Teams</div>
+{#- The voyage: voyage.js pins this section and ties the ship's crossing to the scroll, so each
+    number is hoisted as the ship sails under it. Without scripts, or with motion reduced,
+    it is a plain row of numbers above a still sea. -#}
+{% set ship = image_manifest['icons/mascot_ship'] %}
+<section class="voyage" data-voyage{% if home.stats_heading %} aria-labelledby="voyage-heading"{% endif %}>
+    <div class="voyage-stage">
+        <span class="voyage-sun rig-cog" aria-hidden="true"></span>
+        {% if home.stats_heading %}<h2 id="voyage-heading" class="voyage-heading">{{ home.stats_heading }}</h2>{% endif %}
+        <div class="stats-container">
+            <div class="stat-item" data-voyage-stop>
+                <div class="stat-number">{{ stats.teams_count }}</div>
+                <div class="stat-label">Teams</div>
+            </div>
+            <div class="stat-item" data-voyage-stop>
+                <div class="stat-number">{{ stats.members_count }}</div>
+                <div class="stat-label">Members</div>
+            </div>
+            <div class="stat-item" data-voyage-stop>
+                <div class="stat-number">{{ stats.awards_count }}</div>
+                <div class="stat-label">Awards</div>
+            </div>
+            <div class="stat-item" data-voyage-stop>
+                <div class="stat-number">{{ stats.hours_built }}+</div>
+                <div class="stat-label">Hours Built</div>
+            </div>
         </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ stats.members_count }}</div>
-            <div class="stat-label">Members</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ stats.awards_count }}</div>
-            <div class="stat-label">Awards</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ stats.hours_built }}+</div>
-            <div class="stat-label">Hours Built</div>
+        <div class="voyage-sea" aria-hidden="true">
+            <span class="voyage-route"></span>
+            <span class="voyage-mark"></span>
+            <span class="sea-wave sea-wave--back"></span>
+            <span class="voyage-ship"><img src="{{ url_for('static', filename=ship.src) }}" alt=""
+                    width="{{ ship.width }}" height="{{ ship.height }}" loading="lazy" decoding="async"></span>
+            <span class="sea-wave sea-wave--mid"></span>
+            <span class="sea-wave sea-wave--front"></span>
         </div>
     </div>
 </section>

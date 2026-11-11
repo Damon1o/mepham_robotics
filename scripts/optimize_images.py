@@ -12,6 +12,7 @@ What it does (safe to re-run; it never re-encodes an already-small JPEG):
   written at each of WEBP_WIDTHS (capped at the photo's own width) for srcset.
 - hero.png: a JPEG and a WebP copy at native size. The PNG itself is kept.
 - Chatbot avatar and favicons: small square copies.
+- Mascot: a copy trimmed to its outline (mascot-ship.webp) for the animated sea.
 - Award icons: resized in place to ICON_SIZE px, keeping the filename because
   the database stores icons by name.
 
@@ -117,6 +118,16 @@ def padded_icon(path, size, out_name):
     return rel(out)
 
 
+def mascot_ship(path):
+    """The mascot trimmed to its own outline, with transparency kept: it sails across
+    the homepage voyage and rides the waves above the footer."""
+    logo = Image.open(path).convert('RGBA')
+    logo = logo.crop(logo.getbbox())
+    out = path.with_name('mascot-ship.webp')
+    logo.save(out, 'WEBP', quality=90, method=6)
+    return {'src': rel(out), 'width': logo.width, 'height': logo.height}
+
+
 def award_icon(path):
     image = Image.open(path)
     if max(image.size) <= ICON_SIZE:
@@ -138,6 +149,7 @@ def main():
         'favicon': padded_icon(icons / 'mephamrobotics.png', 32, 'favicon-32.png'),
         'apple_touch': padded_icon(icons / 'mephamrobotics.png', 180, 'apple-touch-icon.png'),
     }
+    manifest['icons/mascot_ship'] = mascot_ship(icons / 'mephamrobotics.png')
     for path in sorted(icons.glob('*_award.png')) + [icons / name for name in (
             'robot_skills_champion.png', 'sportsmanship.png', 'tournament_champions.png',
             'tournament_finalists.png', 'triple_crown.png', 'world_championship.png')]:
