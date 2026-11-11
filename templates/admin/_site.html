@@ -8,6 +8,11 @@
         {% endcall %}
         <p class="form-hint">Change the words, links, photos and sections on the public pages without touching code.
             Everything saves as you type, and each setting can be put back to the original.</p>
+        <button type="button" class="admin-search admin-search--wide" data-open-search aria-keyshortcuts="Control+K">
+            <i data-lucide="search" aria-hidden="true"></i>
+            <span>Find a setting by its name, or by the words it puts on the page…</span>
+            <kbd>Ctrl K</kbd>
+        </button>
         <div class="announcement-status{% if announcement_on %} is-on{% endif %}">
             <i data-lucide="megaphone" aria-hidden="true"></i>
             {% if announcement_on %}

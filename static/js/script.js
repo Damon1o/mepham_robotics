@@ -918,100 +918,186 @@ function showToast(message, type = 'info') {
     } catch (err) {
         pages = [];
     }
+    // Admins also get every dashboard tab, setting, person, team and event
+    // (admin_search_items in api/index.py), fetched each time the box opens.
+    let adminItems = [];
+    const MAX_SHOWN = 40;
 
     const signedIn = () => document.body.hasAttribute('data-current-user');
+    const overlayEl = () => document.querySelector('.search-overlay');
+    const inputEl = () => document.getElementById('site-search');
+    const resultsEl = () => document.querySelector('.search-results');
 
+    // Every word has to appear somewhere; a match in the title ranks above one in the
+    // description, and that above one in the keywords (for a setting, its current text).
     function doSearch(query) {
-        if (!query || query.length < 2) return [];
         const q = query.toLowerCase();
-        return pages.filter(p => (!p.members || signedIn()) && (
-            p.title.toLowerCase().includes(q) ||
-            p.desc.toLowerCase().includes(q) ||
-            p.keywords.toLowerCase().includes(q)
-        ));
+        const words = q.split(/\s+/).filter(Boolean);
+        if (q.length < 2 || !words.length) return [];
+        const hits = [];
+        pages.concat(adminItems).forEach((p, order) => {
+            if (p.members && !signedIn()) return;
+            const title = p.title.toLowerCase();
+            const desc = p.desc.toLowerCase();
+            const all = `${title} ${desc} ${p.keywords.toLowerCase()}`;
+            if (!words.every(word => all.includes(word))) return;
+            let score = 0;
+            if (title === q) score = 5;
+            else if (title.startsWith(q)) score = 4;
+            else if (words.every(word => title.includes(word))) score = 3;
+            else if (words.some(word => title.includes(word))) score = 2;
+            else if (words.every(word => desc.includes(word))) score = 1;
+            hits.push({ p: Object.assign({}, p, { quote: p.kind === 'Setting' ? quoteFrom(p.keywords, words) : '' }), score, order });
+        });
+        return hits.sort((a, b) => b.score - a.score || a.order - b.order).map(hit => hit.p);
+    }
+
+    // The part of a setting's own text that matched, so it is clear why it came up.
+    function quoteFrom(text, words) {
+        const lower = text.toLowerCase();
+        const at = words.map(word => lower.indexOf(word)).filter(i => i !== -1).sort((a, b) => a - b)[0];
+        if (at === undefined) return '';
+        const start = Math.max(0, at - 30);
+        const end = Math.min(text.length, at + 70);
+        return (start > 0 ? '…' : '') + text.slice(start, end).trim() + (end < text.length ? '…' : '');
+    }
+
+    function resultItem(h) {
+        const item = document.createElement('a');
+        item.className = 'search-result-item';
+        item.href = h.url;
+        item.setAttribute('role', 'option');
+
+        const title = document.createElement('div');
+        title.className = 'result-title';
+        title.textContent = h.title;
+        if (h.kind) {
+            const kind = document.createElement('span');
+            kind.className = 'result-kind';
+            kind.textContent = h.kind;
+            title.append(kind);
+        }
+
+        const desc = document.createElement('div');
+        desc.className = 'result-desc';
+        desc.textContent = h.desc;
+
+        item.append(title, desc);
+        if (h.quote) {
+            const quote = document.createElement('div');
+            quote.className = 'result-desc result-quote';
+            quote.textContent = `“${h.quote}”`;
+            item.append(quote);
+        }
+        return item;
+    }
+
+    function setActive(item) {
+        resultsEl()?.querySelectorAll('.search-result-item.is-active').forEach(node => {
+            node.classList.remove('is-active');
+            node.removeAttribute('aria-selected');
+        });
+        if (!item) return;
+        item.classList.add('is-active');
+        item.setAttribute('aria-selected', 'true');
+        item.scrollIntoView({ block: 'nearest' });
+    }
+
+    function render() {
+        const results = resultsEl();
+        const input = inputEl();
+        if (!results || !input) return;
+        const q = input.value.trim();
+        results.textContent = '';
+        // Nothing typed yet: an admin sees the things admins do most.
+        const hits = q.length < 2 ? adminItems.filter(item => item.kind === 'Action') : doSearch(q);
+        input.setAttribute('aria-expanded', hits.length ? 'true' : 'false');
+        if (q.length >= 2 && hits.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'search-no-results';
+            empty.textContent = 'No results found.';
+            results.appendChild(empty);
+            return;
+        }
+        hits.slice(0, MAX_SHOWN).forEach(h => results.appendChild(resultItem(h)));
+        if (hits.length > MAX_SHOWN) {
+            const more = document.createElement('div');
+            more.className = 'search-no-results';
+            more.textContent = `${hits.length - MAX_SHOWN} more. Keep typing to narrow it down.`;
+            results.appendChild(more);
+        }
+        if (q.length >= 2) setActive(results.querySelector('.search-result-item'));
+    }
+
+    function loadAdminItems() {
+        const url = overlayEl()?.dataset.adminIndex;
+        if (!url) return;
+        fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+            .then(response => (response.ok ? response.json() : { items: adminItems }))
+            .then(data => {
+                adminItems = data.items || [];
+                if (overlayEl()?.classList.contains('active')) render();
+            })
+            .catch(() => {});
     }
 
     document.addEventListener('click', function (e) {
-        if (e.target.closest('.search-close')) {
+        if (e.target.closest('[data-open-search]')) {
+            e.preventDefault();
+            openSearch();
+        } else if (e.target.closest('.search-close') || e.target === overlayEl()
+            // A result on this same page (a dashboard tab, a setting) does not reload it.
+            || e.target.closest('.search-result-item')) {
             closeSearch();
-        }    });
+        }
+    });
 
     document.addEventListener('keydown', function (e) {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             e.preventDefault();
             openSearch();
+            return;
         }
+        if (!overlayEl()?.classList.contains('active')) return;
         if (e.key === 'Escape') {
             closeSearch();
-        }
-        // Enter on the search box opens the first result.
-        if (e.key === 'Enter' && e.target.closest('.search-input-wrapper input')) {
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            const items = Array.from(resultsEl().querySelectorAll('.search-result-item'));
+            if (!items.length) return;
             e.preventDefault();
-            document.querySelector('.search-result-item')?.click();
+            const at = items.findIndex(item => item.classList.contains('is-active'));
+            const step = e.key === 'ArrowDown' ? 1 : -1;
+            setActive(items[(at + step + items.length) % items.length] || items[0]);
+        } else if (e.key === 'Enter' && e.target.closest('.search-input-wrapper input')) {
+            // Enter opens the highlighted result (the first, until the arrow keys move it).
+            e.preventDefault();
+            (resultsEl().querySelector('.search-result-item.is-active')
+                || resultsEl().querySelector('.search-result-item'))?.click();
         }
     });
 
     function openSearch() {
-        const overlay = document.querySelector('.search-overlay');
+        const overlay = overlayEl();
         if (!overlay) return;
         overlay.classList.add('active');
         const input = overlay.querySelector('input');
         if (input) { input.value = ''; input.focus(); }
-        const results = overlay.querySelector('.search-results');
-        if (results) results.textContent = '';
+        render();
+        loadAdminItems();
         // Close the side nav if it is open, then lock page scroll for the overlay.
         toggleNav(false);
         document.body.style.overflow = 'hidden';
     }
 
     function closeSearch() {
-        const overlay = document.querySelector('.search-overlay');
-        if (!overlay) return;
+        const overlay = overlayEl();
+        if (!overlay || !overlay.classList.contains('active')) return;
         overlay.classList.remove('active');
         document.body.style.overflow = '';
     }
 
     document.addEventListener('input', function (e) {
-        if (!e.target.closest('.search-input-wrapper input')) return;
-        const q = e.target.value.trim();
-        const resultsEl = document.querySelector('.search-results');
-        if (!resultsEl) return;
-        const hits = doSearch(q);
-        if (q.length < 2) {
-            resultsEl.innerHTML = '';
-            return;
-        }
-        if (hits.length === 0) {
-            resultsEl.textContent = '';
-            const empty = document.createElement('div');
-            empty.className = 'search-no-results';
-            empty.textContent = 'No results found.';
-            resultsEl.appendChild(empty);
-            return;
-        }
-        resultsEl.textContent = '';
-        hits.forEach(h => {
-            const item = document.createElement('a');
-            item.className = 'search-result-item';
-            item.href = h.url;
-
-            const title = document.createElement('div');
-            title.className = 'result-title';
-            title.textContent = h.title;
-
-            const desc = document.createElement('div');
-            desc.className = 'result-desc';
-            desc.textContent = h.desc;
-
-            item.append(title, desc);
-            resultsEl.appendChild(item);
-        });
-    });
-
-    // Click outside to close
-    document.addEventListener('click', function (e) {
-        const overlay = document.querySelector('.search-overlay');
-        if (overlay && e.target === overlay) closeSearch();
+        if (e.target.closest('.search-input-wrapper input')) render();
     });
 })();
 

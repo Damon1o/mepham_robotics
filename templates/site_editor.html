@@ -18,12 +18,18 @@
             <p>Plan fundraisers and choose how the homepage shows them. Every change saves on its own.</p>
             {% else %}
             <h1>Site editor</h1>
-            <p>Change the public pages. Every setting saves on its own; <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+            <p>Pick a page on the left, or search for a setting by its name or by the words on the page.
+                Every setting saves on its own; <i data-lucide="rotate-ccw" aria-hidden="true"></i>
                 puts one back to the original and <i data-lucide="history" aria-hidden="true"></i> brings back an earlier version.</p>
             {% endif %}
         </div>
         <div class="editor-bar-actions">
             <span class="save-status" id="saveStatus" role="status" aria-live="polite">All changes saved</span>
+            {% if not fundraiser_editor %}
+            <button type="button" class="admin-btn admin-btn-secondary admin-btn-small" data-open-search
+                aria-keyshortcuts="Control+K" title="Search every setting, person and page (Ctrl+K)">
+                <i data-lucide="search" aria-hidden="true"></i> Search everything</button>
+            {% endif %}
             <a class="admin-btn admin-btn-secondary admin-btn-small" href="{{ url_for('index') }}" target="_blank" rel="noopener">
                 <i data-lucide="external-link" aria-hidden="true"></i> View site</a>
             {% if not fundraiser_editor %}
@@ -68,14 +74,18 @@
         <option value="/contact#find-us"></option>
     </datalist>
 
-    <div class="settings-layout{% if sections|length == 1 %} settings-layout--single{% endif %}">
+    {#- With several sections the editor shows one at a time (site-editor.js picks it). -#}
+    <div class="settings-layout{% if sections|length == 1 %} settings-layout--single{% else %} is-paged{% endif %}">
         {% if sections|length > 1 %}
         <nav class="settings-nav" aria-label="Site editor sections">
             <div class="settings-search">
                 <i data-lucide="search" aria-hidden="true"></i>
-                <input type="search" id="settingsSearch" placeholder="Find a setting" autocomplete="off"
-                    aria-label="Find a setting" aria-controls="settingsMain">
+                <input type="search" id="settingsSearch" placeholder="Find a setting  ( / )" autocomplete="off"
+                    aria-label="Find a setting by its name or the words it shows" aria-controls="settingsMain">
             </div>
+            <button type="button" class="settings-filter" data-only-changed aria-pressed="false"
+                title="Show only the settings that differ from the original">
+                <i data-lucide="pencil-line" aria-hidden="true"></i> Changed only</button>
             <p class="settings-search-empty" data-search-empty hidden>No setting matches.</p>
             {% for section in sections %}
             {% set changed = (overrides.get(section.key) or {})|length %}
@@ -109,6 +119,18 @@
                 {{ setting_row(section, field) }}
                 {% endif %}
                 {% endfor %}
+                {% if sections|length > 1 %}
+                <nav class="settings-pager" aria-label="Other sections">
+                    {% if not loop.first %}
+                    <a class="settings-pager-prev" href="#{{ loop.previtem.key }}"><i data-lucide="arrow-left" aria-hidden="true"></i>
+                        <span><small>Previous</small>{{ loop.previtem.title }}</span></a>
+                    {% endif %}
+                    {% if not loop.last %}
+                    <a class="settings-pager-next" href="#{{ loop.nextitem.key }}"><span><small>Next</small>{{ loop.nextitem.title }}</span>
+                        <i data-lucide="arrow-right" aria-hidden="true"></i></a>
+                    {% endif %}
+                </nav>
+                {% endif %}
             </section>
             {% endfor %}
         </div>

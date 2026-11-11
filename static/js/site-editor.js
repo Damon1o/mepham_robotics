@@ -609,33 +609,53 @@
             + (left ? ` ${left} did not fit: the most is ${max}.` : ''), left ? 'error' : 'success');
     });
 
-    // --- Section nav --------------------------------------------------------------------
+    // --- Sections, one at a time ----------------------------------------------------------
+    //
+    // /admin/site has some two hundred settings, so it shows one section at a time: the
+    // side menu (or #section in the address) picks it. #section.field opens that section
+    // and points at one setting, which is where search results (Ctrl+K) and "Edit This
+    // Page" land. Typing in "Find a setting", or "Changed only", looks across every
+    // section at once. The one-section editors (fundraisers) have no menu and show it all.
 
+    const sections = Array.from(root.querySelectorAll('.settings-section'));
     const navLinks = Array.from(root.querySelectorAll('.settings-nav a'));
-    if ('IntersectionObserver' in window && navLinks.length) {
-        const observer = new IntersectionObserver(entries => {
-            entries.filter(entry => entry.isIntersecting).forEach(entry => {
-                navLinks.forEach(link => {
-                    const current = link.getAttribute('href') === `#${entry.target.id}`;
-                    link.classList.toggle('is-current', current);
-                    if (current) link.setAttribute('aria-current', 'true');
-                    else link.removeAttribute('aria-current');
-                });
-            });
-        }, { rootMargin: '-15% 0px -75% 0px' });
-        root.querySelectorAll('.settings-section').forEach(section => observer.observe(section));
-    }
-
-    // --- Finding a setting ------------------------------------------------------------------
-
+    const paged = navLinks.length > 0;
     const search = document.getElementById('settingsSearch');
     const searchEmpty = root.querySelector('[data-search-empty]');
+    const changedToggle = root.querySelector('[data-only-changed]');
+    const LAST_SECTION = 'site-editor-section';
+    let current = sections[0] || null;
 
-    // A row matches on its own label and hint, its group heading and its section title.
-    function filterSettings() {
-        const words = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const onlyChanged = () => changedToggle?.getAttribute('aria-pressed') === 'true';
+
+    function remembered() {
+        try {
+            return sections.find(section => section.id === localStorage.getItem(LAST_SECTION));
+        } catch (err) {
+            return null;
+        }
+    }
+
+    // What a row is found by: its section, group, label and hint, and the text it holds now,
+    // so a setting can be found by the words it puts on the page.
+    function rowText(row, sectionTitle, groupTitle) {
+        if (!row.dataset.search) {
+            // The placeholder help lists the same words on many rows, so it is left out.
+            const label = (row.querySelector('.setting-label') || row).cloneNode(true);
+            label.querySelector('.token-help')?.remove();
+            row.dataset.search = [sectionTitle, groupTitle, label.textContent].join(' ').replace(/\s+/g, ' ').toLowerCase();
+        }
+        const typed = Array.from(row.querySelectorAll('input[type="text"], input[type="url"], input[type="email"], textarea'),
+            control => control.value).join(' ').toLowerCase();
+        return `${row.dataset.search} ${typed}`;
+    }
+
+    function applyView() {
+        const words = (search?.value || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+        const changedOnly = onlyChanged();
+        const filtering = words.length > 0 || changedOnly;
         let any = false;
-        root.querySelectorAll('.settings-section').forEach(section => {
+        sections.forEach(section => {
             const sectionTitle = section.querySelector('h2').textContent;
             let shown = 0;
             let title = null;
@@ -646,14 +666,9 @@
                     title = node;
                     titleShown = false;
                 } else if (node.matches('.setting-row')) {
-                    if (!node.dataset.search) {
-                        // The placeholder help lists the same words on many rows, so it is left out.
-                        const label = node.querySelector('.setting-label').cloneNode(true);
-                        label.querySelector('.token-help')?.remove();
-                        node.dataset.search = [sectionTitle, title?.textContent || '', label.textContent]
-                            .join(' ').replace(/\s+/g, ' ').toLowerCase();
-                    }
-                    const match = words.every(word => node.dataset.search.includes(word));
+                    const match = !filtering || (
+                        (!changedOnly || node.querySelector('.custom-chip:not([hidden]), .draft-chip:not([hidden])'))
+                        && (!words.length || words.every(word => rowText(node, sectionTitle, title?.textContent || '').includes(word))));
                     node.hidden = !match;
                     if (match) {
                         shown++;
@@ -662,21 +677,104 @@
                 }
             });
             if (title) title.hidden = !titleShown;
-            section.hidden = shown === 0;
-            const link = root.querySelector(`.settings-nav a[href="#${CSS.escape(section.id)}"]`);
-            if (link) link.classList.toggle('is-empty', shown === 0);
+            section.hidden = filtering ? shown === 0 : paged && section !== current;
+            const link = navLinks.find(a => a.getAttribute('href') === `#${section.id}`);
+            if (link) {
+                const isCurrent = !filtering && section === current;
+                link.classList.toggle('is-empty', filtering && shown === 0);
+                link.classList.toggle('is-current', isCurrent);
+                if (isCurrent) link.setAttribute('aria-current', 'true');
+                else link.removeAttribute('aria-current');
+            }
             if (shown) any = true;
         });
-        if (searchEmpty) searchEmpty.hidden = any;
+        root.classList.toggle('is-filtering', filtering);
+        if (searchEmpty) {
+            searchEmpty.hidden = any;
+            searchEmpty.textContent = changedOnly && !words.length
+                ? 'Nothing has been changed from the original.' : 'No setting matches.';
+        }
     }
 
-    search?.addEventListener('input', filterSettings);
+    function clearFilters() {
+        if (search) search.value = '';
+        changedToggle?.setAttribute('aria-pressed', 'false');
+    }
+
+    function point(row) {
+        row.scrollIntoView({ block: 'center' });
+        row.classList.remove('is-found');
+        // Restart the highlight if the same setting is opened twice.
+        void row.offsetWidth;
+        row.classList.add('is-found');
+        setTimeout(() => row.classList.remove('is-found'), 3200);
+        row.querySelector('input:not([type="file"]):not([type="hidden"]), textarea, select, button')?.focus({ preventScroll: true });
+    }
+
+    // Show what the address asks for. `moved` is true when the visitor picked something
+    // (a menu link, a search result), so the page should bring it into view.
+    function route(moved) {
+        const key = decodeURIComponent(location.hash.replace('#', ''));
+        const section = sections.find(s => s.id === key.split('.')[0]);
+        const row = section && key.includes('.')
+            ? section.querySelector(`.setting-row[data-key="${CSS.escape(key)}"]`) : null;
+        if (!paged) {
+            if (row) point(row);
+            return;
+        }
+        if (section) {
+            current = section;
+            clearFilters();
+            try {
+                localStorage.setItem(LAST_SECTION, section.id);
+            } catch (err) { /* private mode: it just will not be remembered */ }
+        }
+        applyView();
+        root.querySelector('.settings-layout').classList.add('is-ready');
+        navLinks.find(a => a.classList.contains('is-current'))?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        if (row) point(row);
+        else if (section && moved) {
+            const top = root.querySelector('.settings-layout').getBoundingClientRect().top + window.scrollY - 96;
+            if (window.scrollY > top) window.scrollTo({ top });
+        }
+    }
+
+    if (paged && !location.hash) current = remembered() || current;
+    window.addEventListener('hashchange', () => route(true));
+    // script.js smooth-scrolls in-page links without changing the address, and here the
+    // address is what picks the section, so the menu and pager links set it themselves.
+    root.addEventListener('click', e => {
+        const link = e.target.closest('.settings-nav a, .settings-pager a');
+        if (!link || !paged) return;
+        e.preventDefault();
+        const hash = link.getAttribute('href');
+        // The same link twice changes no address: show the section again by hand.
+        if (hash === location.hash) route(true);
+        else location.hash = hash;
+    });
+
+    search?.addEventListener('input', applyView);
     search?.addEventListener('keydown', e => {
         if (e.key === 'Escape' && search.value) {
             search.value = '';
-            filterSettings();
+            applyView();
         }
     });
+    changedToggle?.addEventListener('click', () => {
+        changedToggle.setAttribute('aria-pressed', String(!onlyChanged()));
+        applyView();
+    });
+    // "/" jumps to "Find a setting", as it opens the search on the dashboard.
+    document.addEventListener('keydown', e => {
+        if (e.key !== '/' || !search || e.ctrlKey || e.metaKey || e.altKey
+            || e.target.matches('input, textarea, select, [contenteditable]')) return;
+        e.preventDefault();
+        search.focus();
+    });
+
+    route(false);
+
+
 
     root.querySelectorAll('.setting-row[data-kind="list"]').forEach(refreshListButtons);
 

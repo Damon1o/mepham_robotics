@@ -3000,10 +3000,39 @@ footer::before {
     transition: all 0.2s;
 }
 
-.search-result-item:hover {
+.search-result-item:hover,
+.search-result-item.is-active {
     background: rgba(255, 215, 0, 0.15);
     border-color: rgba(255, 215, 0, 0.3);
     transform: translateX(5px);
+}
+
+/* What an admin result is: a setting, a person, a dashboard tab... */
+.search-result-item .result-kind {
+    margin-left: 0.6rem;
+    padding: 0.1rem 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+/* The words in a setting that matched the search. */
+.search-result-item .result-quote {
+    margin-top: 0.25rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-style: italic;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .search-result-item:hover,
+    .search-result-item.is-active {
+        transform: none;
+    }
 }
 
 .search-result-item .result-title {
