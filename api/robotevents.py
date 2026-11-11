@@ -288,7 +288,23 @@ def parse_rankings(payload):
     return records
 
 
+def mark_upcoming(events, today=None):
+    """Flag the events that have not been played yet.
+
+    RobotEvents lists a team at an event from the day it registers, so a
+    competition next week arrived looking like a result with nothing in it.
+    An event with a record or an award has clearly happened, whatever its date.
+    """
+    today = (today or _now().date()).isoformat()
+    for event in events:
+        event['upcoming'] = bool((event.get('start') or '')[:10] > today
+                                 and not event.get('record') and not event.get('awards'))
+    return events
+
+
 def build_scoreboard(events, awards):
+    """Counts for the scoreboard band. Events flagged `upcoming` are not competitions yet."""
+    events = [e for e in events if not e.get('upcoming')]
     buckets = {'local': 0, 'signature': 0, 'championship': 0}
     for event in events:
         buckets[event.get('bucket', 'local')] = buckets.get(event.get('bucket', 'local'), 0) + 1
@@ -396,6 +412,7 @@ def team_summary(db, team_number, season_id=None):
     for event in events:
         event['record'] = rankings.get(event['name'])
         event['awards'] = [a['title'] for a in awards if a.get('event') == event['name']]
+    mark_upcoming(events)
 
     fetched_at = skills_at or events_at
     return {

@@ -2809,7 +2809,8 @@ def _message_counts():
     return counts
 
 
-def _attention_items(pending, counts, past_events, upcoming, teams, stats_doc, auto, users=()):
+def _attention_items(pending, counts, past_events, upcoming, teams, stats_doc, auto, users=(),
+                     awards=(), team_awards=()):
     """Short to-do list for the Overview tab: each item says what is off and where to fix it."""
     items = []
 
@@ -2854,6 +2855,13 @@ def _attention_items(pending, counts, past_events, upcoming, teams, stats_doc, a
         add('hash', f'Homepage {listed} {"differs" if len(drift) == 1 else "differ"} from the live count',
             'overview', 'Check',
             target='homepage-numbers')
+    # The club totals and each team's counters are typed in separately, so the Achievements
+    # page can say "3 awards won" above five teams that each show none.
+    club_total = sum(int(a.get('count') or 0) for a in awards)
+    team_total = sum(int(a.get('count') or 0) for a in team_awards)
+    if club_total != team_total:
+        add('trophy', f'The club has {plural(club_total, "award")} but its teams\' own counts add up to '
+            f'{team_total}', 'awards', 'Check')
     return items
 
 
@@ -3018,7 +3026,7 @@ def admin_dashboard():
         stat_fields=STAT_FIELDS, auto_stat_fields=AUTO_STAT_FIELDS, stat_labels=STAT_LABELS,
         stat_limits=STAT_LIMITS,
         attention=_attention_items(pending_users, message_counts, past, upcoming, current_robot_teams,
-                                   stats_doc, auto, users),
+                                   stats_doc, auto, users, awards=global_awards, team_awards=team_awards),
         users=users, pending_users=pending_users, board=board, unassigned=unassigned,
         team_choices=team_choices, group_choices=group_choices, group_members=group_members,
         robot_team_of=robot_team_of, claimable=claimable,
