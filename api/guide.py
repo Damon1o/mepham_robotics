@@ -193,7 +193,9 @@ CHAPTERS = [
             '<b>Teams</b>, <b>Events</b>, <b>Awards</b> and <b>Sponsors</b> manage what the public pages show.',
             '<b>Messages</b> is the inbox for the contact form, alumni updates and questions.',
             '<b>Site</b> opens the site editor: change any page\'s text and images, preview a draft, and roll back '
-            'from history.',
+            'from history. On any public page, <b>Edit This Page</b> in the menu opens that page\'s settings.',
+            'Press <kbd>Ctrl</kbd> + <kbd>K</kbd> on any page to find a setting (by its name or by the words on the '
+            'page), a person, a team or an event, and jump straight to it.',
             'Deleting something shows an <b>Undo</b> button for a few seconds instead of asking first.',
         ],
     },

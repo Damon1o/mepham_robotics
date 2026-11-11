@@ -415,6 +415,145 @@
     opacity: 0.4;
 }
 
+/* "Changed only": just the settings that differ from the original, across every section. */
+.settings-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    padding: 0.36rem 0.65rem;
+    border: 1px solid var(--admin-field-border);
+    border-radius: var(--admin-radius-sm);
+    background: transparent;
+    color: var(--admin-text);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.settings-filter svg {
+    flex: none;
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+.settings-filter:hover {
+    background: var(--admin-surface-hover);
+}
+
+.settings-filter:focus-visible {
+    outline: none;
+    box-shadow: var(--admin-focus-ring);
+}
+
+.settings-filter[aria-pressed="true"] {
+    border-color: var(--admin-gold);
+    background: var(--admin-gold);
+    color: var(--ink-on-gold);
+    font-weight: 700;
+}
+
+/* --- One section at a time ------------------------------------------------------------ */
+/* Until site-editor.js has picked the section, only the first shows, so the page does
+   not open as one very long list and then collapse. */
+.settings-layout.is-paged:not(.is-ready) .settings-section ~ .settings-section {
+    display: none;
+}
+
+.settings-pager {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.9rem;
+    border-top: 2px solid var(--admin-line);
+}
+
+.settings-pager a {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--admin-line-strong);
+    border-radius: var(--admin-radius-sm);
+    color: var(--admin-text);
+    font-size: 0.92rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.settings-pager a:hover {
+    border-color: var(--admin-accent);
+    background: var(--admin-surface-hover);
+}
+
+.settings-pager a:focus-visible {
+    outline: none;
+    box-shadow: var(--admin-focus-ring);
+}
+
+.settings-pager small {
+    display: block;
+    color: var(--admin-muted);
+    font-size: 0.7rem;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.settings-pager svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    color: var(--admin-accent-ink);
+}
+
+.settings-pager-next {
+    margin-left: auto;
+    text-align: right;
+}
+
+/* Search results and "Changed only" span sections, so there is no previous or next. */
+.site-editor.is-filtering .settings-pager {
+    display: none;
+}
+
+/* The setting a search result or link pointed at. */
+.setting-row.is-found {
+    border-radius: var(--admin-radius-sm);
+    outline: 2px solid var(--admin-gold);
+    outline-offset: 4px;
+    animation: setting-found 3.2s ease-out;
+}
+
+@keyframes setting-found {
+    0%,
+    45% {
+        background: var(--admin-gold-soft);
+    }
+
+    100% {
+        background: transparent;
+    }
+}
+
+@media (max-width: 900px) {
+    /* The menu is a sideways strip here: the search and filter sit in it as chips. */
+    .settings-nav .settings-search,
+    .settings-nav .settings-filter {
+        flex: none;
+        margin-bottom: 0;
+    }
+
+    .settings-nav .settings-search {
+        width: 11rem;
+    }
+
+    .settings-nav .settings-search-empty {
+        flex: none;
+        align-self: center;
+    }
+}
+
 /* --- Hints, placeholders, unfinished entries ---------------------------------------- */
 .setting-label small a {
     color: var(--admin-accent-ink);
@@ -594,4 +733,12 @@
 
 .site-editor--embedded .save-status {
     margin-left: auto;
+}
+
+/* The found-setting highlight holds still for anyone who asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+    .setting-row.is-found {
+        animation: none;
+        background: var(--admin-gold-soft);
+    }
 }

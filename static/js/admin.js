@@ -5,8 +5,8 @@
 // handlers anywhere, so /admin runs under the same no-inline-script
 // Content-Security-Policy as the rest of the site.
 //
-// Sections, in order: DOM helpers, notifications, dialog, JSON calls, tabs and
-// search, forms (sponsor/account editors), autosave (numbers, awards, events),
+// Sections, in order: DOM helpers, notifications, dialog, JSON calls, tabs,
+// forms (sponsor/account editors), autosave (numbers, awards, events),
 // homepage number modes, awards, events, teams, dropped files (team banners,
 // sponsor logos), people (approvals, roles, roster), messages and newsletter,
 // activity, help, and the delegated wiring.
@@ -278,54 +278,30 @@ document.addEventListener('fuse:commit', function (e) {
     showLoading();
 });
 
-// --- Tabs and search -------------------------------------------------------------------
-
-// Search only the tab the admin is looking at: rows inside its lists are
-// filtered, and whole cards drop out when nothing in them matches.
-function searchAdminContent() {
-    const term = document.getElementById('adminSearch').value.trim().toLowerCase();
-    const panel = document.querySelector('.admin-panel:not([hidden])');
-    if (!panel) return;
-    let shown = 0;
-    panel.querySelectorAll('.admin-card, .site-tile').forEach(card => {
-        const rows = card.querySelectorAll('.data-item, .roster-card, .attention-item, .activity-item, .subscriber-item');
-        let match;
-        if (rows.length) {
-            let rowsShown = 0;
-            rows.forEach(row => {
-                const hit = !term || row.textContent.toLowerCase().includes(term);
-                row.classList.toggle('is-search-hidden', !hit);
-                if (hit) rowsShown++;
-            });
-            const head = card.querySelector('.admin-card-header')?.textContent.toLowerCase() || '';
-            match = !term || rowsShown > 0 || head.includes(term);
-        } else {
-            match = !term || card.textContent.toLowerCase().includes(term);
-        }
-        card.classList.toggle('is-search-hidden', !match);
-        if (match) shown++;
-    });
-    let emptyNote = panel.querySelector('.admin-search-empty');
-    if (!shown && term) {
-        if (!emptyNote) {
-            emptyNote = el('p', { className: 'admin-search-empty', role: 'status' });
-            panel.append(emptyNote);
-        }
-        emptyNote.textContent = `Nothing on this tab matches "${term}".`;
-    } else if (emptyNote) {
-        emptyNote.remove();
-    }
-}
+/// --- Tabs -------------------------------------------------------------------------------
+//
+// The address picks the tab: /admin#events. A link can also say what to do there, which
+// is how search results (Ctrl+K) and other pages land on the right row:
+//   #users?find=ada      type "ada" into that tab's filter
+//   #events?add          open that tab's "add" form
+//   #overview?at=some-id scroll to that element
 
 const AdminTabs = (function () {
     const DEFAULT_TAB = 'overview';
+    const FILTERS = {
+        users: 'users_filter', teams: 'teams_filter', events: 'events_filter', awards: 'awards_filter',
+        sponsors: 'sponsors_filter', messages: 'messages_filter',
+    };
 
     const tabs = () => Array.from(document.querySelectorAll('.admin-tabs [role="tab"]'));
     const panels = () => Array.from(document.querySelectorAll('.admin-panel'));
 
-    function currentTab() {
-        const hash = location.hash.replace('#', '');
-        return tabs().some(t => t.dataset.tab === hash) ? hash : DEFAULT_TAB;
+    function parseHash() {
+        const [name, query = ''] = location.hash.replace('#', '').split('?');
+        const known = tabs().some(t => t.dataset.tab === name);
+        // Editors only have the Events tab, so the fallback is whichever tab comes first.
+        const fallback = tabs().some(t => t.dataset.tab === DEFAULT_TAB) ? DEFAULT_TAB : tabs()[0]?.dataset.tab;
+        return { name: known ? name : fallback, params: new URLSearchParams(known ? query : '') };
     }
 
     function show(name) {
@@ -338,12 +314,38 @@ const AdminTabs = (function () {
         panels().forEach(panel => {
             panel.hidden = panel.dataset.panel !== name;
         });
-        const search = document.getElementById('adminSearch');
-        if (search) {
-            const label = tabs().find(t => t.dataset.tab === name)?.querySelector('span')?.textContent || 'this tab';
-            search.placeholder = `Search ${label}…  ( / )`;
-            if (search.value) searchAdminContent();
+    }
+
+    function act(name, params) {
+        if (params.has('find')) {
+            const filter = document.getElementById(FILTERS[name]);
+            if (filter) {
+                filter.value = params.get('find');
+                filter.dispatchEvent(new Event('input', { bubbles: true }));
+                scrollToId(filter.id);
+            }
+        } else if (params.has('add')) {
+            const quick = QUICK_ADD[name];
+            if (quick) {
+                guarded(quick[0], () => {
+                    scrollToId(quick[0]);
+                    quick[1]();
+                });
+            } else if (name === 'users') {
+                scrollToId('userFormDetails');
+            }
+        } else if (params.has('at')) {
+            scrollToId(params.get('at'));
         }
+    }
+
+    function route() {
+        const { name, params } = parseHash();
+        show(name);
+        if (![...params].length) return;
+        // The extra part is used once: a reload should not filter or scroll again.
+        history.replaceState(null, '', '#' + name);
+        requestAnimationFrame(() => act(name, params));
     }
 
     function go(name, scrollTarget) {
@@ -376,8 +378,8 @@ const AdminTabs = (function () {
             });
         });
         document.querySelector('.admin-tabs')?.addEventListener('keydown', onKeydown);
-        window.addEventListener('hashchange', () => show(currentTab()));
-        show(currentTab());
+        window.addEventListener('hashchange', route);
+        route();
     }
 
     return { init, go };
@@ -1521,8 +1523,9 @@ function showHelp() {
             <p><strong>Overview:</strong> "Needs attention" lists what is waiting on you. The homepage numbers can count themselves (Auto) or show what you type.</p>
             <p><strong>People:</strong> approve sign-ups at the top. Drag cards between teams or use <em>Move to</em>; every move has an Undo. <em>Link login</em> connects an account to a card that was added by name.</p>
             <p><strong>Teams:</strong> open a team to edit its page. <em>New season</em> copies the roster into next season.</p>
-            <p><strong>Site:</strong> edit page text, photos, the announcement bar and more in the site editor.</p>
-            <p><strong>Keyboard:</strong> press <kbd>/</kbd> to search the current tab, and use the arrow keys on the tab bar.</p>
+            <p><strong>Site:</strong> edit page text, photos, the announcement bar and more in the site editor. On any public page, <em>Edit This Page</em> in the menu opens that page's settings.</p>
+            <p><strong>Finding things:</strong> press <kbd>Ctrl</kbd> <kbd>K</kbd> on any page (or <kbd>/</kbd> here) and type what you are looking for: a setting, the words on a page, a person, a team, an event. Enter takes you straight to it.</p>
+            <p><strong>Keyboard:</strong> use the arrow keys on the tab bar.</p>
         `,
         confirmLabel: 'Got it',
     });
@@ -1608,10 +1611,6 @@ document.addEventListener('click', function (e) {
 
 document.addEventListener('input', function (e) {
     const target = e.target;
-    if (target.id === 'adminSearch') {
-        searchAdminContent();
-        return;
-    }
     const form = target.form;
     if (form && DIRTY_FORMS.includes(form.id)) form.dataset.dirty = '1';
 });
@@ -1654,14 +1653,14 @@ document.addEventListener('submit', function (e) {
     showLoading();
 });
 
-// "/" jumps to the tab search, like most dashboards.
+// "/" opens the search, like most dashboards (Ctrl+K does too, on every page).
 document.addEventListener('keydown', function (e) {
-    if (e.key !== '/' || e.target.matches('input, textarea, select, [contenteditable]')) return;
-    const search = document.getElementById('adminSearch');
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey
+        || e.target.matches('input, textarea, select, [contenteditable]')) return;
+    const search = document.querySelector('.admin-topbar [data-open-search]');
     if (!search) return;
     e.preventDefault();
-    search.focus();
-    search.select();
+    search.click();
 });
 
 // Warn before leaving the page with unsaved edits.

@@ -181,34 +181,62 @@ body:has(.admin-container) #custom-chatbot-container {
     gap: 0.5rem;
 }
 
+/* A button that looks like a search field: it opens the site-wide search (Ctrl+K). */
 .admin-search {
-    position: relative;
     display: flex;
     align-items: center;
-}
-
-.admin-search svg {
-    position: absolute;
-    left: 0.7rem;
-    width: 1rem;
-    height: 1rem;
-    color: var(--admin-muted);
-    pointer-events: none;
-}
-
-.admin-container .admin-search input[type="search"] {
+    gap: 0.5rem;
     width: min(22rem, 70vw);
     height: 2.4rem;
-    padding: 0 0.8rem 0 2.2rem;
+    padding: 0 0.6rem 0 0.75rem;
     border: 1px solid var(--admin-field-border);
     border-radius: 999px;
     background: var(--admin-field-bg);
-    color: var(--admin-text);
+    color: var(--admin-muted);
     font: inherit;
     font-size: 0.92rem;
+    text-align: left;
+    cursor: pointer;
 }
 
-.admin-container .admin-search input[type="search"]:focus {
+.admin-search svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+}
+
+.admin-search span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-search kbd {
+    flex: none;
+    padding: 0.05rem 0.4rem;
+    border: 1px solid var(--admin-line-strong);
+    border-radius: var(--admin-radius-sm);
+    background: var(--admin-surface);
+    color: var(--admin-text);
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.admin-search:hover {
+    border-color: var(--admin-accent);
+    color: var(--admin-text);
+}
+
+/* In the Site tab: as wide as the card, above the section tiles. */
+.admin-search--wide {
+    width: 100%;
+    margin-bottom: 0.75rem;
+}
+
+.admin-search:focus-visible {
     border-color: var(--admin-accent);
     outline: none;
     box-shadow: var(--admin-focus-ring);
@@ -1468,17 +1496,6 @@ body:has(.admin-container) #custom-chatbot-container {
 }
 
 .is-hidden,
-.is-search-hidden {
-    display: none !important;
-}
-
-.admin-search-empty {
-    padding: 1.5rem;
-    border: 1px dashed var(--admin-line-strong);
-    border-radius: var(--admin-radius);
-    color: var(--admin-muted);
-    text-align: center;
-}
 
 .user-avatar,
 .roster-avatar {
@@ -3260,10 +3277,13 @@ html.ctl-dragging .admin-editor .setting-row[data-drop] {
 
     .admin-search {
         flex: 1;
+        width: auto;
+        min-width: 0;
     }
 
-    .admin-container .admin-search input[type="search"] {
-        width: 100%;
+    /* No keyboard on a phone. */
+    .admin-search kbd {
+        display: none;
     }
 
     .admin-tabs {

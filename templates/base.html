@@ -126,6 +126,9 @@
             {{ nav_link(url_for('resources'), 'book-open', site.resources.hero_title, active_page in ('resources', 'guide', 'glossary', 'standards', 'branding', 'notebook')) }}
             {% if session.get('role') == 'admin' %}
             {{ nav_link(url_for('admin_dashboard'), 'shield', 'Admin Panel', active_page == 'admin') }}
+            {#- Straight to this page's settings in the site editor. -#}
+            {% set edit_link = site_edit_link() %}
+            {% if edit_link %}{{ nav_link(edit_link, 'pencil', 'Edit This Page', False) }}{% endif %}
             {% elif session.get('role') == 'editor' %}
             {{ nav_link(url_for('admin_dashboard', _anchor='events'), 'calendar-days', 'Manage Events', active_page == 'admin') }}
             {% endif %}
@@ -161,13 +164,15 @@
         </div>
     </div>
 
-    <div class="search-overlay">
+    {#- Admins also search every setting, dashboard tab, person, team and event (script.js). -#}
+    {% set admin_search = session.get('role') == 'admin' %}
+    <div class="search-overlay"{% if admin_search %} data-admin-index="{{ url_for('admin_search_index') }}"{% endif %}>
         <button class="search-close" aria-label="Close search">&times;</button>
         <div class="search-container">
             <div class="search-input-wrapper">
                 <span class="search-icon"><i data-lucide="search"></i></span>
-                <label class="visually-hidden" for="site-search">Search pages</label>
-                <input type="text" id="site-search" placeholder="Search pages... (Ctrl+K)"
+                <label class="visually-hidden" for="site-search">{{ 'Search pages, settings and people' if admin_search else 'Search pages' }}</label>
+                <input type="text" id="site-search" placeholder="{{ 'Search pages, settings, people…' if admin_search else 'Search pages...' }} (Ctrl+K)"
                     autocomplete="off" role="combobox" aria-expanded="false" aria-controls="search-results">
             </div>
             <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>

@@ -39,11 +39,14 @@
             <p>Signed in as <strong>{{ current_user }}</strong>. Most changes save the moment you make them.</p>
         </div>
         <div class="admin-topbar-actions">
-            <div class="admin-search">
+            {% if admin_access %}
+            {#- Opens the site search (base.html), which for admins finds every setting, tab and person. -#}
+            <button type="button" class="admin-search" data-open-search aria-keyshortcuts="Control+K">
                 <i data-lucide="search" aria-hidden="true"></i>
-                <label class="visually-hidden" for="adminSearch">Search this tab</label>
-                <input type="search" id="adminSearch" placeholder="Search this tab…  ( / )" autocomplete="off">
-            </div>
+                <span>Find any setting, person or page…</span>
+                <kbd>Ctrl K</kbd>
+            </button>
+            {% endif %}
             <a class="admin-btn admin-btn-secondary admin-btn-small" href="{{ url_for('index') }}" target="_blank"
                 rel="noopener"><i data-lucide="external-link" aria-hidden="true"></i> View site</a>
             <button type="button" class="icon-btn icon-btn--outline" data-action="show-help" aria-label="Help"

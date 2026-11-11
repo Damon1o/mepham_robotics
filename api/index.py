@@ -4688,6 +4688,131 @@ def admin_site():
                            group_choices=_group_choices(), can_pick_group=True, moved_keys=FUNDRAISER_LIST_KEYS)
 
 
+# --- Admin search --------------------------------------------------------------------
+# The site search box (Ctrl+K, static/js/script.js) also finds, for admins, every dashboard
+# tab, every site setting, and the club's people, teams, events and sponsors. It is fetched
+# when the box opens, so ordinary pages do not carry it.
+
+# (tab, title, what is there, extra words to match)
+ADMIN_SEARCH_TABS = (
+    ('overview', 'Overview', 'What needs attention, homepage numbers and quick actions', 'dashboard command center'),
+    ('users', 'People', 'Approve sign-ups, move people between teams, accounts and roles',
+     'users accounts members roles roster approve password reset link login'),
+    ('teams', 'Teams', 'Teams and groups, new seasons and team page editors', 'groups season roster robot'),
+    ('events', 'Events', 'Events, bake sales, sign-up sheets and fundraisers',
+     'calendar competitions countdown volunteering sheets'),
+    ('awards', 'Awards', 'Club award totals and each team\'s counts', 'trophies categories achievements'),
+    ('sponsors', 'Sponsors', 'Sponsors and their logos on the Donate page', 'donors tiers logos'),
+    ('messages', 'Messages', 'Contact form messages and newsletter subscribers', 'inbox contact newsletter subscribers csv'),
+    ('site', 'Site', 'Every section of the site editor', 'settings content pages text'),
+    ('activity', 'Activity', 'Who changed what, and when', 'log history audit changes'),
+)
+# (title, where it goes, what it does, extra words). A string goes to that dashboard anchor;
+# a tuple is (endpoint, anchor).
+ADMIN_SEARCH_ACTIONS = (
+    ('Add an event', 'events?add', 'Put a competition, outreach day or meeting on the calendar', 'new create schedule competition'),
+    ('Add a team', 'teams?add', 'Start a new robot team or group', 'new create group'),
+    ('Add a sponsor', 'sponsors?add', 'List a sponsor on the Donate page', 'new create donor'),
+    ('Add an account', 'users?add', 'Make a login for someone by hand', 'new create user member login'),
+    ('Approve sign-ups', 'users', 'See who is waiting for an account', 'pending approval new members'),
+    ('Change the homepage numbers', 'overview?at=homepage-numbers', 'Teams, members, awards and hours on the homepage',
+     'stats counts auto typed'),
+    ('Post an announcement', ('admin_site', 'announcement'), 'A strip across the top of every page', 'banner notice alert'),
+    ('Put the site under construction', ('admin_site', 'construction'), 'Hide the whole site or single pages',
+     'maintenance hide offline'),
+    ('Export the newsletter list', ('admin_subscribers_csv', None), 'Download every subscriber as a CSV', 'download emails'),
+)
+SEARCH_VALUE_MAX = 2000
+
+
+def _search_words(value):
+    """The words a setting currently shows, so search finds a setting by the text on the page."""
+    out = []
+
+    def walk(v, key=''):
+        if isinstance(v, str):
+            if key != 'src':
+                out.append(v)
+        elif isinstance(v, dict):
+            for k, item in v.items():
+                walk(item, k)
+        elif isinstance(v, (list, tuple)):
+            for item in v:
+                walk(item)
+
+    walk(value)
+    return ' '.join(' '.join(out).split())[:SEARCH_VALUE_MAX]
+
+
+def _anchor_word(text):
+    return urllib.parse.quote(text or '', safe='')
+
+
+def admin_search_items():
+    items = []
+
+    def add(kind, title, url, desc, keywords=''):
+        items.append({'kind': kind, 'title': title, 'url': url, 'desc': desc, 'keywords': keywords, 'members': True})
+
+    for title, where, desc, words in ADMIN_SEARCH_ACTIONS:
+        url = url_for('admin_dashboard', _anchor=where) if isinstance(where, str) else url_for(where[0], _anchor=where[1])
+        add('Action', title, url, desc, words)
+    for tab, title, desc, words in ADMIN_SEARCH_TABS:
+        add('Admin', f'{title} tab', url_for('admin_dashboard', _anchor=tab), desc, words)
+
+    values = site_content.merged(_site_view_overrides())
+    for section in site_content.SECTIONS:
+        add('Settings', section.title, url_for('admin_site', _anchor=section.key),
+            f'Site editor · {section.blurb}' if section.blurb else 'Site editor')
+        for field in section.fields:
+            key = f'{section.key}.{field.key}'
+            where = ' › '.join(part for part in (section.title, field.group) if part)
+            if key in FUNDRAISER_LIST_KEYS:
+                url = url_for('admin_dashboard', _anchor='events?at=siteEditor')
+            else:
+                url = url_for('admin_site', _anchor=key)
+            add('Setting', field.label, url, where + (f' · {field.hint}' if field.hint else ''),
+                _search_words(values[section.key][field.key]))
+
+    for u in db['users'].find({}, {'username': 1, 'full_name': 1, 'email': 1, 'role': 1, 'status': 1}).sort('username', 1):
+        pending = u.get('status') == 'pending'
+        add('Person', u.get('full_name') or u['username'],
+            url_for('admin_dashboard', _anchor='users' if pending else 'users?find=' + _anchor_word(u['username'])),
+            ('Waiting for approval' if pending else (u.get('role') or 'member').capitalize() + ' account') + f" · @{u['username']}",
+            f"{u['username']} {u.get('email') or ''}")
+    for t in sorted(_newest_season_docs().values(), key=team_sort_key):
+        add('Team', f'Edit the {_team_label(t)} page', url_for('manage_team', team_id=str(t['_id'])),
+            'Group page editor' if is_group(t) else 'Team page editor: roster, robot, goals and journey',
+            f"{t.get('team_number') or ''} {t.get('nickname') or ''} {t.get('title') or ''}")
+    today = datetime.datetime.combine(club_now().date(), datetime.time())
+    for c in db['competitions'].find({'date': {'$gte': today}}).sort('date', 1).limit(50):
+        add('Event', c.get('name') or 'Event', url_for('admin_dashboard', _anchor='events?find=' + _anchor_word(c.get('name'))),
+            ' · '.join(part for part in (c['date'].strftime('%b %d, %Y'), c.get('location')) if part))
+    for s in load_sponsors():
+        add('Sponsor', s.get('name') or 'Sponsor', url_for('admin_dashboard', _anchor='sponsors?find=' + _anchor_word(s.get('name'))),
+            f"{s['tier'].capitalize()} sponsor" if s.get('tier') else 'Sponsor')
+    return items
+
+
+@app.route('/admin/api/search-index')
+@role_required('admin')
+def admin_search_index():
+    response = jsonify({'items': admin_search_items()})
+    response.headers['Cache-Control'] = 'private, no-store'
+    return response
+
+
+def site_edit_link():
+    """Where an admin edits the page they are looking at: its section of the site editor."""
+    if session.get('role') != 'admin' or not request.endpoint:
+        return None
+    section = next((s for s in site_content.SECTIONS if s.page == request.endpoint and s.role == 'admin'), None)
+    return url_for('admin_site', _anchor=section.key) if section else None
+
+
+app.jinja_env.globals['site_edit_link'] = site_edit_link
+
+
 def _site_editor_context(sections):
     """What both editors (/admin/site and /manage/fundraisers) need to draw their fields.
     In draft mode the fields show the draft, and drafted fields are marked."""
