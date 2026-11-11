@@ -1,0 +1,5 @@
+# These vendored libraries are loaded with SRI hashes (or must match their upstream bytes):
+# keep line-ending settings from rewriting them.
+static/js/vendor/marked-*.js -text
+static/js/vendor/dompurify-*.js -text
+static/js/vendor/three-*/** -text
