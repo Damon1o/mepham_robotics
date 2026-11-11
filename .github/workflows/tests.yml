@@ -37,7 +37,9 @@ jobs:
         run: for f in static/js/*.js; do node --check "$f"; done
 
   accessibility:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, which the pinned Playwright cannot install
+    # Chromium on. Move this and the Playwright version below together.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
