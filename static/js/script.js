@@ -1230,7 +1230,14 @@ function showToast(message, type = 'info') {
         if (windowEl.classList.contains('active')) {
             loadRenderer();
             restoreHistory();
+            // The window fades in from visibility: hidden, and a hidden field refuses
+            // focus, so when the first try does not take, try again once it has faded in.
             input.focus();
+            if (document.activeElement !== input) {
+                windowEl.addEventListener('transitionend', () => {
+                    if (windowEl.classList.contains('active')) input.focus();
+                }, { once: true });
+            }
         }
     });
 
@@ -1240,8 +1247,8 @@ function showToast(message, type = 'info') {
     });
 
     // Escape closes the chat and hands focus back to the button that opened it.
-    windowEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && windowEl.classList.contains('active')) {
             setChatOpen(false);
             bubble.focus();
         }
