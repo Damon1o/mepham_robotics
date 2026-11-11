@@ -2255,6 +2255,10 @@
     color: #fff;
 }
 
+[data-theme="dark"] .hub-event-kind {
+    color: #d4a0a1;
+}
+
 [data-theme="dark"] .hub-event-toggle.is-on,
 [data-theme="dark"] .hub-sheet-fill strong {
     color: #6fd39a;

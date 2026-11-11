@@ -275,6 +275,13 @@
     -webkit-text-stroke-color: #d4a0a1;
 }
 
+/* The light theme's maroon is too dim on the dark page. */
+[data-theme="dark"] .gc-head .g-eyebrow,
+[data-theme="dark"] .gc-status,
+[data-theme="dark"] .gc-open {
+    color: #d4a0a1;
+}
+
 [data-theme="dark"] .gc-chapter {
     border-bottom-color: rgba(255, 255, 255, 0.14);
 }

@@ -846,6 +846,10 @@
     border-color: rgba(255, 255, 255, 0.14);
 }
 
+[data-theme="dark"] .station-status.is-open {
+    color: #56c271;
+}
+
 [data-theme="dark"] .closing-band {
     background: #0e0c0c;
 }
