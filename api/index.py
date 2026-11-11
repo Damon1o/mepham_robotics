@@ -847,10 +847,25 @@ LOGIN_MAX_ATTEMPTS = 5
 # A botnet can rotate IPs, so an account also locks after this many failures
 # across *all* addresses inside the same window.
 LOGIN_MAX_ACCOUNT_ATTEMPTS = 20
+# One address trying a common password on many accounts never trips a per-account limit,
+# so failures are also capped per address across every account. Kept generous: a whole
+# school can share one address.
+LOGIN_MAX_IP_ATTEMPTS = 40
 LOGIN_WINDOW = datetime.timedelta(minutes=15)
 PASSWORD_MIN_LENGTH = 8
+# bcrypt reads only the first 72 bytes, so anything longer would be silently cut short.
+PASSWORD_MAX_BYTES = 72
 RESET_TOKEN_TTL = datetime.timedelta(hours=1)
 _auth_indexes_ready = False
+
+def _password_length_error(password, subject='Password'):
+    """Why this new password's length is not acceptable, or '' when it is."""
+    if len(password) < PASSWORD_MIN_LENGTH:
+        return f'{subject} must be at least {PASSWORD_MIN_LENGTH} characters.'
+    if len(password.encode('utf-8')) > PASSWORD_MAX_BYTES:
+        return f'{subject} must be {PASSWORD_MAX_BYTES} characters or fewer.'
+    return ''
+
 
 def _utcnow():
     """Naive UTC now; MongoDB TTL indexes compare against UTC."""
@@ -867,6 +882,7 @@ def _ensure_auth_indexes():
         return
     db['login_attempts'].create_index('created_at', expireAfterSeconds=int(LOGIN_WINDOW.total_seconds()))
     db['login_attempts'].create_index([('key', 1), ('ip', 1), ('created_at', 1)])
+    db['login_attempts'].create_index([('ip', 1), ('created_at', 1)])
     db['password_resets'].create_index('created_at', expireAfterSeconds=int(RESET_TOKEN_TTL.total_seconds()))
     db['password_resets'].create_index('token_hash', unique=True)
     _auth_indexes_ready = True
@@ -885,12 +901,14 @@ def _window_lockout(query, limit):
 def _lockout_minutes(key, ip):
     """Minutes until this account may try again from this IP, or 0.
 
-    Two limits apply: a tight one for this (account, IP) pair, and a looser
-    account-wide one so rotating source addresses does not reset the counter.
+    Three limits apply: a tight one for this (account, IP) pair, a looser
+    account-wide one so rotating source addresses does not reset the counter,
+    and one per address across all accounts so rotating usernames does not either.
     """
     return max(
         _window_lockout({'key': key, 'ip': ip}, LOGIN_MAX_ATTEMPTS),
         _window_lockout({'key': key}, LOGIN_MAX_ACCOUNT_ATTEMPTS),
+        _window_lockout({'ip': ip}, LOGIN_MAX_IP_ATTEMPTS) if ip else 0,
     )
 
 def _record_attempt(key, ip):
@@ -1138,7 +1156,6 @@ def payload_too_large(e):
 # --- Security headers ------------------------------------------------------
 # One policy for every page: no inline script anywhere, including the admin
 # dashboard, whose controls are wired through delegated listeners.
-_SCRIPT_CDNS = "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com"
 _BASE_CSP = [
     "default-src 'self'",
     "base-uri 'self'",
@@ -1157,7 +1174,10 @@ _BASE_CSP = [
 
 
 def _csp_for(path):
-    return '; '.join(_BASE_CSP + [f"script-src 'self' {_SCRIPT_CDNS}"])
+    # Scripts come from this site only. The chat's markdown libraries and the team page's
+    # 3D viewer used to load from public CDNs, which host every npm package: allowing a
+    # whole CDN meant any injected markup could pull in a script of the attacker's choosing.
+    return '; '.join(_BASE_CSP + ["script-src 'self'"])
 
 
 @app.after_request
@@ -2586,10 +2606,8 @@ def reset_password(token):
     if request.method == 'POST':
         password = request.form.get('password', '')
         confirm = request.form.get('confirm_password', '')
-        error = None
-        if len(password) < PASSWORD_MIN_LENGTH:
-            error = f'Password must be at least {PASSWORD_MIN_LENGTH} characters.'
-        elif password != confirm:
+        error = _password_length_error(password)
+        if not error and password != confirm:
             error = 'Passwords do not match.'
         if error:
             resp = render_template('reset_password.html', active_page='login', invalid=False, error=error), 400
@@ -2661,8 +2679,8 @@ def _validate_account(username, email, password, confirm=None, existing=None, re
         if not _looks_like_email(email) or len(email) > CONTACT_EMAIL_MAX:
             return 'Please enter a valid email address.'
     if password or require_password:
-        if len(password) < PASSWORD_MIN_LENGTH:
-            return f'Password must be at least {PASSWORD_MIN_LENGTH} characters.'
+        if _password_length_error(password):
+            return _password_length_error(password)
         if confirm is not None and password != confirm:
             return 'Passwords do not match.'
     clash = []
@@ -5297,6 +5315,8 @@ def account_password():
     error = _password_attempt_ok(user, request.form.get('current_password', ''))
     if not error and len(password) < PASSWORD_MIN_LENGTH:
         error = f'Your new password needs at least {PASSWORD_MIN_LENGTH} characters.'
+    elif not error and _password_length_error(password):
+        error = _password_length_error(password, 'Your new password')
     elif not error and password != confirm:
         error = "The new passwords don't match."
     if error:

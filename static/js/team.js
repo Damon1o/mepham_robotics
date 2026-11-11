@@ -454,11 +454,13 @@
 
     // --- STL viewer --------------------------------------------------------
 
-    // The raw examples/jsm files import a bare "three" specifier, which a browser
-    // cannot resolve without an import map. jsDelivr's /+esm builds rewrite that to
-    // the same three@0.160.0/+esm URL used below, so all three share one instance.
+    // three.js is served from static/js/vendor, so the CSP allows no outside script host.
+    // The two examples/jsm files import a bare "three" specifier, which a browser cannot
+    // resolve without an import map; the vendored copies import './three.module.min.js'
+    // instead. All three must be loaded by these exact URLs (no ?v=) to share one instance.
     const THREE_VERSION = '0.160.0';
-    const THREE_BASE = 'https://cdn.jsdelivr.net/npm/three@' + THREE_VERSION;
+    const THREE_BASE = new URL('vendor/three-' + THREE_VERSION + '/', (document.currentScript && document.currentScript.src)
+        || (window.location.origin + '/static/js/team.js')).href;
 
     function viewerFailed(host, message) {
         const shell = host.closest('.viewer-shell') || host;
@@ -489,9 +491,9 @@
         }
 
         Promise.all([
-            import(THREE_BASE + '/+esm'),
-            import(THREE_BASE + '/examples/jsm/loaders/STLLoader.js/+esm'),
-            import(THREE_BASE + '/examples/jsm/controls/OrbitControls.js/+esm')
+            import(THREE_BASE + 'three.module.min.js'),
+            import(THREE_BASE + 'STLLoader.js'),
+            import(THREE_BASE + 'OrbitControls.js')
         ]).then(function (mods) {
             const THREE = mods[0];
             const STLLoader = mods[1].STLLoader;

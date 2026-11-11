@@ -1182,12 +1182,15 @@ function showToast(message, type = 'info') {
     }
 
     // marked and DOMPurify only render bot replies, so they are fetched the
-    // first time the chat opens instead of on every page. Same pinned
-    // versions and SRI hashes as before; the CSP already allows both CDNs.
+    // first time the chat opens instead of on every page. They are served from
+    // static/js/vendor (the same pinned files the CDNs served, checked against the
+    // same SRI hashes), so the CSP no longer has to allow any outside script host.
+    const VENDOR_DIR = new URL('vendor/', (document.currentScript && document.currentScript.src)
+        || (window.location.origin + '/static/js/script.js')).href;
     const RENDERER_SCRIPTS = [
-        ['https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js',
+        [VENDOR_DIR + 'marked-9.1.6.min.js',
             'sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7'],
-        ['https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js',
+        [VENDOR_DIR + 'dompurify-3.1.6.min.js',
             'sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a'],
     ];
     let rendererReady = null;
@@ -1198,7 +1201,6 @@ function showToast(message, type = 'info') {
                 const script = document.createElement('script');
                 script.src = src;
                 script.integrity = integrity;
-                script.crossOrigin = 'anonymous';
                 // A failed load resolves too: addMessage falls back to plain text.
                 script.onload = script.onerror = () => resolve();
                 document.head.appendChild(script);
