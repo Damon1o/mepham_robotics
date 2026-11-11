@@ -6,3 +6,5 @@ docs/
 .playwright-mcp/
 requirements-dev.txt
 scripts/
+# The source for hero.jpg and hero.webp (scripts/optimize_images.py); no page loads it.
+static/assets/photos/hero.png
