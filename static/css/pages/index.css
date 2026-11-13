@@ -24,10 +24,7 @@
 }
 
 .donate-container h2 {
-    color: #944547;
-    font-family: 'Space Mono', monospace;
     margin-bottom: 1.5rem;
-    font-size: clamp(2rem, 5vw, 3rem);
 }
 
 .donate-container p {

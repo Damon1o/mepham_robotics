@@ -10,7 +10,6 @@
 
 /* Who We Are */
 .about-heading {
-    font-family: 'Space Mono', monospace;
     color: var(--maroon-dark);
     text-align: left;
     margin-bottom: 1rem;

@@ -3,14 +3,6 @@
    (sections 5, 6 and 17). This file adds the list editor, the day picker,
    image fields and the "Changed" marker. Colours are admin tokens only. */
 
-.site-editor .setting-row--wide {
-    grid-template-columns: 13rem minmax(0, 1fr);
-}
-
-.site-editor .setting-row--wide .setting-control {
-    max-width: 46rem;
-}
-
 .custom-chip {
     display: inline-flex;
     margin-top: 0.3rem;
@@ -136,9 +128,11 @@
 }
 
 /* --- List editor: one card per entry, fields in a grid, tools on the right ---------------- */
+/* Entries sit side by side when the window has room for more than one. */
 .list-editor {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+    align-items: start;
     gap: 0.5rem;
     width: 100%;
     margin: 0;
@@ -163,16 +157,19 @@
     background: var(--admin-surface);
 }
 
+/* Short fields share a line and stretch to fill it; long ones take a line each. */
 .list-row-fields {
-    display: grid;
+    display: flex;
     flex: 1;
-    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    flex-wrap: wrap;
+    align-content: flex-start;
     gap: 0.45rem 0.6rem;
     min-width: 0;
 }
 
 .list-cell {
     display: flex;
+    flex: 1 1 10rem;
     flex-direction: column;
     gap: 0.15rem;
     min-width: 0;
@@ -181,7 +178,7 @@
 .list-cell--textarea,
 .list-cell--rich,
 .list-cell--image {
-    grid-column: 1 / -1;
+    flex-basis: 100%;
 }
 
 .list-cell--icon,
@@ -273,12 +270,8 @@
 }
 
 @media (max-width: 720px) {
-    .site-editor .setting-row--wide {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .list-row-fields {
-        grid-template-columns: minmax(0, 1fr);
+    .list-cell {
+        flex-basis: 100%;
     }
 
     .list-cell--icon,
@@ -598,7 +591,7 @@
 }
 
 .list-row-note {
-    grid-column: 1 / -1;
+    flex-basis: 100%;
     margin: 0;
     color: var(--admin-info);
     font-size: 0.78rem;

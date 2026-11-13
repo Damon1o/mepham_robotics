@@ -768,7 +768,7 @@ h2 {
     font-family: var(--font-display);
     text-align: center;
     margin-bottom: var(--spacing-lg);
-    color: var(--maroon-light);
+    color: var(--maroon-dark);
     position: relative;
     display: block;
     width: 100%;
@@ -1413,6 +1413,11 @@ footer::before {
 .ripple {
     display: inline-block;
     animation: ripple-effect 2s ease-in-out infinite;
+}
+
+/* A heading stays a block, so the auto margins that centre it in a full-width band apply. */
+h2.ripple {
+    display: block;
 }
 
 @keyframes ripple-effect {
@@ -2885,6 +2890,18 @@ footer::before {
     flex-wrap: wrap;
 }
 
+/* On a page with no hero the breadcrumb comes first, right where the fixed MENU
+   button sits. Start it below the button. */
+main > .breadcrumb:first-child {
+    margin-top: 5.5rem;
+}
+
+@media (max-width: 768px) {
+    main > .breadcrumb:first-child {
+        margin-top: 4.75rem;
+    }
+}
+
 .breadcrumb a {
     color: var(--maroon-dark);
     text-decoration: none;
@@ -4064,11 +4081,13 @@ footer::before {
    ============================================ */
 
 /* Visible only to screen readers (honeypot inputs, form labels). */
+/* Width, height and padding are forced: form rules such as "input { width: 100% }"
+   otherwise stretch a hidden field past the edge of the page. */
 .visually-hidden {
     position: absolute !important;
-    width: 1px;
-    height: 1px;
-    padding: 0;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
     margin: -1px;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
