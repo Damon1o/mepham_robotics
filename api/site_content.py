@@ -288,8 +288,8 @@ SECTIONS = (
         Field('show_donate', 'toggle', 'Show the donation band', True, group='Sections'),
         Field('donate_heading', 'text', 'Donation heading', 'Want to Support Us?', max=60, group='Sections'),
         Field('donate_body', 'textarea', 'Donation text',
-              'Your donation helps us compete at the highest level, acquire new parts, and continue building '
-              'innovative robots.', max=300, group='Sections'),
+              'Your donation pays for competition registration, new parts, and travel to events.',
+              max=300, group='Sections'),
         Field('donate_button', 'text', 'Donation button', 'Donate Now', max=24, group='Sections'),
         Field('meta_description', 'textarea', 'Search description',
               '{club_name} (VEX Team {team_number}): student robotics in {town}, Long Island, NY. We build, code '
@@ -351,31 +351,29 @@ SECTIONS = (
 
     Section('about', 'About page', 'info', (
         Field('hero_title', 'text', 'Big title', 'About Us', max=40, required=True, group='Top of the page'),
-        Field('hero_tagline', 'text', 'Tagline', 'Innovation Driven by Passion', max=80, group='Top of the page'),
+        Field('hero_tagline', 'text', 'Tagline', 'Built, Coded and Driven by Students', max=80, group='Top of the page'),
         Field('hero_image', 'image', 'Background photo', None, group='Top of the page'),
         Field('who_heading', 'text', 'Heading', 'Who We Are', max=60, group='Who we are'),
         Field('who_body', 'rich', 'Text',
               'We are a **student-led robotics club** competing in the **VEX V5 Robotics Competition**. Our '
-              'members learn hands-on mechanical design, electrical engineering, and complex C++ / Python '
-              'programming.\n\nThrough intense competition and collaboration, we push the boundaries of what '
-              'high school students can achieve in robotics and engineering.\n\nOur teams work year-round to '
-              'design, build, and program competitive robots that can tackle the season\'s challenges with '
-              'precision and creativity.', max=2000, group='Who we are'),
+              'members learn mechanical design, electrical engineering, and C++ / Python programming by '
+              'building real robots.\n\nOur teams work year-round to design, build, and program a robot for '
+              'each season\'s game, then test it against other schools at tournaments.',
+              max=2000, group='Who we are'),
         Field('values_heading', 'text', 'Heading', 'What We Stand For', max=60, group='Values'),
         Field('values', 'list', 'Value cards', [
-            _card('target', 'Excellence', 'We strive for excellence in every aspect of robotics - from mechanical '
+            _card('target', 'Excellence', 'We hold every part of the robot to a high standard, from mechanical '
                   'design to autonomous programming.'),
-            _card('lightbulb', 'Innovation', 'We encourage creative thinking and innovative solutions to complex '
-                  'engineering challenges.'),
-            _card('handshake', 'Collaboration', 'Teamwork is at our core. The best solutions come from diverse '
-                  'minds working together, and we carry that spirit into our school and local community by '
-                  'giving back.'),
+            _card('lightbulb', 'Innovation', 'We try unusual ideas, prototype them quickly, and keep what '
+                  'works.'),
+            _card('handshake', 'Collaboration', 'Every robot is a group effort. We solve problems together, and '
+                  'we give back to our school and local community.'),
             _card('mountain', 'Perseverance', 'We embrace challenges and learn from failures, constantly improving '
                   'our robots and ourselves.'),
             _card('scale', 'Integrity', 'We compete with honesty and fairness, upholding the highest standards of '
                   'sportsmanship.'),
-            _card('graduation-cap', 'Mentorship', 'Experienced members guide new team members, fostering a culture '
-                  'of continuous learning.'),
+            _card('graduation-cap', 'Mentorship', 'Experienced members teach new members, so everyone keeps '
+                  'learning.'),
         ], items=CARD_ITEMS, max_items=9, group='Values'),
         Field('subteams_heading', 'text', 'Heading', 'Our Sub-Teams', max=60, group='Sub-teams'),
         Field('subteams', 'list', 'Sub-team cards', [
@@ -389,17 +387,16 @@ SECTIONS = (
                    'everyone on it.'),
         Field('culture_heading', 'text', 'Heading', 'Culture & Safety', max=60, group='Culture'),
         Field('culture', 'list', 'Culture cards', [
-            _card('globe', 'Diversity & Inclusion', '{short_name} is committed to fostering an inclusive '
-                  'environment where students of all backgrounds can thrive in STEM. We believe that diverse '
-                  'perspectives lead to better engineering solutions and a stronger community.'),
-            _card('hard-hat', 'Team Safety Captain', 'Our dedicated Safety Captain ensures all team members adhere '
-                  'to safety protocols, manages the safety manual, and conducts regular workshop inspections.',
+            _card('globe', 'Diversity & Inclusion', '{short_name} welcomes students of all backgrounds into '
+                  'STEM. Different perspectives lead to better engineering and a stronger community.'),
+            _card('hard-hat', 'Team Safety Captain', 'Our Safety Captain makes sure everyone follows safety '
+                  'protocols, manages the safety manual, and runs regular workshop inspections.',
                   'Take Safety Quiz', '/safety-quiz'),
         ], items=CARD_WITH_LINK_ITEMS, max_items=4, group='Culture'),
         Field('gallery_heading', 'text', 'Gallery heading', 'Team Moments', max=60, group='Culture'),
         Field('meta_description', 'textarea', 'Search description',
-              'Learn about the {club_name} mission, our sub-teams, and our history of excellence in VEX '
-              'Robotics.', max=200, group='Search & sharing'),
+              'Learn about the {club_name} mission, our sub-teams, and our record in VEX Robotics '
+              'competitions.', max=200, group='Search & sharing'),
     ), page='about', blurb='Story, values, sub-teams'),
 
     Section('donate', 'Donate page', 'heart-handshake', (
@@ -413,9 +410,8 @@ SECTIONS = (
         Field('intro_subheading', 'text', 'Subheading', 'Every Donation Makes a Difference', max=80,
               group='Online donations'),
         Field('intro_body', 'textarea', 'Text',
-              'Your generous donation helps us compete at the highest level, purchase new parts and equipment, '
-              'travel to competitions, and continue building innovative robots that push the boundaries of '
-              'what\'s possible.', max=600, group='Online donations'),
+              'Your donation pays for competition registration, new parts and equipment, and travel to '
+              'competitions, so our teams can keep building and competing.', max=600, group='Online donations'),
         Field('note', 'textarea', 'Small print',
               '{club_name} is a registered student organization. All donations go directly to '
               'supporting our teams.', max=300, group='Online donations'),
@@ -438,7 +434,7 @@ SECTIONS = (
             {'amount': '$25', 'text': 'Buys a VEX motor'},
             {'amount': '$50', 'text': 'Funds team transportation'},
             {'amount': '$100', 'text': 'Covers competition registration'},
-            {'amount': '$250', 'text': 'Supplies essential build materials'},
+            {'amount': '$250', 'text': 'Supplies build materials'},
         ], items=(Field('amount', 'text', 'Amount', '', max=12, required=True),
                   Field('text', 'text', 'What it pays for', '', max=80, required=True)),
               max_items=6, group='Your impact'),
@@ -554,7 +550,7 @@ SECTIONS = (
         Field('live_lede', 'text', 'Text', 'Every match, ranking and skills run from our latest season, straight from RobotEvents',
               max=160, group='Live results'),
         Field('meta_description', 'textarea', 'Search description',
-              'Our history of excellence in VEX Robotics competitions, including awards and match results.',
+              'Our VEX Robotics competition record: awards, events and match results.',
               max=200, group='Search & sharing'),
     ), page='achievements', blurb='Sections, headings, competition log, live results'),
 
