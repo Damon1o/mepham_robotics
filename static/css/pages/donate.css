@@ -885,7 +885,9 @@ svg.dn-tier-icon {
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    /* Fixed-width cards, centred under the heading whether there are two or twenty. */
+    grid-template-columns: repeat(auto-fit, minmax(200px, 240px));
+    justify-content: center;
     gap: var(--spacing-md);
 }
 

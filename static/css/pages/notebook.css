@@ -46,7 +46,9 @@
     text-align:left;
 }
 
+/* Six steps: three to a row on a wide screen, so no row is left with two. */
 .subteam-grid.notebook-process {
+    grid-template-columns:repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
     margin-bottom:2rem;
 }
 

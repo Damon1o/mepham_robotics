@@ -75,8 +75,11 @@
     padding: var(--spacing-lg);
 }
 
+/* Sized to stay on one line in the narrow form column. */
 .auth-title {
     font-family: 'Space Mono', monospace;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    line-height: 1.2;
     color: var(--maroon-dark);
     margin: 0 0 1rem;
     text-align: left;

@@ -315,6 +315,11 @@
     margin: 0;
 }
 
+/* Four tiles sit two by two rather than three and a stray one. */
+.pf-stats:has(> .pf-stat:nth-child(4):last-child) {
+    grid-template-columns: repeat(2, minmax(84px, 1fr));
+}
+
 .pf-stat {
     padding: 0.7rem 0.9rem;
     border: 2px solid #1a1a1a;
